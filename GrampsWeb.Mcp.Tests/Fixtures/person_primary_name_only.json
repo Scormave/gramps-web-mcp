@@ -1,0 +1,17 @@
+{
+  "handle": "H1",
+  "gender": 1,
+  "gramps_id": "I0001",
+  "primary_name": {
+    "type": "Birth Name",
+    "first_name": "Anna",
+    "surname_list": [{ "surname": "Smith", "prefix": "", "connector": "" }]
+  },
+  "alternate_names": [
+    {
+      "type": "Married Name",
+      "first_name": "Anna",
+      "surname_list": [{ "surname": "Jones", "primary": true }]
+    }
+  ]
+}

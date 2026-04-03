@@ -1,0 +1,8 @@
+{
+  "handle": "SRC01",
+  "title": "Test source",
+  "reporef_list": [
+    "REPO_STRING",
+    { "ref": "REPO_OBJ", "call_number": "A-1", "media_type": "Book" }
+  ]
+}

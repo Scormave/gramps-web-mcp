@@ -1,0 +1,27 @@
+[
+  {
+    "_class": "Note",
+    "handle": "1026866629cf221fee081e20af8",
+    "new": {
+      "_class": "Note",
+      "change": 1775764964,
+      "format": 0,
+      "gramps_id": "N0036",
+      "handle": "1026866629cf221fee081e20af8",
+      "private": false,
+      "tag_list": [],
+      "text": {
+        "_class": "StyledText",
+        "string": "test",
+        "tags": []
+      },
+      "type": {
+        "_class": "NoteType",
+        "string": "",
+        "value": 1
+      }
+    },
+    "old": null,
+    "type": "add"
+  }
+]

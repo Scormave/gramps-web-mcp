@@ -1,0 +1,10 @@
+{
+  "handle": "PERSON01",
+  "gender": 1,
+  "parent_family_list": [
+    "FAM_HANDLE_STRING",
+    { "ref": "FAM_HANDLE_OBJ", "frel": "Birth", "mrel": "Birth" }
+  ],
+  "family_list": [{ "ref": "CHILD_FAM1" }, "CHILD_FAM2"],
+  "media_list": [{ "ref": "MEDIA1" }, { "handle": "MEDIA2" }]
+}

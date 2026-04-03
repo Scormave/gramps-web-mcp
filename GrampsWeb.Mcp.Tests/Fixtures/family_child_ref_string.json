@@ -1,0 +1,4 @@
+{
+  "handle": "FAM01",
+  "child_ref_list": ["CHILD1", { "ref": "CHILD2", "frel": "Birth" }]
+}

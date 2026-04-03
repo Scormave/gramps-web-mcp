@@ -1,0 +1,29 @@
+[
+  {
+    "_class": "Note",
+    "handle": "abc123handle0001",
+    "new": {
+      "handle": "abc123handle0001",
+      "gramps_id": "N0001",
+      "text": {
+        "string": "updated body",
+        "tags": []
+      },
+      "type": "General",
+      "format": 0,
+      "tag_list": []
+    },
+    "old": {
+      "handle": "abc123handle0001",
+      "gramps_id": "N0001",
+      "text": {
+        "string": "old body",
+        "tags": []
+      },
+      "type": "General",
+      "format": 0,
+      "tag_list": []
+    },
+    "type": "update"
+  }
+]

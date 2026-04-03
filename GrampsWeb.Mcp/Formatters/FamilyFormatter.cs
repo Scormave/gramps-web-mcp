@@ -1,0 +1,209 @@
+using System.Text;
+using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Models;
+
+namespace GrampsWeb.Mcp.Formatters;
+
+/// <summary>
+/// Formats family API responses.
+/// </summary>
+public static class FamilyFormatter
+{
+    public static async Task<string> FormatFamilySummary(GrampsFamily family, GrampsApiClient client)
+    {
+        if (family == null)
+            return "Unknown family";
+
+        var sb = new StringBuilder();
+
+        var relType = family.Relationship ?? "Unknown";
+        sb.AppendLine($"Relationship: {relType}");
+
+        if (!string.IsNullOrEmpty(family.FatherHandle))
+        {
+            try
+            {
+                var father = await client.GetAsync<GrampsPerson>($"/api/people/{family.FatherHandle}");
+                if (father != null)
+                {
+                    var fatherName = father.PrimaryName;
+                    var fatherBirth = await PersonFormatter.ExtractEventInfo(father, "Birth", client);
+                    var fatherStr = GrampsValueFormatter.FormatName(fatherName);
+                    sb.AppendLine($"Father: {fatherStr} ({(fatherBirth != null ? $"b. {fatherBirth}" : "")})".Trim());
+                }
+            }
+            catch { }
+        }
+
+        if (!string.IsNullOrEmpty(family.MotherHandle))
+        {
+            try
+            {
+                var mother = await client.GetAsync<GrampsPerson>($"/api/people/{family.MotherHandle}");
+                if (mother != null)
+                {
+                    var motherName = mother.PrimaryName;
+                    var motherBirth = await PersonFormatter.ExtractEventInfo(mother, "Birth", client);
+                    var motherStr = GrampsValueFormatter.FormatName(motherName);
+                    sb.AppendLine($"Mother: {motherStr} ({(motherBirth != null ? $"b. {motherBirth}" : "")})".Trim());
+                }
+            }
+            catch { }
+        }
+
+        if (family.ChildRefList != null && family.ChildRefList.Length > 0)
+        {
+            sb.AppendLine($"\nChildren ({family.ChildRefList.Length}):");
+            foreach (var childRef in family.ChildRefList)
+            {
+                if (string.IsNullOrEmpty(childRef.Ref))
+                    continue;
+
+                try
+                {
+                    var child = await client.GetAsync<GrampsPerson>($"/api/people/{childRef.Ref}");
+                    if (child != null)
+                    {
+                        var childName = child.PrimaryName;
+                        var childBirth = await PersonFormatter.ExtractEventInfo(child, "Birth", client);
+                        var childStr = GrampsValueFormatter.FormatName(childName);
+                        var relTypeStr = !string.IsNullOrEmpty(childRef.FatherRelType) ? $" ({childRef.FatherRelType})" : "";
+                        sb.AppendLine($"  • {childStr}{relTypeStr} {(childBirth != null ? $"b. {childBirth}" : "")}".Trim());
+                    }
+                }
+                catch { }
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    public static string FormatFamilyFull(GrampsFamily family)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"FAMILY [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
+        sb.AppendLine(new string('=', 60));
+        sb.AppendLine($"Relationship: {family.Relationship ?? "Unknown"}");
+        sb.AppendLine();
+
+        sb.AppendLine($"Father: {family.FatherHandle ?? "—"}");
+        sb.AppendLine($"Mother: {family.MotherHandle ?? "—"}");
+
+        if (family.ChildRefList?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Children ({family.ChildRefList.Length}):");
+            foreach (var child in family.ChildRefList)
+            {
+                var frel = child.FatherRelType ?? "Birth";
+                var mrel = child.MotherRelType ?? "Birth";
+                sb.AppendLine($"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}");
+            }
+        }
+        else
+        {
+            sb.AppendLine("Children: none");
+        }
+
+        if (family.EventRefList?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Events ({family.EventRefList.Length}):");
+            foreach (var er in family.EventRefList)
+                sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
+        }
+
+        if (family.NoteList?.Length > 0)     sb.AppendLine($"Notes:     {family.NoteList.Length}");
+        if (family.CitationList?.Length > 0) sb.AppendLine($"Citations: {family.CitationList.Length}");
+        if (family.TagList?.Length > 0)      sb.AppendLine($"Tags:      {string.Join(", ", family.TagList)}");
+        if (family.Private)                  sb.AppendLine("⚠ Private record");
+
+        return sb.ToString();
+    }
+
+    public static async Task<string> FormatFamilyExtended(GrampsFamilyExtended family, GrampsApiClient client)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"FAMILY (extended) [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
+        sb.AppendLine($"Relationship: {family.Relationship ?? "Unknown"}");
+        sb.AppendLine(new string('=', 60));
+
+        var father = family.Extended?.Father;
+        if (father != null)
+        {
+            var summary = await PersonFormatter.FormatPersonSummary(father, client);
+            sb.AppendLine($"Father: {summary} [handle: {father.Handle}]");
+        }
+        else if (!string.IsNullOrEmpty(family.FatherHandle))
+        {
+            sb.AppendLine($"Father: [handle: {family.FatherHandle}]");
+        }
+
+        var mother = family.Extended?.Mother;
+        if (mother != null)
+        {
+            var summary = await PersonFormatter.FormatPersonSummary(mother, client);
+            sb.AppendLine($"Mother: {summary} [handle: {mother.Handle}]");
+        }
+        else if (!string.IsNullOrEmpty(family.MotherHandle))
+        {
+            sb.AppendLine($"Mother: [handle: {family.MotherHandle}]");
+        }
+
+        var children = family.Extended?.Children;
+        if (children?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Children ({children.Length}):");
+            foreach (var child in children)
+            {
+                var summary = await PersonFormatter.FormatPersonSummary(child, client);
+                var childRef = family.ChildRefList?.FirstOrDefault(cr => cr.Ref == child.Handle);
+                var frel = childRef?.FatherRelType ?? "Birth";
+                var mrel = childRef?.MotherRelType ?? "Birth";
+                sb.AppendLine($"  • {summary} [handle: {child.Handle}] (frel: {frel}, mrel: {mrel})");
+            }
+        }
+
+        var extEvents = family.Extended?.Events;
+        if (extEvents?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("EVENTS:");
+            foreach (var evt in extEvents)
+            {
+                var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : "—";
+                var placeStr = "";
+                if (!string.IsNullOrEmpty(evt.Place))
+                {
+                    try
+                    {
+                        var place = await client.GetAsync<GrampsPlace>($"/api/places/{evt.Place}");
+                        if (place != null) placeStr = $" — {GrampsValueFormatter.FormatPlace(place)}";
+                    }
+                    catch { }
+                }
+                var role = family.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
+                sb.AppendLine($"  • {evt.Type}: {dateStr}{placeStr} [{role}]");
+            }
+        }
+
+        var extNotes = family.Extended?.Notes;
+        if (extNotes?.Length > 0)
+        {
+            sb.AppendLine("\nNOTES:");
+            foreach (var note in extNotes)
+            {
+                var snippet = note.Text?.Replace('\n', ' ').Trim() ?? "";
+                if (snippet.Length > 100) snippet = snippet[..100] + "…";
+                sb.AppendLine($"  • [{note.Type}] {snippet}");
+            }
+        }
+
+        var extTags = family.Extended?.Tags;
+        if (extTags?.Length > 0)
+            sb.AppendLine($"\nTAGS: {string.Join(", ", extTags.Select(t => t.Name))}");
+
+        return sb.ToString();
+    }
+}
