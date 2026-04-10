@@ -61,6 +61,33 @@ public class GrampsMutationParserTests
     }
 
     [Fact]
+    public void ExtractNewObject_FamilyRelTypeObject_ParsesRelationshipValue()
+    {
+        const string json = """
+            [{
+              "_class":"Family",
+              "handle":"fam1",
+              "type":"add",
+              "old":null,
+              "new":{
+                "_class":"Family",
+                "handle":"fam1",
+                "gramps_id":"F0762",
+                "type":{"_class":"FamilyRelType","string":"","value":0},
+                "private":false,
+                "child_ref_list":[],
+                "father_handle":null,
+                "mother_handle":null
+              }
+            }]
+            """;
+
+        var fam = GrampsMutationParser.ExtractNewObject<GrampsFamily>(json, "Family");
+        Assert.Equal("fam1", fam.Handle);
+        Assert.Equal("0", fam.Relationship);
+    }
+
+    [Fact]
     public void ExtractNewObject_FromBareEntity_DoesNotRequireWrapper()
     {
         const string json = """

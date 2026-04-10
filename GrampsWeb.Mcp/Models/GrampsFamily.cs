@@ -71,7 +71,8 @@ public class GrampsFamily
     [JsonPropertyName("private")]
     public bool Private { get; set; }
 
-    /// <summary>Relationship between parents (Gramps Web JSON key <c>type</c>).</summary>
+    /// <summary>Relationship between parents (Gramps Web JSON key <c>type</c>). See <see cref="Serialization.GrampsFamilyRelTypeObjectConverter"/>.</summary>
     [JsonPropertyName("type")]
+    [JsonConverter(typeof(GrampsFamilyRelTypeObjectConverter))]
     public string? Relationship { get; set; }
 }

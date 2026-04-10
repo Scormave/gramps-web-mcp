@@ -5,8 +5,7 @@ namespace GrampsWeb.Mcp.Serialization;
 
 /// <summary>
 /// Gramps mutation payloads may return <c>Event.type</c> as an object:
-/// <c>{ "_class": "EventType", "string": "", "value": 12 }</c>.
-/// This converter supports that object shape.
+/// <c>{ "_class": "EventType", "string": "", "value": 12 }</c> instead of a string.
 /// </summary>
 public sealed class GrampsEventTypeObjectConverter : JsonConverter<string?>
 {
@@ -17,7 +16,7 @@ public sealed class GrampsEventTypeObjectConverter : JsonConverter<string?>
             JsonTokenType.Null => null,
             JsonTokenType.String => reader.GetString(),
             JsonTokenType.StartObject => ReadFromEventTypeObject(ref reader),
-            _ => throw new JsonException($"Unexpected JSON token for event type: {reader.TokenType}.")
+            _ => throw new JsonException($"Unexpected JSON token for Event.type: {reader.TokenType}.")
         };
     }
 
