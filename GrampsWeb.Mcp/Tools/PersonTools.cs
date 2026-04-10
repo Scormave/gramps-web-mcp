@@ -132,8 +132,10 @@ public static class PersonTools
         "Get chronological timeline of life events for a person. " +
         "events: filter by category — vital, family, religious, vocational, academic, travel, legal, residence, other, custom. " +
         "relatives: include events of — father, mother, brother, sister, wife, husband, son, daughter. " +
-        "relative_events: event categories for relatives (same options as events; defaults to same as events). " +
-        "dates: date range as 'YYYY/MM/DD-YYYY/MM/DD'. " +
+        "relative_events: event categories for relatives (same options as events). " +
+        "dates: range 'YYYY/MM/DD-YYYY/MM/DD', or open 'YYYY/MM/DD-' or '-YYYY/MM/DD'. Leading zeros in month/day are normalized for the API. " +
+        "include_undated: default true — Gramps may still show a formatted date while sortval is 0; the API hides those unless discard_empty=false. " +
+        "Set false only to match strict API default (omit events Gramps treats as undated). " +
         "ratings: include citation confidence scores (0=very low … 4=very high).")]
     public static async Task<string> GetPersonTimeline(
         [Description("Person handle")]
@@ -144,21 +146,25 @@ public static class PersonTools
         string[]? relatives = null,
         [Description("Event categories for the listed relatives (same options as events)")]
         string[]? relativeEvents = null,
-        [Description("Date range filter as 'YYYY/MM/DD-YYYY/MM/DD'")]
+        [Description("Date range filter; e.g. 1999/1/1-2010/12/31 or 1999/01/01-2010/01/01 (zeros stripped for API)")]
         string? dates = null,
+        [Description("Include events Gramps marks undated (sortval 0); default true. Use false for API-strict filtering.")]
+        bool includeUndated = true,
         [Description("When true, include citation confidence rating (★) for each event")]
         bool ratings = false,
         GrampsApiClient client = null!)
     {
         try
         {
-            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, ratings);
+            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, ratings, includeUndated);
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
                 $"/api/people/{handle}/timeline{qs}");
             if (timeline == null)
                 return $"Person not found: {handle}";
             if (timeline.Length == 0)
-                return $"No timeline events found for {handle}";
+                return $"No timeline events found for {handle}. " +
+                    "If you use include_undated=false, events with sortval 0 are hidden by the API even when a date displays in Gramps. " +
+                    "Only linked events (and relatives per filters) appear; a name date alone is not a timeline event.";
             return TimelineFormatter.FormatTimelineChronological(timeline);
         }
         catch (Exception ex)
@@ -378,20 +384,79 @@ public static class PersonTools
 
     internal static string BuildTimelineQueryString(
         string[]? events, string[]? relatives, string[]? relativeEvents,
-        string? dates, bool ratings)
+        string? dates, bool ratings, bool includeUndated = true)
     {
         var queryParams = new List<string>();
+        // Gramps Web API uses comma-delimited event_classes / relative_event_classes (not repeated events= for categories).
         if (events?.Length > 0)
-            foreach (var e in events) queryParams.Add($"events={Uri.EscapeDataString(e)}");
+            queryParams.Add($"event_classes={Uri.EscapeDataString(string.Join(",", events))}");
         if (relatives?.Length > 0)
-            foreach (var r in relatives) queryParams.Add($"relatives={Uri.EscapeDataString(r)}");
+            queryParams.Add($"relatives={Uri.EscapeDataString(string.Join(",", relatives))}");
         if (relativeEvents?.Length > 0)
-            foreach (var re in relativeEvents) queryParams.Add($"relative_events={Uri.EscapeDataString(re)}");
-        if (!string.IsNullOrEmpty(dates))
-            queryParams.Add($"dates={Uri.EscapeDataString(dates)}");
+            queryParams.Add($"relative_event_classes={Uri.EscapeDataString(string.Join(",", relativeEvents))}");
+        var normalizedDates = NormalizeTimelineDatesForGrampsApi(dates);
+        if (!string.IsNullOrEmpty(normalizedDates))
+            queryParams.Add($"dates={Uri.EscapeDataString(normalizedDates)}");
+        // Default true: Gramps timeline drops events when date.sortval==0 (API discard_empty default), even if a display date exists.
+        if (includeUndated)
+            queryParams.Add("discard_empty=false");
         if (ratings)
             queryParams.Add("ratings=1");
         return queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
+    }
+
+    /// <summary>
+    /// Gramps Web timeline <c>dates</c> query is validated with a regex that disallows leading zeros
+    /// in month and day (<c>1999/1/1</c> not <c>1999/01/01</c>).
+    /// </summary>
+    internal static string? NormalizeTimelineDatesForGrampsApi(string? dates)
+    {
+        if (string.IsNullOrWhiteSpace(dates))
+            return dates;
+
+        var s = dates.Trim();
+
+        if (s.StartsWith("-", StringComparison.Ordinal))
+        {
+            var rest = s[1..];
+            return "-" + NormalizeYmdSegment(rest);
+        }
+
+        if (s.EndsWith("-", StringComparison.Ordinal)
+            && !s[..^1].Contains('-', StringComparison.Ordinal))
+        {
+            var rest = s[..^1];
+            return NormalizeYmdSegment(rest) + "-";
+        }
+
+        var dash = s.IndexOf('-', StringComparison.Ordinal);
+        if (dash > 0 && dash < s.Length - 1)
+        {
+            var left = s[..dash];
+            var right = s[(dash + 1)..];
+            return $"{NormalizeYmdSegment(left)}-{NormalizeYmdSegment(right)}";
+        }
+
+        return NormalizeYmdSegment(s);
+    }
+
+    private static string NormalizeYmdSegment(string segment)
+    {
+        var parts = segment.Split('/');
+        if (parts.Length != 3)
+            return segment;
+
+        if (parts[0].Contains('*', StringComparison.Ordinal)
+            || parts[1].Contains('*', StringComparison.Ordinal)
+            || parts[2].Contains('*', StringComparison.Ordinal))
+            return segment;
+
+        if (!int.TryParse(parts[0], out var y)
+            || !int.TryParse(parts[1], out var m)
+            || !int.TryParse(parts[2], out var d))
+            return segment;
+
+        return $"{y}/{m}/{d}";
     }
 
     private static GrampsNameRequest ConvertNameToRequest(

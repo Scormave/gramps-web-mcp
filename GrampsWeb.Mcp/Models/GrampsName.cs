@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
@@ -49,7 +50,9 @@ public class GrampsName
     [JsonPropertyName("title")]
     public string? Title { get; set; }
 
+    /// <summary>Gramps name type (JSON key <c>type</c>). See <see cref="GrampsNameTypeObjectConverter"/>.</summary>
     [JsonPropertyName("type")]
+    [JsonConverter(typeof(GrampsNameTypeObjectConverter))]
     public string? Type { get; set; }
 
     /// <summary>

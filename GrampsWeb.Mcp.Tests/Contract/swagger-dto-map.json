@@ -28,7 +28,7 @@
     { "typeName": "GrampsWeb.Mcp.Models.GrampsFamilyRef, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "ref", "relationship", "frel", "mrel" ] },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsSearchHit, GrampsWeb.Mcp", "swaggerDefinition": "SearchResult", "allowedExtraJsonNames": [ "rank", "gramps_id" ] },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsPagedResult`1, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "objects", "total", "page" ], "skipNested": true },
-    { "typeName": "GrampsWeb.Mcp.Models.GrampsTimelineEntry, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "handle", "gramps_id", "type", "date", "place", "description", "role", "name", "category", "rating" ] },
+    { "typeName": "GrampsWeb.Mcp.Models.GrampsTimelineEntry, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "handle", "gramps_id", "label", "type", "date", "place", "description", "role", "name", "category", "rating" ] },
     { "typeName": "GrampsWeb.Mcp.Requests.CreatePersonRequest, GrampsWeb.Mcp", "swaggerDefinition": "Person" },
     { "typeName": "GrampsWeb.Mcp.Requests.GrampsNameRequest, GrampsWeb.Mcp", "swaggerDefinition": "Name" },
     { "typeName": "GrampsWeb.Mcp.Requests.SurnameRequest, GrampsWeb.Mcp", "swaggerDefinition": "Surname" },

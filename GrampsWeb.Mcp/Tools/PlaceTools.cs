@@ -43,7 +43,8 @@ public static class PlaceTools
     [Description(
         "Get chronological timeline of all events that occurred at this place. " +
         "events: filter by category (vital, family, religious, vocational, academic, travel, legal, residence, other, custom). " +
-        "dates: date range as 'YYYY/MM/DD-YYYY/MM/DD'. " +
+        "dates: date range; month/day must not use leading zeros for the API (e.g. 1999/1/1-2010/1/1); zero-padding is normalized automatically. " +
+        "By default, events with sortval 0 are still included (discard_empty=false). " +
         "Useful for finding all families and people connected to a location over time.")]
     public static async Task<string> GetPlaceTimeline(
         [Description("Place handle")]

@@ -72,7 +72,8 @@ public static class FamilyTools
     [Description(
         "Get chronological timeline of events for a family. " +
         "events: filter by category — vital, family, religious, vocational, academic, travel, legal, residence, other, custom. " +
-        "dates: date range as 'YYYY/MM/DD-YYYY/MM/DD'. " +
+        "dates: date range; zero-padding in month/day is normalized for the API (1999/1/1 not 1999/01/01). " +
+        "By default, events with sortval 0 are still included (discard_empty=false), matching person timeline behavior. " +
         "ratings: include citation confidence scores.")]
     public static async Task<string> GetFamilyTimeline(
         [Description("Family handle")]

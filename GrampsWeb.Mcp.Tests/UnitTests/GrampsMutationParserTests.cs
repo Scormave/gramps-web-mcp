@@ -88,6 +88,75 @@ public class GrampsMutationParserTests
     }
 
     [Fact]
+    public void ExtractNewObject_PersonPrimaryNameNameTypeObject_ParsesTypeValue()
+    {
+        const string json = """
+            [{
+              "_class":"Person",
+              "handle":"p1",
+              "type":"add",
+              "old":null,
+              "new":{
+                "_class":"Person",
+                "handle":"p1",
+                "gramps_id":"I2157",
+                "gender":1,
+                "private":false,
+                "primary_name":{
+                  "_class":"Name",
+                  "first_name":"Alexander",
+                  "private":false,
+                  "display_as":0,
+                  "sort_as":0,
+                  "type":{"_class":"NameType","string":"","value":2}
+                }
+              }
+            }]
+            """;
+
+        var person = GrampsMutationParser.ExtractNewObject<GrampsPerson>(json, "Person");
+        Assert.Equal("p1", person.Handle);
+        Assert.NotNull(person.PrimaryName);
+        Assert.Equal("Alexander", person.PrimaryName.FirstName);
+        Assert.Equal("2", person.PrimaryName.Type);
+    }
+
+    [Fact]
+    public void ExtractNewObject_PersonEventRefEventRoleTypeObject_ParsesRoleValue()
+    {
+        const string json = """
+            [{
+              "_class":"Person",
+              "handle":"p1",
+              "type":"update",
+              "old":null,
+              "new":{
+                "_class":"Person",
+                "handle":"p1",
+                "gramps_id":"I2159",
+                "gender":1,
+                "private":false,
+                "event_ref_list":[
+                  {
+                    "_class":"EventRef",
+                    "ref":"1026baa3ae5f6f78efeb2bede716",
+                    "role":{"_class":"EventRoleType","string":"","value":1},
+                    "private":false
+                  }
+                ]
+              }
+            }]
+            """;
+
+        var person = GrampsMutationParser.ExtractNewObject<GrampsPerson>(json, "Person");
+        Assert.Equal("p1", person.Handle);
+        Assert.NotNull(person.EventRefList);
+        Assert.Single(person.EventRefList);
+        Assert.Equal("1026baa3ae5f6f78efeb2bede716", person.EventRefList![0].Ref);
+        Assert.Equal("1", person.EventRefList[0].Role);
+    }
+
+    [Fact]
     public void ExtractNewObject_FromBareEntity_DoesNotRequireWrapper()
     {
         const string json = """
