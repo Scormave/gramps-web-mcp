@@ -4,6 +4,7 @@ using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -232,18 +233,18 @@ public static class PersonTools
         DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
         [Description("Gender: 0=Female, 1=Male, 2=Unknown (default: 2)")]
         int gender = 2,
-        [Description("Array of event handles to link to this person")]
-        string[]? eventRefHandles = null,
+        [Description("Event handles to link to this person. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? eventRefHandles = null,
         [Description("Array of event roles (e.g. 'Primary', 'Witness'). Must match eventRefHandles length")]
         string[]? eventRefRoles = null,
-        [Description("Array of family handles (where this person is parent/spouse)")]
-        string[]? familyHandles = null,
-        [Description("Array of parent family handles (where this person is child)")]
-        string[]? parentFamilyHandles = null,
-        [Description("Array of note handles")]
-        string[]? noteHandles = null,
-        [Description("Array of tag handles")]
-        string[]? tagHandles = null,
+        [Description("Family handles (where this person is parent/spouse). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? familyHandles = null,
+        [Description("Parent family handles (where this person is child). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? parentFamilyHandles = null,
+        [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         [Description("Mark record as private (default: false)")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
@@ -255,20 +256,22 @@ public static class PersonTools
             
             // Build event_ref_list
             var eventRefList = new List<EventRefRequest>();
-            if (eventRefHandles?.Length > 0)
+            var eventRefHandleArray = (string[]?)eventRefHandles;
+            if (eventRefHandleArray?.Length > 0)
             {
-                for (int i = 0; i < eventRefHandles.Length; i++)
+                for (int i = 0; i < eventRefHandleArray.Length; i++)
                 {
                     var role = eventRefRoles?.Length > i ? eventRefRoles[i] : "Primary";
-                    eventRefList.Add(new EventRefRequest { Ref = eventRefHandles[i], Role = role });
+                    eventRefList.Add(new EventRefRequest { Ref = eventRefHandleArray[i], Role = role });
                 }
             }
 
             // Build parent family list
             var parentFamilyList = new List<FamilyRefRequest>();
-            if (parentFamilyHandles?.Length > 0)
+            var parentFamilyHandleArray = (string[]?)parentFamilyHandles;
+            if (parentFamilyHandleArray?.Length > 0)
             {
-                foreach (var pfHandle in parentFamilyHandles)
+                foreach (var pfHandle in parentFamilyHandleArray)
                 {
                     parentFamilyList.Add(new FamilyRefRequest { Ref = pfHandle });
                 }
@@ -317,18 +320,18 @@ public static class PersonTools
         DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
         [Description("Update gender: 0=Female, 1=Male, 2=Unknown")]
         int? gender = null,
-        [Description("Replace event references")]
-        string[]? eventRefHandles = null,
+        [Description("Replace event references. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? eventRefHandles = null,
         [Description("Event roles to match eventRefHandles length")]
         string[]? eventRefRoles = null,
-        [Description("Replace family handles")]
-        string[]? familyHandles = null,
-        [Description("Replace parent family handles")]
-        string[]? parentFamilyHandles = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
-        [Description("Replace tag handles")]
-        string[]? tagHandles = null,
+        [Description("Replace family handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? familyHandles = null,
+        [Description("Replace parent family handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? parentFamilyHandles = null,
+        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         [Description("Update private status")]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
@@ -364,18 +367,18 @@ public static class PersonTools
                 PrimaryName = primaryReq,
                 AlternateNames = person.AlternateNames?.Select(an => ConvertNameToRequest(an)).ToArray(),
                 EventRefList = eventRefHandles != null
-                    ? BuildEventRefList(eventRefHandles, eventRefRoles)
+                    ? BuildEventRefList((string[]?)eventRefHandles, eventRefRoles)
                     : GrampsRequestMapping.ToEventRefRequests(person.EventRefList),
-                FamilyList = familyHandles ?? person.FamilyList,
+                FamilyList = (string[]?)familyHandles ?? person.FamilyList,
                 ParentFamilyList = parentFamilyHandles != null
-                    ? parentFamilyHandles.Select(h => new FamilyRefRequest { Ref = h }).ToArray()
+                    ? ((string[]?)parentFamilyHandles)!.Select(h => new FamilyRefRequest { Ref = h }).ToArray()
                     : GrampsRequestMapping.ToFamilyRefRequests(person.ParentFamilyList),
                 MediaList = person.MediaList,
                 AddressList = person.AddressList,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests(person.AttributeList),
                 CitationList = person.CitationList,
-                NoteList = noteHandles ?? person.NoteList,
-                TagList = tagHandles ?? person.TagList,
+                NoteList = (string[]?)noteHandles ?? person.NoteList,
+                TagList = (string[]?)tagHandles ?? person.TagList,
                 Private = isPrivate ?? person.Private
             };
 
@@ -503,9 +506,10 @@ public static class PersonTools
 
     private static EventRefRequest[] BuildEventRefList(string[]? handles, string[]? roles)
     {
-        if (handles?.Length == 0) return Array.Empty<EventRefRequest>();
+        if (handles is null || handles.Length == 0)
+            return Array.Empty<EventRefRequest>();
         var list = new List<EventRefRequest>();
-        for (int i = 0; i < handles!.Length; i++)
+        for (int i = 0; i < handles.Length; i++)
         {
             list.Add(new EventRefRequest
             {

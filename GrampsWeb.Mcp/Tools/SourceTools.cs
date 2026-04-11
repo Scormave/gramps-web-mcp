@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -50,10 +51,10 @@ public static class SourceTools
         string? pubinfo = null,
         [Description("Abbreviation (optional)")]
         string? abbrev = null,
-        [Description("Array of repository handles (optional)")]
-        string[]? repositoryHandles = null,
-        [Description("Array of note handles (optional)")]
-        string[]? noteHandles = null,
+        [Description("Repository handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? repositoryHandles = null,
+        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -61,8 +62,9 @@ public static class SourceTools
             if (string.IsNullOrWhiteSpace(title))
                 throw McpToolErrors.ValidationError("Error: title is required");
 
-            var repoRefList = repositoryHandles?.Length > 0 
-                ? repositoryHandles.Select(h => new { @ref = h } as object).ToArray()
+            var repoHandlesArray = (string[]?)repositoryHandles;
+            var repoRefList = repoHandlesArray?.Length > 0
+                ? repoHandlesArray.Select(h => new { @ref = h } as object).ToArray()
                 : null;
 
             var request = new CreateSourceRequest
@@ -102,10 +104,10 @@ public static class SourceTools
         string? pubinfo = null,
         [Description("Update abbreviation")]
         string? abbrev = null,
-        [Description("Replace repository handles")]
-        string[]? repositoryHandles = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
+        [Description("Replace repository handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? repositoryHandles = null,
+        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -114,8 +116,9 @@ public static class SourceTools
             if (source == null)
                 return $"Source not found: {handle}";
 
-            var repoRefList = repositoryHandles != null && repositoryHandles.Length > 0
-                ? repositoryHandles.Select(h => new { @ref = h } as object).ToArray()
+            var repoHandlesUpdate = (string[]?)repositoryHandles;
+            var repoRefList = repoHandlesUpdate != null && repoHandlesUpdate.Length > 0
+                ? repoHandlesUpdate.Select(h => new { @ref = h } as object).ToArray()
                 : null;
 
             var updateRequest = new CreateSourceRequest
@@ -131,7 +134,7 @@ public static class SourceTools
                 MediaList = source.MediaList,
                 RepositoryRefList = repoRefList ?? ToRepositoryRefRequestObjects(source.RepositoryRefList),
                 AttributeList = GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
-                NoteList = noteHandles ?? source.NoteList,
+                NoteList = (string[]?)noteHandles ?? source.NoteList,
                 TagList = source.TagList,
                 Private = source.Private
             };

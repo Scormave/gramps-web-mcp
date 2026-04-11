@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -103,12 +104,12 @@ public static class PlaceTools
         string? lat = null,
         [Description("Longitude coordinate")]
         string? lon = null,
-        [Description("Array of parent place handles (for geography hierarchy)")]
-        string[]? enclosedByHandles = null,
+        [Description("Parent place handles (hierarchy). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? enclosedByHandles = null,
         [Description("Language code (default: 'en')")]
         string? nameLang = null,
-        [Description("Array of note handles")]
-        string[]? noteHandles = null,
+        [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -116,8 +117,9 @@ public static class PlaceTools
             if (string.IsNullOrWhiteSpace(name))
                 throw McpToolErrors.ValidationError("Error: name is required");
 
-            var placeRefList = enclosedByHandles?.Length > 0
-                ? enclosedByHandles.Select(h => new { @ref = h } as object).ToArray()
+            var enclosed = (string[]?)enclosedByHandles;
+            var placeRefList = enclosed?.Length > 0
+                ? enclosed.Select(h => new { @ref = h } as object).ToArray()
                 : null;
 
             var request = new CreatePlaceRequest
@@ -163,10 +165,10 @@ public static class PlaceTools
         string? lat = null,
         [Description("Update longitude")]
         string? lon = null,
-        [Description("Replace parent place handles")]
-        string[]? enclosedByHandles = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
+        [Description("Replace parent place handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? enclosedByHandles = null,
+        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -175,8 +177,9 @@ public static class PlaceTools
             if (place == null)
                 return $"Place not found: {handle}";
 
-            var placeRefList = enclosedByHandles != null && enclosedByHandles.Length > 0
-                ? enclosedByHandles.Select(h => new { @ref = h } as object).ToArray()
+            var enclosedUpdate = (string[]?)enclosedByHandles;
+            var placeRefList = enclosedUpdate != null && enclosedUpdate.Length > 0
+                ? enclosedUpdate.Select(h => new { @ref = h } as object).ToArray()
                 : null;
 
             var updateRequest = new CreatePlaceRequest
@@ -191,7 +194,7 @@ public static class PlaceTools
                 Latitude = lat ?? place.Latitude,
                 Longitude = lon ?? place.Longitude,
                 MediaList = place.MediaList,
-                NoteList = noteHandles ?? place.NoteList,
+                NoteList = (string[]?)noteHandles ?? place.NoteList,
                 CitationList = place.CitationList,
                 TagList = place.TagList,
                 PlaceRefList = placeRefList ?? place.PlaceRefList,

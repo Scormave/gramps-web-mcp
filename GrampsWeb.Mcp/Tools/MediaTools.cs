@@ -4,6 +4,7 @@ using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -52,10 +53,10 @@ public static class MediaTools
         string? date = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
-        [Description("Replace tag handles")]
-        string[]? tagHandles = null,
+        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -80,8 +81,8 @@ public static class MediaTools
                 Date = dateRequest,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests(media.AttributeList),
                 CitationList = media.CitationList,
-                NoteList = noteHandles ?? media.NoteList,
-                TagList = tagHandles ?? media.TagList,
+                NoteList = (string[]?)noteHandles ?? media.NoteList,
+                TagList = (string[]?)tagHandles ?? media.TagList,
                 Private = media.Private
             };
 

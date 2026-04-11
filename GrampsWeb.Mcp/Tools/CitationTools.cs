@@ -4,6 +4,7 @@ using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -57,8 +58,8 @@ public static class CitationTools
         string? date = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
-        [Description("Array of note handles (optional)")]
-        string[]? noteHandles = null,
+        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -111,8 +112,8 @@ public static class CitationTools
         string? date = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
+        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -140,7 +141,7 @@ public static class CitationTools
                 Text = citation.Text,
                 MediaList = citation.MediaList,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
-                NoteList = noteHandles ?? citation.NoteList,
+                NoteList = (string[]?)noteHandles ?? citation.NoteList,
                 TagList = citation.TagList,
                 Private = citation.Private
             };

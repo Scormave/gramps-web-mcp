@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -50,8 +51,8 @@ public static class RepositoryTools
         string? address = null,
         [Description("Website URL (optional)")]
         string? url = null,
-        [Description("Array of note handles (optional)")]
-        string[]? noteHandles = null,
+        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -95,8 +96,8 @@ public static class RepositoryTools
         string? address = null,
         [Description("Update URL")]
         string? url = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
+        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -116,7 +117,7 @@ public static class RepositoryTools
                 EmailList = repo.EmailList,
                 AddressList = repo.AddressList,
                 UrlList = repo.UrlList,
-                NoteList = noteHandles ?? repo.NoteList,
+                NoteList = (string[]?)noteHandles ?? repo.NoteList,
                 TagList = repo.TagList,
                 Private = repo.Private
             };

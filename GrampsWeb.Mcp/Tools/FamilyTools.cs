@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -117,28 +118,29 @@ public static class FamilyTools
         string? motherHandle = null,
         [Description("Relationship type: Married, Unmarried, Civil Union, Unknown (default: Married)")]
         string? relationshipType = "Married",
-        [Description("Array of child person handles")]
-        string[]? childHandles = null,
+        [Description("Child person handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? childHandles = null,
         [Description("Array of child relationship types (Birth, Adopted, Stepchild, etc). Must match childHandles length")]
         string[]? childRefTypes = null,
-        [Description("Array of note handles")]
-        string[]? noteHandles = null,
-        [Description("Array of tag handles")]
-        string[]? tagHandles = null,
+        [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         GrampsApiClient client = null!)
     {
         try
         {
             // Build child_ref_list
             var childRefList = new List<GrampsChildRef>();
-            if (childHandles?.Length > 0)
+            var childHandleArray = (string[]?)childHandles;
+            if (childHandleArray?.Length > 0)
             {
-                for (int i = 0; i < childHandles.Length; i++)
+                for (int i = 0; i < childHandleArray.Length; i++)
                 {
                     var refType = childRefTypes?.Length > i ? childRefTypes[i] : "Birth";
                     childRefList.Add(new GrampsChildRef
                     {
-                        Ref = childHandles[i],
+                        Ref = childHandleArray[i],
                         FatherRelType = refType,
                         MotherRelType = refType
                     });
@@ -186,14 +188,14 @@ public static class FamilyTools
         string? motherHandle = null,
         [Description("Update relationship type")]
         string? relationshipType = null,
-        [Description("Replace child references")]
-        string[]? childHandles = null,
+        [Description("Replace child references. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? childHandles = null,
         [Description("Child relationship types to match childHandles")]
         string[]? childRefTypes = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
-        [Description("Replace tag handles")]
-        string[]? tagHandles = null,
+        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -203,14 +205,15 @@ public static class FamilyTools
                 return $"Family not found: {handle}";
 
             var childRefList = new List<GrampsChildRef>();
-            if (childHandles != null && childHandles.Length > 0)
+            var childHandleArrayUpdate = (string[]?)childHandles;
+            if (childHandleArrayUpdate != null && childHandleArrayUpdate.Length > 0)
             {
-                for (int i = 0; i < childHandles.Length; i++)
+                for (int i = 0; i < childHandleArrayUpdate.Length; i++)
                 {
                     var refType = childRefTypes?.Length > i ? childRefTypes[i] : "Birth";
                     childRefList.Add(new GrampsChildRef
                     {
-                        Ref = childHandles[i],
+                        Ref = childHandleArrayUpdate[i],
                         FatherRelType = refType,
                         MotherRelType = refType
                     });
@@ -230,8 +233,8 @@ public static class FamilyTools
                 MediaList = family.MediaList,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests(family.AttributeList),
                 CitationList = family.CitationList,
-                NoteList = noteHandles ?? family.NoteList,
-                TagList = tagHandles ?? family.TagList,
+                NoteList = (string[]?)noteHandles ?? family.NoteList,
+                TagList = (string[]?)tagHandles ?? family.TagList,
                 Private = family.Private,
                 Relationship = relationshipType ?? family.Relationship
             };

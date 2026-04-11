@@ -4,6 +4,7 @@ using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -58,12 +59,12 @@ public static class EventTools
         string? placeHandle = null,
         [Description("Event description (optional)")]
         string? description = null,
-        [Description("Array of citation handles (optional)")]
-        string[]? citationHandles = null,
-        [Description("Array of note handles (optional)")]
-        string[]? noteHandles = null,
-        [Description("Array of tag handles (optional)")]
-        string[]? tagHandles = null,
+        [Description("Citation handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -117,12 +118,12 @@ public static class EventTools
         string? placeHandle = null,
         [Description("Update description")]
         string? description = null,
-        [Description("Replace citation handles")]
-        string[]? citationHandles = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
-        [Description("Replace tag handles")]
-        string[]? tagHandles = null,
+        [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -147,9 +148,9 @@ public static class EventTools
                 Description = description ?? evt.Description,
                 MediaList = evt.MediaList,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),
-                CitationList = citationHandles ?? evt.CitationList,
-                NoteList = noteHandles ?? evt.NoteList,
-                TagList = tagHandles ?? evt.TagList,
+                CitationList = (string[]?)citationHandles ?? evt.CitationList,
+                NoteList = (string[]?)noteHandles ?? evt.NoteList,
+                TagList = (string[]?)tagHandles ?? evt.TagList,
                 Private = evt.Private
             };
 

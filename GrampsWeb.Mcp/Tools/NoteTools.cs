@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -50,8 +51,8 @@ public static class NoteTools
         string noteType = "General",
         [Description("Text format: 0=Plain Text, 1=HTML (default: 0)")]
         int format = 0,
-        [Description("Array of tag handles (optional)")]
-        string[]? tagHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         [Description("Mark as private (optional)")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
@@ -99,8 +100,8 @@ public static class NoteTools
         string? noteType = null,
         [Description("Update format (0=Plain, 1=HTML)")]
         int? format = null,
-        [Description("Replace tag handles")]
-        string[]? tagHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         GrampsApiClient client = null!)
     {
         try
@@ -122,7 +123,7 @@ public static class NoteTools
                 },
                 Type = noteType ?? note.Type,
                 Format = format ?? note.Format,
-                TagList = tagHandles ?? note.TagList,
+                TagList = (string[]?)tagHandles ?? note.TagList,
                 Private = note.Private
             };
 
