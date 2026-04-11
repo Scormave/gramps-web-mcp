@@ -121,7 +121,7 @@ public static class FamilyFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", family.CitationList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Media", family.MediaList);
-        if (family.TagList?.Length > 0)      sb.AppendLine($"Tags:      {string.Join(", ", family.TagList)}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
         if (family.Private)                  sb.AppendLine("⚠ Private record");
 
         return sb.ToString();

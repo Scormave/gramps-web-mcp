@@ -124,7 +124,7 @@ public static class PersonFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", person.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", person.CitationList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Media", person.MediaList);
-        if (person.TagList?.Length > 0)      sb.AppendLine($"Tags:      {string.Join(", ", person.TagList)}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", person.TagList);
         if (person.Private)                  sb.AppendLine("⚠ Private record");
 
         if (person.AlternateNames is { Length: > 0 })

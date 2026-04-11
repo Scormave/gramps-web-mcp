@@ -33,8 +33,7 @@ public static class RepositoryFormatter
         }
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", repo.NoteList);
-        if (repo.TagList?.Length > 0)
-            sb.AppendLine($"Tags:  {string.Join(", ", repo.TagList)}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", repo.TagList);
 
         return sb.ToString();
     }

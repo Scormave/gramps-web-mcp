@@ -22,8 +22,7 @@ public static class MediaFormatter
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", media.NoteList);
-        if (media.TagList?.Length > 0)
-            sb.AppendLine($"Tags:      {string.Join(", ", media.TagList)}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", media.TagList);
         if (media.Private)
             sb.AppendLine("⚠ Private record");
 

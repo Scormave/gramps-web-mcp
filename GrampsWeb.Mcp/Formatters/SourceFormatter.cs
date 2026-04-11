@@ -37,8 +37,7 @@ public static class SourceFormatter
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", source.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Media", source.MediaList);
-        if (source.TagList?.Length > 0)
-            sb.AppendLine($"Tags:    {string.Join(", ", source.TagList)}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", source.TagList);
 
         return sb.ToString();
     }

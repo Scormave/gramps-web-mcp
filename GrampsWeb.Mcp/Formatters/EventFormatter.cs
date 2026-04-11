@@ -44,8 +44,7 @@ public static class EventFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", evt.CitationList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", evt.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Media", evt.MediaList);
-        if (evt.TagList?.Length > 0)
-            sb.AppendLine($"Tags:      {string.Join(", ", evt.TagList)}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", evt.TagList);
         if (evt.Private)
             sb.AppendLine("⚠ Private record");
 

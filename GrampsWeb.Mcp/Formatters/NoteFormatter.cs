@@ -21,11 +21,7 @@ public static class NoteFormatter
         sb.AppendLine($"Format: {(note.Format == 1 ? "Flowed (HTML)" : "Plain Text")}");
         sb.AppendLine();
         sb.AppendLine(note.Text ?? "(empty)");
-        if (note.TagList?.Length > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"Tags: {string.Join(", ", note.TagList)}");
-        }
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", note.TagList);
         return sb.ToString();
     }
 }
