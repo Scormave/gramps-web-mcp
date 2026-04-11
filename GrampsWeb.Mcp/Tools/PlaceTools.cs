@@ -105,7 +105,11 @@ public static class PlaceTools
 
             var request = new CreatePlaceRequest
             {
-                Name = name,
+                Name = new PlaceNameRequest
+                {
+                    Value = name.Trim(),
+                    Lang = string.IsNullOrWhiteSpace(nameLang) ? null : nameLang.Trim()
+                },
                 Type = placeType,
                 Latitude = lat,
                 Longitude = lon,
@@ -114,11 +118,12 @@ public static class PlaceTools
             };
 
             var response = await client.PostMutationAsync<GrampsPlace>("/api/places/", request, "Place");
+            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
             return $"Place created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
                    $"Name: {response.Name}\n" +
-                   $"Type: {response.Type ?? "—"}";
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {
@@ -163,7 +168,7 @@ public static class PlaceTools
                 Handle = place.Handle,
                 GrampsId = place.GrampsId,
                 Change = place.Change,
-                Name = name ?? place.Name,
+                Name = new PlaceNameRequest { Value = (name ?? place.Name)?.Trim() ?? "" },
                 Type = placeType ?? place.Type,
                 Code = place.Code,
                 Latitude = lat ?? place.Latitude,
@@ -178,9 +183,12 @@ public static class PlaceTools
             };
 
             var response = await client.PutMutationAsync<GrampsPlace>($"/api/places/{handle}", updateRequest, "Place");
+            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
             return $"Place updated successfully\n" +
                    $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Name: {response.Name ?? "—"}\n" +
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {

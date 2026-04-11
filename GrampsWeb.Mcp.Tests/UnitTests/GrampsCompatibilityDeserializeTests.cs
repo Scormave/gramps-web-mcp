@@ -125,6 +125,37 @@ public class GrampsCompatibilityDeserializeTests
         var place = JsonSerializer.Deserialize<GrampsPlace>(json, GrampsJson.Options);
         Assert.NotNull(place);
         Assert.Equal("Twin Falls", place!.Name);
+        Assert.Equal("City", place.Type);
+    }
+
+    [Fact]
+    public void Deserialize_Place_PlaceTypeAsMutationObject_UsesStringOrValue()
+    {
+        const string json = """
+            {
+              "handle": "1026dd3ba3c522f1d3ed8b0dbdc4",
+              "name": { "value": "New Zealand", "lang": "" },
+              "place_type": { "_class": "PlaceType", "string": "", "value": 1 }
+            }
+            """;
+        var place = JsonSerializer.Deserialize<GrampsPlace>(json, GrampsJson.Options);
+        Assert.NotNull(place);
+        Assert.Equal("New Zealand", place!.Name);
+        Assert.Equal("1", place.Type);
+    }
+
+    [Fact]
+    public void Deserialize_Place_PlaceTypeObject_WithNonEmptyString_PrefersString()
+    {
+        const string json = """
+            {
+              "handle": "H1",
+              "place_type": { "_class": "PlaceType", "string": "Country", "value": 1 }
+            }
+            """;
+        var place = JsonSerializer.Deserialize<GrampsPlace>(json, GrampsJson.Options);
+        Assert.NotNull(place);
+        Assert.Equal("Country", place!.Type);
     }
 
     [Fact]

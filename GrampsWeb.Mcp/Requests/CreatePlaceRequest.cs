@@ -20,7 +20,7 @@ public class CreatePlaceRequest
     public long? Change { get; set; }
 
     [JsonPropertyName("name")]
-    public string? Name { get; set; }
+    public PlaceNameRequest? Name { get; set; }
 
     [JsonPropertyName("place_type")]
     public string? Type { get; set; }
