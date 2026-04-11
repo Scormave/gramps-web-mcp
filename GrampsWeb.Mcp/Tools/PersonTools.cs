@@ -143,7 +143,8 @@ public static class PersonTools
         "dates: range 'YYYY/MM/DD-YYYY/MM/DD', or open 'YYYY/MM/DD-' or '-YYYY/MM/DD'. Leading zeros in month/day are normalized for the API. " +
         "include_undated: default true — Gramps may still show a formatted date while sortval is 0; the API hides those unless discard_empty=false. " +
         "Set false only to match strict API default (omit events Gramps treats as undated). " +
-        "ratings: include citation confidence scores (0=very low … 4=very high).")]
+        "ratings: include citation confidence scores (0=very low … 4=very high). " +
+        "Rows include [event: handle] when the API provides handles, for get_event follow-up.")]
     public static async Task<string> GetPersonTimeline(
         [Description("Person handle")]
         string handle,

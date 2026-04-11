@@ -27,13 +27,20 @@ public static class TimelineFormatter
             var relative = !string.IsNullOrEmpty(entry.Name) ? $" ({entry.Name})" : "";
             var rating = entry.Rating.HasValue ? $" ★{entry.Rating:F1}" : "";
             var desc = !string.IsNullOrEmpty(entry.Description) ? $"\n    {entry.Description}" : "";
+            var handleSuffix = !string.IsNullOrWhiteSpace(entry.Handle)
+                ? $"  [event: {entry.Handle.Trim()}]"
+                : "";
 
-            sb.AppendLine($"{dateStr}: {type}{role}{place}{relative}{rating}{desc}");
+            sb.AppendLine($"{dateStr}: {type}{role}{place}{relative}{rating}{desc}{handleSuffix}");
         }
 
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Renders timeline rows in chronological order (by decade when there are more than 20 rows).
+    /// Each row appends <c>[event: handle]</c> when the entry has a handle.
+    /// </summary>
     public static string FormatTimelineChronological(GrampsTimelineEntry[] entries)
     {
         if (entries == null || entries.Length == 0)
@@ -80,8 +87,11 @@ public static class TimelineFormatter
         var relative = !string.IsNullOrEmpty(entry.Name) ? $" ({entry.Name})" : "";
         var rating = entry.Rating.HasValue ? $" ★{entry.Rating:F1}" : "";
         var desc = !string.IsNullOrEmpty(entry.Description) ? $"\n    {entry.Description}" : "";
+        var handleSuffix = !string.IsNullOrWhiteSpace(entry.Handle)
+            ? $"  [event: {entry.Handle.Trim()}]"
+            : "";
 
-        return $"  {dateStr}: {type}{role}{place}{relative}{rating}{desc}";
+        return $"  {dateStr}: {type}{role}{place}{relative}{rating}{desc}{handleSuffix}";
     }
 
     private static string FormatDateText(GrampsTimelineEntry entry) =>

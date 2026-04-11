@@ -64,6 +64,33 @@ public class FormatterIntegrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void FormatTimelineChronological_IncludesHandlePerRowWhenPresent()
+    {
+        var events = new[]
+        {
+            new GrampsTimelineEntry
+            {
+                Handle = "e111",
+                Type = "Birth",
+                Date = "1900-01-01"
+            },
+            new GrampsTimelineEntry
+            {
+                Handle = "e222",
+                Type = "Death",
+                Date = "1950-01-01"
+            }
+        };
+
+        var result = TimelineFormatter.FormatTimelineChronological(events);
+
+        Assert.Contains("[event: e111]", result);
+        Assert.Contains("[event: e222]", result);
+        Assert.DoesNotContain("Event handles:", result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void FormatTimelineChronological_WithOverTwentyEvents_GroupsByDecade()
     {
         // Arrange - create 25 events spanning multiple decades

@@ -74,7 +74,8 @@ public static class FamilyTools
         "events: filter by category — vital, family, religious, vocational, academic, travel, legal, residence, other, custom. " +
         "dates: date range; zero-padding in month/day is normalized for the API (1999/1/1 not 1999/01/01). " +
         "By default, events with sortval 0 are still included (discard_empty=false), matching person timeline behavior. " +
-        "ratings: include citation confidence scores.")]
+        "ratings: include citation confidence scores. " +
+        "Rows include [event: handle] when the API provides handles, for get_event follow-up.")]
     public static async Task<string> GetFamilyTimeline(
         [Description("Family handle")]
         string handle,

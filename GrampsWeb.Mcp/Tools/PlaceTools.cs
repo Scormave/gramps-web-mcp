@@ -43,7 +43,8 @@ public static class PlaceTools
     [Description(
         "Get chronological timeline of events at this place. " +
         "Loads each linked event; " +
-        "only events whose place field matches this handle are included (child vs parent places differ). ")]
+        "only events whose place field matches this handle are included (child vs parent places differ). " +
+        "Rows include [event: handle] when known, for follow-up get_event calls.")]
     public static async Task<string> GetPlaceTimeline(
         [Description("Place handle")]
         string handle,
