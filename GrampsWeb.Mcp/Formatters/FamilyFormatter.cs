@@ -137,9 +137,10 @@ public static class FamilyFormatter
             relLabel = "Unknown";
 
         var sb = new StringBuilder();
-        sb.AppendLine($"FAMILY (extended) [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
-        sb.AppendLine($"Relationship: {relLabel}");
+        sb.AppendLine($"Family (extended) [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
         sb.AppendLine(new string('=', 60));
+        sb.AppendLine($"Relationship: {relLabel}");
+        sb.AppendLine();
 
         var father = family.Extended?.Father;
         if (father != null)
@@ -177,12 +178,27 @@ public static class FamilyFormatter
                 sb.AppendLine($"  • {summary} [handle: {child.Handle}] (frel: {frel}, mrel: {mrel})");
             }
         }
+        else if (family.ChildRefList?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Children ({family.ChildRefList.Length}):");
+            foreach (var child in family.ChildRefList)
+            {
+                var frel = child.FatherRelType ?? "Birth";
+                var mrel = child.MotherRelType ?? "Birth";
+                sb.AppendLine($"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}");
+            }
+        }
+        else
+        {
+            sb.AppendLine("Children: none");
+        }
 
         var extEvents = family.Extended?.Events;
         if (extEvents?.Length > 0)
         {
             sb.AppendLine();
-            sb.AppendLine("EVENTS:");
+            sb.AppendLine($"Events ({extEvents.Length}):");
             foreach (var evt in extEvents)
             {
                 var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : "—";
@@ -198,14 +214,21 @@ public static class FamilyFormatter
                 }
                 var role = family.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
                 var evtTypeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, tables.EventTypes);
-                sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]");
+                var evtHandleSuffix = string.IsNullOrWhiteSpace(evt.Handle)
+                    ? ""
+                    : $" [handle: {evt.Handle.Trim()}]";
+                var placeHandleSuffix = string.IsNullOrWhiteSpace(evt.Place)
+                    ? ""
+                    : $" [place: {evt.Place.Trim()}]";
+                sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]{placeHandleSuffix}{evtHandleSuffix}");
             }
         }
 
         var extNotes = family.Extended?.Notes;
         if (extNotes?.Length > 0)
         {
-            sb.AppendLine("\nNOTES:");
+            sb.AppendLine();
+            sb.AppendLine($"Notes ({extNotes.Length}):");
             foreach (var note in extNotes)
             {
                 var snippet = note.Text?.Replace('\n', ' ').Trim() ?? "";
@@ -213,13 +236,41 @@ public static class FamilyFormatter
                 var noteTypeLabel = string.IsNullOrWhiteSpace(note.Type)
                     ? "General"
                     : GrampsDefaultTypeLabels.ResolveStored(note.Type.Trim(), tables.NoteTypes);
-                sb.AppendLine($"  • [{noteTypeLabel}] {snippet}");
+                var nh = string.IsNullOrWhiteSpace(note.Handle) ? "—" : note.Handle.Trim();
+                sb.AppendLine($"  • [{noteTypeLabel}] {snippet} [handle: {nh}]");
             }
         }
 
+        var extCitations = family.Extended?.Citations;
+        if (extCitations?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Citations ({extCitations.Length}):");
+            foreach (var c in extCitations)
+            {
+                var pagePart = string.IsNullOrWhiteSpace(c.Page) ? "" : $"p. {c.Page.Trim()} — ";
+                var ch = string.IsNullOrWhiteSpace(c.Handle) ? "—" : c.Handle.Trim();
+                var sh = string.IsNullOrWhiteSpace(c.Source) ? "" : $" source [handle: {c.Source.Trim()}]";
+                sb.AppendLine($"  • {pagePart}[handle: {ch}]{sh}");
+            }
+        }
+
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", family.MediaList);
+
         var extTags = family.Extended?.Tags;
         if (extTags?.Length > 0)
-            sb.AppendLine($"\nTAGS: {string.Join(", ", extTags.Select(t => t.Name))}");
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Tags ({extTags.Length}):");
+            foreach (var t in extTags)
+            {
+                var label = string.IsNullOrWhiteSpace(t.Name) ? "Tag" : t.Name.Trim();
+                var th = string.IsNullOrWhiteSpace(t.Handle) ? "—" : t.Handle.Trim();
+                sb.AppendLine($"  • {label} [handle: {th}]");
+            }
+        }
+
+        if (family.Private) sb.AppendLine("⚠ Private record");
 
         return sb.ToString();
     }
