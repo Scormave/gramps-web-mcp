@@ -107,7 +107,7 @@ public static class TypeTools
             citations = "create_citation / update_citation — date + dateComponentOrder",
             media = "update_media — date + dateComponentOrder",
             persons =
-                "create_person / update_person — primaryNameDate (string) + primaryNameDateOrder; overrides nested primary_name.date when set"
+                "create_person / update_person — primaryNameDate (string) + primaryNameDateOrder; gender: Female, Male, or Unknown (not integers)"
         },
         fallback =
             "Strings that do not match structured patterns are stored as Gramps text-only dates (modifier 6)."

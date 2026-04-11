@@ -7,6 +7,7 @@ using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
+using GrampsWeb.Mcp.Tools.Parsing;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -44,7 +45,7 @@ public static class CitationTools
     [Description(
         "Create a citation linking a source to evidence. " +
         "sourceHandle: must be an existing source (use create_source first). " +
-        "confidence: 0=Very Low, 1=Low, 2=Normal, 3=High, 4=Very High. " +
+        "confidence: Very Low, Low, Normal, High, or Very High (default: Normal). " +
         "Returns citation handle — link to person/event via update. " +
         "Access date strings: get_date_input_guide().")]
     public static async Task<string> CreateCitation(
@@ -52,8 +53,8 @@ public static class CitationTools
         string sourceHandle,
         [Description("Page reference within source (optional)")]
         string? page = null,
-        [Description("Confidence level: 0=Very Low, 1=Low, 2=Normal, 3=High, 4=Very High (default: 2)")]
-        int confidence = 2,
+        [Description("Confidence: Very Low, Low, Normal, High, or Very High (default: Normal)")]
+        string confidence = "Normal",
         [Description("Access date as text (optional). Formats: get_date_input_guide().")]
         string? date = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
@@ -67,7 +68,7 @@ public static class CitationTools
             if (string.IsNullOrWhiteSpace(sourceHandle))
                 throw McpToolErrors.ValidationError("Error: sourceHandle is required");
 
-            confidence = Math.Clamp(confidence, 0, 4);
+            var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
 
             var dateRequest = AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder);
 
@@ -75,7 +76,7 @@ public static class CitationTools
             {
                 Source = sourceHandle,
                 Page = page,
-                Confidence = confidence,
+                Confidence = confidenceLevel,
                 Date = dateRequest,
                 NoteList = noteHandles
             };
@@ -106,8 +107,8 @@ public static class CitationTools
         string? sourceHandle = null,
         [Description("Update page reference")]
         string? page = null,
-        [Description("Update confidence level")]
-        int? confidence = null,
+        [Description("Update confidence: Very Low, Low, Normal, High, or Very High (omit to keep current)")]
+        string? confidence = null,
         [Description("Update access date as text (optional). Empty string clears. Formats: get_date_input_guide().")]
         string? date = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
@@ -122,7 +123,10 @@ public static class CitationTools
             if (citation == null)
                 return $"Citation not found: {handle}";
 
-            var finalConfidence = Math.Clamp(confidence ?? citation.Confidence, 0, 4);
+            var finalConfidence = Math.Clamp(
+                CitationConfidenceParser.ParseOptional(confidence) ?? citation.Confidence,
+                0,
+                4);
 
             var dateRequest = date != null
                 ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)

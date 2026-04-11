@@ -7,6 +7,7 @@ using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
+using GrampsWeb.Mcp.Tools.Parsing;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -223,7 +224,8 @@ public static class PersonTools
         "Pass event handles directly — no separate update call needed. " +
         "eventRefHandles and eventRefRoles must be same length (use 'Primary' for main events). " +
         "Returns the handle of the created person. " +
-        "primaryNameDate overrides any date embedded in primaryName. Date formats: get_date_input_guide().")]
+        "primaryNameDate overrides any date embedded in primaryName. Date formats: get_date_input_guide(). " +
+        "gender: Female, Male, or Unknown (default: Unknown).")]
     public static async Task<string> CreatePerson(
         [Description("Primary name object. Must include first_name and surname_list (see get_name_schema)")]
         GrampsName primaryName,
@@ -231,8 +233,8 @@ public static class PersonTools
         string? primaryNameDate = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
         DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
-        [Description("Gender: 0=Female, 1=Male, 2=Unknown (default: 2)")]
-        int gender = 2,
+        [Description("Gender: Female, Male, or Unknown (default: Unknown)")]
+        string gender = "Unknown",
         [Description("Event handles to link to this person. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? eventRefHandles = null,
         [Description("Array of event roles (e.g. 'Primary', 'Witness'). Must match eventRefHandles length")]
@@ -253,7 +255,9 @@ public static class PersonTools
         {
             if (primaryName == null)
                 throw McpToolErrors.ValidationError("Error: primaryName is required");
-            
+
+            var genderCode = GrampsGenderParser.ParseRequired(gender);
+
             // Build event_ref_list
             var eventRefList = new List<EventRefRequest>();
             var eventRefHandleArray = (string[]?)eventRefHandles;
@@ -279,7 +283,7 @@ public static class PersonTools
 
             var request = new CreatePersonRequest
             {
-                Gender = gender,
+                Gender = genderCode,
                 PrimaryName = ConvertNameToRequest(primaryName, primaryNameDate, primaryNameDateOrder),
                 AlternateNames = null,
                 EventRefList = eventRefList.Count > 0 ? eventRefList.ToArray() : null,
@@ -308,7 +312,8 @@ public static class PersonTools
         "To add an event, include existing event handles in eventRefHandles. " +
         "⚠ WARNING: passing empty lists will REMOVE those linked objects (e.g. empty tagHandles removes all tags). " +
         "primaryNameDate updates only the name date when primaryName is omitted (requires existing primary name). " +
-        "Date formats: get_date_input_guide().")]
+        "Date formats: get_date_input_guide(). " +
+        "gender: omit to keep; otherwise Female, Male, or Unknown.")]
     public static async Task<string> UpdatePerson(
         [Description("Person handle")]
         string handle,
@@ -318,8 +323,8 @@ public static class PersonTools
         string? primaryNameDate = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
         DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
-        [Description("Update gender: 0=Female, 1=Male, 2=Unknown")]
-        int? gender = null,
+        [Description("Update gender: Female, Male, or Unknown (omit to keep current)")]
+        string? gender = null,
         [Description("Replace event references. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? eventRefHandles = null,
         [Description("Event roles to match eventRefHandles length")]
@@ -363,7 +368,7 @@ public static class PersonTools
                 Handle = person.Handle,
                 GrampsId = person.GrampsId,
                 Change = person.Change,
-                Gender = gender ?? person.Gender,
+                Gender = GrampsGenderParser.ParseOptional(gender) ?? person.Gender,
                 PrimaryName = primaryReq,
                 AlternateNames = person.AlternateNames?.Select(an => ConvertNameToRequest(an)).ToArray(),
                 EventRefList = eventRefHandles != null

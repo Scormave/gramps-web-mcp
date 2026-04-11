@@ -6,6 +6,7 @@ using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
+using GrampsWeb.Mcp.Tools.Parsing;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -41,7 +42,7 @@ public static class NoteTools
     [McpServerTool]
     [Description(
         "Create a text note. Call get_types() for valid note_type values. " +
-        "format: 0=Plain text, 1=Formatted (HTML). " +
+        "format: Plain or Html (default: Plain). " +
         "After creating, add note handle to any object via update_{type}(noteHandles). " +
         "Returns note handle.")]
     public static async Task<string> CreateNote(
@@ -49,8 +50,8 @@ public static class NoteTools
         string text,
         [Description("Note type — call get_types to get valid values (default: 'General')")]
         string noteType = "General",
-        [Description("Text format: 0=Plain Text, 1=HTML (default: 0)")]
-        int format = 0,
+        [Description("Text format: Plain or Html (default: Plain)")]
+        string format = "Plain",
         [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Mark as private (optional)")]
@@ -62,11 +63,13 @@ public static class NoteTools
             if (string.IsNullOrWhiteSpace(text))
                 throw McpToolErrors.ValidationError("Error: text is required");
 
+            var formatCode = NoteTextFormatParser.ParseRequired(format);
+
             var request = new CreateNoteRequest
             {
                 Text = new StyledTextRequest { Text = text, Tags = [] },
                 Type = noteType,
-                Format = format,
+                Format = formatCode,
                 TagList = tagHandles,
                 Private = isPrivate
             };
@@ -98,8 +101,8 @@ public static class NoteTools
         string? text = null,
         [Description("Update note type")]
         string? noteType = null,
-        [Description("Update format (0=Plain, 1=HTML)")]
-        int? format = null,
+        [Description("Update format: Plain or Html (omit to keep current)")]
+        string? format = null,
         [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         GrampsApiClient client = null!)
@@ -122,7 +125,7 @@ public static class NoteTools
                     Tags = []
                 },
                 Type = noteType ?? note.Type,
-                Format = format ?? note.Format,
+                Format = NoteTextFormatParser.ParseOptional(format) ?? note.Format,
                 TagList = (string[]?)tagHandles ?? note.TagList,
                 Private = note.Private
             };

@@ -65,8 +65,9 @@ public class GrampsPerson
     [JsonPropertyName("gramps_id")]
     public string? GrampsId { get; set; }
 
+    /// <summary>Gramps API: 0=Female, 1=Male, 2=Unknown. MCP create/update tools accept names (Female/Male/Unknown).</summary>
     [JsonPropertyName("gender")]
-    public int Gender { get; set; } = 2; // 0=Female, 1=Male, 2=Unknown
+    public int Gender { get; set; } = 2;
 
     [JsonPropertyName("primary_name")]
     public GrampsName? PrimaryName { get; set; }
