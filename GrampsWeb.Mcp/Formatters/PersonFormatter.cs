@@ -97,20 +97,16 @@ public static class PersonFormatter
         if (birthInfo != null) sb.AppendLine($"Birth:     {birthInfo}");
         if (deathInfo != null) sb.AppendLine($"Death:     {deathInfo}");
 
-        sb.AppendLine();
-
-        if (person.FamilyList?.Length > 0)
-        {
-            sb.AppendLine($"Families (as parent/spouse): {person.FamilyList.Length}");
-            foreach (var fh in person.FamilyList)
-                sb.AppendLine($"  • [handle: {fh}]");
-        }
+        HandleListFormatter.AppendHandleBulletSection(sb, "Families as parent/spouse", person.FamilyList);
 
         if (person.ParentFamilyList?.Length > 0)
         {
-            sb.AppendLine($"Parent families (as child): {person.ParentFamilyList.Length}");
-            foreach (var pf in person.ParentFamilyList)
-                sb.AppendLine($"  • [handle: {pf.Ref}]");
+            string[] parentFamilyHandles = person.ParentFamilyList
+                .Select(pf => pf.Ref)
+                .Where(r => !string.IsNullOrWhiteSpace(r))
+                .Select(r => r!)
+                .ToArray();
+            HandleListFormatter.AppendHandleBulletSection(sb, "Parent families as child", parentFamilyHandles);
         }
 
         if (person.EventRefList?.Length > 0)
