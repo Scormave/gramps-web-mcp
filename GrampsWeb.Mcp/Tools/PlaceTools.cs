@@ -41,30 +41,28 @@ public static class PlaceTools
 
     [McpServerTool]
     [Description(
-        "Get chronological timeline of all events that occurred at this place. " +
-        "events: filter by category (vital, family, religious, vocational, academic, travel, legal, residence, other, custom). " +
-        "dates: date range; month/day must not use leading zeros for the API (e.g. 1999/1/1-2010/1/1); zero-padding is normalized automatically. " +
-        "By default, events with sortval 0 are still included (discard_empty=false). " +
-        "Useful for finding all families and people connected to a location over time.")]
+        "Get chronological timeline of events at this place. " +
+        "Loads each linked event; " +
+        "only events whose place field matches this handle are included (child vs parent places differ). ")]
     public static async Task<string> GetPlaceTimeline(
         [Description("Place handle")]
         string handle,
-        [Description("Event categories to include")]
-        string[]? events = null,
-        [Description("Date range filter as 'YYYY/MM/DD-YYYY/MM/DD'")]
-        string? dates = null,
         GrampsApiClient client = null!)
     {
         try
         {
-            var qs = PersonTools.BuildTimelineQueryString(events, null, null, dates, false);
-            var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
-                $"/api/places/{handle}/timeline{qs}");
-            if (timeline == null)
+            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
+            if (place == null)
                 return $"Place not found: {handle}";
-            if (timeline.Length == 0)
-                return $"No timeline events found for place {handle}";
-            return TimelineFormatter.FormatTimelineChronological(timeline);
+
+            var entries = await PlaceTimelineFallback.CollectAsync(client, handle, place);
+            if (entries.Length == 0)
+                return
+                    $"No events linked directly to place {handle}. " +
+                    "No events reference this exact place handle in backlinks " +
+                    "(events often use a city or address place, not the parent country or region).";
+
+            return TimelineFormatter.FormatTimelineChronological(entries);
         }
         catch (Exception ex)
         {

@@ -20,8 +20,8 @@ public class GrampsTimelinePlaceProfile
 
 /// <summary>
 /// Represents a single entry in a Gramps timeline response.
-/// Returned by /api/people/{handle}/timeline, /api/families/{handle}/timeline,
-/// and /api/places/{handle}/timeline.
+/// Returned by /api/people/{handle}/timeline and /api/families/{handle}/timeline.
+/// For places, MCP may synthesize rows from events (backlinks); the bundled API spec does not define <c>/api/places/{handle}/timeline</c>.
 /// </summary>
 /// <remarks>
 /// The timeline API returns <c>date</c> as a <b>formatted display string</b> (see OpenAPI <c>TimelineEventProfile.date</c>),

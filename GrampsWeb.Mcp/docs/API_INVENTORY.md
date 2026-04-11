@@ -14,7 +14,8 @@ Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, and `G
 | `GET /api/people/{h}/relationships?other=` | Object | `JsonElement` |
 | `GET /api/families/{handle}` | Family | `GrampsFamily` |
 | `GET /api/families/{handle}?extend=all` | Family extended | `GrampsFamilyExtended` |
-| `GET /api/families/{h}/timeline`, places timeline | Array | `GrampsTimelineEntry[]` |
+| `GET /api/families/{h}/timeline` | Array | `GrampsTimelineEntry[]` |
+| `GET /api/places/{h}?backlinks=true` + `GET /api/events/{eh}` | Derived | `GrampsTimelineEntry[]` (MCP synthesizes; no `/places/{h}/timeline` in apispec) |
 | `GET /api/events/{handle}` | Event | `GrampsEvent` |
 | `GET /api/places/{handle}` | Place | `GrampsPlace` |
 | `GET /api/sources/{handle}` | Source | `GrampsSource` |
