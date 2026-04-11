@@ -216,6 +216,50 @@ public static class PersonFormatter
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Formats ancestor or descendant tool output with generation index and optional kinship labels.
+    /// </summary>
+    public static async Task<string> FormatPersonTreeRows(
+        string title,
+        string rootHandle,
+        IReadOnlyList<PersonTreeRow> rows,
+        bool kinshipLabels,
+        GrampsApiClient client)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"{title} [root: {rootHandle}]");
+        sb.AppendLine(new string('=', 60));
+        sb.AppendLine($"Total: {rows.Count}");
+        sb.AppendLine();
+
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            var summary = await FormatPersonSummary(row.Person, client);
+            var genPart = $"Gen {row.Generation}";
+
+            string headLine;
+            if (kinshipLabels)
+            {
+                if (row.AncestorPathFromRoot is { Count: > 0 } ancestorPath)
+                    headLine = $"{genPart} — {KinshipLabels.AncestorChainLabel(ancestorPath)}";
+                else if (row.AncestorPathFromRoot is not null)
+                    headLine = genPart;
+                else
+                    headLine =
+                        $"{genPart} — {KinshipLabels.DescendantKinshipLabel(row.Generation, row.Person.Gender)}";
+            }
+            else
+                headLine = genPart;
+
+            sb.AppendLine($"  {i + 1}. {headLine}");
+            sb.AppendLine($"     {summary}");
+            sb.AppendLine($"     [handle: {row.Person.Handle}] (gramps_id: {row.Person.GrampsId})");
+        }
+
+        return sb.ToString();
+    }
+
     public static async Task<string> FormatPersonList(
         string title, string rootHandle, GrampsPerson[] people, GrampsApiClient client)
     {

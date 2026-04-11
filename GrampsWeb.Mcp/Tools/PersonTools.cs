@@ -73,25 +73,29 @@ public static class PersonTools
     [McpServerTool]
     [Description(
         "Get ancestor tree up to N generations. Returns names, birth/death dates and places " +
-        "for each ancestor. Uses server-side BFS traversal — no HTML reports. " +
+        "for each ancestor. Each line includes Gen N and optional kinship (Father, Mother's father, …). " +
         "Use handle from search() or list_objects('people').")]
     public static async Task<string> GetAncestors(
         [Description("Person handle")]
         string handle,
         [Description("Number of ancestor generations to include (default: 3, max: 10)")]
         int generations = 3,
+        [Description("When true (default), add kinship text from the father/mother chain (e.g. Father's mother). When false, only Gen N.")]
+        bool kinship_labels = true,
         GrampsApiClient client = null!)
     {
         try
         {
             generations = Math.Clamp(generations, 1, 10);
-            var ancestors = await client.GetOrNullIfNotFoundAsync<GrampsPerson[]>(
-                $"/api/people/{handle}/ancestors?generations={generations}");
+            var ancestors = await PersonTreeTraversal.CollectAncestorsAsync(client, handle, generations);
             if (ancestors == null)
                 return $"Person not found: {handle}";
             if (ancestors.Length == 0)
-                return $"No ancestors found for {handle}";
-            return await PersonFormatter.FormatPersonList("ANCESTOR TREE", handle, ancestors, client);
+                return
+                    $"No ancestors found for {handle}. " +
+                    "Only people linked through a parent family (where this person is the child) appear. " +
+                    "Spouse-only links do not count as ancestors. Use get_person_extended to inspect family links.";
+            return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", handle, ancestors, kinship_labels, client);
         }
         catch (Exception ex)
         {
@@ -102,24 +106,27 @@ public static class PersonTools
     [McpServerTool]
     [Description(
         "Get descendant tree up to N generations. Returns names, birth/death dates and places " +
-        "for each descendant. Uses server-side BFS traversal.")]
+        "for each descendant. Each line includes Gen N and optional kinship (Son, Granddaughter, …) based on recorded gender.")]
     public static async Task<string> GetDescendants(
         [Description("Person handle")]
         string handle,
         [Description("Number of descendant generations to include (default: 3, max: 10)")]
         int generations = 3,
+        [Description("When true (default), add kinship (Son/Daughter/Grandson/…). When false, only Gen N.")]
+        bool kinship_labels = true,
         GrampsApiClient client = null!)
     {
         try
         {
             generations = Math.Clamp(generations, 1, 10);
-            var descendants = await client.GetOrNullIfNotFoundAsync<GrampsPerson[]>(
-                $"/api/people/{handle}/descendants?generations={generations}");
+            var descendants = await PersonTreeTraversal.CollectDescendantsAsync(client, handle, generations);
             if (descendants == null)
                 return $"Person not found: {handle}";
             if (descendants.Length == 0)
-                return $"No descendants found for {handle}";
-            return await PersonFormatter.FormatPersonList("DESCENDANT TREE", handle, descendants, client);
+                return
+                    $"No descendants found for {handle}. " +
+                    "Only children linked on families where this person is a parent are included; if none are recorded, the list is empty.";
+            return await PersonFormatter.FormatPersonTreeRows("DESCENDANT TREE", handle, descendants, kinship_labels, client);
         }
         catch (Exception ex)
         {
