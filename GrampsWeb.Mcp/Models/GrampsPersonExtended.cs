@@ -22,8 +22,9 @@ public class GrampsPersonExtended : GrampsPerson
 /// </summary>
 public class GrampsPersonExtendedData
 {
+    /// <summary>Event rows; nested place is filled via <c>GET /api/events/…?extend=place</c> when absent.</summary>
     [JsonPropertyName("events")]
-    public GrampsEvent[]? Events { get; set; }
+    public GrampsEventExtended[]? Events { get; set; }
 
     /// <summary>Families where this person is a parent/spouse.</summary>
     [JsonPropertyName("families")]
@@ -39,8 +40,13 @@ public class GrampsPersonExtendedData
     [JsonPropertyName("tags")]
     public GrampsTag[]? Tags { get; set; }
 
+    /// <summary>Media rows from <c>extend</c>; otherwise filled from top-level <c>media_list</c> handles.</summary>
+    [JsonPropertyName("media")]
+    public GrampsMedia[]? Media { get; set; }
+
+    /// <summary>Citation rows from <c>extend</c>; use <see cref="GrampsCitationExtended"/> for optional nested <c>extended.source</c>.</summary>
     [JsonPropertyName("citations")]
-    public GrampsCitation[]? Citations { get; set; }
+    public GrampsCitationExtended[]? Citations { get; set; }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -62,8 +68,9 @@ public class GrampsFamilyExtended : GrampsFamily
 /// </summary>
 public class GrampsFamilyExtendedData
 {
+    /// <summary>Event rows; nested place is filled via <c>GET /api/events/…?extend=place</c> when absent.</summary>
     [JsonPropertyName("events")]
-    public GrampsEvent[]? Events { get; set; }
+    public GrampsEventExtended[]? Events { get; set; }
 
     /// <summary>Fully resolved father object.</summary>
     [JsonPropertyName("father")]
@@ -83,6 +90,11 @@ public class GrampsFamilyExtendedData
     [JsonPropertyName("tags")]
     public GrampsTag[]? Tags { get; set; }
 
+    /// <summary>Media rows from <c>extend</c>; otherwise filled from top-level <c>media_list</c> handles.</summary>
+    [JsonPropertyName("media")]
+    public GrampsMedia[]? Media { get; set; }
+
+    /// <summary>Citation rows from <c>extend</c>; nested source is filled via <c>GET /api/citations/…?extend=all</c> when absent.</summary>
     [JsonPropertyName("citations")]
-    public GrampsCitation[]? Citations { get; set; }
+    public GrampsCitationExtended[]? Citations { get; set; }
 }

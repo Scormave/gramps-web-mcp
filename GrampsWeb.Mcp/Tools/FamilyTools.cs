@@ -49,6 +49,8 @@ public static class FamilyTools
     [Description(
         "Get complete family data with all member names and events resolved in a single request. " +
         "Returns resolved father name, mother name, children names, event dates and place names. " +
+        "After the bulk response, missing first-level unwraps are filled: citations (source etc. via per-citation extend=all), " +
+        "events (place via per-event extend=place), and media objects (GET /api/media/… when extended.media is absent). " +
         "Use for comprehensive family overview. Slower than get_family.")]
     public static async Task<string> GetFamilyExtended(
         [Description("Family handle")]
@@ -58,9 +60,10 @@ public static class FamilyTools
         try
         {
             var family = await client.GetOrNullIfNotFoundAsync<GrampsFamilyExtended>($"/api/families/{handle}?extend=all");
-            return family == null
-                ? $"Family not found: {handle}"
-                : await FamilyFormatter.FormatFamilyExtended(family, client);
+            if (family == null)
+                return $"Family not found: {handle}";
+            await ExtendedEntityEnrichment.EnrichFamilyExtendedAsync(family, client);
+            return await FamilyFormatter.FormatFamilyExtended(family, client);
         }
         catch (Exception ex)
         {

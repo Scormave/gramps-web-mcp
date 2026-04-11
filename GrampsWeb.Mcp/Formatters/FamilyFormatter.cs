@@ -203,7 +203,13 @@ public static class FamilyFormatter
             {
                 var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : "—";
                 var placeStr = "";
-                if (!string.IsNullOrEmpty(evt.Place))
+                if (evt is GrampsEventExtended { Extended.Place: { } embedded })
+                {
+                    var pl = GrampsValueFormatter.FormatPlace(embedded);
+                    if (!string.IsNullOrEmpty(pl) && pl != "Unknown place")
+                        placeStr = $" — {pl}";
+                }
+                else if (!string.IsNullOrEmpty(evt.Place))
                 {
                     try
                     {
@@ -247,15 +253,10 @@ public static class FamilyFormatter
             sb.AppendLine();
             sb.AppendLine($"Citations ({extCitations.Length}):");
             foreach (var c in extCitations)
-            {
-                var pagePart = string.IsNullOrWhiteSpace(c.Page) ? "" : $"p. {c.Page.Trim()} — ";
-                var ch = string.IsNullOrWhiteSpace(c.Handle) ? "—" : c.Handle.Trim();
-                var sh = string.IsNullOrWhiteSpace(c.Source) ? "" : $" source [handle: {c.Source.Trim()}]";
-                sb.AppendLine($"  • {pagePart}[handle: {ch}]{sh}");
-            }
+                sb.AppendLine(CitationFormatter.FormatEmbeddedCitationExtendedLine(c));
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", family.MediaList);
+        MediaFormatter.AppendExtendedMediaSection(sb, family.Extended?.Media, family.MediaList);
 
         var extTags = family.Extended?.Tags;
         if (extTags?.Length > 0)

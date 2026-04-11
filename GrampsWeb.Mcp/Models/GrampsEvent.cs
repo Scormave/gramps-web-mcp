@@ -28,21 +28,25 @@ public class GrampsEvent
     public string? Description { get; set; }
 
     [JsonPropertyName("media_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? MediaList { get; set; }
 
     [JsonPropertyName("attribute_list")]
     public GrampsAttribute[]? AttributeList { get; set; }
 
     [JsonPropertyName("note_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? NoteList { get; set; }
 
     [JsonPropertyName("citation_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? CitationList { get; set; }
 
     [JsonPropertyName("change")]
     public long? Change { get; set; }
 
     [JsonPropertyName("tag_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? TagList { get; set; }
 
     [JsonPropertyName("private")]

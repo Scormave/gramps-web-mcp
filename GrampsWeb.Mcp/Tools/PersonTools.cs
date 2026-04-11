@@ -51,6 +51,8 @@ public static class PersonTools
     [Description(
         "Get complete person data with all referenced objects resolved in a single request. " +
         "Returns resolved event dates, place names, family handles, note text, and tag names. " +
+        "After the bulk response, missing first-level unwraps are filled: citations (source etc. via per-citation extend=all), " +
+        "events (place via per-event extend=place), and media objects (GET /api/media/… when extended.media is absent). " +
         "Use for 'tell me everything about this person' queries. Slower than get_person.")]
     public static async Task<string> GetPersonExtended(
         [Description("Person handle")]
@@ -60,9 +62,10 @@ public static class PersonTools
         try
         {
             var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>($"/api/people/{handle}?extend=all");
-            return person == null
-                ? $"Person not found: {handle}"
-                : await PersonFormatter.FormatPersonExtended(person, client);
+            if (person == null)
+                return $"Person not found: {handle}";
+            await ExtendedEntityEnrichment.EnrichPersonExtendedAsync(person, client);
+            return await PersonFormatter.FormatPersonExtended(person, client);
         }
         catch (Exception ex)
         {
