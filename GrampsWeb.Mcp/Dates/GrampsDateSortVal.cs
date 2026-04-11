@@ -1,3 +1,4 @@
+using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 
 namespace GrampsWeb.Mcp.Dates;
@@ -42,6 +43,45 @@ internal static class GrampsDateSortVal
         day = day < 1 ? 1 : day;
 
         return GregorianSdn(y, m, day);
+    }
+
+    /// <summary>
+    /// Sort key for timeline-style filtering: prefers wire <see cref="GrampsDate.SortVal"/>, else Gregorian first segment (calendar 0, not text-only).
+    /// Returns <c>null</c> when no comparable key; <c>0</c> means undated in Gramps.
+    /// </summary>
+    internal static int? TryGetTimelineSortKey(GrampsDate? d)
+    {
+        if (d == null)
+            return null;
+        if (d.SortVal.HasValue)
+            return d.SortVal.Value;
+        if (d.Calendar != 0)
+            return null;
+        if (d.Modifier == ModTextOnly)
+            return null;
+
+        var y = d.Year;
+        var m = d.Month;
+        var day = d.Day;
+        if (y == 0 && m == 0 && day == 0)
+            return null;
+
+        y = y == 0 ? 1 : y;
+        m = m < 1 ? 1 : m;
+        day = day < 1 ? 1 : day;
+
+        return GregorianSdn(y, m, day);
+    }
+
+    /// <summary>Gregorian serial day for a calendar date (after Gramps zero-adjust).</summary>
+    internal static int? TryGregorianSdnYmd(int year, int month, int day)
+    {
+        if (year == 0 && month == 0 && day == 0)
+            return null;
+        var y = year == 0 ? 1 : year;
+        var m = month < 1 ? 1 : month;
+        var d = day < 1 ? 1 : day;
+        return GregorianSdn(y, m, d);
     }
 
     /// <summary>Port of <c>gregorian_sdn</c> from Gramps <c>gcalendar.py</c>.</summary>

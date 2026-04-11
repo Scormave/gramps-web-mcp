@@ -11,24 +11,31 @@ namespace GrampsWeb.Mcp.Tools;
 /// </summary>
 internal static class PlaceTimelineFallback
 {
-    public static async Task<GrampsTimelineEntry[]> CollectAsync(
+    public static async Task<PlaceTimelineCollectOutcome> CollectAsync(
         GrampsApiClient client,
         string placeHandle,
-        GrampsPlace place)
+        GrampsPlace place,
+        string[]? eventClasses,
+        string? datesNormalized,
+        bool includeUndated)
     {
         var raw = await client.GetJsonOrNullIfNotFoundAsync($"/api/places/{placeHandle}?backlinks=true");
         if (raw is null || raw.Value.ValueKind != JsonValueKind.Object)
-            return [];
+            return new PlaceTimelineCollectOutcome([], 0);
 
         var root = raw.Value;
         if (!root.TryGetProperty("backlinks", out var backlinks) || backlinks.ValueKind != JsonValueKind.Object)
-            return [];
+            return new PlaceTimelineCollectOutcome([], 0);
 
         var eventHandles = CollectEventHandles(backlinks);
         if (eventHandles.Count == 0)
-            return [];
+            return new PlaceTimelineCollectOutcome([], 0);
+
+        var range = PlaceTimelineFilters.TryParseDateRange(datesNormalized);
+        var options = new PlaceTimelineCollectOptions(eventClasses, includeUndated);
 
         var list = new List<GrampsTimelineEntry>();
+        var matchedPlace = 0;
         foreach (var eh in eventHandles)
         {
             var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>($"/api/events/{eh}");
@@ -36,10 +43,13 @@ internal static class PlaceTimelineFallback
                 continue;
             if (!string.Equals(evt.Place, placeHandle, StringComparison.Ordinal))
                 continue;
+            matchedPlace++;
+            if (!PlaceTimelineFilters.Passes(evt, options, range))
+                continue;
             list.Add(ToTimelineEntry(evt, place));
         }
 
-        return list.ToArray();
+        return new PlaceTimelineCollectOutcome(list.ToArray(), matchedPlace);
     }
 
     private static HashSet<string> CollectEventHandles(JsonElement backlinks)

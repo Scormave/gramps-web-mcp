@@ -42,12 +42,22 @@ public static class PlaceTools
     [McpServerTool]
     [Description(
         "Get chronological timeline of events at this place. " +
-        "Loads each linked event; " +
-        "only events whose place field matches this handle are included (child vs parent places differ). " +
+        "Built from place backlinks and per-event fetches (no server place-timeline route). " +
+        "Only events whose place field matches this handle are included (child vs parent places differ). " +
+        "events: filter by category — vital, family, religious, vocational, academic, travel, legal, residence, other, custom " +
+        "(same keywords as person/family timelines; default English type names from the Gramps Web API spec). " +
+        "dates: range 'YYYY/MM/DD-YYYY/MM/DD', or open 'YYYY/MM/DD-' or '-YYYY/MM/DD'; leading zeros in month/day are normalized like other timeline tools. " +
+        "include_undated: default true — when false, events with no sortable date (sortval 0 or missing) are omitted. " +
         "Rows include [event: handle] when known, for follow-up get_event calls.")]
     public static async Task<string> GetPlaceTimeline(
         [Description("Place handle")]
         string handle,
+        [Description("Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom")]
+        string[]? events = null,
+        [Description("Date range filter; e.g. 1999/1/1-2010/12/31 (zeros normalized)")]
+        string? dates = null,
+        [Description("Include events with no sortable date (sortval 0 or missing); default true. Use false to match strict undated exclusion.")]
+        bool includeUndated = true,
         GrampsApiClient client = null!)
     {
         try
@@ -56,14 +66,22 @@ public static class PlaceTools
             if (place == null)
                 return $"Place not found: {handle}";
 
-            var entries = await PlaceTimelineFallback.CollectAsync(client, handle, place);
-            if (entries.Length == 0)
+            var datesNormalized = PersonTools.NormalizeTimelineDatesForGrampsApi(dates);
+            var outcome = await PlaceTimelineFallback.CollectAsync(
+                client, handle, place, events, datesNormalized, includeUndated);
+
+            if (outcome.MatchedPlaceCount == 0)
                 return
                     $"No events linked directly to place {handle}. " +
                     "No events reference this exact place handle in backlinks " +
                     "(events often use a city or address place, not the parent country or region).";
 
-            return TimelineFormatter.FormatTimelineChronological(entries);
+            if (outcome.Entries.Length == 0)
+                return
+                    $"No events at place {handle} match the filters (event categories and/or date range). " +
+                    "Try broader categories, widen the date range, or set include_undated=true if undated events were excluded.";
+
+            return TimelineFormatter.FormatTimelineChronological(outcome.Entries);
         }
         catch (Exception ex)
         {
