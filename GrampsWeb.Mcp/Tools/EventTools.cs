@@ -86,10 +86,11 @@ public static class EventTools
 
             var response = await client.PostMutationAsync<GrampsEvent>("/api/events/", request, "Event");
             var dateStr = response.Date != null ? GrampsValueFormatter.FormatDate(response.Date) : "—";
+            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
             return $"Event created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {response.Type}\n" +
+                   $"Type: {typeLabel}\n" +
                    $"Date: {dateStr}";
         }
         catch (Exception ex)
@@ -153,9 +154,11 @@ public static class EventTools
             };
 
             var response = await client.PutMutationAsync<GrampsEvent>($"/api/events/{handle}", updateRequest, "Event");
+            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
             return $"Event updated successfully\n" +
                    $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {

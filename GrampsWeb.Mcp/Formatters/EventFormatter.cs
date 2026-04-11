@@ -11,8 +11,9 @@ public static class EventFormatter
 {
     public static async Task<string> FormatEventFull(GrampsEvent evt, GrampsApiClient client)
     {
+        var typeDisplay = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, evt.Type);
         var sb = new StringBuilder();
-        sb.AppendLine($"EVENT: {evt.Type} [handle: {evt.Handle}] (gramps_id: {evt.GrampsId})");
+        sb.AppendLine($"EVENT: {typeDisplay} [handle: {evt.Handle}] (gramps_id: {evt.GrampsId})");
         sb.AppendLine(new string('=', 60));
 
         if (evt.Date != null)

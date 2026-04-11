@@ -29,7 +29,7 @@ public static class NoteTools
             var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>($"/api/notes/{handle}");
             return note == null
                 ? $"Note not found: {handle}"
-                : NoteFormatter.FormatNoteFull(note);
+                : await NoteFormatter.FormatNoteFullAsync(note, client);
         }
         catch (Exception ex)
         {
@@ -71,10 +71,13 @@ public static class NoteTools
             };
 
             var response = await client.PostMutationAsync<GrampsNote>("/api/notes/", request, "Note");
+            var typeLabel = string.IsNullOrWhiteSpace(response.Type)
+                ? "General"
+                : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, response.Type);
             return $"Note created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {response.Type}\n" +
+                   $"Type: {typeLabel}\n" +
                    $"Text preview: {(response.Text?.Substring(0, Math.Min(50, response.Text.Length)) ?? "—")}...";
         }
         catch (Exception ex)
@@ -124,9 +127,13 @@ public static class NoteTools
             };
 
             var response = await client.PutMutationAsync<GrampsNote>($"/api/notes/{handle}", updateRequest, "Note");
+            var typeLabel = string.IsNullOrWhiteSpace(response.Type)
+                ? "General"
+                : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, response.Type);
             return $"Note updated successfully\n" +
                    $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {

@@ -29,7 +29,7 @@ public static class RepositoryTools
             var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
             return repo == null
                 ? $"Repository not found: {handle}"
-                : RepositoryFormatter.FormatRepositoryFull(repo);
+                : await RepositoryFormatter.FormatRepositoryFullAsync(repo, client);
         }
         catch (Exception ex)
         {
@@ -67,11 +67,12 @@ public static class RepositoryTools
             };
 
             var response = await client.PostMutationAsync<GrampsRepository>("/api/repositories/", request, "Repository");
+            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
             return $"Repository created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
                    $"Name: {response.Name}\n" +
-                   $"Type: {response.Type ?? "—"}";
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {
@@ -121,9 +122,11 @@ public static class RepositoryTools
             };
 
             var response = await client.PutMutationAsync<GrampsRepository>($"/api/repositories/{handle}", updateRequest, "Repository");
+            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
             return $"Repository updated successfully\n" +
                    $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {

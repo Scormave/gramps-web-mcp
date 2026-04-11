@@ -80,6 +80,10 @@ public static class PersonFormatter
 
     public static async Task<string> FormatPersonFull(GrampsPerson person, GrampsApiClient client)
     {
+        IReadOnlyList<string>? nameTypeLabels = null;
+        if (person.AlternateNames is { Length: > 0 })
+            nameTypeLabels = await GrampsDefaultTypeLabels.LoadNameTypeLabelsAsync(client).ConfigureAwait(false);
+
         var sb = new StringBuilder();
         var name = person.PrimaryName;
         var displayName = name != null ? GrampsValueFormatter.FormatName(name) : "Unknown";
@@ -127,7 +131,10 @@ public static class PersonFormatter
             sb.AppendLine();
             sb.AppendLine("Alternate names:");
             foreach (var n in person.AlternateNames)
-                sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({n.Type})");
+            {
+                var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, nameTypeLabels);
+                sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({typeLabel})");
+            }
         }
 
         return sb.ToString();
@@ -135,6 +142,7 @@ public static class PersonFormatter
 
     public static async Task<string> FormatPersonExtended(GrampsPersonExtended person, GrampsApiClient client)
     {
+        var tables = await GrampsDefaultTypeLabels.PrefetchAllAsync(client).ConfigureAwait(false);
         var sb = new StringBuilder();
         var name = person.PrimaryName;
         var displayName = name != null ? GrampsValueFormatter.FormatName(name) : "Unknown";
@@ -162,7 +170,8 @@ public static class PersonFormatter
                     catch { }
                 }
                 var role = person.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
-                sb.AppendLine($"  • {evt.Type}: {dateStr}{placeStr} [{role}]");
+                var evtTypeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, tables.EventTypes);
+                sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]");
                 if (!string.IsNullOrEmpty(evt.Description))
                     sb.AppendLine($"    {evt.Description}");
             }
@@ -176,7 +185,12 @@ public static class PersonFormatter
             {
                 var spouseHandle = fam.FatherHandle == person.Handle ? fam.MotherHandle : fam.FatherHandle;
                 var childCount = fam.ChildRefList?.Length ?? 0;
-                sb.AppendLine($"  • [{fam.Relationship ?? "Married"}] [handle: {fam.Handle}] " +
+                var relLabel = string.IsNullOrWhiteSpace(fam.Relationship)
+                    ? "Married"
+                    : GrampsDefaultTypeLabels.ResolveStored(fam.Relationship.Trim(), tables.FamilyRelationTypes);
+                if (relLabel == "—")
+                    relLabel = "Married";
+                sb.AppendLine($"  • [{relLabel}] [handle: {fam.Handle}] " +
                               $"— spouse: {spouseHandle ?? "—"}, children: {childCount}");
             }
         }
@@ -198,7 +212,10 @@ public static class PersonFormatter
             {
                 var snippet = note.Text?.Replace('\n', ' ').Trim() ?? "";
                 if (snippet.Length > 100) snippet = snippet[..100] + "…";
-                sb.AppendLine($"  • [{note.Type}] {snippet}");
+                var noteTypeLabel = string.IsNullOrWhiteSpace(note.Type)
+                    ? "General"
+                    : GrampsDefaultTypeLabels.ResolveStored(note.Type.Trim(), tables.NoteTypes);
+                sb.AppendLine($"  • [{noteTypeLabel}] {snippet}");
             }
         }
 
@@ -210,7 +227,10 @@ public static class PersonFormatter
         {
             sb.AppendLine("\nALTERNATE NAMES:");
             foreach (var n in person.AlternateNames)
-                sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({n.Type})");
+            {
+                var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, tables.NameTypes);
+                sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({typeLabel})");
+            }
         }
 
         return sb.ToString();

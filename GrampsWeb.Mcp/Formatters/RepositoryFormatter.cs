@@ -1,4 +1,5 @@
 using System.Text;
+using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
@@ -8,14 +9,14 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class RepositoryFormatter
 {
-    public static string FormatRepositoryFull(GrampsRepository repo)
+    public static async Task<string> FormatRepositoryFullAsync(GrampsRepository repo, GrampsApiClient client)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"REPOSITORY: {repo.Name} [handle: {repo.Handle}] (gramps_id: {repo.GrampsId})");
         sb.AppendLine(new string('=', 60));
 
-        if (!string.IsNullOrEmpty(repo.Type))
-            sb.AppendLine($"Type: {repo.Type}");
+        var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, repo.Type);
+        sb.AppendLine($"Type: {typeLabel}");
 
         if (repo.AddressList?.Length > 0)
         {

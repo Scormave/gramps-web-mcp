@@ -37,7 +37,7 @@ public static class FamilyTools
             var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>($"/api/families/{handle}");
             return family == null
                 ? $"Family not found: {handle}"
-                : FamilyFormatter.FormatFamilyFull(family);
+                : await FamilyFormatter.FormatFamilyFullAsync(family, client);
         }
         catch (Exception ex)
         {
@@ -153,9 +153,13 @@ public static class FamilyTools
             };
 
             var response = await client.PostMutationAsync<GrampsFamily>("/api/families/", request, "Family");
+            var relLabel = string.IsNullOrWhiteSpace(response.Relationship)
+                ? "Unknown"
+                : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, response.Relationship);
             return $"Family created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
+                   $"Relationship: {relLabel}\n" +
                    $"Father: {response.FatherHandle ?? "—"}\n" +
                    $"Mother: {response.MotherHandle ?? "—"}\n" +
                    $"Children: {response.ChildRefList?.Length ?? 0}";
@@ -230,9 +234,13 @@ public static class FamilyTools
             };
 
             var response = await client.PutMutationAsync<GrampsFamily>($"/api/families/{handle}", updateRequest, "Family");
+            var relLabel = string.IsNullOrWhiteSpace(response.Relationship)
+                ? "Unknown"
+                : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, response.Relationship);
             return $"Family updated successfully\n" +
                    $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Relationship: {relLabel}";
         }
         catch (Exception ex)
         {

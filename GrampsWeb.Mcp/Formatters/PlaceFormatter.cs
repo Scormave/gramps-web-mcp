@@ -13,16 +13,21 @@ public static class PlaceFormatter
     /// <summary>
     /// Place name with type when available (reserved for future parent traversal).
     /// </summary>
-    public static Task<string> FormatPlaceHierarchy(GrampsPlace place, GrampsApiClient? client, int maxLevels = 6)
+    public static async Task<string> FormatPlaceHierarchy(GrampsPlace place, GrampsApiClient? client, int maxLevels = 6)
     {
         if (place == null)
-            return Task.FromResult("Unknown place");
+            return "Unknown place";
 
         var result = place.Name ?? "Unknown";
         if (!string.IsNullOrEmpty(place.Type))
-            result += $" ({place.Type})";
+        {
+            var typeLabel = client != null
+                ? await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, place.Type).ConfigureAwait(false)
+                : place.Type.Trim();
+            result += $" ({typeLabel})";
+        }
 
-        return Task.FromResult(result);
+        return result;
     }
 
     public static async Task<string> FormatPlaceFull(GrampsPlace place, GrampsApiClient client)
@@ -31,8 +36,8 @@ public static class PlaceFormatter
         sb.AppendLine($"PLACE: {place.Name} [handle: {place.Handle}] (gramps_id: {place.GrampsId})");
         sb.AppendLine(new string('=', 60));
 
-        if (!string.IsNullOrEmpty(place.Type))
-            sb.AppendLine($"Type: {place.Type}");
+        var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, place.Type);
+        sb.AppendLine($"Type: {typeLabel}");
 
         var hierarchy = await BuildPlaceHierarchy(place, client);
         if (!string.IsNullOrEmpty(hierarchy))

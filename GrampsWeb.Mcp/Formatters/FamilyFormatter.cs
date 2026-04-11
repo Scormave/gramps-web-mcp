@@ -16,7 +16,9 @@ public static class FamilyFormatter
 
         var sb = new StringBuilder();
 
-        var relType = family.Relationship ?? "Unknown";
+        var relType = string.IsNullOrWhiteSpace(family.Relationship)
+            ? "Unknown"
+            : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, family.Relationship);
         sb.AppendLine($"Relationship: {relType}");
 
         if (!string.IsNullOrEmpty(family.FatherHandle))
@@ -78,12 +80,15 @@ public static class FamilyFormatter
         return sb.ToString();
     }
 
-    public static string FormatFamilyFull(GrampsFamily family)
+    public static async Task<string> FormatFamilyFullAsync(GrampsFamily family, GrampsApiClient client)
     {
+        var relLabel = string.IsNullOrWhiteSpace(family.Relationship)
+            ? "Unknown"
+            : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, family.Relationship);
         var sb = new StringBuilder();
         sb.AppendLine($"FAMILY [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
         sb.AppendLine(new string('=', 60));
-        sb.AppendLine($"Relationship: {family.Relationship ?? "Unknown"}");
+        sb.AppendLine($"Relationship: {relLabel}");
         sb.AppendLine();
 
         sb.AppendLine($"Father: {family.FatherHandle ?? "—"}");
@@ -123,9 +128,16 @@ public static class FamilyFormatter
 
     public static async Task<string> FormatFamilyExtended(GrampsFamilyExtended family, GrampsApiClient client)
     {
+        var tables = await GrampsDefaultTypeLabels.PrefetchAllAsync(client);
+        var relLabel = string.IsNullOrWhiteSpace(family.Relationship)
+            ? "Unknown"
+            : GrampsDefaultTypeLabels.ResolveStored(family.Relationship.Trim(), tables.FamilyRelationTypes);
+        if (relLabel == "—")
+            relLabel = "Unknown";
+
         var sb = new StringBuilder();
         sb.AppendLine($"FAMILY (extended) [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
-        sb.AppendLine($"Relationship: {family.Relationship ?? "Unknown"}");
+        sb.AppendLine($"Relationship: {relLabel}");
         sb.AppendLine(new string('=', 60));
 
         var father = family.Extended?.Father;
@@ -184,7 +196,8 @@ public static class FamilyFormatter
                     catch { }
                 }
                 var role = family.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
-                sb.AppendLine($"  • {evt.Type}: {dateStr}{placeStr} [{role}]");
+                var evtTypeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, tables.EventTypes);
+                sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]");
             }
         }
 
@@ -196,7 +209,10 @@ public static class FamilyFormatter
             {
                 var snippet = note.Text?.Replace('\n', ' ').Trim() ?? "";
                 if (snippet.Length > 100) snippet = snippet[..100] + "…";
-                sb.AppendLine($"  • [{note.Type}] {snippet}");
+                var noteTypeLabel = string.IsNullOrWhiteSpace(note.Type)
+                    ? "General"
+                    : GrampsDefaultTypeLabels.ResolveStored(note.Type.Trim(), tables.NoteTypes);
+                sb.AppendLine($"  • [{noteTypeLabel}] {snippet}");
             }
         }
 

@@ -16,6 +16,7 @@ public static class SearchFormatter
         if (hits == null || hits.Length == 0)
             return "No results found";
 
+        var tables = await GrampsDefaultTypeLabels.PrefetchAllAsync(client);
         var sb = new StringBuilder();
         sb.AppendLine($"Search Results ({hits.Length}):");
         sb.AppendLine(new string('=', ResultSeparatorWidth));
@@ -24,7 +25,7 @@ public static class SearchFormatter
         {
             try
             {
-                var line = await FormatLineForSearchHitAsync(hit, client);
+                var line = await FormatLineForSearchHitAsync(hit, client, tables);
                 if (!string.IsNullOrEmpty(line))
                     sb.AppendLine($"{line}{FormatHandleGrampsSuffix(hit.Handle, hit.GrampsId)}");
             }
@@ -75,6 +76,7 @@ public static class SearchFormatter
         sb.AppendLine();
 
         var typeKey = objectType.ToLowerInvariant();
+        var tables = await GrampsDefaultTypeLabels.PrefetchForObjectListAsync(typeKey, client);
 
         for (int i = 0; i < objects.Length; i++)
         {
@@ -85,7 +87,7 @@ public static class SearchFormatter
             int itemNumber = (page - 1) * pagesize + i + 1;
             try
             {
-                var line = await FormatLineForListedObjectAsync(item, typeKey, client);
+                var line = await FormatLineForListedObjectAsync(item, typeKey, client, tables);
                 if (!string.IsNullOrEmpty(line))
                 {
                     var handle = GetHandle(item);
@@ -155,41 +157,48 @@ public static class SearchFormatter
         };
     }
 
-    private static async Task<string?> FormatLineForSearchHitAsync(GrampsSearchHit hit, GrampsApiClient client)
+    private static async Task<string?> FormatLineForSearchHitAsync(
+        GrampsSearchHit hit,
+        GrampsApiClient client,
+        GrampsTypeLabelTables tables)
     {
         var t = hit.ObjectType?.ToLowerInvariant();
         return t switch
         {
             "person" or "people" => await FetchAndBuildPersonLineAsync(hit.Handle, client),
-            "family" or "families" => await FetchAndBuildFamilyLineAsync(hit.Handle, client),
-            "event" or "events" => await FetchAndBuildEventLineAsync(hit.Handle, client),
-            "place" or "places" => await FetchAndBuildPlaceLineAsync(hit.Handle, client),
+            "family" or "families" => await FetchAndBuildFamilyLineAsync(hit.Handle, client, tables.FamilyRelationTypes),
+            "event" or "events" => await FetchAndBuildEventLineAsync(hit.Handle, client, tables.EventTypes),
+            "place" or "places" => await FetchAndBuildPlaceLineAsync(hit.Handle, client, tables.PlaceTypes),
             "source" or "sources" => await FetchAndBuildSourceLineAsync(hit.Handle, client),
             "citation" or "citations" => await FetchAndBuildCitationLineAsync(hit.Handle, client),
-            "note" or "notes" => await FetchAndBuildNoteLineAsync(hit.Handle, client),
+            "note" or "notes" => await FetchAndBuildNoteLineAsync(hit.Handle, client, tables.NoteTypes),
             "media" => await FetchAndBuildMediaLineAsync(hit.Handle, client),
             "tag" or "tags" => await FetchAndBuildTagLineAsync(hit.Handle, client),
-            "repository" or "repositories" => await FetchAndBuildRepositoryLineAsync(hit.Handle, client),
+            "repository" or "repositories" => await FetchAndBuildRepositoryLineAsync(hit.Handle, client, tables.RepositoryTypes),
             _ => $"{hit.ObjectType}: {hit.GrampsId}"
         };
     }
 
-    private static async Task<string?> FormatLineForListedObjectAsync(object item, string objectTypeKey, GrampsApiClient client)
+    private static async Task<string?> FormatLineForListedObjectAsync(
+        object item,
+        string objectTypeKey,
+        GrampsApiClient client,
+        GrampsTypeLabelTables tables)
     {
         switch (objectTypeKey)
         {
             case "people" when item is GrampsPerson p:
                 return await BuildPersonSearchLineAsync(p, client);
             case "families" when item is GrampsFamilyExtended fx:
-                return await BuildFamilySearchLineAsync(fx, client);
+                return await BuildFamilySearchLineAsync(fx, client, tables.FamilyRelationTypes);
             case "families" when item is GrampsFamily f:
-                return await BuildFamilySearchLineFromHandlesAsync(f, client);
+                return await BuildFamilySearchLineFromHandlesAsync(f, client, tables.FamilyRelationTypes);
             case "events" when item is GrampsEventExtended ee:
-                return await BuildEventSearchLineAsync(ee, client);
+                return await BuildEventSearchLineAsync(ee, client, tables.EventTypes);
             case "events" when item is GrampsEvent e:
-                return await BuildEventSearchLineAsync(e, client);
+                return await BuildEventSearchLineAsync(e, client, tables.EventTypes);
             case "places" when item is GrampsPlace pl:
-                return BuildPlaceSearchLine(pl);
+                return BuildPlaceSearchLine(pl, tables.PlaceTypes);
             case "sources" when item is GrampsSource s:
                 return BuildSourceSearchLine(s);
             case "citations" when item is GrampsCitationExtended cx:
@@ -197,9 +206,9 @@ public static class SearchFormatter
             case "citations" when item is GrampsCitation c:
                 return await BuildCitationSearchLineAsync(c, client);
             case "repositories" when item is GrampsRepository r:
-                return BuildRepositorySearchLine(r);
+                return BuildRepositorySearchLine(r, tables.RepositoryTypes);
             case "notes" when item is GrampsNote n:
-                return BuildNoteSearchLine(n);
+                return BuildNoteSearchLine(n, tables.NoteTypes);
             case "media" when item is GrampsMedia m:
                 return BuildMediaSearchLine(m);
             case "tags" when item is GrampsTag tag:
@@ -217,30 +226,39 @@ public static class SearchFormatter
         return person == null ? null : await BuildPersonSearchLineAsync(person, client);
     }
 
-    private static async Task<string?> FetchAndBuildFamilyLineAsync(string? handle, GrampsApiClient client)
+    private static async Task<string?> FetchAndBuildFamilyLineAsync(
+        string? handle,
+        GrampsApiClient client,
+        IReadOnlyList<string>? familyRelationTypes)
     {
         if (string.IsNullOrEmpty(handle))
             return null;
         var familyEx = await client.GetAsync<GrampsFamilyExtended>(
             $"/api/families/{Uri.EscapeDataString(handle)}?extend=father_handle,mother_handle");
-        return familyEx == null ? null : await BuildFamilySearchLineAsync(familyEx, client);
+        return familyEx == null ? null : await BuildFamilySearchLineAsync(familyEx, client, familyRelationTypes);
     }
 
-    private static async Task<string?> FetchAndBuildEventLineAsync(string? handle, GrampsApiClient client)
+    private static async Task<string?> FetchAndBuildEventLineAsync(
+        string? handle,
+        GrampsApiClient client,
+        IReadOnlyList<string>? eventTypes)
     {
         if (string.IsNullOrEmpty(handle))
             return null;
         var evt = await client.GetAsync<GrampsEventExtended>(
             $"/api/events/{Uri.EscapeDataString(handle)}?extend=place");
-        return evt == null ? null : await BuildEventSearchLineAsync(evt, client);
+        return evt == null ? null : await BuildEventSearchLineAsync(evt, client, eventTypes);
     }
 
-    private static async Task<string?> FetchAndBuildPlaceLineAsync(string? handle, GrampsApiClient client)
+    private static async Task<string?> FetchAndBuildPlaceLineAsync(
+        string? handle,
+        GrampsApiClient client,
+        IReadOnlyList<string>? placeTypes)
     {
         if (string.IsNullOrEmpty(handle))
             return null;
         var place = await client.GetAsync<GrampsPlace>($"/api/places/{Uri.EscapeDataString(handle)}");
-        return place == null ? null : BuildPlaceSearchLine(place);
+        return place == null ? null : BuildPlaceSearchLine(place, placeTypes);
     }
 
     private static async Task<string?> FetchAndBuildSourceLineAsync(string? handle, GrampsApiClient client)
@@ -260,12 +278,15 @@ public static class SearchFormatter
         return citation == null ? null : await BuildCitationSearchLineAsync(citation, client);
     }
 
-    private static async Task<string?> FetchAndBuildNoteLineAsync(string? handle, GrampsApiClient client)
+    private static async Task<string?> FetchAndBuildNoteLineAsync(
+        string? handle,
+        GrampsApiClient client,
+        IReadOnlyList<string>? noteTypes)
     {
         if (string.IsNullOrEmpty(handle))
             return null;
         var note = await client.GetAsync<GrampsNote>($"/api/notes/{Uri.EscapeDataString(handle)}");
-        return note == null ? null : BuildNoteSearchLine(note);
+        return note == null ? null : BuildNoteSearchLine(note, noteTypes);
     }
 
     private static async Task<string?> FetchAndBuildMediaLineAsync(string? handle, GrampsApiClient client)
@@ -284,12 +305,15 @@ public static class SearchFormatter
         return tag == null ? null : BuildTagSearchLine(tag);
     }
 
-    private static async Task<string?> FetchAndBuildRepositoryLineAsync(string? handle, GrampsApiClient client)
+    private static async Task<string?> FetchAndBuildRepositoryLineAsync(
+        string? handle,
+        GrampsApiClient client,
+        IReadOnlyList<string>? repositoryTypes)
     {
         if (string.IsNullOrEmpty(handle))
             return null;
         var repo = await client.GetAsync<GrampsRepository>($"/api/repositories/{Uri.EscapeDataString(handle)}");
-        return repo == null ? null : BuildRepositorySearchLine(repo);
+        return repo == null ? null : BuildRepositorySearchLine(repo, repositoryTypes);
     }
 
     private static async Task<string?> BuildPersonSearchLineAsync(GrampsPerson person, GrampsApiClient client)
@@ -300,11 +324,14 @@ public static class SearchFormatter
         return $"Person: {displayName}{birthStr}";
     }
 
-    private static Task<string?> BuildFamilySearchLineFromHandlesAsync(GrampsFamily family, GrampsApiClient client)
+    private static Task<string?> BuildFamilySearchLineFromHandlesAsync(
+        GrampsFamily family,
+        GrampsApiClient client,
+        IReadOnlyList<string>? familyRelationTypes)
     {
         var fx = new GrampsFamilyExtended();
         CopyFamilyBase(family, fx);
-        return BuildFamilySearchLineAsync(fx, client);
+        return BuildFamilySearchLineAsync(fx, client, familyRelationTypes);
     }
 
     private static void CopyFamilyBase(GrampsFamily from, GrampsFamilyExtended to)
@@ -327,7 +354,8 @@ public static class SearchFormatter
 
     private static async Task<string?> BuildFamilySearchLineAsync(
         GrampsFamilyExtended family,
-        GrampsApiClient client)
+        GrampsApiClient client,
+        IReadOnlyList<string>? familyRelationTypes)
     {
         static bool Meaningful(string? s) => !string.IsNullOrEmpty(s) && s != "Unknown";
 
@@ -389,16 +417,27 @@ public static class SearchFormatter
         };
 
         var rel = family.Relationship?.Trim();
-        var relPart = !string.IsNullOrEmpty(rel) ? $" ({rel})" : "";
+        string relPart;
+        if (string.IsNullOrEmpty(rel))
+            relPart = "";
+        else
+        {
+            var relLabel = GrampsDefaultTypeLabels.ResolveStored(rel, familyRelationTypes);
+            relPart = $" ({relLabel})";
+        }
 
         return $"Family: {partners}{relPart}";
     }
 
-    private static async Task<string?> BuildEventSearchLineAsync(GrampsEvent evt, GrampsApiClient client)
+    private static async Task<string?> BuildEventSearchLineAsync(
+        GrampsEvent evt,
+        GrampsApiClient client,
+        IReadOnlyList<string>? eventTypes)
     {
         var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : "—";
         var placeStr = await FormatEventPlaceSegmentAsync(evt, client);
-        return $"Event: {evt.Type} — {dateStr} — {placeStr}";
+        var typeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, eventTypes);
+        return $"Event: {typeLabel} — {dateStr} — {placeStr}";
     }
 
     private static async Task<string> FormatEventPlaceSegmentAsync(GrampsEvent evt, GrampsApiClient client)
@@ -436,10 +475,12 @@ public static class SearchFormatter
         return placeRef;
     }
 
-    private static string BuildPlaceSearchLine(GrampsPlace place)
+    private static string BuildPlaceSearchLine(GrampsPlace place, IReadOnlyList<string>? placeTypes)
     {
-        var typePart = !string.IsNullOrWhiteSpace(place.Type) ? $" ({place.Type.Trim()})" : "";
-        return $"Place: {place.Name}{typePart}";
+        if (string.IsNullOrWhiteSpace(place.Type))
+            return $"Place: {place.Name}";
+        var typeLabel = GrampsDefaultTypeLabels.ResolveStored(place.Type.Trim(), placeTypes);
+        return $"Place: {place.Name} ({typeLabel})";
     }
 
     private static string BuildSourceSearchLine(GrampsSource source)
@@ -486,7 +527,7 @@ public static class SearchFormatter
         return null;
     }
 
-    private static string BuildNoteSearchLine(GrampsNote note)
+    private static string BuildNoteSearchLine(GrampsNote note, IReadOnlyList<string>? noteTypes)
     {
         string preview;
         if (string.IsNullOrEmpty(note.Text))
@@ -495,7 +536,9 @@ public static class SearchFormatter
             preview = note.Text;
         else
             preview = note.Text.Substring(0, 50) + "…";
-        var typeLabel = string.IsNullOrWhiteSpace(note.Type) ? "General" : note.Type.Trim();
+        var typeLabel = string.IsNullOrWhiteSpace(note.Type)
+            ? "General"
+            : GrampsDefaultTypeLabels.ResolveStored(note.Type.Trim(), noteTypes);
         return $"Note: [{typeLabel}] {preview}";
     }
 
@@ -511,9 +554,11 @@ public static class SearchFormatter
         return $"Tag: {tag.Name}";
     }
 
-    private static string BuildRepositorySearchLine(GrampsRepository repo)
+    private static string BuildRepositorySearchLine(GrampsRepository repo, IReadOnlyList<string>? repositoryTypes)
     {
-        var typePart = !string.IsNullOrWhiteSpace(repo.Type) ? $" ({repo.Type.Trim()})" : "";
-        return $"Repository: {repo.Name}{typePart}";
+        if (string.IsNullOrWhiteSpace(repo.Type))
+            return $"Repository: {repo.Name}";
+        var typeLabel = GrampsDefaultTypeLabels.ResolveStored(repo.Type.Trim(), repositoryTypes);
+        return $"Repository: {repo.Name} ({typeLabel})";
     }
 }
