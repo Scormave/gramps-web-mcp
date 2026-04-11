@@ -33,10 +33,8 @@ public static class SourceFormatter
             }
         }
 
-        if (source.NoteList?.Length > 0)
-            sb.AppendLine($"Notes:   {source.NoteList.Length}");
-        if (source.MediaList?.Length > 0)
-            sb.AppendLine($"Media:   {source.MediaList.Length}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", source.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", source.MediaList);
         if (source.TagList?.Length > 0)
             sb.AppendLine($"Tags:    {string.Join(", ", source.TagList)}");
 

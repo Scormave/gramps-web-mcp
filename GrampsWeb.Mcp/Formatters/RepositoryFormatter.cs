@@ -32,8 +32,7 @@ public static class RepositoryFormatter
                 sb.AppendLine($"  • {url}");
         }
 
-        if (repo.NoteList?.Length > 0)
-            sb.AppendLine($"Notes: {repo.NoteList.Length}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", repo.NoteList);
         if (repo.TagList?.Length > 0)
             sb.AppendLine($"Tags:  {string.Join(", ", repo.TagList)}");
 

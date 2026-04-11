@@ -20,10 +20,8 @@ public static class MediaFormatter
         if (!string.IsNullOrEmpty(media.Description))
             sb.AppendLine($"\nDescription:\n{media.Description}");
 
-        if (media.CitationList?.Length > 0)
-            sb.AppendLine($"Citations: {media.CitationList.Length}");
-        if (media.NoteList?.Length > 0)
-            sb.AppendLine($"Notes:     {media.NoteList.Length}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", media.NoteList);
         if (media.TagList?.Length > 0)
             sb.AppendLine($"Tags:      {string.Join(", ", media.TagList)}");
         if (media.Private)

@@ -41,12 +41,9 @@ public static class EventFormatter
                 sb.AppendLine($"  • {attr.Type}: {attr.Value}");
         }
 
-        if (evt.CitationList?.Length > 0)
-            sb.AppendLine($"\nCitations: {evt.CitationList.Length} {string.Join(", ", evt.CitationList.Take(3))}");
-        if (evt.NoteList?.Length > 0)
-            sb.AppendLine($"Notes:     {evt.NoteList.Length}");
-        if (evt.MediaList?.Length > 0)
-            sb.AppendLine($"Media:     {evt.MediaList.Length}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", evt.CitationList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", evt.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", evt.MediaList);
         if (evt.TagList?.Length > 0)
             sb.AppendLine($"Tags:      {string.Join(", ", evt.TagList)}");
         if (evt.Private)

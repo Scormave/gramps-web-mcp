@@ -48,12 +48,9 @@ public static class PlaceFormatter
             sb.AppendLine($"Coordinates: {place.Latitude ?? "—"}, {place.Longitude ?? "—"}");
         }
 
-        if (place.CitationList?.Length > 0)
-            sb.AppendLine($"Citations: {place.CitationList.Length}");
-        if (place.NoteList?.Length > 0)
-            sb.AppendLine($"Notes:     {place.NoteList.Length}");
-        if (place.MediaList?.Length > 0)
-            sb.AppendLine($"Media:     {place.MediaList.Length}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", place.CitationList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", place.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", place.MediaList);
         if (place.TagList?.Length > 0)
             sb.AppendLine($"Tags:      {string.Join(", ", place.TagList)}");
 

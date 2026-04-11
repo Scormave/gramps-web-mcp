@@ -37,10 +37,8 @@ public static class CitationFormatter
         if (citation.Date != null)
             sb.AppendLine($"Access Date: {GrampsValueFormatter.FormatDate(citation.Date)}");
 
-        if (citation.NoteList?.Length > 0)
-            sb.AppendLine($"Notes: {citation.NoteList.Length}");
-        if (citation.MediaList?.Length > 0)
-            sb.AppendLine($"Media: {citation.MediaList.Length}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", citation.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", citation.MediaList);
 
         return sb.ToString();
     }

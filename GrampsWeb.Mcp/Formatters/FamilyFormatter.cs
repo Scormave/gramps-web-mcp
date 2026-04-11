@@ -118,8 +118,9 @@ public static class FamilyFormatter
                 sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
         }
 
-        if (family.NoteList?.Length > 0)     sb.AppendLine($"Notes:     {family.NoteList.Length}");
-        if (family.CitationList?.Length > 0) sb.AppendLine($"Citations: {family.CitationList.Length}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", family.CitationList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", family.MediaList);
         if (family.TagList?.Length > 0)      sb.AppendLine($"Tags:      {string.Join(", ", family.TagList)}");
         if (family.Private)                  sb.AppendLine("⚠ Private record");
 

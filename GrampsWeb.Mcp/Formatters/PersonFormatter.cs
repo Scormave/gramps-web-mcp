@@ -121,8 +121,9 @@ public static class PersonFormatter
                 sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
         }
 
-        if (person.NoteList?.Length > 0)     sb.AppendLine($"Notes:     {person.NoteList.Length}");
-        if (person.CitationList?.Length > 0) sb.AppendLine($"Citations: {person.CitationList.Length}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", person.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", person.CitationList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", person.MediaList);
         if (person.TagList?.Length > 0)      sb.AppendLine($"Tags:      {string.Join(", ", person.TagList)}");
         if (person.Private)                  sb.AppendLine("⚠ Private record");
 
