@@ -11,9 +11,9 @@ public class GrampsEventRef
     [JsonPropertyName("ref")]
     public string? Ref { get; set; }
 
-    /// <summary>Event role (JSON key <c>role</c>). See <see cref="GrampsEventRoleTypeObjectConverter"/>.</summary>
+    /// <summary>Event role (JSON key <c>role</c>). See <see cref="GrampsWireTypeObject"/>.</summary>
     [JsonPropertyName("role")]
-    [JsonConverter(typeof(GrampsEventRoleTypeObjectConverter))]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Role { get; set; }
 
     [JsonPropertyName("note_list")]

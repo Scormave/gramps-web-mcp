@@ -41,7 +41,7 @@ public class GrampsTimelineEntry
 
     /// <summary>Event type; may be a string or a typed object in some API payloads.</summary>
     [JsonPropertyName("type")]
-    [JsonConverter(typeof(GrampsEventTypeObjectConverter))]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Type { get; set; }
 
     /// <summary>Event date as returned by the API (localized display string).</summary>

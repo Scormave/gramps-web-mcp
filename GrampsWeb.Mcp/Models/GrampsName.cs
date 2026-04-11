@@ -50,9 +50,9 @@ public class GrampsName
     [JsonPropertyName("title")]
     public string? Title { get; set; }
 
-    /// <summary>Gramps name type (JSON key <c>type</c>). See <see cref="GrampsNameTypeObjectConverter"/>.</summary>
+    /// <summary>Gramps name type (JSON key <c>type</c>). See <see cref="GrampsWireTypeObject"/>.</summary>
     [JsonPropertyName("type")]
-    [JsonConverter(typeof(GrampsNameTypeObjectConverter))]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Type { get; set; }
 
     /// <summary>

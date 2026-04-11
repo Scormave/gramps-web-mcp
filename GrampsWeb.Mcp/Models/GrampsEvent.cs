@@ -15,7 +15,7 @@ public class GrampsEvent
     public string? GrampsId { get; set; }
 
     [JsonPropertyName("type")]
-    [JsonConverter(typeof(GrampsEventTypeObjectConverter))]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Type { get; set; }
 
     [JsonPropertyName("date")]
