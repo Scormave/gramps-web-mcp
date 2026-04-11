@@ -65,7 +65,7 @@ public class GrampsTimelineEntry
     [JsonPropertyName("category")]
     public string? Category { get; set; }
 
-    /// <summary>Average citation confidence (0=very low … 4=very high). Present when ratings=true.</summary>
+    /// <summary>Average citation confidence (0=very low … 4=very high). Populated when the timeline API returns it.</summary>
     [JsonPropertyName("rating")]
     public double? Rating { get; set; }
 }

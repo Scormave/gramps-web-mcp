@@ -74,7 +74,6 @@ public static class FamilyTools
         "events: filter by category — vital, family, religious, vocational, academic, travel, legal, residence, other, custom. " +
         "dates: date range; zero-padding in month/day is normalized for the API (1999/1/1 not 1999/01/01). " +
         "By default, events with sortval 0 are still included (discard_empty=false), matching person timeline behavior. " +
-        "ratings: include citation confidence scores. " +
         "Rows include [event: handle] when the API provides handles, for get_event follow-up.")]
     public static async Task<string> GetFamilyTimeline(
         [Description("Family handle")]
@@ -83,13 +82,11 @@ public static class FamilyTools
         string[]? events = null,
         [Description("Date range filter as 'YYYY/MM/DD-YYYY/MM/DD'")]
         string? dates = null,
-        [Description("When true, include citation confidence rating (★) for each event")]
-        bool ratings = false,
         GrampsApiClient client = null!)
     {
         try
         {
-            var qs = PersonTools.BuildTimelineQueryString(events, null, null, dates, ratings);
+            var qs = PersonTools.BuildTimelineQueryString(events, null, null, dates);
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
                 $"/api/families/{handle}/timeline{qs}");
             if (timeline == null)

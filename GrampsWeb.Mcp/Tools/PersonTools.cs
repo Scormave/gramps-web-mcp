@@ -143,7 +143,6 @@ public static class PersonTools
         "dates: range 'YYYY/MM/DD-YYYY/MM/DD', or open 'YYYY/MM/DD-' or '-YYYY/MM/DD'. Leading zeros in month/day are normalized for the API. " +
         "include_undated: default true — Gramps may still show a formatted date while sortval is 0; the API hides those unless discard_empty=false. " +
         "Set false only to match strict API default (omit events Gramps treats as undated). " +
-        "ratings: include citation confidence scores (0=very low … 4=very high). " +
         "Rows include [event: handle] when the API provides handles, for get_event follow-up.")]
     public static async Task<string> GetPersonTimeline(
         [Description("Person handle")]
@@ -158,13 +157,11 @@ public static class PersonTools
         string? dates = null,
         [Description("Include events Gramps marks undated (sortval 0); default true. Use false for API-strict filtering.")]
         bool includeUndated = true,
-        [Description("When true, include citation confidence rating (★) for each event")]
-        bool ratings = false,
         GrampsApiClient client = null!)
     {
         try
         {
-            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, ratings, includeUndated);
+            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, includeUndated);
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
                 $"/api/people/{handle}/timeline{qs}");
             if (timeline == null)
@@ -392,7 +389,7 @@ public static class PersonTools
 
     internal static string BuildTimelineQueryString(
         string[]? events, string[]? relatives, string[]? relativeEvents,
-        string? dates, bool ratings, bool includeUndated = true)
+        string? dates, bool includeUndated = true)
     {
         var queryParams = new List<string>();
         // Gramps Web API uses comma-delimited event_classes / relative_event_classes (not repeated events= for categories).
@@ -408,8 +405,6 @@ public static class PersonTools
         // Default true: Gramps timeline drops events when date.sortval==0 (API discard_empty default), even if a display date exists.
         if (includeUndated)
             queryParams.Add("discard_empty=false");
-        if (ratings)
-            queryParams.Add("ratings=1");
         return queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
     }
 
