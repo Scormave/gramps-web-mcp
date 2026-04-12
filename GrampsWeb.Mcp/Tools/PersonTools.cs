@@ -26,13 +26,13 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Get raw person data by handle. Returns name, gender, gramps_id, birth/death dates and places, " +
-        "attributes, addresses, URLs, person associations, handles of linked events, families, notes and media. " +
-        "Use get_person_extended for all referenced objects resolved in one call. " +
-        "Use get_ancestors or get_descendants for family tree traversal. " +
-        "Always call get_name_schema before working with name fields.")]
+        "Read-only: fetch one person by handle as formatted text (names, gender, Gramps ID, birth/death, " +
+        "attributes, addresses, URLs, associations, and handles of linked events, families, notes, media). " +
+        "Use get_person_extended when you need names/places/events resolved in one response. " +
+        "Use get_ancestors / get_descendants for tree traversal. " +
+        ToolDescriptionFragments.CallGetNameSchema)]
     public static async Task<string> GetPerson(
-        [Description("Person handle — use search() or list_objects('people') to find handles")]
+        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -51,14 +51,11 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Get complete person data with all referenced objects resolved in a single request. " +
-        "Returns resolved event dates, place names, family handles, note text, tag names, " +
-        "plus root-level attributes, addresses, URLs, and person associations (same as get_person). " +
-        "After the bulk response, missing first-level unwraps are filled: citations (source etc. via per-citation extend=all), " +
-        "events (place via per-event extend=place), and media objects (GET /api/media/… when extended.media is absent). " +
-        "Use for 'tell me everything about this person' queries. Slower than get_person.")]
+        "Read-only: like get_person but resolves many linked objects (event dates/places, note text, tag names, citations, media) " +
+        "so you get a fuller narrative in one call. Slower and heavier than get_person. " +
+        "Use get_person when you only need handles and core fields.")]
     public static async Task<string> GetPersonExtended(
-        [Description("Person handle")]
+        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -78,11 +75,11 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Get ancestor tree up to N generations. Returns names, birth/death dates and places " +
-        "for each ancestor. Each line includes Gen N and optional kinship (Father, Mother's father, …). " +
-        "Use handle from search() or list_objects('people').")]
+        "Read-only: list ancestors up to N generations with names and vital dates/places. " +
+        "Each row includes generation and optional kinship labels (Father, Mother's father, …). " +
+        "Only ancestors via parent families appear; spouse-only links do not.")]
     public static async Task<string> GetAncestors(
-        [Description("Person handle")]
+        [Description("Root person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Number of ancestor generations to include (default: 3, max: 10)")]
         int generations = 3,
@@ -111,10 +108,11 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Get descendant tree up to N generations. Returns names, birth/death dates and places " +
-        "for each descendant. Each line includes Gen N and optional kinship (Son, Granddaughter, …) based on recorded gender.")]
+        "Read-only: list descendants up to N generations with names and vital dates/places. " +
+        "Each row includes generation and optional kinship (Son, Granddaughter, …) from recorded gender. " +
+        "Only children on families where this person is a parent are included.")]
     public static async Task<string> GetDescendants(
-        [Description("Person handle")]
+        [Description("Root person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Number of descendant generations to include (default: 3, max: 10)")]
         int generations = 3,
@@ -142,16 +140,14 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Get chronological timeline of life events for a person. " +
-        "events: filter by category — vital, family, religious, vocational, academic, travel, legal, residence, other, custom. " +
-        "relatives: include events of — father, mother, brother, sister, wife, husband, son, daughter. " +
-        "relative_events: event categories for relatives (same options as events). " +
-        "dates: range 'YYYY/MM/DD-YYYY/MM/DD', or open 'YYYY/MM/DD-' or '-YYYY/MM/DD'. Leading zeros in month/day are normalized for the API. " +
-        "include_undated: default true — Gramps may still show a formatted date while sortval is 0; the API hides those unless discard_empty=false. " +
-        "Set false only to match strict API default (omit events Gramps treats as undated). " +
-        "Rows include [event: handle] when the API provides handles, for get_event follow-up.")]
+        "Read-only: chronological timeline of events for one person (and optionally relatives' events). " +
+        "Filter with events (categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom), " +
+        "relatives (father, mother, brother, sister, wife, husband, son, daughter), and relative_events (same categories). " +
+        "dates: range YYYY/M/D-YYYY/M/D or open-ended; month/day leading zeros are stripped for the API. " +
+        "include_undated default true keeps events with sortval 0; false matches stricter API filtering. " +
+        "Output may include event handles for follow-up with get_event.")]
     public static async Task<string> GetPersonTimeline(
-        [Description("Person handle")]
+        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Event categories to include: vital, family, religious, vocational, academic, travel, legal, residence, other, custom")]
         string[]? events = null,
@@ -186,14 +182,12 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Calculate the genealogical relationship between two people. " +
-        "Returns the relationship string (e.g. '3rd cousin twice removed'), " +
-        "the path distance to common ancestors, and handles of common ancestors. " +
-        "Returns 'no relationship found' when the people are unrelated.")]
+        "Read-only: genealogical relationship between two people (e.g. '3rd cousin twice removed'), " +
+        "path distance, and common-ancestor handles, or a clear message if unrelated.")]
     public static async Task<string> GetRelations(
-        [Description("Handle of the first person")]
+        [Description("First person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle1,
-        [Description("Handle of the second person")]
+        [Description("Second person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle2,
         GrampsApiClient client)
     {
@@ -220,29 +214,24 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Create a new person. IMPORTANT: call get_name_schema first to understand the Name structure. " +
-        "Call get_types() for valid event type values. " +
-        "Pass event handles directly — no separate update call needed. " +
-        "eventRefHandles and eventRefRoles must be same length (use 'Primary' for main events). " +
-        "Returns the handle of the created person. " +
-        "primaryNameDate overrides any date embedded in primaryName. Date formats: get_date_input_guide(). " +
-        "gender: Female, Male, or Unknown (default: Unknown). " +
-        "Structured fields (attributes, addresses, urls, personAssociations) and simple name strings: get_structured_field_input_guide(). " +
-        "Complex names: get_name_schema().")]
+        "Create a new person (write). Returns handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetNameSchema + " " + ToolDescriptionFragments.CallGetTypes + " " +
+        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
+        "Link events in one call with eventRefHandles + eventRefRoles (same array length; use Primary for the person's main role).")]
     public static async Task<string> CreatePerson(
         [Description(FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName,
-        [Description("Primary name date as text (optional). Overrides primaryName.date. Formats: get_date_input_guide().")]
+        [Description("Optional primary name date; overrides any date inside primaryName. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? primaryNameDate = null,
-        [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
+        [Description("Interpretation order for ambiguous numeric dates (slash/dot). " + ToolDescriptionFragments.CallGetDateInputGuide)]
         DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
-        [Description("Gender: Female, Male, or Unknown (default: Unknown)")]
+        [Description("Gender: Female, Male, or Unknown (default Unknown).")]
         string gender = "Unknown",
         [Description(FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Event handles to link to this person. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Event handles to attach to this person. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? eventRefHandles = null,
-        [Description("Array of event roles (e.g. 'Primary', 'Witness'). Must match eventRefHandles length")]
+        [Description("Role string per event in eventRefHandles (same length). Examples: Primary, Witness. Order must match one-to-one.")]
         string[]? eventRefRoles = null,
         [Description("Family handles (where this person is parent/spouse). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
@@ -324,52 +313,49 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Update existing person. Pass only fields that need to change. " +
-        "To add an event, include existing event handles in eventRefHandles. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects (e.g. empty tagHandles removes all tags). " +
-        "primaryNameDate updates only the name date when primaryName is omitted (requires existing primary name). " +
-        "Date formats: get_date_input_guide(). " +
-        "gender: omit to keep; otherwise Female, Male, or Unknown. " +
-        "Omit attributes/addresses/urls/personAssociations/alternateNames to leave unchanged; pass [] to clear alternate names. " +
-        "Flexible name syntax: get_structured_field_input_guide().")]
+        "Update an existing person (write). Only include arguments you want to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        "Replacing eventRefHandles replaces the full event list; parallel eventRefRoles must match length. " +
+        "If primaryName is omitted, primaryNameDate can still update the stored primary name date (requires an existing primary name). " +
+        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdatePerson(
-        [Description("Person handle")]
+        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update primary name (omit to keep). " + FlexibleGrampsName.DescriptionHint)]
+        [Description("Replace primary name. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName = null,
-        [Description("Primary name date as text (optional). When primaryName is set, overrides its date; otherwise updates stored name date. Formats: get_date_input_guide().")]
+        [Description("Name date text. With primaryName: overrides that name's date. Without primaryName: updates existing primary name date only. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? primaryNameDate = null,
-        [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
+        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
-        [Description("Update gender: Female, Male, or Unknown (omit to keep current)")]
+        [Description("Gender: Female, Male, or Unknown. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? gender = null,
-        [Description("Replace alternate names (omit to keep; [] removes all). " + FlexibleAlternateNameList.DescriptionHint)]
+        [Description("Replace all alternate names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Replace event references. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace all person–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? eventRefHandles = null,
-        [Description("Event roles to match eventRefHandles length")]
+        [Description("One role per eventRefHandles entry (same length). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string[]? eventRefRoles = null,
-        [Description("Replace family handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace families where this person is parent/spouse. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
-        [Description("Replace parent family handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace parent (child-of) families. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? parentFamilyHandles = null,
-        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace media links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace citation links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace note links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace tag links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears). " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Replace addresses (omit to keep; [] clears). " + FlexibleAddressList.DescriptionHint)]
+        [Description("Replace addresses. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAddressList.DescriptionHint)]
         FlexibleAddressList? addresses = null,
-        [Description("Replace URLs (omit to keep; [] clears). " + FlexibleUrlList.DescriptionHint)]
+        [Description("Replace URLs. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleUrlList.DescriptionHint)]
         FlexibleUrlList? urls = null,
-        [Description("Replace person associations (omit to keep; [] clears). " + FlexiblePersonRefList.DescriptionHint)]
+        [Description("Replace person associations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePersonRefList.DescriptionHint)]
         FlexiblePersonRefList? personAssociations = null,
-        [Description("Update private status")]
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
@@ -549,13 +535,12 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Delete a person. Checks backlinks first — will warn if person is " +
-        "referenced in families or events. Use force=true to delete despite references, " +
-        "but this will leave dangling handles in Family objects.")]
+        "Delete a person (destructive). Blocked when backlinks exist unless force=true. " +
+        "WARNING: force=true can leave dangling references in family and event records.")]
     public static async Task<string> DeletePerson(
-        [Description("Person handle")]
+        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false) — WARNING: leaves dangling references")]
+        [Description("If true, delete even when other objects still reference this person (dangerous; default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

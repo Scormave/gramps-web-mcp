@@ -20,11 +20,10 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns all built-in Gramps type vocabularies including event_types, place_types, " +
-        "note_types, repository_types, source_media_types, family_relation_types, " +
-        "child_reference_types, event_role_types, name_types, name_origin_types, and more. " +
-        "ALWAYS call this before any create_person, create_event, create_place or other create/update operations " +
-        "to ensure you use only valid type strings. Using non-standard type strings corrupts the database.")]
+        "Read-only discovery: built-in Gramps type vocabularies (event_types, place_types, note_types, repository_types, " +
+        "family_relation_types, child_reference_types, event_role_types, name_types, name_origin_types, etc.). " +
+        "Call before create_* or update_* whenever you set a type or role string so values match the tree. " +
+        "Invalid type strings can corrupt or reject data.")]
     public static async Task<string> GetTypes(GrampsApiClient client)
     {
         try
@@ -45,9 +44,8 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns user-defined custom types that have been added to this specific Gramps database. " +
-        "Custom types extend the standard built-in types from get_types(). " +
-        "Call this alongside get_types() to get the complete vocabulary for your database.")]
+        "Read-only discovery: custom types added in this database only. " +
+        "Use with get_types for the full set of allowed type strings before writes.")]
     public static async Task<string> GetCustomTypes(GrampsApiClient client)
     {
         try
@@ -67,10 +65,8 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns the authoritative guide for date strings in MCP tools: ISO and regional formats, " +
-        "dateComponentOrder (Iso / DayMonthYear / MonthDayYear), modifiers (before, after, about, circa), " +
-        "year ranges, separators (- / .), and primaryNameDate for persons. " +
-        "Call before create_event, update_event, create_citation, update_citation, update_media, or when setting person name dates.")]
+        "Read-only reference JSON: how to write date strings for MCP tools (ISO vs slash/dot, dateComponentOrder, modifiers, ranges). " +
+        "Call before any tool parameter named date, primaryNameDate, or similar.")]
     public static Task<string> GetDateInputGuide()
     {
         var json = JsonSerializer.Serialize(BuildDateInputGuidePayload(), new JsonSerializerOptions { WriteIndented = true });
@@ -82,9 +78,8 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns how to pass attributes, URLs, addresses, person associations, and simple person names without full Gramps JSON. " +
-        "Covers Type: Value lines, Web Home: https://…, name types with ::, given|surname, and HANDLE:: relationship. " +
-        "Use with create_person, update_person, and create/update tools that take attributes.")]
+        "Read-only reference JSON: flexible string/array forms for attributes, URLs, addresses, person refs, and shorthand names. " +
+        "Call before passing FlexibleAttributeList, FlexibleUrlList, FlexibleAddressList, FlexiblePersonRefList, or simple name strings.")]
     public static Task<string> GetStructuredFieldInputGuide()
     {
         var json = JsonSerializer.Serialize(
@@ -215,10 +210,9 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns the complete Name object schema with field descriptions and constraints. " +
-        "ALWAYS call this before create_person or update_person. " +
-        "Gramps supports complex names with multiple surnames, prefixes, connectors, and origin types. " +
-        "JSON field names match the Gramps Web API (e.g. call, nick, famnick, first_name, surname_list).")]
+        "Read-only reference JSON: full Gramps Name object (first_name, surname_list, type, call, nick, …). " +
+        "Call before create_person or update_person when building structured names (not only shorthand strings). " +
+        "Field names match the Gramps Web API.")]
     public static Task<string> GetNameSchema()
     {
         var schema = new

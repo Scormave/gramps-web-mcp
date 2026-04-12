@@ -19,10 +19,10 @@ public static class MediaTools
 {
     [McpServerTool]
     [Description(
-        "Get media metadata by handle. Returns file path, MIME type, checksum, and description. " +
-        "Media objects reference images, audio, video and other files attached to genealogical data.")]
+        "Read-only: media object metadata (path, MIME, checksum, description). " +
+        "Does not upload or download file bytes via MCP.")]
     public static async Task<string> GetMedia(
-        [Description("Media handle — use list_objects('media') or search() to find handles")]
+        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -41,27 +41,27 @@ public static class MediaTools
 
     [McpServerTool]
     [Description(
-        "Update media metadata (description, date, notes, tags). " +
-        "Note: binary file upload is not supported via MCP. " +
-        "Access date strings: get_date_input_guide(). Attributes: get_structured_field_input_guide().")]
+        "Update media metadata (write). Binary upload is not supported here—only fields stored on the media record. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdateMedia(
-        [Description("Media handle")]
+        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update description")]
+        [Description("Description. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? description = null,
-        [Description("Update access date as text (optional). Empty string clears. Formats: get_date_input_guide().")]
+        [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
+        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
-        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears). " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Update private flag")]
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
@@ -108,12 +108,12 @@ public static class MediaTools
 
     [McpServerTool]
     [Description(
-        "Delete a media object. Removes database entry, not the physical file. " +
-        "Will warn if referenced by people, events, places, or sources.")]
+        "Delete a media record (destructive). Removes the Gramps object, not necessarily the file on disk. " +
+        "Blocked when other objects reference it unless force=true.")]
     public static async Task<string> DeleteMedia(
-        [Description("Media handle")]
+        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite backlinks (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

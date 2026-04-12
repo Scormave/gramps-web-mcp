@@ -18,10 +18,9 @@ public static class RepositoryTools
 {
     [McpServerTool]
     [Description(
-        "Get repository data by handle. Returns name, type (Archive/Library/Website/etc), " +
-        "address information and URLs where sources can be accessed.")]
+        "Read-only: one repository (name, type, address, URLs). Repositories are where sources live.")]
     public static async Task<string> GetRepository(
-        [Description("Repository handle — use list_objects('repositories') or search() to find handles")]
+        [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -40,12 +39,12 @@ public static class RepositoryTools
 
     [McpServerTool]
     [Description(
-        "Create an archive, library or repository record. " +
-        "Call get_types() for valid repository_type values.")]
+        "Create a repository (write). Returns handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetTypes)]
     public static async Task<string> CreateRepository(
-        [Description("Repository name")]
+        [Description("Name (required).")]
         string name,
-        [Description("Repository type — call get_types to get valid values")]
+        [Description("Repository type key. " + ToolDescriptionFragments.CallGetTypes)]
         string? repoType = null,
         [Description("Street address (optional)")]
         string? address = null,
@@ -91,24 +90,25 @@ public static class RepositoryTools
 
     [McpServerTool]
     [Description(
-        "Update existing repository. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
+        "Update a repository (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetTypes)]
     public static async Task<string> UpdateRepository(
-        [Description("Repository handle")]
+        [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update repository name")]
+        [Description("Name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
-        [Description("Update repository type")]
+        [Description("Type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? repoType = null,
-        [Description("Update address")]
+        [Description("Street line (replaces address list when set). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? address = null,
-        [Description("Update URL")]
+        [Description("Website URL (replaces url list when set). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? url = null,
-        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Update private flag")]
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
@@ -149,11 +149,11 @@ public static class RepositoryTools
 
     [McpServerTool]
     [Description(
-        "Delete a repository. Will warn if referenced by sources.")]
+        "Delete a repository (destructive). Blocked when sources still reference it unless force=true.")]
     public static async Task<string> DeleteRepository(
-        [Description("Repository handle")]
+        [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite backlinks (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

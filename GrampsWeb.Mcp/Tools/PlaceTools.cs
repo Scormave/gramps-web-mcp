@@ -19,11 +19,10 @@ public static class PlaceTools
 {
     [McpServerTool]
     [Description(
-        "Get place data by handle. Returns name, type, coordinates, and hierarchical location " +
-        "(e.g. 'Kyiv, Kyivska Oblast, Ukraine' by traversing enclosed_by). " +
-        "Useful for understanding the geographic context of events.")]
+        "Read-only: one place by handle (name, type, coordinates, hierarchy by traversing parent places). " +
+        "Use when resolving place handles from events or building geographic context.")]
     public static async Task<string> GetPlace(
-        [Description("Place handle — use list_objects('places') or search() to find handles")]
+        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -42,16 +41,12 @@ public static class PlaceTools
 
     [McpServerTool]
     [Description(
-        "Get chronological timeline of events at this place. " +
-        "Built from place backlinks and per-event fetches (no server place-timeline route). " +
-        "Only events whose place field matches this handle are included (child vs parent places differ). " +
-        "events: filter by category — vital, family, religious, vocational, academic, travel, legal, residence, other, custom " +
-        "(same keywords as person/family timelines; default English type names from the Gramps Web API spec). " +
-        "dates: range 'YYYY/MM/DD-YYYY/MM/DD', or open 'YYYY/MM/DD-' or '-YYYY/MM/DD'; leading zeros in month/day are normalized like other timeline tools. " +
-        "include_undated: default true — when false, events with no sortable date (sortval 0 or missing) are omitted. " +
-        "Rows include [event: handle] when known, for follow-up get_event calls.")]
+        "Read-only: chronological events whose place field equals this handle (computed via backlinks; not a single API route). " +
+        "Events on a child place (e.g. city) do not appear when querying the parent country handle. " +
+        "events filters by category (same set as person timeline). dates uses YYYY/M/D ranges with zero-stripping. " +
+        "include_undated default true keeps sortval-0 events. Output may include event handles for get_event.")]
     public static async Task<string> GetPlaceTimeline(
-        [Description("Place handle")]
+        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom")]
         string[]? events = null,
@@ -92,19 +87,19 @@ public static class PlaceTools
 
     [McpServerTool]
     [Description(
-        "Create a geographic place. Call get_types() for valid place_type values. " +
-        "enclosedByHandles: parent places (village → county → country). " +
-        "Returns place handle.")]
+        "Create a place (write). Returns handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetTypes + " " +
+        "Parent places go in enclosedByHandles (smaller region → larger region order as in your tree).")]
     public static async Task<string> CreatePlace(
-        [Description("Place name")]
+        [Description("Primary display name (required).")]
         string name,
-        [Description("Place type — call get_types to get valid values")]
+        [Description("Place type key. " + ToolDescriptionFragments.CallGetTypes)]
         string? placeType = null,
         [Description("Latitude coordinate")]
         string? lat = null,
         [Description("Longitude coordinate")]
         string? lon = null,
-        [Description("Parent place handles (hierarchy). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Parent place handles (enclosure hierarchy). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? enclosedByHandles = null,
         [Description("Language code (default: 'en')")]
         string? nameLang = null,
@@ -167,32 +162,32 @@ public static class PlaceTools
 
     [McpServerTool]
     [Description(
-        "Update existing place. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
+        "Update a place (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks)]
     public static async Task<string> UpdatePlace(
-        [Description("Place handle")]
+        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update place name")]
+        [Description("Name text. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
-        [Description("Update place type")]
+        [Description("Place type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? placeType = null,
-        [Description("Update latitude")]
+        [Description("Latitude string. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? lat = null,
-        [Description("Update longitude")]
+        [Description("Longitude string. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? lon = null,
-        [Description("Replace parent place handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Parent place chain. Omit to keep unchanged. When set non-empty, replaces hierarchy; empty value does not clear parents in this API mapping—omit instead. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? enclosedByHandles = null,
-        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Update place code")]
+        [Description("Place code. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? code = null,
-        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Update private flag")]
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
@@ -243,12 +238,12 @@ public static class PlaceTools
 
     [McpServerTool]
     [Description(
-        "Delete a place. Will warn if referenced by events or by child places. " +
-        "Deleting a parent place breaks child place hierarchy.")]
+        "Delete a place (destructive). Blocked when events or child places reference it unless force=true. " +
+        "Deleting a parent can orphan child places in the hierarchy.")]
     public static async Task<string> DeletePlace(
-        [Description("Place handle")]
+        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite references (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

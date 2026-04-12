@@ -18,10 +18,10 @@ public static class SourceTools
 {
     [McpServerTool]
     [Description(
-        "Get source data by handle. Returns title, author, publication info, abbreviation, " +
-        "and linked repository handles. Sources are the scholarly works that citations cite.")]
+        "Read-only: one source (title, author, publication, abbreviation, repository refs). " +
+        "Sources are what citations point at.")]
     public static async Task<string> GetSource(
-        [Description("Source handle — use list_objects('sources') or search() to find handles")]
+        [Description("Source handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -40,11 +40,11 @@ public static class SourceTools
 
     [McpServerTool]
     [Description(
-        "Create a source document. Usually created before citations. " +
-        "Link to repository if the physical document is held there. " +
-        "Attributes: get_structured_field_input_guide().")]
+        "Create a source (write). Create sources before citations. " +
+        "Optional repositoryHandles link to where the item is held. " +
+        ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> CreateSource(
-        [Description("Source title")]
+        [Description("Title (required).")]
         string title,
         [Description("Author name (optional)")]
         string? author = null,
@@ -52,7 +52,7 @@ public static class SourceTools
         string? pubinfo = null,
         [Description("Abbreviation (optional)")]
         string? abbrev = null,
-        [Description("Repository handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Repository handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? repositoryHandles = null,
         [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
@@ -104,31 +104,31 @@ public static class SourceTools
 
     [McpServerTool]
     [Description(
-        "Update existing source. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects. " +
-        "Attributes: get_structured_field_input_guide().")]
+        "Update a source (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdateSource(
-        [Description("Source handle")]
+        [Description("Source handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update title")]
+        [Description("Title. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? title = null,
-        [Description("Update author")]
+        [Description("Author. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? author = null,
-        [Description("Update publication info")]
+        [Description("Publication info. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? pubinfo = null,
-        [Description("Update abbreviation")]
+        [Description("Abbreviation. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? abbrev = null,
-        [Description("Replace repository handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Repository refs. Omit to keep. Non-empty replaces the list; empty array does not clear (omit to keep). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? repositoryHandles = null,
-        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears). " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Update private flag")]
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
@@ -176,12 +176,12 @@ public static class SourceTools
 
     [McpServerTool]
     [Description(
-        "Delete a source. WARNING: all citations referencing this source will lose their source link. " +
-        "Will warn if source is referenced by citations.")]
+        "Delete a source (destructive). WARNING: citations pointing at this source break or lose the link. " +
+        "Blocked when backlinks exist unless force=true.")]
     public static async Task<string> DeleteSource(
-        [Description("Source handle")]
+        [Description("Source handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite citations still referencing it (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

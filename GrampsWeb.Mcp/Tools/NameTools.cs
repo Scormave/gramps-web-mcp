@@ -13,8 +13,8 @@ public static class NameTools
 {
     [McpServerTool]
     [Description(
-        "Get all configured name format options for this database. " +
-        "Returns the list of name format definitions (how names are displayed).")]
+        "Read-only: name display format definitions configured in this tree (how Gramps renders names in the UI). " +
+        "Distinct from get_name_schema (person name JSON for create/update).")]
     public static async Task<string> GetNameFormats(GrampsApiClient client)
     {
         try
@@ -30,8 +30,7 @@ public static class NameTools
 
     [McpServerTool]
     [Description(
-        "Get all configured name grouping rules for this database. " +
-        "These rules define surname grouping across name variants (e.g. 'Smith' and 'Smythe').")]
+        "Read-only: surname grouping rules (e.g. Smith vs Smythe) for this database.")]
     public static async Task<string> GetNameGroups(GrampsApiClient client)
     {
         try

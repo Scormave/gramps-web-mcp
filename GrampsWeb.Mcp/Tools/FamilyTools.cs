@@ -23,13 +23,10 @@ public static class FamilyTools
 
     [McpServerTool]
     [Description(
-        "Get family unit data by handle. Returns father_handle, mother_handle, " +
-        "child handles with relationship types (frel/mrel), relationship type, " +
-        "and handles of linked events, notes and tags. " +
-        "Use get_family_extended for resolved member names. " +
-        "Use list_objects('families') or search() to find family handles.")]
+        "Read-only: one family by handle (parents, children with frel/mrel, relationship type, linked events/notes/tags as handles). " +
+        "Use get_family_extended for resolved parent/child names and richer event/place text.")]
     public static async Task<string> GetFamily(
-        [Description("Family handle — use list_objects('families') or search() to find handles")]
+        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -48,13 +45,10 @@ public static class FamilyTools
 
     [McpServerTool]
     [Description(
-        "Get complete family data with all member names and events resolved in a single request. " +
-        "Returns resolved father name, mother name, children names, event dates and place names. " +
-        "After the bulk response, missing first-level unwraps are filled: citations (source etc. via per-citation extend=all), " +
-        "events (place via per-event extend=place), and media objects (GET /api/media/… when extended.media is absent). " +
-        "Use for comprehensive family overview. Slower than get_family.")]
+        "Read-only: like get_family but resolves member names, event dates/places, citations, and media where possible. " +
+        "Slower than get_family; use when you need a full household picture in one response.")]
     public static async Task<string> GetFamilyExtended(
-        [Description("Family handle")]
+        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -74,13 +68,12 @@ public static class FamilyTools
 
     [McpServerTool]
     [Description(
-        "Get chronological timeline of events for a family. " +
-        "events: filter by category — vital, family, religious, vocational, academic, travel, legal, residence, other, custom. " +
-        "dates: date range; zero-padding in month/day is normalized for the API (1999/1/1 not 1999/01/01). " +
-        "By default, events with sortval 0 are still included (discard_empty=false), matching person timeline behavior. " +
-        "Rows include [event: handle] when the API provides handles, for get_event follow-up.")]
+        "Read-only: chronological events for one family. " +
+        "events filters by category (vital, family, religious, vocational, academic, travel, legal, residence, other, custom). " +
+        "dates uses YYYY/M/D ranges; leading zeros stripped for API. Undated events included by default (same behavior as person timeline). " +
+        "Rows may include event handles for get_event.")]
     public static async Task<string> GetFamilyTimeline(
-        [Description("Family handle")]
+        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom")]
         string[]? events = null,
@@ -107,26 +100,24 @@ public static class FamilyTools
 
     [McpServerTool]
     [Description(
-        "Create family unit. Call get_types() for valid relationship_type values. " +
-        "childRefTypes: birth relationship of each child (Birth, Adopted, Stepchild...). " +
-        "childHandles and childRefTypes must be same length. " +
-        "Link events via eventRefHandles/eventRefRoles (same pattern as create_person). " +
-        "Attributes: get_structured_field_input_guide(). " +
-        "Returns family handle.")]
+        "Create a family unit (write). Returns family handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetTypes + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
+        "childHandles and childRefTypes must have the same length (child relationship: Birth, Adopted, Stepchild, …). " +
+        "eventRefHandles and eventRefRoles must have the same length (same pattern as create_person).")]
     public static async Task<string> CreateFamily(
-        [Description("Father person handle (optional)")]
+        [Description("Father person handle. Optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? fatherHandle = null,
-        [Description("Mother person handle (optional)")]
+        [Description("Mother person handle. Optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? motherHandle = null,
         [Description("Relationship type: Married, Unmarried, Civil Union, Unknown (default: Married)")]
         string? relationshipType = "Married",
         [Description("Child person handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? childHandles = null,
-        [Description("Array of child relationship types (Birth, Adopted, Stepchild, etc). Must match childHandles length")]
+        [Description("One relationship type per childHandles entry (same length): Birth, Adopted, Stepchild, …")]
         string[]? childRefTypes = null,
-        [Description("Event handles linked to this family. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Events to link to this family. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? eventRefHandles = null,
-        [Description("Event roles; must match eventRefHandles length (default Primary)")]
+        [Description("Parallel to eventRefHandles (same length). Shorter arrays are padded with Primary.")]
         string[]? eventRefRoles = null,
         [Description("Media handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
@@ -198,37 +189,38 @@ public static class FamilyTools
 
     [McpServerTool]
     [Description(
-        "Update existing family. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects. " +
-        "Attributes: get_structured_field_input_guide().")]
+        "Update an existing family (write). Only pass fields you want to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        "Replacing childHandles replaces the full child list; childRefTypes must match length. " +
+        ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdateFamily(
-        [Description("Family handle")]
+        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update father handle")]
+        [Description("Father person handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? fatherHandle = null,
-        [Description("Update mother handle")]
+        [Description("Mother person handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? motherHandle = null,
-        [Description("Update relationship type")]
+        [Description("Relationship type string. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? relationshipType = null,
-        [Description("Replace child references. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace all children. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? childHandles = null,
-        [Description("Child relationship types to match childHandles")]
+        [Description("One type per childHandles entry (same length). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string[]? childRefTypes = null,
-        [Description("Replace event references. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace family–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? eventRefHandles = null,
-        [Description("Event roles to match eventRefHandles length")]
+        [Description("One role per eventRefHandles entry (same length). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string[]? eventRefRoles = null,
-        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace media links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace citation links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace note links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace tag links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears)")]
+        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         GrampsAttribute[]? attributes = null,
-        [Description("Update private flag")]
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
@@ -294,12 +286,12 @@ public static class FamilyTools
 
     [McpServerTool]
     [Description(
-        "Delete a family unit. Will warn if family members still reference it. " +
-        "Does NOT automatically remove family from member Person objects.")]
+        "Delete a family (destructive). Blocked when backlinks exist unless force=true. " +
+        "Does not remove this family from person records automatically; fix person links separately if needed.")]
     public static async Task<string> DeleteFamily(
-        [Description("Family handle")]
+        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite remaining references (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

@@ -19,10 +19,9 @@ public static class NoteTools
 {
     [McpServerTool]
     [Description(
-        "Get note data by handle. Returns the text content, note type (General/Research/TODO/etc), " +
-        "and format (plain text or HTML).")]
+        "Read-only: one note (text, type, Plain vs Html format).")]
     public static async Task<string> GetNote(
-        [Description("Note handle — use list_objects('notes') or search() to find handles")]
+        [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -41,14 +40,13 @@ public static class NoteTools
 
     [McpServerTool]
     [Description(
-        "Create a text note. Call get_types() for valid note_type values. " +
-        "format: Plain or Html (default: Plain). " +
-        "After creating, add note handle to any object via update_{type}(noteHandles). " +
-        "Returns note handle.")]
+        "Create a note (write). Returns handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetTypes + " " +
+        "Link the note to people/events/etc. by passing its handle in that object's noteHandles on create/update.")]
     public static async Task<string> CreateNote(
-        [Description("Note text content")]
+        [Description("Note body text (required).")]
         string text,
-        [Description("Note type — call get_types to get valid values (default: 'General')")]
+        [Description("Note type key. " + ToolDescriptionFragments.CallGetTypes + " Default General.")]
         string noteType = "General",
         [Description("Text format: Plain or Html (default: Plain)")]
         string format = "Plain",
@@ -92,20 +90,21 @@ public static class NoteTools
 
     [McpServerTool]
     [Description(
-        "Update existing note. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
+        "Update a note (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetTypes)]
     public static async Task<string> UpdateNote(
-        [Description("Note handle")]
+        [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update note text")]
+        [Description("Body text. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? text = null,
-        [Description("Update note type")]
+        [Description("Note type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? noteType = null,
-        [Description("Update format: Plain or Html (omit to keep current)")]
+        [Description("Plain or Html. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? format = null,
-        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Update private flag")]
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
@@ -149,11 +148,11 @@ public static class NoteTools
 
     [McpServerTool]
     [Description(
-        "Delete a note. Will warn if referenced by any genealogical object.")]
+        "Delete a note (destructive). Blocked when still attached elsewhere unless force=true.")]
     public static async Task<string> DeleteNote(
-        [Description("Note handle")]
+        [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite backlinks (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {
