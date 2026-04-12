@@ -33,6 +33,17 @@ public class GrampsAttribute
 
     [JsonPropertyName("value")]
     public string? Value { get; set; }
+
+    [JsonPropertyName("citation_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
+    public string[]? CitationList { get; set; }
+
+    [JsonPropertyName("note_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
+    public string[]? NoteList { get; set; }
+
+    [JsonPropertyName("private")]
+    public bool Private { get; set; }
 }
 
 /// <summary>
@@ -78,6 +89,14 @@ public class GrampsPerson
     [JsonPropertyName("event_ref_list")]
     public GrampsEventRef[]? EventRefList { get; set; }
 
+    /// <summary>Index into <see cref="EventRefList"/> for the preferred birth event, when set.</summary>
+    [JsonPropertyName("birth_ref_index")]
+    public int? BirthRefIndex { get; set; }
+
+    /// <summary>Index into <see cref="EventRefList"/> for the preferred death event, when set.</summary>
+    [JsonPropertyName("death_ref_index")]
+    public int? DeathRefIndex { get; set; }
+
     [JsonPropertyName("family_list")]
     [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? FamilyList { get; set; }
@@ -90,10 +109,13 @@ public class GrampsPerson
     public string[]? MediaList { get; set; }
 
     [JsonPropertyName("address_list")]
-    public object[]? AddressList { get; set; }
+    public GrampsAddress[]? AddressList { get; set; }
 
     [JsonPropertyName("attribute_list")]
     public GrampsAttribute[]? AttributeList { get; set; }
+
+    [JsonPropertyName("person_ref_list")]
+    public GrampsPersonRef[]? PersonRefList { get; set; }
 
     [JsonPropertyName("note_list")]
     public string[]? NoteList { get; set; }
@@ -106,6 +128,9 @@ public class GrampsPerson
 
     [JsonPropertyName("tag_list")]
     public string[]? TagList { get; set; }
+
+    [JsonPropertyName("urls")]
+    public GrampsUrl[]? UrlList { get; set; }
 
     [JsonPropertyName("private")]
     public bool Private { get; set; }

@@ -41,41 +41,24 @@ public static class PersonFormatter
         return summary;
     }
 
+    /// <summary>
+    /// Date/place text for the first matching vital event, preferring <see cref="GrampsPerson.BirthRefIndex"/> /
+    /// <see cref="GrampsPerson.DeathRefIndex"/> when set (same logic as person detail headers, without <c>[event: …]</c> suffix).
+    /// </summary>
     public static async Task<string?> ExtractEventInfo(GrampsPerson person, string eventType, GrampsApiClient client)
     {
-        if (person.EventRefList == null || person.EventRefList.Length == 0)
+        var death = eventType switch
+        {
+            "Birth" => false,
+            "Death" => true,
+            _ => (bool?)null
+        };
+        if (death is null)
             return null;
 
-        foreach (var eventRef in person.EventRefList.Where(e => e.Ref != null))
-        {
-            try
-            {
-                var eventObj = await client.GetAsync<GrampsEvent>($"/api/events/{eventRef.Ref}");
-                if (eventObj?.Type != eventType)
-                    continue;
-
-                var parts = new List<string>();
-
-                if (eventObj.Date != null)
-                    parts.Add(GrampsValueFormatter.FormatDate(eventObj.Date));
-
-                if (!string.IsNullOrEmpty(eventObj.Place))
-                {
-                    try
-                    {
-                        var place = await client.GetAsync<GrampsPlace>($"/api/places/{eventObj.Place}");
-                        if (place != null)
-                            parts.Add(GrampsValueFormatter.FormatPlace(place));
-                    }
-                    catch { }
-                }
-
-                return string.Join(", ", parts);
-            }
-            catch { }
-        }
-
-        return null;
+        var r = await ResolveBirthOrDeathAsync(person, death.Value, client, preloadedExtendedEvents: null)
+            .ConfigureAwait(false);
+        return r.DatePlaceSummary;
     }
 
     public static async Task<string> FormatPersonFull(GrampsPerson person, GrampsApiClient client)
@@ -92,10 +75,7 @@ public static class PersonFormatter
         sb.AppendLine(new string('=', 60));
         sb.AppendLine($"Gender:    {GenderLabels[Math.Clamp(person.Gender, 0, 2)]}");
 
-        var birthInfo = await ExtractEventInfo(person, "Birth", client);
-        var deathInfo = await ExtractEventInfo(person, "Death", client);
-        if (birthInfo != null) sb.AppendLine($"Birth:     {birthInfo}");
-        if (deathInfo != null) sb.AppendLine($"Death:     {deathInfo}");
+        await AppendBirthDeathHeaderLinesAsync(sb, person, client, preloadedExtendedEvents: null).ConfigureAwait(false);
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Families as parent/spouse", person.FamilyList);
 
@@ -116,6 +96,11 @@ public static class PersonFormatter
             foreach (var er in person.EventRefList)
                 sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
         }
+
+        AppendAttributesSection(sb, person.AttributeList);
+        AppendAddressesSection(sb, person.AddressList);
+        AppendUrlsSection(sb, person.UrlList);
+        AppendPersonAssociationsSection(sb, person.PersonRefList);
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", person.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", person.CitationList);
@@ -148,10 +133,7 @@ public static class PersonFormatter
         sb.AppendLine(new string('=', 60));
         sb.AppendLine($"Gender:    {GenderLabels[Math.Clamp(person.Gender, 0, 2)]}");
 
-        var birthInfoEx = await ExtractEventInfo(person, "Birth", client);
-        var deathInfoEx = await ExtractEventInfo(person, "Death", client);
-        if (birthInfoEx != null) sb.AppendLine($"Birth:     {birthInfoEx}");
-        if (deathInfoEx != null) sb.AppendLine($"Death:     {deathInfoEx}");
+        await AppendBirthDeathHeaderLinesAsync(sb, person, client, person.Extended?.Events).ConfigureAwait(false);
 
         var extFamilies = person.Extended?.Families;
         if (extFamilies?.Length > 0)
@@ -253,6 +235,11 @@ public static class PersonFormatter
 
         MediaFormatter.AppendExtendedMediaSection(sb, person.Extended?.Media, person.MediaList);
 
+        AppendAttributesSection(sb, person.AttributeList);
+        AppendAddressesSection(sb, person.AddressList);
+        AppendUrlsSection(sb, person.UrlList);
+        AppendPersonAssociationsSection(sb, person.PersonRefList);
+
         var extTags = person.Extended?.Tags;
         if (extTags?.Length > 0)
         {
@@ -343,6 +330,257 @@ public static class PersonFormatter
         }
 
         return sb.ToString();
+    }
+
+    private readonly record struct BirthDeathHeaderParts(string? DatePlaceSummary, string? EventHandle);
+
+    private static async Task AppendBirthDeathHeaderLinesAsync(
+        StringBuilder sb,
+        GrampsPerson person,
+        GrampsApiClient client,
+        IReadOnlyList<GrampsEventExtended>? preloadedExtendedEvents)
+    {
+        var birth = await ResolveBirthOrDeathAsync(person, death: false, client, preloadedExtendedEvents)
+            .ConfigureAwait(false);
+        AppendOneVitalLine(sb, "Birth", birth);
+        var death = await ResolveBirthOrDeathAsync(person, death: true, client, preloadedExtendedEvents)
+            .ConfigureAwait(false);
+        AppendOneVitalLine(sb, "Death", death);
+    }
+
+    private static void AppendOneVitalLine(StringBuilder sb, string label, BirthDeathHeaderParts parts)
+    {
+        if (string.IsNullOrWhiteSpace(parts.EventHandle) && string.IsNullOrWhiteSpace(parts.DatePlaceSummary))
+            return;
+        var core = string.IsNullOrWhiteSpace(parts.DatePlaceSummary) ? "—" : parts.DatePlaceSummary.Trim();
+        var line = string.IsNullOrWhiteSpace(parts.EventHandle)
+            ? core
+            : $"{core} [event: {parts.EventHandle.Trim()}]";
+        sb.AppendLine($"{label}:     {line}");
+    }
+
+    /// <summary>
+    /// Resolves birth or death using <see cref="GrampsPerson.BirthRefIndex"/> / <see cref="GrampsPerson.DeathRefIndex"/> first,
+    /// then the first matching event in <paramref name="preloadedExtendedEvents"/> or <see cref="GrampsPerson.EventRefList"/>.
+    /// </summary>
+    private static async Task<BirthDeathHeaderParts> ResolveBirthOrDeathAsync(
+        GrampsPerson person,
+        bool death,
+        GrampsApiClient client,
+        IReadOnlyList<GrampsEventExtended>? preloadedExtendedEvents)
+    {
+        var type = death ? "Death" : "Birth";
+        var refs = person.EventRefList;
+        int? idx = death ? person.DeathRefIndex : person.BirthRefIndex;
+
+        if (refs != null && idx is >= 0 && idx < refs.Length)
+        {
+            var h = refs[idx.Value].Ref;
+            if (!string.IsNullOrWhiteSpace(h))
+            {
+                var trimmed = h.Trim();
+                var embedded = FindEmbeddedExtendedEvent(preloadedExtendedEvents, trimmed);
+                if (embedded != null)
+                {
+                    var summary = await FormatEventDatePlaceLineAsync(embedded, client).ConfigureAwait(false);
+                    return new BirthDeathHeaderParts(summary, trimmed);
+                }
+
+                var fetched = await client.GetAsync<GrampsEvent>($"/api/events/{trimmed}").ConfigureAwait(false);
+                if (fetched != null)
+                {
+                    var summary = await FormatEventDatePlaceLineAsync(fetched, client).ConfigureAwait(false);
+                    return new BirthDeathHeaderParts(summary, trimmed);
+                }
+            }
+        }
+
+        if (preloadedExtendedEvents is { Count: > 0 })
+        {
+            foreach (var evt in preloadedExtendedEvents)
+            {
+                if (evt.Type != type)
+                    continue;
+                var summary = await FormatEventDatePlaceLineAsync(evt, client).ConfigureAwait(false);
+                var h = evt.Handle?.Trim();
+                return new BirthDeathHeaderParts(summary, string.IsNullOrWhiteSpace(h) ? null : h);
+            }
+        }
+
+        if (refs != null)
+        {
+            foreach (var eventRef in refs.Where(e => e.Ref != null))
+            {
+                try
+                {
+                    var eventObj = await client.GetAsync<GrampsEvent>($"/api/events/{eventRef.Ref}")
+                        .ConfigureAwait(false);
+                    if (eventObj?.Type != type)
+                        continue;
+                    var summary = await FormatEventDatePlaceLineAsync(eventObj, client).ConfigureAwait(false);
+                    return new BirthDeathHeaderParts(summary, eventRef.Ref?.Trim());
+                }
+                catch
+                {
+                    // try next ref
+                }
+            }
+        }
+
+        return default;
+    }
+
+    private static GrampsEventExtended? FindEmbeddedExtendedEvent(
+        IReadOnlyList<GrampsEventExtended>? events,
+        string handle)
+    {
+        if (events == null)
+            return null;
+        foreach (var e in events)
+        {
+            if (string.Equals(e.Handle?.Trim(), handle, StringComparison.Ordinal))
+                return e;
+        }
+
+        return null;
+    }
+
+    private static async Task<string?> FormatEventDatePlaceLineAsync(GrampsEvent evt, GrampsApiClient client)
+    {
+        var parts = new List<string>();
+        if (evt.Date != null)
+            parts.Add(GrampsValueFormatter.FormatDate(evt.Date));
+
+        if (evt is GrampsEventExtended { Extended.Place: { } embedded })
+        {
+            var pl = GrampsValueFormatter.FormatPlace(embedded);
+            if (!string.IsNullOrEmpty(pl) && pl != "Unknown place")
+                parts.Add(pl);
+        }
+        else if (!string.IsNullOrEmpty(evt.Place))
+        {
+            try
+            {
+                var place = await client.GetAsync<GrampsPlace>($"/api/places/{evt.Place}").ConfigureAwait(false);
+                if (place != null)
+                    parts.Add(GrampsValueFormatter.FormatPlace(place));
+            }
+            catch
+            {
+                // omit place
+            }
+        }
+
+        var s = string.Join(", ", parts);
+        return string.IsNullOrWhiteSpace(s) ? null : s;
+    }
+
+    private static void AppendAttributesSection(StringBuilder sb, GrampsAttribute[]? list)
+    {
+        if (list is null || list.Length == 0)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine($"Attributes ({list.Length}):");
+        foreach (var a in list)
+        {
+            var type = string.IsNullOrWhiteSpace(a.Type) ? "—" : a.Type.Trim();
+            var val = string.IsNullOrWhiteSpace(a.Value) ? "—" : a.Value.Trim();
+            var priv = a.Private ? " ⚠ private" : "";
+            sb.AppendLine($"  • {type}: {val}{priv}");
+            AppendIndentedHandleListLine(sb, "    citations", a.CitationList);
+            AppendIndentedHandleListLine(sb, "    notes", a.NoteList);
+        }
+    }
+
+    private static void AppendAddressesSection(StringBuilder sb, GrampsAddress[]? list)
+    {
+        if (list is null || list.Length == 0)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine($"Addresses ({list.Length}):");
+        foreach (var a in list)
+        {
+            var parts = new List<string>();
+            void add(string? s)
+            {
+                if (!string.IsNullOrWhiteSpace(s))
+                    parts.Add(s.Trim());
+            }
+
+            add(a.Street);
+            add(a.Locality);
+            add(a.City);
+            add(a.County);
+            add(a.State);
+            add(a.Postal);
+            add(a.Country);
+
+            var line = parts.Count > 0 ? string.Join(", ", parts) : "";
+            if (string.IsNullOrEmpty(line) && string.IsNullOrWhiteSpace(a.Phone))
+                line = "(empty address lines)";
+
+            sb.AppendLine($"  • {line}");
+            if (!string.IsNullOrWhiteSpace(a.Phone))
+                sb.AppendLine($"    phone: {a.Phone.Trim()}");
+            if (a.Date != null)
+            {
+                var ds = GrampsValueFormatter.FormatDate(a.Date);
+                if (!string.IsNullOrWhiteSpace(ds))
+                    sb.AppendLine($"    resident as of: {ds}");
+            }
+
+            if (a.Private)
+                sb.AppendLine("    ⚠ private");
+            AppendIndentedHandleListLine(sb, "    citations", a.CitationList);
+            AppendIndentedHandleListLine(sb, "    notes", a.NoteList);
+        }
+    }
+
+    private static void AppendUrlsSection(StringBuilder sb, GrampsUrl[]? list)
+    {
+        if (list is null || list.Length == 0)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine($"URLs ({list.Length}):");
+        foreach (var u in list)
+        {
+            var typ = string.IsNullOrWhiteSpace(u.Type) ? "URL" : u.Type.Trim();
+            var path = string.IsNullOrWhiteSpace(u.Path) ? "—" : u.Path.Trim();
+            var desc = string.IsNullOrWhiteSpace(u.Description) ? "" : $" — {u.Description.Trim()}";
+            var priv = u.Private ? " ⚠ private" : "";
+            sb.AppendLine($"  • [{typ}] {path}{desc}{priv}");
+        }
+    }
+
+    private static void AppendPersonAssociationsSection(StringBuilder sb, GrampsPersonRef[]? list)
+    {
+        if (list is null || list.Length == 0)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine($"Person associations ({list.Length}):");
+        foreach (var p in list)
+        {
+            var rh = string.IsNullOrWhiteSpace(p.Ref) ? "—" : p.Ref.Trim();
+            var rel = string.IsNullOrWhiteSpace(p.Relationship) ? "—" : p.Relationship.Trim();
+            var priv = p.Private ? " ⚠ private" : "";
+            sb.AppendLine($"  • related person [handle: {rh}] — {rel}{priv}");
+            AppendIndentedHandleListLine(sb, "    citations", p.CitationList);
+            AppendIndentedHandleListLine(sb, "    notes", p.NoteList);
+        }
+    }
+
+    private static void AppendIndentedHandleListLine(StringBuilder sb, string label, string[]? handles)
+    {
+        if (handles is null || handles.Length == 0)
+            return;
+        var cleaned = handles.Where(h => !string.IsNullOrWhiteSpace(h)).Select(h => h.Trim()).ToArray();
+        if (cleaned.Length == 0)
+            return;
+        sb.AppendLine($"{label}: {string.Join(", ", cleaned.Select(h => $"[handle: {h}]"))}");
     }
 
     public static string FormatRelationships(string handle1, string handle2, JsonElement data)

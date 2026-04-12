@@ -27,7 +27,7 @@ public static class PersonTools
     [McpServerTool]
     [Description(
         "Get raw person data by handle. Returns name, gender, gramps_id, birth/death dates and places, " +
-        "handles of linked events, families, notes and media. " +
+        "attributes, addresses, URLs, person associations, handles of linked events, families, notes and media. " +
         "Use get_person_extended for all referenced objects resolved in one call. " +
         "Use get_ancestors or get_descendants for family tree traversal. " +
         "Always call get_name_schema before working with name fields.")]
@@ -52,7 +52,8 @@ public static class PersonTools
     [McpServerTool]
     [Description(
         "Get complete person data with all referenced objects resolved in a single request. " +
-        "Returns resolved event dates, place names, family handles, note text, and tag names. " +
+        "Returns resolved event dates, place names, family handles, note text, tag names, " +
+        "plus root-level attributes, addresses, URLs, and person associations (same as get_person). " +
         "After the bulk response, missing first-level unwraps are filled: citations (source etc. via per-citation extend=all), " +
         "events (place via per-event extend=place), and media objects (GET /api/media/… when extended.media is absent). " +
         "Use for 'tell me everything about this person' queries. Slower than get_person.")]

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Requests;
@@ -42,7 +43,7 @@ public class CreatePersonRequest
     public string[]? MediaList { get; set; }
 
     [JsonPropertyName("address_list")]
-    public object[]? AddressList { get; set; }
+    public GrampsAddress[]? AddressList { get; set; }
 
     [JsonPropertyName("attribute_list")]
     public AttributeRequest[]? AttributeList { get; set; }
