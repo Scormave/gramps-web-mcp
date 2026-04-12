@@ -9,13 +9,18 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class MediaFormatter
 {
+    private const string GallerySectionTitle = "Gallery (media)";
+
     /// <summary>Uses resolved <paramref name="extendedMedia"/> when present; otherwise handle bullets from <paramref name="handleFallback"/>.</summary>
-    public static void AppendExtendedMediaSection(StringBuilder sb, GrampsMedia[]? extendedMedia, string[]? handleFallback)
+    public static void AppendExtendedMediaSection(
+        StringBuilder sb,
+        GrampsMedia[]? extendedMedia,
+        string[]? handleFallback)
     {
         if (extendedMedia is { Length: > 0 })
         {
             sb.AppendLine();
-            sb.AppendLine($"Media ({extendedMedia.Length}):");
+            sb.AppendLine($"{GallerySectionTitle} ({extendedMedia.Length}):");
             foreach (var m in extendedMedia)
             {
                 var fn = Path.GetFileName(m.Path ?? "");
@@ -28,7 +33,7 @@ public static class MediaFormatter
             return;
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", handleFallback);
+        HandleListFormatter.AppendHandleBulletSection(sb, GallerySectionTitle, handleFallback);
     }
 
     public static string FormatMediaFull(GrampsMedia media)

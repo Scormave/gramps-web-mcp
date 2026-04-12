@@ -77,17 +77,8 @@ public static class PersonFormatter
 
         await AppendBirthDeathHeaderLinesAsync(sb, person, client, preloadedExtendedEvents: null).ConfigureAwait(false);
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Families as parent/spouse", person.FamilyList);
-
-        if (person.ParentFamilyList?.Length > 0)
-        {
-            string[] parentFamilyHandles = person.ParentFamilyList
-                .Select(pf => pf.Ref)
-                .Where(r => !string.IsNullOrWhiteSpace(r))
-                .Select(r => r!)
-                .ToArray();
-            HandleListFormatter.AppendHandleBulletSection(sb, "Parent families as child", parentFamilyHandles);
-        }
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", person.TagList);
+        AppendPersonRelationshipsHandleSections(sb, person);
 
         if (person.EventRefList?.Length > 0)
         {
@@ -97,16 +88,7 @@ public static class PersonFormatter
                 sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
         }
 
-        AppendAttributesSection(sb, person.AttributeList);
-        AppendAddressesSection(sb, person.AddressList);
-        AppendUrlsSection(sb, person.UrlList);
-        AppendPersonAssociationsSection(sb, person.PersonRefList);
-
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", person.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", person.CitationList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", person.MediaList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", person.TagList);
-        if (person.Private)                  sb.AppendLine("⚠ Private record");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Gallery (media)", person.MediaList);
 
         if (person.AlternateNames is { Length: > 0 })
         {
@@ -118,6 +100,15 @@ public static class PersonFormatter
                 sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({typeLabel})");
             }
         }
+
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", person.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", person.CitationList);
+
+        AppendMetadataSectionsForPerson(sb, person);
+        AppendPersonAssociationsSection(sb, person.PersonRefList);
+
+        if (person.Private)
+            sb.AppendLine("⚠ Private record");
 
         return sb.ToString();
     }
@@ -135,11 +126,43 @@ public static class PersonFormatter
 
         await AppendBirthDeathHeaderLinesAsync(sb, person, client, person.Extended?.Events).ConfigureAwait(false);
 
-        var extFamilies = person.Extended?.Families;
-        if (extFamilies?.Length > 0)
+        var extTags = person.Extended?.Tags;
+        if (extTags?.Length > 0)
         {
             sb.AppendLine();
-            sb.AppendLine($"Families as parent/spouse ({extFamilies.Length}):");
+            sb.AppendLine($"Tags ({extTags.Length}):");
+            foreach (var t in extTags)
+            {
+                var label = string.IsNullOrWhiteSpace(t.Name) ? "Tag" : t.Name.Trim();
+                var th = string.IsNullOrWhiteSpace(t.Handle) ? "—" : t.Handle.Trim();
+                sb.AppendLine($"  • {label} [handle: {th}]");
+            }
+        }
+
+        var extParentFamilies = person.Extended?.ParentFamilies;
+        var extFamilies = person.Extended?.Families;
+        if (extParentFamilies is { Length: > 0 } || extFamilies is { Length: > 0 })
+        {
+            sb.AppendLine();
+            sb.AppendLine("Relationships:");
+        }
+
+        if (extParentFamilies is { Length: > 0 })
+        {
+            sb.AppendLine();
+            sb.AppendLine($"  Parent families (as child) ({extParentFamilies.Length}):");
+            foreach (var fam in extParentFamilies)
+            {
+                var fh = string.IsNullOrWhiteSpace(fam.FatherHandle) ? "—" : fam.FatherHandle.Trim();
+                var mh = string.IsNullOrWhiteSpace(fam.MotherHandle) ? "—" : fam.MotherHandle.Trim();
+                sb.AppendLine($"  • [handle: {fam.Handle}] — father [handle: {fh}], mother [handle: {mh}]");
+            }
+        }
+
+        if (extFamilies is { Length: > 0 })
+        {
+            sb.AppendLine();
+            sb.AppendLine($"  Families as parent or spouse ({extFamilies.Length}):");
             foreach (var fam in extFamilies)
             {
                 var spouseHandle = fam.FatherHandle == person.Handle ? fam.MotherHandle : fam.FatherHandle;
@@ -153,19 +176,6 @@ public static class PersonFormatter
                     ? "spouse: —"
                     : $"spouse [handle: {spouseHandle.Trim()}]";
                 sb.AppendLine($"  • [{relLabel}] [handle: {fam.Handle}] — {spousePart}, children: {childCount}");
-            }
-        }
-
-        var extParentFamilies = person.Extended?.ParentFamilies;
-        if (extParentFamilies?.Length > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"Parent families as child ({extParentFamilies.Length}):");
-            foreach (var fam in extParentFamilies)
-            {
-                var fh = string.IsNullOrWhiteSpace(fam.FatherHandle) ? "—" : fam.FatherHandle.Trim();
-                var mh = string.IsNullOrWhiteSpace(fam.MotherHandle) ? "—" : fam.MotherHandle.Trim();
-                sb.AppendLine($"  • [handle: {fam.Handle}] — father [handle: {fh}], mother [handle: {mh}]");
             }
         }
 
@@ -207,6 +217,19 @@ public static class PersonFormatter
             }
         }
 
+        MediaFormatter.AppendExtendedMediaSection(sb, person.Extended?.Media, person.MediaList);
+
+        if (person.AlternateNames is { Length: > 0 })
+        {
+            sb.AppendLine();
+            sb.AppendLine("Alternate names:");
+            foreach (var n in person.AlternateNames)
+            {
+                var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, tables.NameTypes);
+                sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({typeLabel})");
+            }
+        }
+
         var extNotes = person.Extended?.Notes;
         if (extNotes?.Length > 0)
         {
@@ -228,43 +251,16 @@ public static class PersonFormatter
         if (extCitations?.Length > 0)
         {
             sb.AppendLine();
-            sb.AppendLine($"Citations ({extCitations.Length}):");
+            sb.AppendLine($"Sources (citations) ({extCitations.Length}):");
             foreach (var c in extCitations)
                 sb.AppendLine(CitationFormatter.FormatEmbeddedCitationExtendedLine(c));
         }
 
-        MediaFormatter.AppendExtendedMediaSection(sb, person.Extended?.Media, person.MediaList);
-
-        AppendAttributesSection(sb, person.AttributeList);
-        AppendAddressesSection(sb, person.AddressList);
-        AppendUrlsSection(sb, person.UrlList);
+        AppendMetadataSectionsForPerson(sb, person);
         AppendPersonAssociationsSection(sb, person.PersonRefList);
 
-        var extTags = person.Extended?.Tags;
-        if (extTags?.Length > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"Tags ({extTags.Length}):");
-            foreach (var t in extTags)
-            {
-                var label = string.IsNullOrWhiteSpace(t.Name) ? "Tag" : t.Name.Trim();
-                var th = string.IsNullOrWhiteSpace(t.Handle) ? "—" : t.Handle.Trim();
-                sb.AppendLine($"  • {label} [handle: {th}]");
-            }
-        }
-
-        if (person.Private) sb.AppendLine("⚠ Private record");
-
-        if (person.AlternateNames is { Length: > 0 })
-        {
-            sb.AppendLine();
-            sb.AppendLine("Alternate names:");
-            foreach (var n in person.AlternateNames)
-            {
-                var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, tables.NameTypes);
-                sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({typeLabel})");
-            }
-        }
+        if (person.Private)
+            sb.AppendLine("⚠ Private record");
 
         return sb.ToString();
     }
@@ -475,6 +471,33 @@ public static class PersonFormatter
         return string.IsNullOrWhiteSpace(s) ? null : s;
     }
 
+    private static void AppendPersonRelationshipsHandleSections(StringBuilder sb, GrampsPerson person)
+    {
+        var parentHandles = person.ParentFamilyList?
+            .Select(pf => pf.Ref)
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Select(r => r!)
+            .ToArray();
+        var hasParents = parentHandles is { Length: > 0 };
+        var hasSpouseFamilies = person.FamilyList?.Any(h => !string.IsNullOrWhiteSpace(h)) == true;
+        if (!hasParents && !hasSpouseFamilies)
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine("Relationships:");
+        if (hasParents)
+            HandleListFormatter.AppendHandleBulletSection(sb, "  Parent families (as child)", parentHandles);
+        if (hasSpouseFamilies)
+            HandleListFormatter.AppendHandleBulletSection(sb, "  Families as parent or spouse", person.FamilyList);
+    }
+
+    private static void AppendMetadataSectionsForPerson(StringBuilder sb, GrampsPerson person)
+    {
+        AppendAttributesSection(sb, person.AttributeList);
+        AppendAddressesSection(sb, person.AddressList);
+        AppendUrlsSection(sb, person.UrlList);
+    }
+
     private static void AppendAttributesSection(StringBuilder sb, GrampsAttribute[]? list)
     {
         if (list is null || list.Length == 0)
@@ -561,7 +584,7 @@ public static class PersonFormatter
             return;
 
         sb.AppendLine();
-        sb.AppendLine($"Person associations ({list.Length}):");
+        sb.AppendLine($"Associations (relations) ({list.Length}):");
         foreach (var p in list)
         {
             var rh = string.IsNullOrWhiteSpace(p.Ref) ? "—" : p.Ref.Trim();
