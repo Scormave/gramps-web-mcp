@@ -110,6 +110,7 @@ public static class FamilyTools
         "Create family unit. Call get_types() for valid relationship_type values. " +
         "childRefTypes: birth relationship of each child (Birth, Adopted, Stepchild...). " +
         "childHandles and childRefTypes must be same length. " +
+        "Link events via eventRefHandles/eventRefRoles (same pattern as create_person). " +
         "Returns family handle.")]
     public static async Task<string> CreateFamily(
         [Description("Father person handle (optional)")]
@@ -122,10 +123,22 @@ public static class FamilyTools
         FlexibleHandleList? childHandles = null,
         [Description("Array of child relationship types (Birth, Adopted, Stepchild, etc). Must match childHandles length")]
         string[]? childRefTypes = null,
+        [Description("Event handles linked to this family. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? eventRefHandles = null,
+        [Description("Event roles; must match eventRefHandles length (default Primary)")]
+        string[]? eventRefRoles = null,
+        [Description("Media handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Citation handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
         [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
+        [Description("Custom attributes (type + value)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -147,13 +160,20 @@ public static class FamilyTools
                 }
             }
 
+            var eventRefArr = GrampsRequestMapping.BuildEventRefList((string[]?)eventRefHandles, eventRefRoles);
+
             var request = new CreateFamilyRequest
             {
                 FatherHandle = fatherHandle,
                 MotherHandle = motherHandle,
                 ChildRefList = childRefList.Count > 0 ? childRefList.ToArray() : null,
+                EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
+                MediaList = mediaHandles,
+                CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
+                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
+                Private = isPrivate,
                 Relationship = relationshipType
             };
 
@@ -192,10 +212,22 @@ public static class FamilyTools
         FlexibleHandleList? childHandles = null,
         [Description("Child relationship types to match childHandles")]
         string[]? childRefTypes = null,
+        [Description("Replace event references. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? eventRefHandles = null,
+        [Description("Event roles to match eventRefHandles length")]
+        string[]? eventRefRoles = null,
+        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
         [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
+        [Description("Replace attributes (omit to keep; [] clears)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Update private flag")]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -229,13 +261,17 @@ public static class FamilyTools
                 FatherHandle = fatherHandle ?? family.FatherHandle,
                 MotherHandle = motherHandle ?? family.MotherHandle,
                 ChildRefList = childHandles != null ? childRefList.ToArray() : family.ChildRefList,
-                EventRefList = GrampsRequestMapping.ToEventRefRequests(family.EventRefList),
-                MediaList = family.MediaList,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(family.AttributeList),
-                CitationList = family.CitationList,
+                EventRefList = eventRefHandles != null
+                    ? GrampsRequestMapping.BuildEventRefList((string[]?)eventRefHandles, eventRefRoles)
+                    : GrampsRequestMapping.ToEventRefRequests(family.EventRefList),
+                MediaList = (string[]?)mediaHandles ?? family.MediaList,
+                AttributeList = attributes != null
+                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    : GrampsRequestMapping.ToAttributeRequests(family.AttributeList),
+                CitationList = (string[]?)citationHandles ?? family.CitationList,
                 NoteList = (string[]?)noteHandles ?? family.NoteList,
                 TagList = (string[]?)tagHandles ?? family.TagList,
-                Private = family.Private,
+                Private = isPrivate ?? family.Private,
                 Relationship = relationshipType ?? family.Relationship
             };
 

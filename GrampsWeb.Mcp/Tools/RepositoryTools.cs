@@ -53,6 +53,10 @@ public static class RepositoryTools
         string? url = null,
         [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -64,7 +68,11 @@ public static class RepositoryTools
             {
                 Name = name,
                 Type = repoType,
-                NoteList = noteHandles
+                AddressList = RepositoryAddressListFromStreet(address),
+                UrlList = RepositoryUrlListFromPath(url),
+                NoteList = noteHandles,
+                TagList = tagHandles,
+                Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsRepository>("/api/repositories/", request, "Repository");
@@ -98,6 +106,10 @@ public static class RepositoryTools
         string? url = null,
         [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Update private flag")]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -115,11 +127,11 @@ public static class RepositoryTools
                 Name = name ?? repo.Name,
                 Type = repoType ?? repo.Type,
                 EmailList = repo.EmailList,
-                AddressList = repo.AddressList,
-                UrlList = repo.UrlList,
+                AddressList = address != null ? RepositoryAddressListFromStreet(address) : repo.AddressList,
+                UrlList = url != null ? RepositoryUrlListFromPath(url) : repo.UrlList,
                 NoteList = (string[]?)noteHandles ?? repo.NoteList,
-                TagList = repo.TagList,
-                Private = repo.Private
+                TagList = (string[]?)tagHandles ?? repo.TagList,
+                Private = isPrivate ?? repo.Private
             };
 
             var response = await client.PutMutationAsync<GrampsRepository>($"/api/repositories/{handle}", updateRequest, "Repository");
@@ -183,5 +195,25 @@ public static class RepositoryTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>Single street line as Gramps address_list entry; null input omits the field on create.</summary>
+    private static object[]? RepositoryAddressListFromStreet(string? street)
+    {
+        if (street == null)
+            return null;
+        if (string.IsNullOrWhiteSpace(street))
+            return [];
+        return new object[] { new GrampsAddress { Street = street.Trim() } };
+    }
+
+    /// <summary>Single URL as urls entry; null input omits on create.</summary>
+    private static object[]? RepositoryUrlListFromPath(string? path)
+    {
+        if (path == null)
+            return null;
+        if (string.IsNullOrWhiteSpace(path))
+            return [];
+        return new object[] { new GrampsUrl { Path = path.Trim(), Type = "Web Home" } };
     }
 }

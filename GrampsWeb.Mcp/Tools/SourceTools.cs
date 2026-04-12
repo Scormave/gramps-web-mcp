@@ -55,6 +55,14 @@ public static class SourceTools
         FlexibleHandleList? repositoryHandles = null,
         [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
+        [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Custom attributes (type + value)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -74,7 +82,11 @@ public static class SourceTools
                 PubInfo = pubinfo,
                 Abbrev = abbrev,
                 RepositoryRefList = repoRefList,
-                NoteList = noteHandles
+                MediaList = mediaHandles,
+                NoteList = noteHandles,
+                TagList = tagHandles,
+                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
+                Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsSource>("/api/sources/", request, "Source");
@@ -108,6 +120,14 @@ public static class SourceTools
         FlexibleHandleList? repositoryHandles = null,
         [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
+        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Replace attributes (omit to keep; [] clears)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Update private flag")]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -131,12 +151,14 @@ public static class SourceTools
                 Author = author ?? source.Author,
                 PubInfo = pubinfo ?? source.PubInfo,
                 Abbrev = abbrev ?? source.Abbrev,
-                MediaList = source.MediaList,
+                MediaList = (string[]?)mediaHandles ?? source.MediaList,
                 RepositoryRefList = repoRefList ?? ToRepositoryRefRequestObjects(source.RepositoryRefList),
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
+                AttributeList = attributes != null
+                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    : GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
                 NoteList = (string[]?)noteHandles ?? source.NoteList,
-                TagList = source.TagList,
-                Private = source.Private
+                TagList = (string[]?)tagHandles ?? source.TagList,
+                Private = isPrivate ?? source.Private
             };
 
             var response = await client.PutMutationAsync<GrampsSource>($"/api/sources/{handle}", updateRequest, "Source");

@@ -105,6 +105,8 @@ public static class NoteTools
         string? format = null,
         [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
+        [Description("Update private flag")]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -127,7 +129,7 @@ public static class NoteTools
                 Type = noteType ?? note.Type,
                 Format = NoteTextFormatParser.ParseOptional(format) ?? note.Format,
                 TagList = (string[]?)tagHandles ?? note.TagList,
-                Private = note.Private
+                Private = isPrivate ?? note.Private
             };
 
             var response = await client.PutMutationAsync<GrampsNote>($"/api/notes/{handle}", updateRequest, "Note");

@@ -65,6 +65,12 @@ public static class EventTools
         FlexibleHandleList? noteHandles = null,
         [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
+        [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Custom attributes (type + value)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -80,9 +86,12 @@ public static class EventTools
                 Date = dateRequest,
                 Place = placeHandle,
                 Description = description,
+                MediaList = mediaHandles,
+                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
-                TagList = tagHandles
+                TagList = tagHandles,
+                Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsEvent>("/api/events/", request, "Event");
@@ -124,6 +133,12 @@ public static class EventTools
         FlexibleHandleList? noteHandles = null,
         [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
+        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace attributes (omit to keep; [] clears)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Update private flag")]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -146,12 +161,14 @@ public static class EventTools
                 Date = dateRequest,
                 Place = placeHandle ?? evt.Place,
                 Description = description ?? evt.Description,
-                MediaList = evt.MediaList,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),
+                MediaList = (string[]?)mediaHandles ?? evt.MediaList,
+                AttributeList = attributes != null
+                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    : GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),
                 CitationList = (string[]?)citationHandles ?? evt.CitationList,
                 NoteList = (string[]?)noteHandles ?? evt.NoteList,
                 TagList = (string[]?)tagHandles ?? evt.TagList,
-                Private = evt.Private
+                Private = isPrivate ?? evt.Private
             };
 
             var response = await client.PutMutationAsync<GrampsEvent>($"/api/events/{handle}", updateRequest, "Event");

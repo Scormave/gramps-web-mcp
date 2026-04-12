@@ -110,6 +110,16 @@ public static class PlaceTools
         string? nameLang = null,
         [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
+        [Description("Place code / postal reference (optional)")]
+        string? code = null,
+        [Description("Media handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Citation handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -130,9 +140,14 @@ public static class PlaceTools
                     Lang = string.IsNullOrWhiteSpace(nameLang) ? null : nameLang.Trim()
                 },
                 Type = placeType,
+                Code = code,
                 Latitude = lat,
                 Longitude = lon,
+                MediaList = mediaHandles,
+                CitationList = citationHandles,
                 NoteList = noteHandles,
+                TagList = tagHandles,
+                Private = isPrivate,
                 PlaceRefList = placeRefList
             };
 
@@ -169,6 +184,16 @@ public static class PlaceTools
         FlexibleHandleList? enclosedByHandles = null,
         [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
+        [Description("Update place code")]
+        string? code = null,
+        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Update private flag")]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -190,16 +215,16 @@ public static class PlaceTools
                 Change = place.Change,
                 Name = new PlaceNameRequest { Value = (name ?? place.Name)?.Trim() ?? "" },
                 Type = placeType ?? place.Type,
-                Code = place.Code,
+                Code = code ?? place.Code,
                 Latitude = lat ?? place.Latitude,
                 Longitude = lon ?? place.Longitude,
-                MediaList = place.MediaList,
+                MediaList = (string[]?)mediaHandles ?? place.MediaList,
                 NoteList = (string[]?)noteHandles ?? place.NoteList,
-                CitationList = place.CitationList,
-                TagList = place.TagList,
+                CitationList = (string[]?)citationHandles ?? place.CitationList,
+                TagList = (string[]?)tagHandles ?? place.TagList,
                 PlaceRefList = placeRefList ?? place.PlaceRefList,
                 AlternateLocations = place.AlternateLocations,
-                Private = place.Private
+                Private = isPrivate ?? place.Private
             };
 
             var response = await client.PutMutationAsync<GrampsPlace>($"/api/places/{handle}", updateRequest, "Place");

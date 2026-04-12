@@ -61,6 +61,16 @@ public static class CitationTools
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
+        [Description("Citation text / transcript (optional)")]
+        string? text = null,
+        [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Custom attributes (type + value)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -78,7 +88,12 @@ public static class CitationTools
                 Page = page,
                 Confidence = confidenceLevel,
                 Date = dateRequest,
-                NoteList = noteHandles
+                Text = text,
+                MediaList = mediaHandles,
+                NoteList = noteHandles,
+                TagList = tagHandles,
+                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
+                Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsCitation>("/api/citations/", request, "Citation");
@@ -115,6 +130,16 @@ public static class CitationTools
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Replace note handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
+        [Description("Update citation text")]
+        string? text = null,
+        [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Replace attributes (omit to keep; [] clears)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Update private flag")]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -142,12 +167,14 @@ public static class CitationTools
                 Page = page ?? citation.Page,
                 Confidence = finalConfidence,
                 Date = dateRequest,
-                Text = citation.Text,
-                MediaList = citation.MediaList,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
+                Text = text ?? citation.Text,
+                MediaList = (string[]?)mediaHandles ?? citation.MediaList,
+                AttributeList = attributes != null
+                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    : GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
                 NoteList = (string[]?)noteHandles ?? citation.NoteList,
-                TagList = citation.TagList,
-                Private = citation.Private
+                TagList = (string[]?)tagHandles ?? citation.TagList,
+                Private = isPrivate ?? citation.Private
             };
 
             var response = await client.PutMutationAsync<GrampsCitation>($"/api/citations/{handle}", updateRequest, "Citation");

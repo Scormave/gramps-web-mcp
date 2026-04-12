@@ -57,6 +57,12 @@ public static class MediaTools
         FlexibleHandleList? noteHandles = null,
         [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
+        [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Replace attributes (omit to keep; [] clears)")]
+        GrampsAttribute[]? attributes = null,
+        [Description("Update private flag")]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -79,11 +85,13 @@ public static class MediaTools
                 Mime = media.Mime,
                 Description = description ?? media.Description,
                 Date = dateRequest,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(media.AttributeList),
-                CitationList = media.CitationList,
+                AttributeList = attributes != null
+                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    : GrampsRequestMapping.ToAttributeRequests(media.AttributeList),
+                CitationList = (string[]?)citationHandles ?? media.CitationList,
                 NoteList = (string[]?)noteHandles ?? media.NoteList,
                 TagList = (string[]?)tagHandles ?? media.TagList,
-                Private = media.Private
+                Private = isPrivate ?? media.Private
             };
 
             var response = await client.PutMutationAsync<GrampsMedia>($"/api/media/{handle}", updateRequest, "Media");

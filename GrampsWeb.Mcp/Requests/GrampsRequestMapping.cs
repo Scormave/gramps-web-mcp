@@ -50,6 +50,23 @@ internal static class GrampsRequestMapping
             MotherRelationship = fr.MotherRelationship
         }).ToArray();
 
+    /// <summary>Builds event_ref_list from parallel handle/role arrays (default role Primary).</summary>
+    public static EventRefRequest[] BuildEventRefList(string[]? handles, string[]? roles)
+    {
+        if (handles is null || handles.Length == 0)
+            return [];
+        var list = new List<EventRefRequest>();
+        for (var i = 0; i < handles.Length; i++)
+        {
+            list.Add(new EventRefRequest
+            {
+                Ref = handles[i],
+                Role = roles?.Length > i ? roles[i] : "Primary"
+            });
+        }
+        return list.ToArray();
+    }
+
     private static bool IsEmptyGrampsDate(GrampsDate? date)
     {
         if (date is null)

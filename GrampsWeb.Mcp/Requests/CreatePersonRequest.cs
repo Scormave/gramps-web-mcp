@@ -57,6 +57,12 @@ public class CreatePersonRequest
     [JsonPropertyName("tag_list")]
     public string[]? TagList { get; set; }
 
+    [JsonPropertyName("urls")]
+    public GrampsUrl[]? UrlList { get; set; }
+
+    [JsonPropertyName("person_ref_list")]
+    public GrampsPersonRef[]? PersonRefList { get; set; }
+
     [JsonPropertyName("private")]
     public bool Private { get; set; }
 }
