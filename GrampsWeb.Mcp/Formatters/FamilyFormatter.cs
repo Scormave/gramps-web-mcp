@@ -88,11 +88,12 @@ public static class FamilyFormatter
         var sb = new StringBuilder();
         sb.AppendLine($"FAMILY [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
         sb.AppendLine(new string('=', 60));
-        sb.AppendLine($"Relationship: {relLabel}");
-        sb.AppendLine();
 
         sb.AppendLine($"Father: {family.FatherHandle ?? "—"}");
         sb.AppendLine($"Mother: {family.MotherHandle ?? "—"}");
+        sb.AppendLine($"Relationship: {relLabel}");
+
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
 
         if (family.ChildRefList?.Length > 0)
         {
@@ -116,6 +117,7 @@ public static class FamilyFormatter
         }
         else
         {
+            sb.AppendLine();
             sb.AppendLine("Children: none");
         }
 
@@ -134,13 +136,15 @@ public static class FamilyFormatter
             }
         }
 
-        AttributeListFormatter.AppendSection(sb, family.AttributeList);
+        MediaFormatter.AppendExtendedMediaSection(sb, null, family.MediaList);
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", family.CitationList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", family.MediaList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
-        if (family.Private)                  sb.AppendLine("⚠ Private record");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", family.CitationList);
+
+        AttributeListFormatter.AppendSection(sb, family.AttributeList);
+
+        if (family.Private)
+            sb.AppendLine("⚠ Private record");
 
         return sb.ToString();
     }
@@ -157,8 +161,6 @@ public static class FamilyFormatter
         var sb = new StringBuilder();
         sb.AppendLine($"Family (extended) [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
         sb.AppendLine(new string('=', 60));
-        sb.AppendLine($"Relationship: {relLabel}");
-        sb.AppendLine();
 
         var father = family.Extended?.Father;
         if (father != null)
@@ -181,6 +183,23 @@ public static class FamilyFormatter
         {
             sb.AppendLine($"Mother: [handle: {family.MotherHandle}]");
         }
+
+        sb.AppendLine($"Relationship: {relLabel}");
+
+        var extTags = family.Extended?.Tags;
+        if (extTags?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Tags ({extTags.Length}):");
+            foreach (var t in extTags)
+            {
+                var label = string.IsNullOrWhiteSpace(t.Name) ? "Tag" : t.Name.Trim();
+                var th = string.IsNullOrWhiteSpace(t.Handle) ? "—" : t.Handle.Trim();
+                sb.AppendLine($"  • {label} [handle: {th}]");
+            }
+        }
+        else
+            HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
 
         var children = family.Extended?.Children;
         if (children?.Length > 0)
@@ -280,6 +299,8 @@ public static class FamilyFormatter
             }
         }
 
+        MediaFormatter.AppendExtendedMediaSection(sb, family.Extended?.Media, family.MediaList);
+
         var extNotes = family.Extended?.Notes;
         if (extNotes?.Length > 0)
         {
@@ -303,29 +324,12 @@ public static class FamilyFormatter
         if (extCitations?.Length > 0)
         {
             sb.AppendLine();
-            sb.AppendLine($"Citations ({extCitations.Length}):");
+            sb.AppendLine($"Sources (citations) ({extCitations.Length}):");
             foreach (var c in extCitations)
                 sb.AppendLine(CitationFormatter.FormatEmbeddedCitationExtendedLine(c));
         }
         else
-            HandleListFormatter.AppendHandleBulletSection(sb, "Citations", family.CitationList);
-
-        MediaFormatter.AppendExtendedMediaSection(sb, family.Extended?.Media, family.MediaList);
-
-        var extTags = family.Extended?.Tags;
-        if (extTags?.Length > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"Tags ({extTags.Length}):");
-            foreach (var t in extTags)
-            {
-                var label = string.IsNullOrWhiteSpace(t.Name) ? "Tag" : t.Name.Trim();
-                var th = string.IsNullOrWhiteSpace(t.Handle) ? "—" : t.Handle.Trim();
-                sb.AppendLine($"  • {label} [handle: {th}]");
-            }
-        }
-        else
-            HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
+            HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", family.CitationList);
 
         AttributeListFormatter.AppendSection(sb, family.AttributeList);
 
