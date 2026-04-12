@@ -3,8 +3,10 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
+using GrampsWeb.Mcp.Tools.Parsing;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -17,10 +19,9 @@ public static class NoteTools
 {
     [McpServerTool]
     [Description(
-        "Get note data by handle. Returns the text content, note type (General/Research/TODO/etc), " +
-        "and format (plain text or HTML).")]
+        "Read-only: one note (text, type, Plain vs Html format).")]
     public static async Task<string> GetNote(
-        [Description("Note handle — use list_objects('notes') or search() to find handles")]
+        [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -29,7 +30,7 @@ public static class NoteTools
             var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>($"/api/notes/{handle}");
             return note == null
                 ? $"Note not found: {handle}"
-                : NoteFormatter.FormatNoteFull(note);
+                : await NoteFormatter.FormatNoteFullAsync(note, client);
         }
         catch (Exception ex)
         {
@@ -39,19 +40,18 @@ public static class NoteTools
 
     [McpServerTool]
     [Description(
-        "Create a text note. Call get_types() for valid note_type values. " +
-        "format: 0=Plain text, 1=Formatted (HTML). " +
-        "After creating, add note handle to any object via update_{type}(noteHandles). " +
-        "Returns note handle.")]
+        "Create a note (write). Returns handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetTypes + " " +
+        "Link the note to people/events/etc. by passing its handle in that object's noteHandles on create/update.")]
     public static async Task<string> CreateNote(
-        [Description("Note text content")]
+        [Description("Note body text (required).")]
         string text,
-        [Description("Note type — call get_types to get valid values (default: 'General')")]
+        [Description("Note type key. " + ToolDescriptionFragments.CallGetTypes + " Default General.")]
         string noteType = "General",
-        [Description("Text format: 0=Plain Text, 1=HTML (default: 0)")]
-        int format = 0,
-        [Description("Array of tag handles (optional)")]
-        string[]? tagHandles = null,
+        [Description("Text format: Plain or Html (default: Plain)")]
+        string format = "Plain",
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
         [Description("Mark as private (optional)")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
@@ -61,20 +61,25 @@ public static class NoteTools
             if (string.IsNullOrWhiteSpace(text))
                 throw McpToolErrors.ValidationError("Error: text is required");
 
+            var formatCode = NoteTextFormatParser.ParseRequired(format);
+
             var request = new CreateNoteRequest
             {
                 Text = new StyledTextRequest { Text = text, Tags = [] },
                 Type = noteType,
-                Format = format,
+                Format = formatCode,
                 TagList = tagHandles,
                 Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsNote>("/api/notes/", request, "Note");
+            var typeLabel = string.IsNullOrWhiteSpace(response.Type)
+                ? "General"
+                : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, response.Type);
             return $"Note created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {response.Type}\n" +
+                   $"Type: {typeLabel}\n" +
                    $"Text preview: {(response.Text?.Substring(0, Math.Min(50, response.Text.Length)) ?? "—")}...";
         }
         catch (Exception ex)
@@ -85,19 +90,22 @@ public static class NoteTools
 
     [McpServerTool]
     [Description(
-        "Update existing note. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
+        "Update a note (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetTypes)]
     public static async Task<string> UpdateNote(
-        [Description("Note handle")]
+        [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update note text")]
+        [Description("Body text. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? text = null,
-        [Description("Update note type")]
+        [Description("Note type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? noteType = null,
-        [Description("Update format (0=Plain, 1=HTML)")]
-        int? format = null,
-        [Description("Replace tag handles")]
-        string[]? tagHandles = null,
+        [Description("Plain or Html. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        string? format = null,
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -118,15 +126,19 @@ public static class NoteTools
                     Tags = []
                 },
                 Type = noteType ?? note.Type,
-                Format = format ?? note.Format,
-                TagList = tagHandles ?? note.TagList,
-                Private = note.Private
+                Format = NoteTextFormatParser.ParseOptional(format) ?? note.Format,
+                TagList = (string[]?)tagHandles ?? note.TagList,
+                Private = isPrivate ?? note.Private
             };
 
             var response = await client.PutMutationAsync<GrampsNote>($"/api/notes/{handle}", updateRequest, "Note");
+            var typeLabel = string.IsNullOrWhiteSpace(response.Type)
+                ? "General"
+                : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, response.Type);
             return $"Note updated successfully\n" +
                    $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {
@@ -136,11 +148,11 @@ public static class NoteTools
 
     [McpServerTool]
     [Description(
-        "Delete a note. Will warn if referenced by any genealogical object.")]
+        "Delete a note (destructive). Blocked when still attached elsewhere unless force=true.")]
     public static async Task<string> DeleteNote(
-        [Description("Note handle")]
+        [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite backlinks (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

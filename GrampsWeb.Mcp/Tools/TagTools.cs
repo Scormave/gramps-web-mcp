@@ -17,10 +17,9 @@ public static class TagTools
 {
     [McpServerTool]
     [Description(
-        "Get tag data by handle. Returns tag name, color (hex code), and priority. " +
-        "Tags are user-defined labels that can be applied to any genealogical object for organization.")]
+        "Read-only: one tag (name, color hex, priority). Tags label any object type.")]
     public static async Task<string> GetTag(
-        [Description("Tag handle — use list_objects('tags') or search() to find handles")]
+        [Description("Tag handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -39,16 +38,16 @@ public static class TagTools
 
     [McpServerTool]
     [Description(
-        "Create a tag for categorizing objects. " +
-        "color: hex color without # (e.g. FF5733). " +
-        "After creating, add tag handle to any object via update_{type}(tagHandles). " +
-        "Call list_objects('tags') first to avoid duplicates.")]
+        "Create a tag (write). Returns handle and Gramps ID. " +
+        "color is six hex digits without # (e.g. FF5733). " +
+        "Call list_objects('tags') first to avoid duplicate names. " +
+        "Attach to objects via that object's tagHandles on create/update.")]
     public static async Task<string> CreateTag(
-        [Description("Tag name")]
+        [Description("Display name (required).")]
         string name,
-        [Description("Hex color without # (default: 000000 for black)")]
+        [Description("Color as six hex digits RRGGBB without #. Default 000000 (black).")]
         string color = "000000",
-        [Description("Priority ranking (default: 0)")]
+        [Description("Sort priority; lower often sorts first (default 0).")]
         int priority = 0,
         GrampsApiClient client = null!)
     {
@@ -79,15 +78,15 @@ public static class TagTools
 
     [McpServerTool]
     [Description(
-        "Update existing tag. Pass only fields that need to change.")]
+        "Update a tag (write). Scalar fields: omit to leave unchanged (no list-clear semantics on this tool).")]
     public static async Task<string> UpdateTag(
-        [Description("Tag handle")]
+        [Description("Tag handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update tag name")]
+        [Description("Name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
-        [Description("Update hex color (without #)")]
+        [Description("RRGGBB six hex digits without #. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? color = null,
-        [Description("Update priority")]
+        [Description("Priority. " + ToolDescriptionFragments.OmitToKeepScalar)]
         int? priority = null,
         GrampsApiClient client = null!)
     {
@@ -121,11 +120,11 @@ public static class TagTools
 
     [McpServerTool]
     [Description(
-        "Delete a tag. Will warn if any genealogical objects have this tag.")]
+        "Delete a tag (destructive). Blocked when objects still carry the tag unless force=true.")]
     public static async Task<string> DeleteTag(
-        [Description("Tag handle")]
+        [Description("Tag handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite objects referencing the tag (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

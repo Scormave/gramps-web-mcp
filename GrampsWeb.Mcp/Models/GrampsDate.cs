@@ -22,7 +22,7 @@ public class GrampsDate
 
     public int NewYear { get; set; }
 
-    /// <summary>Server sort key; not sent on POST/PUT.</summary>
+    /// <summary>Server sort key (Gramps serial day number for Gregorian). Included on <see cref="Requests.DateRequest"/> writes when computable.</summary>
     public int? SortVal { get; set; }
 
     // ── First date segment (JSON dateval[0..3]: day, month, year, slash) ──

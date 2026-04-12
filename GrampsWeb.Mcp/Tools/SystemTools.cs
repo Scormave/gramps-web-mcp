@@ -15,8 +15,8 @@ public static class SystemTools
 {
     [McpServerTool]
     [Description(
-        "Get database metadata: API version, tree ID, tree name, owner, and other system information. " +
-        "Useful for understanding which database and version you're connected to.")]
+        "Read-only: connection and tree metadata (API version, tree id/name, owner, default person, etc.). " +
+        "Call early to confirm which database you are editing.")]
     public static async Task<string> GetMetadata(GrampsApiClient client)
     {
         try
@@ -53,10 +53,10 @@ public static class SystemTools
 
     [McpServerTool]
     [Description(
-        "Get recently modified objects. Returns a list of the most recently changed genealogical objects. " +
-        "Useful for seeing what changed recently and tracking database updates.")]
+        "Read-only: recent transaction history (most recently changed objects). " +
+        "Use for sync auditing or 'what changed last' workflows.")]
     public static async Task<string> GetRecentChanges(
-        [Description("Maximum number of recent changes to return (default: 20, max: 100)")]
+        [Description("How many history rows (clamped 1–100). Default 20.")]
         int limit = 20,
         GrampsApiClient client = null!)
     {
@@ -75,8 +75,7 @@ public static class SystemTools
 
     [McpServerTool]
     [Description(
-        "Get user bookmarks: quick references to important objects in the tree. " +
-        "Bookmarks are links that users have saved for quick access to frequently-viewed people or families.")]
+        "Read-only: Gramps Web user bookmarks (saved shortcuts to people, families, etc.).")]
     public static async Task<string> GetBookmarks(GrampsApiClient client)
     {
         try

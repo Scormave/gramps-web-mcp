@@ -23,22 +23,21 @@ public static class SourceFormatter
 
         if (source.RepositoryRefList?.Length > 0)
         {
-            sb.AppendLine("\nRepositories:");
+            sb.AppendLine();
+            sb.AppendLine($"Repositories ({source.RepositoryRefList.Length}):");
             foreach (var repo in source.RepositoryRefList)
             {
-                var label = repo.Ref ?? "(no ref)";
-                if (!string.IsNullOrEmpty(repo.CallNumber))
-                    label += $" — call #: {repo.CallNumber}";
-                sb.AppendLine($"  • {label}");
+                var h = string.IsNullOrWhiteSpace(repo.Ref) ? "—" : repo.Ref.Trim();
+                var line = $"  • [handle: {h}]";
+                if (!string.IsNullOrWhiteSpace(repo.CallNumber))
+                    line += $" — call #: {repo.CallNumber.Trim()}";
+                sb.AppendLine(line);
             }
         }
 
-        if (source.NoteList?.Length > 0)
-            sb.AppendLine($"Notes:   {source.NoteList.Length}");
-        if (source.MediaList?.Length > 0)
-            sb.AppendLine($"Media:   {source.MediaList.Length}");
-        if (source.TagList?.Length > 0)
-            sb.AppendLine($"Tags:    {string.Join(", ", source.TagList)}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", source.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", source.MediaList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", source.TagList);
 
         return sb.ToString();
     }

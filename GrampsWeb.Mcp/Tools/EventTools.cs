@@ -4,6 +4,7 @@ using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -19,11 +20,9 @@ public static class EventTools
 {
     [McpServerTool]
     [Description(
-        "Get event data by handle. Returns event type, date with modifiers (before/after/about), " +
-        "place handle and name, description, linked citations and notes. " +
-        "Use list_objects('events') or search() to find event handles.")]
+        "Read-only: one event by handle (type, date/modifiers, place, description, citations, notes, tags, media).")]
     public static async Task<string> GetEvent(
-        [Description("Event handle — use list_objects('events') or search() to find handles")]
+        [Description("Event handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -43,27 +42,33 @@ public static class EventTools
 
     [McpServerTool]
     [Description(
-        "Create a life event. Call get_types() for valid event_type values. " +
-        "After creating, link to person via update_person(eventRefHandles) or include in create_person(eventRefHandles). " +
-        "Returns event handle. Dates: prefer ISO yyyy-MM-dd; set dateComponentOrder for dd/MM/yyyy vs MM/dd/yyyy. " +
-        "Full syntax: get_date_input_guide().")]
+        "Create an event (write). Returns handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetTypes + " " + ToolDescriptionFragments.CallGetDateInputGuide + " " +
+        ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
+        "Link to people/families afterward via create_person / update_person / create_family / update_family event reference lists.")]
     public static async Task<string> CreateEvent(
-        [Description("Event type — must call get_types to get valid values")]
+        [Description("Event type key from the tree. " + ToolDescriptionFragments.CallGetTypes)]
         string eventType,
-        [Description("Event date as text (optional). Formats: get_date_input_guide().")]
+        [Description("Optional event date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
+        [Description("How to read ambiguous slash/dot numeric dates. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
-        [Description("Place handle (optional)")]
+        [Description("Place handle for this event. Optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,
         [Description("Event description (optional)")]
         string? description = null,
-        [Description("Array of citation handles (optional)")]
-        string[]? citationHandles = null,
-        [Description("Array of note handles (optional)")]
-        string[]? noteHandles = null,
-        [Description("Array of tag handles (optional)")]
-        string[]? tagHandles = null,
+        [Description("Citation handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description(FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -79,17 +84,21 @@ public static class EventTools
                 Date = dateRequest,
                 Place = placeHandle,
                 Description = description,
+                MediaList = mediaHandles,
+                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
-                TagList = tagHandles
+                TagList = tagHandles,
+                Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsEvent>("/api/events/", request, "Event");
             var dateStr = response.Date != null ? GrampsValueFormatter.FormatDate(response.Date) : "—";
+            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
             return $"Event created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {response.Type}\n" +
+                   $"Type: {typeLabel}\n" +
                    $"Date: {dateStr}";
         }
         catch (Exception ex)
@@ -100,28 +109,34 @@ public static class EventTools
 
     [McpServerTool]
     [Description(
-        "Update existing event. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects. " +
-        "Date: same as create_event; omit date to keep existing. Reference: get_date_input_guide().")]
+        "Update an event (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdateEvent(
-        [Description("Event handle")]
+        [Description("Event handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update event type")]
+        [Description("Event type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? eventType = null,
-        [Description("Update event date as text (optional). Empty string clears. Formats: get_date_input_guide().")]
+        [Description("Event date text. Omit to keep current. Empty string may clear per parser rules. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
+        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
-        [Description("Update place handle")]
+        [Description("Place handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,
-        [Description("Update description")]
+        [Description("Description text. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? description = null,
-        [Description("Replace citation handles")]
-        string[]? citationHandles = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
-        [Description("Replace tag handles")]
-        string[]? tagHandles = null,
+        [Description("Replace citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -144,18 +159,22 @@ public static class EventTools
                 Date = dateRequest,
                 Place = placeHandle ?? evt.Place,
                 Description = description ?? evt.Description,
-                MediaList = evt.MediaList,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),
-                CitationList = citationHandles ?? evt.CitationList,
-                NoteList = noteHandles ?? evt.NoteList,
-                TagList = tagHandles ?? evt.TagList,
-                Private = evt.Private
+                MediaList = (string[]?)mediaHandles ?? evt.MediaList,
+                AttributeList = attributes != null
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
+                    : GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),
+                CitationList = (string[]?)citationHandles ?? evt.CitationList,
+                NoteList = (string[]?)noteHandles ?? evt.NoteList,
+                TagList = (string[]?)tagHandles ?? evt.TagList,
+                Private = isPrivate ?? evt.Private
             };
 
             var response = await client.PutMutationAsync<GrampsEvent>($"/api/events/{handle}", updateRequest, "Event");
+            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
             return $"Event updated successfully\n" +
                    $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {
@@ -165,11 +184,11 @@ public static class EventTools
 
     [McpServerTool]
     [Description(
-        "Delete an event. Will warn if referenced in person or family event lists.")]
+        "Delete an event (destructive). Blocked when people/families still reference it unless force=true.")]
     public static async Task<string> DeleteEvent(
-        [Description("Event handle")]
+        [Description("Event handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite backlinks (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

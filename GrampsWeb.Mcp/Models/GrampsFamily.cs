@@ -24,6 +24,7 @@ public class GrampsChildRef
     public bool Private { get; set; }
 
     [JsonPropertyName("tag_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? TagList { get; set; }
 }
 
@@ -51,27 +52,32 @@ public class GrampsFamily
     public GrampsEventRef[]? EventRefList { get; set; }
 
     [JsonPropertyName("media_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? MediaList { get; set; }
 
     [JsonPropertyName("attribute_list")]
     public GrampsAttribute[]? AttributeList { get; set; }
 
     [JsonPropertyName("note_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? NoteList { get; set; }
 
     [JsonPropertyName("citation_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? CitationList { get; set; }
 
     [JsonPropertyName("change")]
     public long? Change { get; set; }
 
     [JsonPropertyName("tag_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? TagList { get; set; }
 
     [JsonPropertyName("private")]
     public bool Private { get; set; }
 
-    /// <summary>Relationship between parents (Gramps Web JSON key <c>type</c>).</summary>
+    /// <summary>Relationship between parents (Gramps Web JSON key <c>type</c>). See <see cref="GrampsWireTypeObject"/>.</summary>
     [JsonPropertyName("type")]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Relationship { get; set; }
 }

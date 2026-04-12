@@ -19,6 +19,7 @@ public class GrampsPlace
     public string? Name { get; set; }
 
     [JsonPropertyName("place_type")]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Type { get; set; }
 
     [JsonPropertyName("code")]

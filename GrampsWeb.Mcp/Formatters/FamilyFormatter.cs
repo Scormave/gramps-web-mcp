@@ -16,7 +16,9 @@ public static class FamilyFormatter
 
         var sb = new StringBuilder();
 
-        var relType = family.Relationship ?? "Unknown";
+        var relType = string.IsNullOrWhiteSpace(family.Relationship)
+            ? "Unknown"
+            : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, family.Relationship);
         sb.AppendLine($"Relationship: {relType}");
 
         if (!string.IsNullOrEmpty(family.FatherHandle))
@@ -78,16 +80,20 @@ public static class FamilyFormatter
         return sb.ToString();
     }
 
-    public static string FormatFamilyFull(GrampsFamily family)
+    public static async Task<string> FormatFamilyFullAsync(GrampsFamily family, GrampsApiClient client)
     {
+        var relLabel = string.IsNullOrWhiteSpace(family.Relationship)
+            ? "Unknown"
+            : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, family.Relationship);
         var sb = new StringBuilder();
         sb.AppendLine($"FAMILY [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
         sb.AppendLine(new string('=', 60));
-        sb.AppendLine($"Relationship: {family.Relationship ?? "Unknown"}");
-        sb.AppendLine();
 
         sb.AppendLine($"Father: {family.FatherHandle ?? "—"}");
         sb.AppendLine($"Mother: {family.MotherHandle ?? "—"}");
+        sb.AppendLine($"Relationship: {relLabel}");
+
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
 
         if (family.ChildRefList?.Length > 0)
         {
@@ -97,11 +103,21 @@ public static class FamilyFormatter
             {
                 var frel = child.FatherRelType ?? "Birth";
                 var mrel = child.MotherRelType ?? "Birth";
-                sb.AppendLine($"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}");
+                var line = $"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}";
+                if (child.Private)
+                    line += " ⚠ private (child link)";
+                if (child.TagList is { Length: > 0 } ctags)
+                {
+                    var th = string.Join(", ", ctags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
+                    if (!string.IsNullOrEmpty(th))
+                        line += $" | tags on link: {th}";
+                }
+                sb.AppendLine(line);
             }
         }
         else
         {
+            sb.AppendLine();
             sb.AppendLine("Children: none");
         }
 
@@ -110,22 +126,40 @@ public static class FamilyFormatter
             sb.AppendLine();
             sb.AppendLine($"Events ({family.EventRefList.Length}):");
             foreach (var er in family.EventRefList)
-                sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
+            {
+                var line = $"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}";
+                if (er.NoteList is { Length: > 0 })
+                    line += $" | note refs: {er.NoteList.Length}";
+                if (er.AttributeList is { Length: > 0 })
+                    line += $" | nested attributes: {er.AttributeList.Length}";
+                sb.AppendLine(line);
+            }
         }
 
-        if (family.NoteList?.Length > 0)     sb.AppendLine($"Notes:     {family.NoteList.Length}");
-        if (family.CitationList?.Length > 0) sb.AppendLine($"Citations: {family.CitationList.Length}");
-        if (family.TagList?.Length > 0)      sb.AppendLine($"Tags:      {string.Join(", ", family.TagList)}");
-        if (family.Private)                  sb.AppendLine("⚠ Private record");
+        MediaFormatter.AppendExtendedMediaSection(sb, null, family.MediaList);
+
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", family.CitationList);
+
+        AttributeListFormatter.AppendSection(sb, family.AttributeList);
+
+        if (family.Private)
+            sb.AppendLine("⚠ Private record");
 
         return sb.ToString();
     }
 
     public static async Task<string> FormatFamilyExtended(GrampsFamilyExtended family, GrampsApiClient client)
     {
+        var tables = await GrampsDefaultTypeLabels.PrefetchAllAsync(client);
+        var relLabel = string.IsNullOrWhiteSpace(family.Relationship)
+            ? "Unknown"
+            : GrampsDefaultTypeLabels.ResolveStored(family.Relationship.Trim(), tables.FamilyRelationTypes);
+        if (relLabel == "—")
+            relLabel = "Unknown";
+
         var sb = new StringBuilder();
-        sb.AppendLine($"FAMILY (extended) [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
-        sb.AppendLine($"Relationship: {family.Relationship ?? "Unknown"}");
+        sb.AppendLine($"Family (extended) [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
         sb.AppendLine(new string('=', 60));
 
         var father = family.Extended?.Father;
@@ -150,6 +184,23 @@ public static class FamilyFormatter
             sb.AppendLine($"Mother: [handle: {family.MotherHandle}]");
         }
 
+        sb.AppendLine($"Relationship: {relLabel}");
+
+        var extTags = family.Extended?.Tags;
+        if (extTags?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Tags ({extTags.Length}):");
+            foreach (var t in extTags)
+            {
+                var label = string.IsNullOrWhiteSpace(t.Name) ? "Tag" : t.Name.Trim();
+                var th = string.IsNullOrWhiteSpace(t.Handle) ? "—" : t.Handle.Trim();
+                sb.AppendLine($"  • {label} [handle: {th}]");
+            }
+        }
+        else
+            HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
+
         var children = family.Extended?.Children;
         if (children?.Length > 0)
         {
@@ -161,20 +212,59 @@ public static class FamilyFormatter
                 var childRef = family.ChildRefList?.FirstOrDefault(cr => cr.Ref == child.Handle);
                 var frel = childRef?.FatherRelType ?? "Birth";
                 var mrel = childRef?.MotherRelType ?? "Birth";
-                sb.AppendLine($"  • {summary} [handle: {child.Handle}] (frel: {frel}, mrel: {mrel})");
+                var line = $"  • {summary} [handle: {child.Handle}] (frel: {frel}, mrel: {mrel})";
+                if (childRef?.Private == true)
+                    line += " ⚠ private (child link)";
+                if (childRef?.TagList is { Length: > 0 } xtags)
+                {
+                    var th = string.Join(", ", xtags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
+                    if (!string.IsNullOrEmpty(th))
+                        line += $" | tags on link: {th}";
+                }
+                sb.AppendLine(line);
             }
+        }
+        else if (family.ChildRefList?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Children ({family.ChildRefList.Length}):");
+            foreach (var child in family.ChildRefList)
+            {
+                var frel = child.FatherRelType ?? "Birth";
+                var mrel = child.MotherRelType ?? "Birth";
+                var line = $"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}";
+                if (child.Private)
+                    line += " ⚠ private (child link)";
+                if (child.TagList is { Length: > 0 } ctags)
+                {
+                    var th = string.Join(", ", ctags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
+                    if (!string.IsNullOrEmpty(th))
+                        line += $" | tags on link: {th}";
+                }
+                sb.AppendLine(line);
+            }
+        }
+        else
+        {
+            sb.AppendLine("Children: none");
         }
 
         var extEvents = family.Extended?.Events;
         if (extEvents?.Length > 0)
         {
             sb.AppendLine();
-            sb.AppendLine("EVENTS:");
+            sb.AppendLine($"Events ({extEvents.Length}):");
             foreach (var evt in extEvents)
             {
                 var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : "—";
                 var placeStr = "";
-                if (!string.IsNullOrEmpty(evt.Place))
+                if (evt is GrampsEventExtended { Extended.Place: { } embedded })
+                {
+                    var pl = GrampsValueFormatter.FormatPlace(embedded);
+                    if (!string.IsNullOrEmpty(pl) && pl != "Unknown place")
+                        placeStr = $" — {pl}";
+                }
+                else if (!string.IsNullOrEmpty(evt.Place))
                 {
                     try
                     {
@@ -184,25 +274,66 @@ public static class FamilyFormatter
                     catch { }
                 }
                 var role = family.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
-                sb.AppendLine($"  • {evt.Type}: {dateStr}{placeStr} [{role}]");
+                var evtTypeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, tables.EventTypes);
+                var evtHandleSuffix = string.IsNullOrWhiteSpace(evt.Handle)
+                    ? ""
+                    : $" [handle: {evt.Handle.Trim()}]";
+                var placeHandleSuffix = string.IsNullOrWhiteSpace(evt.Place)
+                    ? ""
+                    : $" [place: {evt.Place.Trim()}]";
+                sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]{placeHandleSuffix}{evtHandleSuffix}");
             }
         }
+        else if (family.EventRefList?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Events ({family.EventRefList.Length}) (handles only — extended.events empty):");
+            foreach (var er in family.EventRefList)
+            {
+                var line = $"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}";
+                if (er.NoteList is { Length: > 0 })
+                    line += $" | note refs: {er.NoteList.Length}";
+                if (er.AttributeList is { Length: > 0 })
+                    line += $" | nested attributes: {er.AttributeList.Length}";
+                sb.AppendLine(line);
+            }
+        }
+
+        MediaFormatter.AppendExtendedMediaSection(sb, family.Extended?.Media, family.MediaList);
 
         var extNotes = family.Extended?.Notes;
         if (extNotes?.Length > 0)
         {
-            sb.AppendLine("\nNOTES:");
+            sb.AppendLine();
+            sb.AppendLine($"Notes ({extNotes.Length}):");
             foreach (var note in extNotes)
             {
                 var snippet = note.Text?.Replace('\n', ' ').Trim() ?? "";
                 if (snippet.Length > 100) snippet = snippet[..100] + "…";
-                sb.AppendLine($"  • [{note.Type}] {snippet}");
+                var noteTypeLabel = string.IsNullOrWhiteSpace(note.Type)
+                    ? "General"
+                    : GrampsDefaultTypeLabels.ResolveStored(note.Type.Trim(), tables.NoteTypes);
+                var nh = string.IsNullOrWhiteSpace(note.Handle) ? "—" : note.Handle.Trim();
+                sb.AppendLine($"  • [{noteTypeLabel}] {snippet} [handle: {nh}]");
             }
         }
+        else
+            HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
 
-        var extTags = family.Extended?.Tags;
-        if (extTags?.Length > 0)
-            sb.AppendLine($"\nTAGS: {string.Join(", ", extTags.Select(t => t.Name))}");
+        var extCitations = family.Extended?.Citations;
+        if (extCitations?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Sources (citations) ({extCitations.Length}):");
+            foreach (var c in extCitations)
+                sb.AppendLine(CitationFormatter.FormatEmbeddedCitationExtendedLine(c));
+        }
+        else
+            HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", family.CitationList);
+
+        AttributeListFormatter.AppendSection(sb, family.AttributeList);
+
+        if (family.Private) sb.AppendLine("⚠ Private record");
 
         return sb.ToString();
     }

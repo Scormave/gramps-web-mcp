@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 
@@ -242,10 +243,11 @@ internal static class GrampsDateWireCodec
 
     internal static void WriteDateRequest(Utf8JsonWriter writer, DateRequest value, JsonSerializerOptions options)
     {
+        var sortVal = GrampsDateSortVal.TryComputeForDateRequest(value);
         WriteCore(writer, value.Calendar, value.Modifier, value.Quality, value.Text, value.NewYear,
             value.Day, value.Month, value.Year, value.Slash,
             value.EndDay, value.EndMonth, value.EndYear, value.EndSlash,
-            writeSortVal: false, sortVal: null, options);
+            writeSortVal: sortVal.HasValue, sortVal: sortVal, options);
     }
 
     private static void WriteCore(

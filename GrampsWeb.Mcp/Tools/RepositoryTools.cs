@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -17,10 +18,9 @@ public static class RepositoryTools
 {
     [McpServerTool]
     [Description(
-        "Get repository data by handle. Returns name, type (Archive/Library/Website/etc), " +
-        "address information and URLs where sources can be accessed.")]
+        "Read-only: one repository (name, type, address, URLs). Repositories are where sources live.")]
     public static async Task<string> GetRepository(
-        [Description("Repository handle — use list_objects('repositories') or search() to find handles")]
+        [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -29,7 +29,7 @@ public static class RepositoryTools
             var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
             return repo == null
                 ? $"Repository not found: {handle}"
-                : RepositoryFormatter.FormatRepositoryFull(repo);
+                : await RepositoryFormatter.FormatRepositoryFullAsync(repo, client);
         }
         catch (Exception ex)
         {
@@ -39,19 +39,23 @@ public static class RepositoryTools
 
     [McpServerTool]
     [Description(
-        "Create an archive, library or repository record. " +
-        "Call get_types() for valid repository_type values.")]
+        "Create a repository (write). Returns handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetTypes)]
     public static async Task<string> CreateRepository(
-        [Description("Repository name")]
+        [Description("Name (required).")]
         string name,
-        [Description("Repository type — call get_types to get valid values")]
+        [Description("Repository type key. " + ToolDescriptionFragments.CallGetTypes)]
         string? repoType = null,
         [Description("Street address (optional)")]
         string? address = null,
         [Description("Website URL (optional)")]
         string? url = null,
-        [Description("Array of note handles (optional)")]
-        string[]? noteHandles = null,
+        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -63,15 +67,20 @@ public static class RepositoryTools
             {
                 Name = name,
                 Type = repoType,
-                NoteList = noteHandles
+                AddressList = RepositoryAddressListFromStreet(address),
+                UrlList = RepositoryUrlListFromPath(url),
+                NoteList = noteHandles,
+                TagList = tagHandles,
+                Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsRepository>("/api/repositories/", request, "Repository");
+            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
             return $"Repository created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
                    $"Name: {response.Name}\n" +
-                   $"Type: {response.Type ?? "—"}";
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {
@@ -81,21 +90,26 @@ public static class RepositoryTools
 
     [McpServerTool]
     [Description(
-        "Update existing repository. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
+        "Update a repository (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetTypes)]
     public static async Task<string> UpdateRepository(
-        [Description("Repository handle")]
+        [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update repository name")]
+        [Description("Name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
-        [Description("Update repository type")]
+        [Description("Type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? repoType = null,
-        [Description("Update address")]
+        [Description("Street line (replaces address list when set). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? address = null,
-        [Description("Update URL")]
+        [Description("Website URL (replaces url list when set). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? url = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -113,17 +127,19 @@ public static class RepositoryTools
                 Name = name ?? repo.Name,
                 Type = repoType ?? repo.Type,
                 EmailList = repo.EmailList,
-                AddressList = repo.AddressList,
-                UrlList = repo.UrlList,
-                NoteList = noteHandles ?? repo.NoteList,
-                TagList = repo.TagList,
-                Private = repo.Private
+                AddressList = address != null ? RepositoryAddressListFromStreet(address) : repo.AddressList,
+                UrlList = url != null ? RepositoryUrlListFromPath(url) : repo.UrlList,
+                NoteList = (string[]?)noteHandles ?? repo.NoteList,
+                TagList = (string[]?)tagHandles ?? repo.TagList,
+                Private = isPrivate ?? repo.Private
             };
 
             var response = await client.PutMutationAsync<GrampsRepository>($"/api/repositories/{handle}", updateRequest, "Repository");
+            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
             return $"Repository updated successfully\n" +
                    $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Type: {typeLabel}";
         }
         catch (Exception ex)
         {
@@ -133,11 +149,11 @@ public static class RepositoryTools
 
     [McpServerTool]
     [Description(
-        "Delete a repository. Will warn if referenced by sources.")]
+        "Delete a repository (destructive). Blocked when sources still reference it unless force=true.")]
     public static async Task<string> DeleteRepository(
-        [Description("Repository handle")]
+        [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite backlinks (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {
@@ -179,5 +195,25 @@ public static class RepositoryTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>Single street line as Gramps address_list entry; null input omits the field on create.</summary>
+    private static object[]? RepositoryAddressListFromStreet(string? street)
+    {
+        if (street == null)
+            return null;
+        if (string.IsNullOrWhiteSpace(street))
+            return [];
+        return new object[] { new GrampsAddress { Street = street.Trim() } };
+    }
+
+    /// <summary>Single URL as urls entry; null input omits on create.</summary>
+    private static object[]? RepositoryUrlListFromPath(string? path)
+    {
+        if (path == null)
+            return null;
+        if (string.IsNullOrWhiteSpace(path))
+            return [];
+        return new object[] { new GrampsUrl { Path = path.Trim(), Type = "Web Home" } };
     }
 }

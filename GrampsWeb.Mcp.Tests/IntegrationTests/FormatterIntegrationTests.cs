@@ -41,14 +41,14 @@ public class FormatterIntegrationTests
             new GrampsTimelineEntry
             {
                 Type = "Birth",
-                Date = new GrampsDate { Day = 12, Month = 11, Year = 1899, Slash = false, Modifier = 0, SortVal = 18991112 },
-                Place = "Cork"
+                Date = "1899-11-12",
+                Place = new GrampsTimelinePlaceProfile { Name = "Cork", DisplayName = "Cork" }
             },
             new GrampsTimelineEntry
             {
                 Type = "Marriage",
-                Date = new GrampsDate { Day = 5, Month = 6, Year = 1925, Slash = false, Modifier = 0, SortVal = 19250605 },
-                Place = "Dublin"
+                Date = "1925-06-05",
+                Place = new GrampsTimelinePlaceProfile { Name = "Dublin", DisplayName = "Dublin" }
             }
         };
 
@@ -64,6 +64,33 @@ public class FormatterIntegrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void FormatTimelineChronological_IncludesHandlePerRowWhenPresent()
+    {
+        var events = new[]
+        {
+            new GrampsTimelineEntry
+            {
+                Handle = "e111",
+                Type = "Birth",
+                Date = "1900-01-01"
+            },
+            new GrampsTimelineEntry
+            {
+                Handle = "e222",
+                Type = "Death",
+                Date = "1950-01-01"
+            }
+        };
+
+        var result = TimelineFormatter.FormatTimelineChronological(events);
+
+        Assert.Contains("[event: e111]", result);
+        Assert.Contains("[event: e222]", result);
+        Assert.DoesNotContain("Event handles:", result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void FormatTimelineChronological_WithOverTwentyEvents_GroupsByDecade()
     {
         // Arrange - create 25 events spanning multiple decades
@@ -73,16 +100,8 @@ public class FormatterIntegrationTests
             events[i] = new GrampsTimelineEntry
             {
                 Type = $"Event{i}",
-                Date = new GrampsDate
-                {
-                    Day = 1,
-                    Month = 1,
-                    Year = 1880 + (i * 2),
-                    Slash = false,
-                    Modifier = 0,
-                    SortVal = (1880 + (i * 2)) * 10000 + 101
-                },
-                Place = $"Place{i}"
+                Date = $"{1880 + i * 2}-01-01",
+                Place = new GrampsTimelinePlaceProfile { DisplayName = $"Place{i}" }
             };
         }
 
@@ -108,8 +127,8 @@ public class FormatterIntegrationTests
             new GrampsTimelineEntry
             {
                 Type = "Birth",
-                Date = new GrampsDate { Day = 1, Month = 1, Year = 1900, Slash = false, Modifier = 0 },
-                Place = "Boston",
+                Date = "1900-01-01",
+                Place = new GrampsTimelinePlaceProfile { DisplayName = "Boston" },
                 Role = "Primary"
             }
         };

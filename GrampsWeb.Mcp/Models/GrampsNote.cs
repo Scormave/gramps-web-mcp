@@ -19,7 +19,7 @@ public class GrampsNote
     public string? Text { get; set; }
 
     [JsonPropertyName("type")]
-    [JsonConverter(typeof(GrampsNoteTypeStringConverter))]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Type { get; set; }
 
     [JsonPropertyName("format")]

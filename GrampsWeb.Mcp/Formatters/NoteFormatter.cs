@@ -1,4 +1,5 @@
 using System.Text;
+using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
@@ -8,20 +9,19 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class NoteFormatter
 {
-    public static string FormatNoteFull(GrampsNote note)
+    public static async Task<string> FormatNoteFullAsync(GrampsNote note, GrampsApiClient client)
     {
+        var typeLabel = string.IsNullOrWhiteSpace(note.Type)
+            ? "General"
+            : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, note.Type);
         var sb = new StringBuilder();
         sb.AppendLine($"NOTE [handle: {note.Handle}] (gramps_id: {note.GrampsId})");
         sb.AppendLine(new string('=', 60));
-        sb.AppendLine($"Type:   {note.Type ?? "General"}");
+        sb.AppendLine($"Type:   {typeLabel}");
         sb.AppendLine($"Format: {(note.Format == 1 ? "Flowed (HTML)" : "Plain Text")}");
         sb.AppendLine();
         sb.AppendLine(note.Text ?? "(empty)");
-        if (note.TagList?.Length > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"Tags: {string.Join(", ", note.TagList)}");
-        }
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", note.TagList);
         return sb.ToString();
     }
 }

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -17,10 +18,10 @@ public static class SourceTools
 {
     [McpServerTool]
     [Description(
-        "Get source data by handle. Returns title, author, publication info, abbreviation, " +
-        "and linked repository handles. Sources are the scholarly works that citations cite.")]
+        "Read-only: one source (title, author, publication, abbreviation, repository refs). " +
+        "Sources are what citations point at.")]
     public static async Task<string> GetSource(
-        [Description("Source handle — use list_objects('sources') or search() to find handles")]
+        [Description("Source handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -39,10 +40,11 @@ public static class SourceTools
 
     [McpServerTool]
     [Description(
-        "Create a source document. Usually created before citations. " +
-        "Link to repository if the physical document is held there.")]
+        "Create a source (write). Create sources before citations. " +
+        "Optional repositoryHandles link to where the item is held. " +
+        ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> CreateSource(
-        [Description("Source title")]
+        [Description("Title (required).")]
         string title,
         [Description("Author name (optional)")]
         string? author = null,
@@ -50,10 +52,18 @@ public static class SourceTools
         string? pubinfo = null,
         [Description("Abbreviation (optional)")]
         string? abbrev = null,
-        [Description("Array of repository handles (optional)")]
-        string[]? repositoryHandles = null,
-        [Description("Array of note handles (optional)")]
-        string[]? noteHandles = null,
+        [Description("Repository handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? repositoryHandles = null,
+        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description(FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -61,8 +71,9 @@ public static class SourceTools
             if (string.IsNullOrWhiteSpace(title))
                 throw McpToolErrors.ValidationError("Error: title is required");
 
-            var repoRefList = repositoryHandles?.Length > 0 
-                ? repositoryHandles.Select(h => new { @ref = h } as object).ToArray()
+            var repoHandlesArray = (string[]?)repositoryHandles;
+            var repoRefList = repoHandlesArray?.Length > 0
+                ? repoHandlesArray.Select(h => new { @ref = h } as object).ToArray()
                 : null;
 
             var request = new CreateSourceRequest
@@ -72,7 +83,11 @@ public static class SourceTools
                 PubInfo = pubinfo,
                 Abbrev = abbrev,
                 RepositoryRefList = repoRefList,
-                NoteList = noteHandles
+                MediaList = mediaHandles,
+                NoteList = noteHandles,
+                TagList = tagHandles,
+                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
+                Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsSource>("/api/sources/", request, "Source");
@@ -89,23 +104,32 @@ public static class SourceTools
 
     [McpServerTool]
     [Description(
-        "Update existing source. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
+        "Update a source (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdateSource(
-        [Description("Source handle")]
+        [Description("Source handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update title")]
+        [Description("Title. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? title = null,
-        [Description("Update author")]
+        [Description("Author. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? author = null,
-        [Description("Update publication info")]
+        [Description("Publication info. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? pubinfo = null,
-        [Description("Update abbreviation")]
+        [Description("Abbreviation. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? abbrev = null,
-        [Description("Replace repository handles")]
-        string[]? repositoryHandles = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
+        [Description("Repository refs. Omit to keep. Non-empty replaces the list; empty array does not clear (omit to keep). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? repositoryHandles = null,
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -114,8 +138,9 @@ public static class SourceTools
             if (source == null)
                 return $"Source not found: {handle}";
 
-            var repoRefList = repositoryHandles != null && repositoryHandles.Length > 0
-                ? repositoryHandles.Select(h => new { @ref = h } as object).ToArray()
+            var repoHandlesUpdate = (string[]?)repositoryHandles;
+            var repoRefList = repoHandlesUpdate != null && repoHandlesUpdate.Length > 0
+                ? repoHandlesUpdate.Select(h => new { @ref = h } as object).ToArray()
                 : null;
 
             var updateRequest = new CreateSourceRequest
@@ -128,12 +153,14 @@ public static class SourceTools
                 Author = author ?? source.Author,
                 PubInfo = pubinfo ?? source.PubInfo,
                 Abbrev = abbrev ?? source.Abbrev,
-                MediaList = source.MediaList,
+                MediaList = (string[]?)mediaHandles ?? source.MediaList,
                 RepositoryRefList = repoRefList ?? ToRepositoryRefRequestObjects(source.RepositoryRefList),
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
-                NoteList = noteHandles ?? source.NoteList,
-                TagList = source.TagList,
-                Private = source.Private
+                AttributeList = attributes != null
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
+                    : GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
+                NoteList = (string[]?)noteHandles ?? source.NoteList,
+                TagList = (string[]?)tagHandles ?? source.TagList,
+                Private = isPrivate ?? source.Private
             };
 
             var response = await client.PutMutationAsync<GrampsSource>($"/api/sources/{handle}", updateRequest, "Source");
@@ -149,12 +176,12 @@ public static class SourceTools
 
     [McpServerTool]
     [Description(
-        "Delete a source. WARNING: all citations referencing this source will lose their source link. " +
-        "Will warn if source is referenced by citations.")]
+        "Delete a source (destructive). WARNING: citations pointing at this source break or lose the link. " +
+        "Blocked when backlinks exist unless force=true.")]
     public static async Task<string> DeleteSource(
-        [Description("Source handle")]
+        [Description("Source handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite citations still referencing it (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

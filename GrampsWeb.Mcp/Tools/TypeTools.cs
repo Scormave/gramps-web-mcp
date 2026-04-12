@@ -20,11 +20,10 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns all built-in Gramps type vocabularies including event_types, place_types, " +
-        "note_types, repository_types, source_media_types, family_relation_types, " +
-        "child_reference_types, event_role_types, name_types, name_origin_types, and more. " +
-        "ALWAYS call this before any create_person, create_event, create_place or other create/update operations " +
-        "to ensure you use only valid type strings. Using non-standard type strings corrupts the database.")]
+        "Read-only discovery: built-in Gramps type vocabularies (event_types, place_types, note_types, repository_types, " +
+        "family_relation_types, child_reference_types, event_role_types, name_types, name_origin_types, etc.). " +
+        "Call before create_* or update_* whenever you set a type or role string so values match the tree. " +
+        "Invalid type strings can corrupt or reject data.")]
     public static async Task<string> GetTypes(GrampsApiClient client)
     {
         try
@@ -45,9 +44,8 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns user-defined custom types that have been added to this specific Gramps database. " +
-        "Custom types extend the standard built-in types from get_types(). " +
-        "Call this alongside get_types() to get the complete vocabulary for your database.")]
+        "Read-only discovery: custom types added in this database only. " +
+        "Use with get_types for the full set of allowed type strings before writes.")]
     public static async Task<string> GetCustomTypes(GrampsApiClient client)
     {
         try
@@ -67,15 +65,107 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns the authoritative guide for date strings in MCP tools: ISO and regional formats, " +
-        "dateComponentOrder (Iso / DayMonthYear / MonthDayYear), modifiers (before, after, about, circa), " +
-        "year ranges, separators (- / .), and primaryNameDate for persons. " +
-        "Call before create_event, update_event, create_citation, update_citation, update_media, or when setting person name dates.")]
+        "Read-only reference JSON: how to write date strings for MCP tools (ISO vs slash/dot, dateComponentOrder, modifiers, ranges). " +
+        "Call before any tool parameter named date, primaryNameDate, or similar.")]
     public static Task<string> GetDateInputGuide()
     {
         var json = JsonSerializer.Serialize(BuildDateInputGuidePayload(), new JsonSerializerOptions { WriteIndented = true });
         return Task.FromResult(json);
     }
+
+    /// <summary>
+    /// Documents flexible string forms for attributes, URLs, addresses, and person associations in MCP tools.
+    /// </summary>
+    [McpServerTool]
+    [Description(
+        "Read-only reference JSON: flexible string/array forms for attributes, URLs, addresses, person refs, and shorthand names. " +
+        "Call before passing FlexibleAttributeList, FlexibleUrlList, FlexibleAddressList, FlexiblePersonRefList, or simple name strings.")]
+    public static Task<string> GetStructuredFieldInputGuide()
+    {
+        var json = JsonSerializer.Serialize(
+            BuildStructuredFieldInputGuidePayload(),
+            new JsonSerializerOptions { WriteIndented = true });
+        return Task.FromResult(json);
+    }
+
+    private static object BuildStructuredFieldInputGuidePayload() => new
+    {
+        overview =
+            "Create/update tools accept either JSON arrays of Gramps-shaped objects or simpler strings. " +
+            "A parameter may be a JSON array, a single JSON string with multiple lines or | separators, or (where noted) a string starting with [ containing a JSON array.",
+        primary_and_alternate_names = new
+        {
+            primary = new
+            {
+                grammar =
+                    "Full Gramps name object (get_name_schema), or one string. Optional Gramps name type uses double colon: \"Married Name:: Jane|Smith\" or \"Also Known As:: Mary Ann Jones\" (last space splits given and surname when | is absent).",
+                examples = new[]
+                {
+                    "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}",
+                    "John|Doe",
+                    "John Doe",
+                    "Birth Name:: Anna|Kovacs"
+                },
+                tools = "create_person (primaryName required), update_person (primaryName optional)"
+            },
+            alternate_names = new
+            {
+                grammar =
+                    "JSON array of name objects or of simple strings (same rules as primary). One JSON string with multiple names: use newlines between names only — do not use | between names (| separates given|surname within one name).",
+                examples = new[] { "[\"Also Known As:: Sue|Smith\", \"Nickname:: Red\"]", "Married Name:: Jane|Roe\\nAlso Known As:: Jane Doe" },
+                tools = "create_person, update_person"
+            }
+        },
+        attributes = new
+        {
+            grammar = "Type: Value — only the first colon separates type from value; the value may contain more colons.",
+            examples = new[] { "Nickname: Joe", "Occupation: Farmer" },
+            forms = new[]
+            {
+                "JSON array of objects {\"type\":\"T\",\"value\":\"V\",...}",
+                "JSON array of strings [\"Nick: Joe\"]",
+                "One JSON string: \"Line1\\nLine2\" or \"A: 1|B: 2\""
+            },
+            tools = "create_person, update_person, create_event, update_event, create_family, update_family, create_source, update_source, create_citation, update_citation, update_media"
+        },
+        urls = new
+        {
+            grammar =
+                "Type: URL — first colon separates type from path. Optional description after path: em dash — or ASCII \" - \" (space hyphen space).",
+            examples = new[] { "Web Home: http://example.com", "Web Home: https://x.org — my site" },
+            forms = new[]
+            {
+                "JSON array of objects {\"type\",\"path\",\"desc\"}",
+                "JSON array of strings or one multiline / |-separated string"
+            },
+            tools = "create_person, update_person only"
+        },
+        addresses = new
+        {
+            shortcut = "A single line without key: prefix sets street only (e.g. \"123 Main St\").",
+            keyed = "Multiple lines per address: street:, locality:, city:, county:, state:, postal: or zip:, country:, phone: (case-insensitive keys).",
+            multiple = "Separate addresses with a blank line or a line containing only ---.",
+            forms = new[]
+            {
+                "JSON array of Gramps address objects",
+                "JSON array of strings (each string is one address block)",
+                "One multiline JSON string with blocks separated by blank line or ---"
+            },
+            tools = "create_person, update_person only"
+        },
+        person_associations = new
+        {
+            grammar =
+                "HANDLE:: relationship — double colon after the related person's handle; relationship text is free-form (may include spaces).",
+            examples = new[] { "a1b2c3d4e5f678901234567890abcd:: Godfather" },
+            forms = new[]
+            {
+                "JSON array of objects {\"ref\":\"handle\",\"rel\":\"relationship\",...}",
+                "JSON array of strings or one multiline / |-separated string"
+            },
+            tools = "create_person, update_person only (person_ref_list)"
+        }
+    };
 
     private static object BuildDateInputGuidePayload() => new
     {
@@ -107,7 +197,7 @@ public static class TypeTools
             citations = "create_citation / update_citation — date + dateComponentOrder",
             media = "update_media — date + dateComponentOrder",
             persons =
-                "create_person / update_person — primaryNameDate (string) + primaryNameDateOrder; overrides nested primary_name.date when set"
+                "create_person / update_person — primaryNameDate (string) + primaryNameDateOrder; gender: Female, Male, or Unknown"
         },
         fallback =
             "Strings that do not match structured patterns are stored as Gramps text-only dates (modifier 6)."
@@ -120,10 +210,9 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns the complete Name object schema with field descriptions and constraints. " +
-        "ALWAYS call this before create_person or update_person. " +
-        "Gramps supports complex names with multiple surnames, prefixes, connectors, and origin types. " +
-        "JSON field names match the Gramps Web API (e.g. call, nick, famnick, first_name, surname_list).")]
+        "Read-only reference JSON: full Gramps Name object (first_name, surname_list, type, call, nick, …). " +
+        "Call before create_person or update_person when building structured names (not only shorthand strings). " +
+        "Field names match the Gramps Web API.")]
     public static Task<string> GetNameSchema()
     {
         var schema = new

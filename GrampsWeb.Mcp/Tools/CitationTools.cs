@@ -4,8 +4,10 @@ using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
+using GrampsWeb.Mcp.Tools.Parsing;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -18,11 +20,10 @@ public static class CitationTools
 {
     [McpServerTool]
     [Description(
-        "Get citation data by handle. Returns the source title and handle, page reference within that source, " +
-        "confidence level (Very Low/Low/Normal/High/Very High), and access date. " +
-        "Citations link sources to genealogical facts.")]
+        "Read-only: one citation (source title/handle, page, confidence, access date). " +
+        "Citations connect sources to facts on people, events, places, etc.")]
     public static async Task<string> GetCitation(
-        [Description("Citation handle — use list_objects('citations', sourceHandle: ...) or search() to find handles")]
+        [Description("Citation handle. " + ToolDescriptionFragments.HandleDiscovery + " For one source's citations use list_objects('citations', sourceHandle: ...).")]
         string handle,
         GrampsApiClient client)
     {
@@ -41,24 +42,33 @@ public static class CitationTools
 
     [McpServerTool]
     [Description(
-        "Create a citation linking a source to evidence. " +
-        "sourceHandle: must be an existing source (use create_source first). " +
-        "confidence: 0=Very Low, 1=Low, 2=Normal, 3=High, 4=Very High. " +
-        "Returns citation handle — link to person/event via update. " +
-        "Access date strings: get_date_input_guide().")]
+        "Create a citation (write). Returns handle and Gramps ID. " +
+        "sourceHandle must be an existing source (create_source first). " +
+        "Attach to people/events/places via their citationHandles on create/update. " +
+        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> CreateCitation(
-        [Description("Source handle — must exist (create via create_source first)")]
+        [Description("Source handle (required). " + ToolDescriptionFragments.HandleDiscovery)]
         string sourceHandle,
         [Description("Page reference within source (optional)")]
         string? page = null,
-        [Description("Confidence level: 0=Very Low, 1=Low, 2=Normal, 3=High, 4=Very High (default: 2)")]
-        int confidence = 2,
-        [Description("Access date as text (optional). Formats: get_date_input_guide().")]
+        [Description("Confidence: Very Low, Low, Normal, High, or Very High (default: Normal)")]
+        string confidence = "Normal",
+        [Description("Access or reference date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
+        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
-        [Description("Array of note handles (optional)")]
-        string[]? noteHandles = null,
+        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Citation text / transcript (optional)")]
+        string? text = null,
+        [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description(FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
         GrampsApiClient client = null!)
     {
         try
@@ -66,7 +76,7 @@ public static class CitationTools
             if (string.IsNullOrWhiteSpace(sourceHandle))
                 throw McpToolErrors.ValidationError("Error: sourceHandle is required");
 
-            confidence = Math.Clamp(confidence, 0, 4);
+            var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
 
             var dateRequest = AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder);
 
@@ -74,9 +84,14 @@ public static class CitationTools
             {
                 Source = sourceHandle,
                 Page = page,
-                Confidence = confidence,
+                Confidence = confidenceLevel,
                 Date = dateRequest,
-                NoteList = noteHandles
+                Text = text,
+                MediaList = mediaHandles,
+                NoteList = noteHandles,
+                TagList = tagHandles,
+                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
+                Private = isPrivate
             };
 
             var response = await client.PostMutationAsync<GrampsCitation>("/api/citations/", request, "Citation");
@@ -95,24 +110,34 @@ public static class CitationTools
 
     [McpServerTool]
     [Description(
-        "Update existing citation. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects. " +
-        "Date strings: get_date_input_guide().")]
+        "Update a citation (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
+        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdateCitation(
-        [Description("Citation handle")]
+        [Description("Citation handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Update source handle")]
+        [Description("Source handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? sourceHandle = null,
-        [Description("Update page reference")]
+        [Description("Page within source. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? page = null,
-        [Description("Update confidence level")]
-        int? confidence = null,
-        [Description("Update access date as text (optional). Empty string clears. Formats: get_date_input_guide().")]
+        [Description("Confidence: Very Low, Low, Normal, High, Very High. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        string? confidence = null,
+        [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
+        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Transcript or citation text. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        string? text = null,
+        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        bool? isPrivate = null,
         GrampsApiClient client = null!)
     {
         try
@@ -121,7 +146,10 @@ public static class CitationTools
             if (citation == null)
                 return $"Citation not found: {handle}";
 
-            var finalConfidence = Math.Clamp(confidence ?? citation.Confidence, 0, 4);
+            var finalConfidence = Math.Clamp(
+                CitationConfidenceParser.ParseOptional(confidence) ?? citation.Confidence,
+                0,
+                4);
 
             var dateRequest = date != null
                 ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
@@ -137,12 +165,14 @@ public static class CitationTools
                 Page = page ?? citation.Page,
                 Confidence = finalConfidence,
                 Date = dateRequest,
-                Text = citation.Text,
-                MediaList = citation.MediaList,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
-                NoteList = noteHandles ?? citation.NoteList,
-                TagList = citation.TagList,
-                Private = citation.Private
+                Text = text ?? citation.Text,
+                MediaList = (string[]?)mediaHandles ?? citation.MediaList,
+                AttributeList = attributes != null
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
+                    : GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
+                NoteList = (string[]?)noteHandles ?? citation.NoteList,
+                TagList = (string[]?)tagHandles ?? citation.TagList,
+                Private = isPrivate ?? citation.Private
             };
 
             var response = await client.PutMutationAsync<GrampsCitation>($"/api/citations/{handle}", updateRequest, "Citation");
@@ -158,11 +188,11 @@ public static class CitationTools
 
     [McpServerTool]
     [Description(
-        "Delete a citation. Will warn if referenced by people, events or places.")]
+        "Delete a citation (destructive). Blocked when still linked from other objects unless force=true.")]
     public static async Task<string> DeleteCitation(
-        [Description("Citation handle")]
+        [Description("Citation handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("If true, delete despite backlinks (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

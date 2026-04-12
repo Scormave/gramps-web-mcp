@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
 using ModelContextProtocol.Server;
@@ -18,11 +19,10 @@ public static class PlaceTools
 {
     [McpServerTool]
     [Description(
-        "Get place data by handle. Returns name, type, coordinates, and hierarchical location " +
-        "(e.g. 'Kyiv, Kyivska Oblast, Ukraine' by traversing enclosed_by). " +
-        "Useful for understanding the geographic context of events.")]
+        "Read-only: one place by handle (name, type, coordinates, hierarchy by traversing parent places). " +
+        "Use when resolving place handles from events or building geographic context.")]
     public static async Task<string> GetPlace(
-        [Description("Place handle — use list_objects('places') or search() to find handles")]
+        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
     {
@@ -41,109 +41,19 @@ public static class PlaceTools
 
     [McpServerTool]
     [Description(
-        "Get chronological timeline of all events that occurred at this place. " +
-        "events: filter by category (vital, family, religious, vocational, academic, travel, legal, residence, other, custom). " +
-        "dates: date range as 'YYYY/MM/DD-YYYY/MM/DD'. " +
-        "Useful for finding all families and people connected to a location over time.")]
+        "Read-only: chronological events whose place field equals this handle (computed via backlinks; not a single API route). " +
+        "Events on a child place (e.g. city) do not appear when querying the parent country handle. " +
+        "events filters by category (same set as person timeline). dates uses YYYY/M/D ranges with zero-stripping. " +
+        "include_undated default true keeps sortval-0 events. Output may include event handles for get_event.")]
     public static async Task<string> GetPlaceTimeline(
-        [Description("Place handle")]
+        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Event categories to include")]
+        [Description("Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom")]
         string[]? events = null,
-        [Description("Date range filter as 'YYYY/MM/DD-YYYY/MM/DD'")]
+        [Description("Date range filter; e.g. 1999/1/1-2010/12/31 (zeros normalized)")]
         string? dates = null,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var qs = PersonTools.BuildTimelineQueryString(events, null, null, dates, false);
-            var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
-                $"/api/places/{handle}/timeline{qs}");
-            if (timeline == null)
-                return $"Place not found: {handle}";
-            if (timeline.Length == 0)
-                return $"No timeline events found for place {handle}";
-            return TimelineFormatter.FormatTimelineChronological(timeline);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool]
-    [Description(
-        "Create a geographic place. Call get_types() for valid place_type values. " +
-        "enclosedByHandles: parent places (village → county → country). " +
-        "Returns place handle.")]
-    public static async Task<string> CreatePlace(
-        [Description("Place name")]
-        string name,
-        [Description("Place type — call get_types to get valid values")]
-        string? placeType = null,
-        [Description("Latitude coordinate")]
-        string? lat = null,
-        [Description("Longitude coordinate")]
-        string? lon = null,
-        [Description("Array of parent place handles (for geography hierarchy)")]
-        string[]? enclosedByHandles = null,
-        [Description("Language code (default: 'en')")]
-        string? nameLang = null,
-        [Description("Array of note handles")]
-        string[]? noteHandles = null,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                throw McpToolErrors.ValidationError("Error: name is required");
-
-            var placeRefList = enclosedByHandles?.Length > 0
-                ? enclosedByHandles.Select(h => new { @ref = h } as object).ToArray()
-                : null;
-
-            var request = new CreatePlaceRequest
-            {
-                Name = name,
-                Type = placeType,
-                Latitude = lat,
-                Longitude = lon,
-                NoteList = noteHandles,
-                PlaceRefList = placeRefList
-            };
-
-            var response = await client.PostMutationAsync<GrampsPlace>("/api/places/", request, "Place");
-            return $"Place created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {response.Name}\n" +
-                   $"Type: {response.Type ?? "—"}";
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool]
-    [Description(
-        "Update existing place. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
-    public static async Task<string> UpdatePlace(
-        [Description("Place handle")]
-        string handle,
-        [Description("Update place name")]
-        string? name = null,
-        [Description("Update place type")]
-        string? placeType = null,
-        [Description("Update latitude")]
-        string? lat = null,
-        [Description("Update longitude")]
-        string? lon = null,
-        [Description("Replace parent place handles")]
-        string[]? enclosedByHandles = null,
-        [Description("Replace note handles")]
-        string[]? noteHandles = null,
+        [Description("Include events with no sortable date (sortval 0 or missing); default true. Use false to match strict undated exclusion.")]
+        bool includeUndated = true,
         GrampsApiClient client = null!)
     {
         try
@@ -152,34 +62,22 @@ public static class PlaceTools
             if (place == null)
                 return $"Place not found: {handle}";
 
-            var placeRefList = enclosedByHandles != null && enclosedByHandles.Length > 0
-                ? enclosedByHandles.Select(h => new { @ref = h } as object).ToArray()
-                : null;
+            var datesNormalized = PersonTools.NormalizeTimelineDatesForGrampsApi(dates);
+            var outcome = await PlaceTimelineFallback.CollectAsync(
+                client, handle, place, events, datesNormalized, includeUndated);
 
-            var updateRequest = new CreatePlaceRequest
-            {
-                Class = "Place",
-                Handle = place.Handle,
-                GrampsId = place.GrampsId,
-                Change = place.Change,
-                Name = name ?? place.Name,
-                Type = placeType ?? place.Type,
-                Code = place.Code,
-                Latitude = lat ?? place.Latitude,
-                Longitude = lon ?? place.Longitude,
-                MediaList = place.MediaList,
-                NoteList = noteHandles ?? place.NoteList,
-                CitationList = place.CitationList,
-                TagList = place.TagList,
-                PlaceRefList = placeRefList ?? place.PlaceRefList,
-                AlternateLocations = place.AlternateLocations,
-                Private = place.Private
-            };
+            if (outcome.MatchedPlaceCount == 0)
+                return
+                    $"No events linked directly to place {handle}. " +
+                    "No events reference this exact place handle in backlinks " +
+                    "(events often use a city or address place, not the parent country or region).";
 
-            var response = await client.PutMutationAsync<GrampsPlace>($"/api/places/{handle}", updateRequest, "Place");
-            return $"Place updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+            if (outcome.Entries.Length == 0)
+                return
+                    $"No events at place {handle} match the filters (event categories and/or date range). " +
+                    "Try broader categories, widen the date range, or set include_undated=true if undated events were excluded.";
+
+            return TimelineFormatter.FormatTimelineChronological(outcome.Entries);
         }
         catch (Exception ex)
         {
@@ -189,12 +87,163 @@ public static class PlaceTools
 
     [McpServerTool]
     [Description(
-        "Delete a place. Will warn if referenced by events or by child places. " +
-        "Deleting a parent place breaks child place hierarchy.")]
-    public static async Task<string> DeletePlace(
-        [Description("Place handle")]
+        "Create a place (write). Returns handle and Gramps ID. " +
+        ToolDescriptionFragments.CallGetTypes + " " +
+        "Parent places go in enclosedByHandles (smaller region → larger region order as in your tree).")]
+    public static async Task<string> CreatePlace(
+        [Description("Primary display name (required).")]
+        string name,
+        [Description("Place type key. " + ToolDescriptionFragments.CallGetTypes)]
+        string? placeType = null,
+        [Description("Latitude coordinate")]
+        string? lat = null,
+        [Description("Longitude coordinate")]
+        string? lon = null,
+        [Description("Parent place handles (enclosure hierarchy). " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? enclosedByHandles = null,
+        [Description("Language code (default: 'en')")]
+        string? nameLang = null,
+        [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Place code / postal reference (optional)")]
+        string? code = null,
+        [Description("Media handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Citation handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Mark record private (default: false)")]
+        bool isPrivate = false,
+        GrampsApiClient client = null!)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw McpToolErrors.ValidationError("Error: name is required");
+
+            var enclosed = (string[]?)enclosedByHandles;
+            var placeRefList = enclosed?.Length > 0
+                ? enclosed.Select(h => new { @ref = h } as object).ToArray()
+                : null;
+
+            var request = new CreatePlaceRequest
+            {
+                Name = new PlaceNameRequest
+                {
+                    Value = name.Trim(),
+                    Lang = string.IsNullOrWhiteSpace(nameLang) ? null : nameLang.Trim()
+                },
+                Type = placeType,
+                Code = code,
+                Latitude = lat,
+                Longitude = lon,
+                MediaList = mediaHandles,
+                CitationList = citationHandles,
+                NoteList = noteHandles,
+                TagList = tagHandles,
+                Private = isPrivate,
+                PlaceRefList = placeRefList
+            };
+
+            var response = await client.PostMutationAsync<GrampsPlace>("/api/places/", request, "Place");
+            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
+            return $"Place created successfully\n" +
+                   $"Handle: {response.Handle}\n" +
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Name: {response.Name}\n" +
+                   $"Type: {typeLabel}";
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    [McpServerTool]
+    [Description(
+        "Update a place (write). Only pass fields to change. " +
+        ToolDescriptionFragments.UpdateEmptyListRemovesLinks)]
+    public static async Task<string> UpdatePlace(
+        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Force delete despite backlinks (default: false)")]
+        [Description("Name text. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        string? name = null,
+        [Description("Place type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
+        string? placeType = null,
+        [Description("Latitude string. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        string? lat = null,
+        [Description("Longitude string. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        string? lon = null,
+        [Description("Parent place chain. Omit to keep unchanged. When set non-empty, replaces hierarchy; empty value does not clear parents in this API mapping—omit instead. " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? enclosedByHandles = null,
+        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? noteHandles = null,
+        [Description("Place code. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        string? code = null,
+        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? mediaHandles = null,
+        [Description("Replace citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? citationHandles = null,
+        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        FlexibleHandleList? tagHandles = null,
+        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        bool? isPrivate = null,
+        GrampsApiClient client = null!)
+    {
+        try
+        {
+            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
+            if (place == null)
+                return $"Place not found: {handle}";
+
+            var enclosedUpdate = (string[]?)enclosedByHandles;
+            var placeRefList = enclosedUpdate != null && enclosedUpdate.Length > 0
+                ? enclosedUpdate.Select(h => new { @ref = h } as object).ToArray()
+                : null;
+
+            var updateRequest = new CreatePlaceRequest
+            {
+                Class = "Place",
+                Handle = place.Handle,
+                GrampsId = place.GrampsId,
+                Change = place.Change,
+                Name = new PlaceNameRequest { Value = (name ?? place.Name)?.Trim() ?? "" },
+                Type = placeType ?? place.Type,
+                Code = code ?? place.Code,
+                Latitude = lat ?? place.Latitude,
+                Longitude = lon ?? place.Longitude,
+                MediaList = (string[]?)mediaHandles ?? place.MediaList,
+                NoteList = (string[]?)noteHandles ?? place.NoteList,
+                CitationList = (string[]?)citationHandles ?? place.CitationList,
+                TagList = (string[]?)tagHandles ?? place.TagList,
+                PlaceRefList = placeRefList ?? place.PlaceRefList,
+                AlternateLocations = place.AlternateLocations,
+                Private = isPrivate ?? place.Private
+            };
+
+            var response = await client.PutMutationAsync<GrampsPlace>($"/api/places/{handle}", updateRequest, "Place");
+            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
+            return $"Place updated successfully\n" +
+                   $"Handle: {response.Handle}\n" +
+                   $"Gramps ID: {response.GrampsId}\n" +
+                   $"Name: {response.Name ?? "—"}\n" +
+                   $"Type: {typeLabel}";
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    [McpServerTool]
+    [Description(
+        "Delete a place (destructive). Blocked when events or child places reference it unless force=true. " +
+        "Deleting a parent can orphan child places in the hierarchy.")]
+    public static async Task<string> DeletePlace(
+        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        string handle,
+        [Description("If true, delete despite references (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

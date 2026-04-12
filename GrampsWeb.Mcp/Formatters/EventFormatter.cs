@@ -11,8 +11,9 @@ public static class EventFormatter
 {
     public static async Task<string> FormatEventFull(GrampsEvent evt, GrampsApiClient client)
     {
+        var typeDisplay = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, evt.Type);
         var sb = new StringBuilder();
-        sb.AppendLine($"EVENT: {evt.Type} [handle: {evt.Handle}] (gramps_id: {evt.GrampsId})");
+        sb.AppendLine($"EVENT: {typeDisplay} [handle: {evt.Handle}] (gramps_id: {evt.GrampsId})");
         sb.AppendLine(new string('=', 60));
 
         if (evt.Date != null)
@@ -40,14 +41,10 @@ public static class EventFormatter
                 sb.AppendLine($"  • {attr.Type}: {attr.Value}");
         }
 
-        if (evt.CitationList?.Length > 0)
-            sb.AppendLine($"\nCitations: {evt.CitationList.Length} {string.Join(", ", evt.CitationList.Take(3))}");
-        if (evt.NoteList?.Length > 0)
-            sb.AppendLine($"Notes:     {evt.NoteList.Length}");
-        if (evt.MediaList?.Length > 0)
-            sb.AppendLine($"Media:     {evt.MediaList.Length}");
-        if (evt.TagList?.Length > 0)
-            sb.AppendLine($"Tags:      {string.Join(", ", evt.TagList)}");
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", evt.CitationList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", evt.NoteList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", evt.MediaList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", evt.TagList);
         if (evt.Private)
             sb.AppendLine("⚠ Private record");
 

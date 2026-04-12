@@ -18,7 +18,7 @@ public sealed class GrampsHandleStringArrayConverter : JsonConverter<string[]?>
 
         var list = new List<string>();
         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-            list.Add(ReadHandleElement(ref reader));
+            list.Add(HandleElementReader.ReadHandleElement(ref reader));
 
         return list.ToArray();
     }
@@ -35,27 +35,5 @@ public sealed class GrampsHandleStringArrayConverter : JsonConverter<string[]?>
         foreach (var s in value)
             writer.WriteStringValue(s);
         writer.WriteEndArray();
-    }
-
-    private static string ReadHandleElement(ref Utf8JsonReader reader)
-    {
-        switch (reader.TokenType)
-        {
-            case JsonTokenType.String:
-                return reader.GetString() ?? string.Empty;
-            case JsonTokenType.StartObject:
-            {
-                using var doc = JsonDocument.ParseValue(ref reader);
-                var r = doc.RootElement;
-                if (r.TryGetProperty("ref", out var p) && p.ValueKind == JsonValueKind.String)
-                    return p.GetString() ?? string.Empty;
-                if (r.TryGetProperty("handle", out var h) && h.ValueKind == JsonValueKind.String)
-                    return h.GetString() ?? string.Empty;
-                return string.Empty;
-            }
-            default:
-                reader.Skip();
-                return string.Empty;
-        }
     }
 }

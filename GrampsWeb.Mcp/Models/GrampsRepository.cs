@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
@@ -17,6 +18,7 @@ public class GrampsRepository
     public string? Name { get; set; }
 
     [JsonPropertyName("type")]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Type { get; set; }
 
     [JsonPropertyName("email_list")]
