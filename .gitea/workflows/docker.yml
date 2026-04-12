@@ -1,0 +1,84 @@
+# Builds the image and pushes it to your Gitea Container Registry (or any Docker registry).
+#
+# Setup:
+# 1. Enable Gitea Actions and use a runner with Docker (label: ubuntu-latest is common).
+# 2. Repository or organization variable: CONTAINER_REGISTRY — registry host only, e.g.
+#    gitea.example.com (no scheme, no path). For Gitea's built-in registry this is usually
+#    the same hostname you use for the web UI.
+# 3. Repository secrets:
+#    - REGISTRY_USER — your Gitea username (or robot account).
+#    - REGISTRY_PASSWORD — password or personal access token with package write scope.
+#
+# Pull (example):
+#   docker pull CONTAINER_REGISTRY/owner/gramps-web-mcp:latest
+
+name: Build and push container image
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check CONTAINER_REGISTRY variable
+        run: |
+          if [ -z "${{ vars.CONTAINER_REGISTRY }}" ]; then
+            echo '::error::Set variable CONTAINER_REGISTRY (e.g. gitea.example.com — host only, no https://).'
+            exit 1
+          fi
+
+      - name: Compute registry and image name
+        id: image
+        run: |
+          set -euo pipefail
+          REG='${{ vars.CONTAINER_REGISTRY }}'
+          REG="${REG#https://}"
+          REG="${REG#http://}"
+          REG="${REG%/}"
+          REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
+          echo "registry=$REG" >> "$GITHUB_OUTPUT"
+          echo "name=$REG/$REPO_LOWER" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.image.outputs.registry }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build image
+        run: docker build -t "${{ steps.image.outputs.name }}:build" .
+
+      - name: Push tags
+        env:
+          IMAGE: ${{ steps.image.outputs.name }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
+          docker tag "$IMAGE:build" "$IMAGE:sha-$SHORT_SHA"
+          docker push "$IMAGE:sha-$SHORT_SHA"
+          case "$GITHUB_REF" in
+            refs/tags/*)
+              TAG="${GITHUB_REF#refs/tags/}"
+              docker tag "$IMAGE:build" "$IMAGE:$TAG"
+              docker push "$IMAGE:$TAG"
+              ;;
+          esac
+          case "$GITHUB_REF" in
+            refs/heads/main|refs/heads/master)
+              docker tag "$IMAGE:build" "$IMAGE:latest"
+              docker push "$IMAGE:latest"
+              ;;
+          esac
+
+      - name: Log out
+        if: always()
+        run: docker logout "${{ steps.image.outputs.registry }}"
