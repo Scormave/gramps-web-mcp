@@ -47,7 +47,7 @@ public static class CitationTools
         "sourceHandle: must be an existing source (use create_source first). " +
         "confidence: Very Low, Low, Normal, High, or Very High (default: Normal). " +
         "Returns citation handle — link to person/event via update. " +
-        "Access date strings: get_date_input_guide().")]
+        "Access date strings: get_date_input_guide(). Attributes: get_structured_field_input_guide().")]
     public static async Task<string> CreateCitation(
         [Description("Source handle — must exist (create via create_source first)")]
         string sourceHandle,
@@ -67,8 +67,8 @@ public static class CitationTools
         FlexibleHandleList? mediaHandles = null,
         [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Custom attributes (type + value)")]
-        GrampsAttribute[]? attributes = null,
+        [Description(FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
         [Description("Mark record private (default: false)")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
@@ -92,7 +92,7 @@ public static class CitationTools
                 MediaList = mediaHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
+                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
                 Private = isPrivate
             };
 
@@ -114,7 +114,7 @@ public static class CitationTools
     [Description(
         "Update existing citation. Pass only fields that need to change. " +
         "⚠ WARNING: passing empty lists will REMOVE those linked objects. " +
-        "Date strings: get_date_input_guide().")]
+        "Date strings: get_date_input_guide(). Attributes: get_structured_field_input_guide().")]
     public static async Task<string> UpdateCitation(
         [Description("Citation handle")]
         string handle,
@@ -136,8 +136,8 @@ public static class CitationTools
         FlexibleHandleList? mediaHandles = null,
         [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears)")]
-        GrampsAttribute[]? attributes = null,
+        [Description("Replace attributes (omit to keep; [] clears). " + FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
         [Description("Update private flag")]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
@@ -170,7 +170,7 @@ public static class CitationTools
                 Text = text ?? citation.Text,
                 MediaList = (string[]?)mediaHandles ?? citation.MediaList,
                 AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
                 NoteList = (string[]?)noteHandles ?? citation.NoteList,
                 TagList = (string[]?)tagHandles ?? citation.TagList,

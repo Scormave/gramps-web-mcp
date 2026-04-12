@@ -41,7 +41,8 @@ public static class SourceTools
     [McpServerTool]
     [Description(
         "Create a source document. Usually created before citations. " +
-        "Link to repository if the physical document is held there.")]
+        "Link to repository if the physical document is held there. " +
+        "Attributes: get_structured_field_input_guide().")]
     public static async Task<string> CreateSource(
         [Description("Source title")]
         string title,
@@ -59,8 +60,8 @@ public static class SourceTools
         FlexibleHandleList? mediaHandles = null,
         [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Custom attributes (type + value)")]
-        GrampsAttribute[]? attributes = null,
+        [Description(FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
         [Description("Mark record private (default: false)")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
@@ -85,7 +86,7 @@ public static class SourceTools
                 MediaList = mediaHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
+                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
                 Private = isPrivate
             };
 
@@ -104,7 +105,8 @@ public static class SourceTools
     [McpServerTool]
     [Description(
         "Update existing source. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
+        "⚠ WARNING: passing empty lists will REMOVE those linked objects. " +
+        "Attributes: get_structured_field_input_guide().")]
     public static async Task<string> UpdateSource(
         [Description("Source handle")]
         string handle,
@@ -124,8 +126,8 @@ public static class SourceTools
         FlexibleHandleList? mediaHandles = null,
         [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears)")]
-        GrampsAttribute[]? attributes = null,
+        [Description("Replace attributes (omit to keep; [] clears). " + FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
         [Description("Update private flag")]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
@@ -154,7 +156,7 @@ public static class SourceTools
                 MediaList = (string[]?)mediaHandles ?? source.MediaList,
                 RepositoryRefList = repoRefList ?? ToRepositoryRefRequestObjects(source.RepositoryRefList),
                 AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
                 NoteList = (string[]?)noteHandles ?? source.NoteList,
                 TagList = (string[]?)tagHandles ?? source.TagList,

@@ -227,7 +227,7 @@ public static class PersonTools
         "Returns the handle of the created person. " +
         "primaryNameDate overrides any date embedded in primaryName. Date formats: get_date_input_guide(). " +
         "gender: Female, Male, or Unknown (default: Unknown). " +
-        "attributes/addresses/urls/personAssociations use Gramps shapes (type+value, address fields, url type/path/desc, association ref+rel).")]
+        "Structured fields (attributes, addresses, urls, personAssociations): get_structured_field_input_guide().")]
     public static async Task<string> CreatePerson(
         [Description("Primary name object. Must include first_name and surname_list (see get_name_schema)")]
         GrampsName primaryName,
@@ -255,14 +255,14 @@ public static class PersonTools
         FlexibleHandleList? noteHandles = null,
         [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Custom attributes (type + value per item)")]
-        GrampsAttribute[]? attributes = null,
-        [Description("Postal addresses (street, city, etc.; optional date per address)")]
-        GrampsAddress[]? addresses = null,
-        [Description("Web URLs (type, path, description)")]
-        GrampsUrl[]? urls = null,
-        [Description("Associations to other people (ref = person handle, relationship = rel text)")]
-        GrampsPersonRef[]? personAssociations = null,
+        [Description(FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
+        [Description(FlexibleAddressList.DescriptionHint)]
+        FlexibleAddressList? addresses = null,
+        [Description(FlexibleUrlList.DescriptionHint)]
+        FlexibleUrlList? urls = null,
+        [Description(FlexiblePersonRefList.DescriptionHint)]
+        FlexiblePersonRefList? personAssociations = null,
         [Description("Mark record as private (default: false)")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
@@ -301,10 +301,10 @@ public static class PersonTools
                 CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
-                AddressList = addresses is { Length: > 0 } ? addresses : null,
-                UrlList = urls is { Length: > 0 } ? urls : null,
-                PersonRefList = personAssociations is { Length: > 0 } ? personAssociations : null,
+                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
+                AddressList = (GrampsAddress[]?)addresses is { Length: > 0 } a ? a : null,
+                UrlList = (GrampsUrl[]?)urls is { Length: > 0 } u ? u : null,
+                PersonRefList = (GrampsPersonRef[]?)personAssociations is { Length: > 0 } p ? p : null,
                 Private = isPrivate
             };
 
@@ -328,7 +328,8 @@ public static class PersonTools
         "primaryNameDate updates only the name date when primaryName is omitted (requires existing primary name). " +
         "Date formats: get_date_input_guide(). " +
         "gender: omit to keep; otherwise Female, Male, or Unknown. " +
-        "Omit attributes/addresses/urls/personAssociations/alternateNames to leave unchanged; pass [] to clear structured lists.")]
+        "Omit attributes/addresses/urls/personAssociations/alternateNames to leave unchanged; pass [] to clear structured lists. " +
+        "Flexible syntax: get_structured_field_input_guide().")]
     public static async Task<string> UpdatePerson(
         [Description("Person handle")]
         string handle,
@@ -358,14 +359,14 @@ public static class PersonTools
         FlexibleHandleList? noteHandles = null,
         [Description("Replace tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears)")]
-        GrampsAttribute[]? attributes = null,
-        [Description("Replace addresses (omit to keep; [] clears)")]
-        GrampsAddress[]? addresses = null,
-        [Description("Replace URLs (omit to keep; [] clears)")]
-        GrampsUrl[]? urls = null,
-        [Description("Replace person associations / person_ref_list (omit to keep; [] clears)")]
-        GrampsPersonRef[]? personAssociations = null,
+        [Description("Replace attributes (omit to keep; [] clears). " + FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
+        [Description("Replace addresses (omit to keep; [] clears). " + FlexibleAddressList.DescriptionHint)]
+        FlexibleAddressList? addresses = null,
+        [Description("Replace URLs (omit to keep; [] clears). " + FlexibleUrlList.DescriptionHint)]
+        FlexibleUrlList? urls = null,
+        [Description("Replace person associations (omit to keep; [] clears). " + FlexiblePersonRefList.DescriptionHint)]
+        FlexiblePersonRefList? personAssociations = null,
         [Description("Update private status")]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
@@ -410,15 +411,15 @@ public static class PersonTools
                     ? ((string[]?)parentFamilyHandles)!.Select(h => new FamilyRefRequest { Ref = h }).ToArray()
                     : GrampsRequestMapping.ToFamilyRefRequests(person.ParentFamilyList),
                 MediaList = (string[]?)mediaHandles ?? person.MediaList,
-                AddressList = addresses ?? person.AddressList,
+                AddressList = addresses is null ? person.AddressList : (GrampsAddress[]?)addresses,
                 AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(person.AttributeList),
                 CitationList = (string[]?)citationHandles ?? person.CitationList,
                 NoteList = (string[]?)noteHandles ?? person.NoteList,
                 TagList = (string[]?)tagHandles ?? person.TagList,
-                UrlList = urls ?? person.UrlList,
-                PersonRefList = personAssociations ?? person.PersonRefList,
+                UrlList = urls is null ? person.UrlList : (GrampsUrl[]?)urls,
+                PersonRefList = personAssociations is null ? person.PersonRefList : (GrampsPersonRef[]?)personAssociations,
                 Private = isPrivate ?? person.Private
             };
 

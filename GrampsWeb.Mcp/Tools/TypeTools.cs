@@ -77,6 +77,78 @@ public static class TypeTools
         return Task.FromResult(json);
     }
 
+    /// <summary>
+    /// Documents flexible string forms for attributes, URLs, addresses, and person associations in MCP tools.
+    /// </summary>
+    [McpServerTool]
+    [Description(
+        "Returns how to pass attributes, person URLs, postal addresses, and person associations without full Gramps JSON. " +
+        "Covers Type: Value lines, Web Home: https://…, keyed address blocks, and HANDLE:: relationship. " +
+        "Use with create_person, update_person, and create/update tools that take attributes.")]
+    public static Task<string> GetStructuredFieldInputGuide()
+    {
+        var json = JsonSerializer.Serialize(
+            BuildStructuredFieldInputGuidePayload(),
+            new JsonSerializerOptions { WriteIndented = true });
+        return Task.FromResult(json);
+    }
+
+    private static object BuildStructuredFieldInputGuidePayload() => new
+    {
+        overview =
+            "Create/update tools accept either JSON arrays of Gramps-shaped objects or simpler strings. " +
+            "A parameter may be a JSON array, a single JSON string with multiple lines or | separators, or (where noted) a string starting with [ containing a JSON array.",
+        attributes = new
+        {
+            grammar = "Type: Value — only the first colon separates type from value; the value may contain more colons.",
+            examples = new[] { "Nickname: Joe", "Occupation: Farmer" },
+            forms = new[]
+            {
+                "JSON array of objects {\"type\":\"T\",\"value\":\"V\",...}",
+                "JSON array of strings [\"Nick: Joe\"]",
+                "One JSON string: \"Line1\\nLine2\" or \"A: 1|B: 2\""
+            },
+            tools = "create_person, update_person, create_event, update_event, create_family, update_family, create_source, update_source, create_citation, update_citation, update_media"
+        },
+        urls = new
+        {
+            grammar =
+                "Type: URL — first colon separates type from path. Optional description after path: em dash — or ASCII \" - \" (space hyphen space).",
+            examples = new[] { "Web Home: http://example.com", "Web Home: https://x.org — my site" },
+            forms = new[]
+            {
+                "JSON array of objects {\"type\",\"path\",\"desc\"}",
+                "JSON array of strings or one multiline / |-separated string"
+            },
+            tools = "create_person, update_person only"
+        },
+        addresses = new
+        {
+            shortcut = "A single line without key: prefix sets street only (e.g. \"123 Main St\").",
+            keyed = "Multiple lines per address: street:, locality:, city:, county:, state:, postal: or zip:, country:, phone: (case-insensitive keys).",
+            multiple = "Separate addresses with a blank line or a line containing only ---.",
+            forms = new[]
+            {
+                "JSON array of Gramps address objects",
+                "JSON array of strings (each string is one address block)",
+                "One multiline JSON string with blocks separated by blank line or ---"
+            },
+            tools = "create_person, update_person only"
+        },
+        person_associations = new
+        {
+            grammar =
+                "HANDLE:: relationship — double colon after the related person's handle; relationship text is free-form (may include spaces).",
+            examples = new[] { "a1b2c3d4e5f678901234567890abcd:: Godfather" },
+            forms = new[]
+            {
+                "JSON array of objects {\"ref\":\"handle\",\"rel\":\"relationship\",...}",
+                "JSON array of strings or one multiline / |-separated string"
+            },
+            tools = "create_person, update_person only (person_ref_list)"
+        }
+    };
+
     private static object BuildDateInputGuidePayload() => new
     {
         overview =

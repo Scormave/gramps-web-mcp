@@ -111,6 +111,7 @@ public static class FamilyTools
         "childRefTypes: birth relationship of each child (Birth, Adopted, Stepchild...). " +
         "childHandles and childRefTypes must be same length. " +
         "Link events via eventRefHandles/eventRefRoles (same pattern as create_person). " +
+        "Attributes: get_structured_field_input_guide(). " +
         "Returns family handle.")]
     public static async Task<string> CreateFamily(
         [Description("Father person handle (optional)")]
@@ -135,8 +136,8 @@ public static class FamilyTools
         FlexibleHandleList? noteHandles = null,
         [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Custom attributes (type + value)")]
-        GrampsAttribute[]? attributes = null,
+        [Description(FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
         [Description("Mark record private (default: false)")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
@@ -172,7 +173,7 @@ public static class FamilyTools
                 CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
+                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
                 Private = isPrivate,
                 Relationship = relationshipType
             };
@@ -198,7 +199,8 @@ public static class FamilyTools
     [McpServerTool]
     [Description(
         "Update existing family. Pass only fields that need to change. " +
-        "⚠ WARNING: passing empty lists will REMOVE those linked objects.")]
+        "⚠ WARNING: passing empty lists will REMOVE those linked objects. " +
+        "Attributes: get_structured_field_input_guide().")]
     public static async Task<string> UpdateFamily(
         [Description("Family handle")]
         string handle,
@@ -266,7 +268,7 @@ public static class FamilyTools
                     : GrampsRequestMapping.ToEventRefRequests(family.EventRefList),
                 MediaList = (string[]?)mediaHandles ?? family.MediaList,
                 AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(family.AttributeList),
                 CitationList = (string[]?)citationHandles ?? family.CitationList,
                 NoteList = (string[]?)noteHandles ?? family.NoteList,

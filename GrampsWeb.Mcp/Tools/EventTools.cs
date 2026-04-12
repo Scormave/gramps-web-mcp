@@ -47,7 +47,7 @@ public static class EventTools
         "Create a life event. Call get_types() for valid event_type values. " +
         "After creating, link to person via update_person(eventRefHandles) or include in create_person(eventRefHandles). " +
         "Returns event handle. Dates: prefer ISO yyyy-MM-dd; set dateComponentOrder for dd/MM/yyyy vs MM/dd/yyyy. " +
-        "Full syntax: get_date_input_guide().")]
+        "Full syntax: get_date_input_guide(). Attributes: get_structured_field_input_guide().")]
     public static async Task<string> CreateEvent(
         [Description("Event type — must call get_types to get valid values")]
         string eventType,
@@ -67,8 +67,8 @@ public static class EventTools
         FlexibleHandleList? tagHandles = null,
         [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Custom attributes (type + value)")]
-        GrampsAttribute[]? attributes = null,
+        [Description(FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
         [Description("Mark record private (default: false)")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
@@ -87,7 +87,7 @@ public static class EventTools
                 Place = placeHandle,
                 Description = description,
                 MediaList = mediaHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests(attributes),
+                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
@@ -113,7 +113,7 @@ public static class EventTools
     [Description(
         "Update existing event. Pass only fields that need to change. " +
         "⚠ WARNING: passing empty lists will REMOVE those linked objects. " +
-        "Date: same as create_event; omit date to keep existing. Reference: get_date_input_guide().")]
+        "Date: same as create_event; omit date to keep existing. Reference: get_date_input_guide(). Attributes: get_structured_field_input_guide().")]
     public static async Task<string> UpdateEvent(
         [Description("Event handle")]
         string handle,
@@ -135,8 +135,8 @@ public static class EventTools
         FlexibleHandleList? tagHandles = null,
         [Description("Replace media handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears)")]
-        GrampsAttribute[]? attributes = null,
+        [Description("Replace attributes (omit to keep; [] clears). " + FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
         [Description("Update private flag")]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
@@ -163,7 +163,7 @@ public static class EventTools
                 Description = description ?? evt.Description,
                 MediaList = (string[]?)mediaHandles ?? evt.MediaList,
                 AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),
                 CitationList = (string[]?)citationHandles ?? evt.CitationList,
                 NoteList = (string[]?)noteHandles ?? evt.NoteList,

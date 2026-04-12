@@ -43,7 +43,7 @@ public static class MediaTools
     [Description(
         "Update media metadata (description, date, notes, tags). " +
         "Note: binary file upload is not supported via MCP. " +
-        "Access date strings: get_date_input_guide().")]
+        "Access date strings: get_date_input_guide(). Attributes: get_structured_field_input_guide().")]
     public static async Task<string> UpdateMedia(
         [Description("Media handle")]
         string handle,
@@ -59,8 +59,8 @@ public static class MediaTools
         FlexibleHandleList? tagHandles = null,
         [Description("Replace citation handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace attributes (omit to keep; [] clears)")]
-        GrampsAttribute[]? attributes = null,
+        [Description("Replace attributes (omit to keep; [] clears). " + FlexibleAttributeList.DescriptionHint)]
+        FlexibleAttributeList? attributes = null,
         [Description("Update private flag")]
         bool? isPrivate = null,
         GrampsApiClient client = null!)
@@ -86,7 +86,7 @@ public static class MediaTools
                 Description = description ?? media.Description,
                 Date = dateRequest,
                 AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests(attributes)
+                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(media.AttributeList),
                 CitationList = (string[]?)citationHandles ?? media.CitationList,
                 NoteList = (string[]?)noteHandles ?? media.NoteList,
