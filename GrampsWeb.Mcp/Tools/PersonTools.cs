@@ -227,18 +227,19 @@ public static class PersonTools
         "Returns the handle of the created person. " +
         "primaryNameDate overrides any date embedded in primaryName. Date formats: get_date_input_guide(). " +
         "gender: Female, Male, or Unknown (default: Unknown). " +
-        "Structured fields (attributes, addresses, urls, personAssociations): get_structured_field_input_guide().")]
+        "Structured fields (attributes, addresses, urls, personAssociations) and simple name strings: get_structured_field_input_guide(). " +
+        "Complex names: get_name_schema().")]
     public static async Task<string> CreatePerson(
-        [Description("Primary name object. Must include first_name and surname_list (see get_name_schema)")]
-        GrampsName primaryName,
+        [Description(FlexibleGrampsName.DescriptionHint)]
+        FlexibleGrampsName? primaryName,
         [Description("Primary name date as text (optional). Overrides primaryName.date. Formats: get_date_input_guide().")]
         string? primaryNameDate = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
         DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
         [Description("Gender: Female, Male, or Unknown (default: Unknown)")]
         string gender = "Unknown",
-        [Description("Alternate names (same structure as primary; optional)")]
-        GrampsName[]? alternateNames = null,
+        [Description(FlexibleAlternateNameList.DescriptionHint)]
+        FlexibleAlternateNameList? alternateNames = null,
         [Description("Event handles to link to this person. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? eventRefHandles = null,
         [Description("Array of event roles (e.g. 'Primary', 'Witness'). Must match eventRefHandles length")]
@@ -269,9 +270,10 @@ public static class PersonTools
     {
         try
         {
-            if (primaryName == null)
+            if (primaryName?.Name == null)
                 throw McpToolErrors.ValidationError("Error: primaryName is required");
 
+            var primary = primaryName.Name;
             var genderCode = GrampsGenderParser.ParseRequired(gender);
 
             var eventRefArr = GrampsRequestMapping.BuildEventRefList((string[]?)eventRefHandles, eventRefRoles);
@@ -290,9 +292,9 @@ public static class PersonTools
             var request = new CreatePersonRequest
             {
                 Gender = genderCode,
-                PrimaryName = ConvertNameToRequest(primaryName, primaryNameDate, primaryNameDateOrder),
-                AlternateNames = alternateNames is { Length: > 0 }
-                    ? alternateNames.Select(an => ConvertNameToRequest(an)).ToArray()
+                PrimaryName = ConvertNameToRequest(primary, primaryNameDate, primaryNameDateOrder),
+                AlternateNames = (GrampsName[]?)alternateNames is { Length: > 0 } alts
+                    ? alts.Select(an => ConvertNameToRequest(an)).ToArray()
                     : null,
                 EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
                 FamilyList = familyHandles,
@@ -312,7 +314,7 @@ public static class PersonTools
             return $"Person created successfully\n" +
                    $"Handle: {response.Handle}\n" +
                    $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {GrampsValueFormatter.FormatName(primaryName)}";
+                   $"Name: {GrampsValueFormatter.FormatName(primary)}";
         }
         catch (Exception ex)
         {
@@ -328,21 +330,21 @@ public static class PersonTools
         "primaryNameDate updates only the name date when primaryName is omitted (requires existing primary name). " +
         "Date formats: get_date_input_guide(). " +
         "gender: omit to keep; otherwise Female, Male, or Unknown. " +
-        "Omit attributes/addresses/urls/personAssociations/alternateNames to leave unchanged; pass [] to clear structured lists. " +
-        "Flexible syntax: get_structured_field_input_guide().")]
+        "Omit attributes/addresses/urls/personAssociations/alternateNames to leave unchanged; pass [] to clear alternate names. " +
+        "Flexible name syntax: get_structured_field_input_guide().")]
     public static async Task<string> UpdatePerson(
         [Description("Person handle")]
         string handle,
-        [Description("Update to primary name (leave null to keep unchanged)")]
-        GrampsName? primaryName = null,
+        [Description("Update primary name (omit to keep). " + FlexibleGrampsName.DescriptionHint)]
+        FlexibleGrampsName? primaryName = null,
         [Description("Primary name date as text (optional). When primaryName is set, overrides its date; otherwise updates stored name date. Formats: get_date_input_guide().")]
         string? primaryNameDate = null,
         [Description("How to read numeric slash/dot dates; see get_date_input_guide()")]
         DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
         [Description("Update gender: Female, Male, or Unknown (omit to keep current)")]
         string? gender = null,
-        [Description("Replace alternate names entirely (omit to keep; [] to remove all)")]
-        GrampsName[]? alternateNames = null,
+        [Description("Replace alternate names (omit to keep; [] removes all). " + FlexibleAlternateNameList.DescriptionHint)]
+        FlexibleAlternateNameList? alternateNames = null,
         [Description("Replace event references. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? eventRefHandles = null,
         [Description("Event roles to match eventRefHandles length")]
@@ -379,8 +381,8 @@ public static class PersonTools
                 return $"Person not found: {handle}";
 
             GrampsNameRequest? primaryReq;
-            if (primaryName != null)
-                primaryReq = ConvertNameToRequest(primaryName, primaryNameDate, primaryNameDateOrder);
+            if (primaryName?.Name != null)
+                primaryReq = ConvertNameToRequest(primaryName.Name, primaryNameDate, primaryNameDateOrder);
             else if (primaryNameDate != null)
             {
                 if (person.PrimaryName == null)
@@ -401,7 +403,7 @@ public static class PersonTools
                 Gender = GrampsGenderParser.ParseOptional(gender) ?? person.Gender,
                 PrimaryName = primaryReq,
                 AlternateNames = alternateNames != null
-                    ? alternateNames.Select(an => ConvertNameToRequest(an)).ToArray()
+                    ? ((GrampsName[]?)alternateNames)!.Select(an => ConvertNameToRequest(an)).ToArray()
                     : person.AlternateNames?.Select(an => ConvertNameToRequest(an)).ToArray(),
                 EventRefList = eventRefHandles != null
                     ? GrampsRequestMapping.BuildEventRefList((string[]?)eventRefHandles, eventRefRoles)

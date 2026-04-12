@@ -82,8 +82,8 @@ public static class TypeTools
     /// </summary>
     [McpServerTool]
     [Description(
-        "Returns how to pass attributes, person URLs, postal addresses, and person associations without full Gramps JSON. " +
-        "Covers Type: Value lines, Web Home: https://…, keyed address blocks, and HANDLE:: relationship. " +
+        "Returns how to pass attributes, URLs, addresses, person associations, and simple person names without full Gramps JSON. " +
+        "Covers Type: Value lines, Web Home: https://…, name types with ::, given|surname, and HANDLE:: relationship. " +
         "Use with create_person, update_person, and create/update tools that take attributes.")]
     public static Task<string> GetStructuredFieldInputGuide()
     {
@@ -98,6 +98,29 @@ public static class TypeTools
         overview =
             "Create/update tools accept either JSON arrays of Gramps-shaped objects or simpler strings. " +
             "A parameter may be a JSON array, a single JSON string with multiple lines or | separators, or (where noted) a string starting with [ containing a JSON array.",
+        primary_and_alternate_names = new
+        {
+            primary = new
+            {
+                grammar =
+                    "Full Gramps name object (get_name_schema), or one string. Optional Gramps name type uses double colon: \"Married Name:: Jane|Smith\" or \"Also Known As:: Mary Ann Jones\" (last space splits given and surname when | is absent).",
+                examples = new[]
+                {
+                    "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}",
+                    "John|Doe",
+                    "John Doe",
+                    "Birth Name:: Anna|Kovacs"
+                },
+                tools = "create_person (primaryName required), update_person (primaryName optional)"
+            },
+            alternate_names = new
+            {
+                grammar =
+                    "JSON array of name objects or of simple strings (same rules as primary). One JSON string with multiple names: use newlines between names only — do not use | between names (| separates given|surname within one name).",
+                examples = new[] { "[\"Also Known As:: Sue|Smith\", \"Nickname:: Red\"]", "Married Name:: Jane|Roe\\nAlso Known As:: Jane Doe" },
+                tools = "create_person, update_person"
+            }
+        },
         attributes = new
         {
             grammar = "Type: Value — only the first colon separates type from value; the value may contain more colons.",
