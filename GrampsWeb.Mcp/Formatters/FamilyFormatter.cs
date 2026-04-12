@@ -102,7 +102,16 @@ public static class FamilyFormatter
             {
                 var frel = child.FatherRelType ?? "Birth";
                 var mrel = child.MotherRelType ?? "Birth";
-                sb.AppendLine($"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}");
+                var line = $"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}";
+                if (child.Private)
+                    line += " ⚠ private (child link)";
+                if (child.TagList is { Length: > 0 } ctags)
+                {
+                    var th = string.Join(", ", ctags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
+                    if (!string.IsNullOrEmpty(th))
+                        line += $" | tags on link: {th}";
+                }
+                sb.AppendLine(line);
             }
         }
         else
@@ -115,8 +124,17 @@ public static class FamilyFormatter
             sb.AppendLine();
             sb.AppendLine($"Events ({family.EventRefList.Length}):");
             foreach (var er in family.EventRefList)
-                sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
+            {
+                var line = $"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}";
+                if (er.NoteList is { Length: > 0 })
+                    line += $" | note refs: {er.NoteList.Length}";
+                if (er.AttributeList is { Length: > 0 })
+                    line += $" | nested attributes: {er.AttributeList.Length}";
+                sb.AppendLine(line);
+            }
         }
+
+        AttributeListFormatter.AppendSection(sb, family.AttributeList);
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", family.CitationList);
@@ -175,7 +193,16 @@ public static class FamilyFormatter
                 var childRef = family.ChildRefList?.FirstOrDefault(cr => cr.Ref == child.Handle);
                 var frel = childRef?.FatherRelType ?? "Birth";
                 var mrel = childRef?.MotherRelType ?? "Birth";
-                sb.AppendLine($"  • {summary} [handle: {child.Handle}] (frel: {frel}, mrel: {mrel})");
+                var line = $"  • {summary} [handle: {child.Handle}] (frel: {frel}, mrel: {mrel})";
+                if (childRef?.Private == true)
+                    line += " ⚠ private (child link)";
+                if (childRef?.TagList is { Length: > 0 } xtags)
+                {
+                    var th = string.Join(", ", xtags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
+                    if (!string.IsNullOrEmpty(th))
+                        line += $" | tags on link: {th}";
+                }
+                sb.AppendLine(line);
             }
         }
         else if (family.ChildRefList?.Length > 0)
@@ -186,7 +213,16 @@ public static class FamilyFormatter
             {
                 var frel = child.FatherRelType ?? "Birth";
                 var mrel = child.MotherRelType ?? "Birth";
-                sb.AppendLine($"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}");
+                var line = $"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}";
+                if (child.Private)
+                    line += " ⚠ private (child link)";
+                if (child.TagList is { Length: > 0 } ctags)
+                {
+                    var th = string.Join(", ", ctags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
+                    if (!string.IsNullOrEmpty(th))
+                        line += $" | tags on link: {th}";
+                }
+                sb.AppendLine(line);
             }
         }
         else
@@ -229,6 +265,20 @@ public static class FamilyFormatter
                 sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]{placeHandleSuffix}{evtHandleSuffix}");
             }
         }
+        else if (family.EventRefList?.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Events ({family.EventRefList.Length}) (handles only — extended.events empty):");
+            foreach (var er in family.EventRefList)
+            {
+                var line = $"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}";
+                if (er.NoteList is { Length: > 0 })
+                    line += $" | note refs: {er.NoteList.Length}";
+                if (er.AttributeList is { Length: > 0 })
+                    line += $" | nested attributes: {er.AttributeList.Length}";
+                sb.AppendLine(line);
+            }
+        }
 
         var extNotes = family.Extended?.Notes;
         if (extNotes?.Length > 0)
@@ -246,6 +296,8 @@ public static class FamilyFormatter
                 sb.AppendLine($"  • [{noteTypeLabel}] {snippet} [handle: {nh}]");
             }
         }
+        else
+            HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
 
         var extCitations = family.Extended?.Citations;
         if (extCitations?.Length > 0)
@@ -255,6 +307,8 @@ public static class FamilyFormatter
             foreach (var c in extCitations)
                 sb.AppendLine(CitationFormatter.FormatEmbeddedCitationExtendedLine(c));
         }
+        else
+            HandleListFormatter.AppendHandleBulletSection(sb, "Citations", family.CitationList);
 
         MediaFormatter.AppendExtendedMediaSection(sb, family.Extended?.Media, family.MediaList);
 
@@ -270,6 +324,10 @@ public static class FamilyFormatter
                 sb.AppendLine($"  • {label} [handle: {th}]");
             }
         }
+        else
+            HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
+
+        AttributeListFormatter.AppendSection(sb, family.AttributeList);
 
         if (family.Private) sb.AppendLine("⚠ Private record");
 

@@ -498,23 +498,8 @@ public static class PersonFormatter
         AppendUrlsSection(sb, person.UrlList);
     }
 
-    private static void AppendAttributesSection(StringBuilder sb, GrampsAttribute[]? list)
-    {
-        if (list is null || list.Length == 0)
-            return;
-
-        sb.AppendLine();
-        sb.AppendLine($"Attributes ({list.Length}):");
-        foreach (var a in list)
-        {
-            var type = string.IsNullOrWhiteSpace(a.Type) ? "—" : a.Type.Trim();
-            var val = string.IsNullOrWhiteSpace(a.Value) ? "—" : a.Value.Trim();
-            var priv = a.Private ? " ⚠ private" : "";
-            sb.AppendLine($"  • {type}: {val}{priv}");
-            AppendIndentedHandleListLine(sb, "    citations", a.CitationList);
-            AppendIndentedHandleListLine(sb, "    notes", a.NoteList);
-        }
-    }
+    private static void AppendAttributesSection(StringBuilder sb, GrampsAttribute[]? list) =>
+        AttributeListFormatter.AppendSection(sb, list);
 
     private static void AppendAddressesSection(StringBuilder sb, GrampsAddress[]? list)
     {
