@@ -11,6 +11,8 @@
 #
 # Pull (example):
 #   docker pull CONTAINER_REGISTRY/owner/gramps-web-mcp:latest
+#
+# Manual run: repository → Actions → this workflow → Run workflow (pick branch).
 
 name: Build and push container image
 
@@ -21,6 +23,7 @@ on:
       - master
     tags:
       - "v*"
+  workflow_dispatch:
 
 jobs:
   docker:
