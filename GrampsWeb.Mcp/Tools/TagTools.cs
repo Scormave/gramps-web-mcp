@@ -76,7 +76,8 @@ public static class TagTools
         }
     }
 
-    [McpServerTool]
+    // Intentionally not exposed as an MCP tool for now:
+    // Gramps API currently returns HTTP 500 for tag update requests.
     [Description(
         "Update a tag (write). Scalar fields: omit to leave unchanged (no list-clear semantics on this tool).")]
     public static async Task<string> UpdateTag(
