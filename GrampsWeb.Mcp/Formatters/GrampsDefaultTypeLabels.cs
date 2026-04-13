@@ -82,8 +82,22 @@ public static class GrampsDefaultTypeLabels
         string typesListSegment,
         params string[] bulkCategoryKeys)
     {
-        var labels = await FetchLabelsAsync(client, typesListSegment, bulkCategoryKeys).ConfigureAwait(false);
-        return ResolveStored(storedType, labels);
+        var defaultLabels = await FetchLabelsAsync(client, typesListSegment, bulkCategoryKeys).ConfigureAwait(false);
+        var customLabels = await FetchCustomCategoryLabelsAsync(client, bulkCategoryKeys).ConfigureAwait(false);
+        return ResolveStoredWithDefaultAndCustomLists(storedType, defaultLabels, customLabels);
+    }
+
+    /// <summary>
+    /// Resolves a stored type for display: non-numeric strings pass through (e.g. custom names from wire <c>NoteType.string</c>).
+    /// Numeric strings are indices into <see cref="MergeDefaultAndCustomLabels"/> (built-in types first, then custom types).
+    /// </summary>
+    internal static string ResolveStoredWithDefaultAndCustomLists(
+        string? storedType,
+        IReadOnlyList<string>? defaultLabels,
+        IReadOnlyList<string>? customLabels)
+    {
+        var merged = MergeDefaultAndCustomLabels(defaultLabels, customLabels);
+        return ResolveStored(storedType, merged);
     }
 
     public static string ResolveStored(string? storedType, IReadOnlyList<string>? labels)
@@ -92,16 +106,62 @@ public static class GrampsDefaultTypeLabels
             return "—";
 
         var t = storedType.Trim();
+        // Non-numeric values (custom type names, etc.): never substitute — show as returned by the API.
         if (!IsNumericIndex(t))
             return t;
 
         if (!int.TryParse(t, NumberStyles.Integer, CultureInfo.InvariantCulture, out var idx) || idx < 0)
             return t;
 
+        // Numeric enum index: map through merged vocabulary when a non-empty label exists at that index.
         if (labels != null && idx < labels.Count && labels[idx].Length > 0)
             return labels[idx];
 
+        // No mapping (missing labels, unknown index, or empty slot): keep the API value as-is.
         return t;
+    }
+
+    /// <summary>
+    /// Gramps type indices refer to built-in types first, then user-defined types appended.
+    /// Concatenates <paramref name="defaultLabels"/> (from <c>/api/types/default/…</c>) with <paramref name="customLabels"/>
+    /// (from <c>/api/types/custom/</c>) in that order.
+    /// </summary>
+    internal static IReadOnlyList<string>? MergeDefaultAndCustomLabels(
+        IReadOnlyList<string>? defaultLabels,
+        IReadOnlyList<string>? customLabels)
+    {
+        if (defaultLabels == null || defaultLabels.Count == 0)
+            return customLabels;
+        if (customLabels == null || customLabels.Count == 0)
+            return defaultLabels;
+
+        var merged = new List<string>(defaultLabels.Count + customLabels.Count);
+        merged.AddRange(defaultLabels);
+        merged.AddRange(customLabels);
+        return merged;
+    }
+
+    /// <summary>Loads one category from <c>/api/types/custom/</c> using the same keys as the default-types bulk parser.</summary>
+    internal static async Task<IReadOnlyList<string>?> FetchCustomCategoryLabelsAsync(
+        GrampsApiClient client,
+        params string[] bulkCategoryKeys)
+    {
+        try
+        {
+            var root = await client.GetAsync<JsonElement>("/api/types/custom/").ConfigureAwait(false);
+            var categories = TypesPayloadParser.ParseCategories(root);
+            foreach (var key in bulkCategoryKeys)
+            {
+                if (categories.TryGetValue(key, out var list) && list.Count > 0)
+                    return list;
+            }
+        }
+        catch
+        {
+            /* optional endpoint or tree without custom types */
+        }
+
+        return null;
     }
 
     public static bool IsNumericIndex(string t) => t.Length > 0 && t.All(c => c is >= '0' and <= '9');

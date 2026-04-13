@@ -208,6 +208,38 @@ public class GrampsCompatibilityDeserializeTests
     }
 
     [Fact]
+    public void Deserialize_Note_NoteTypeWire_PrefersNonEmptyStringOverValue()
+    {
+        const string oldNote = """
+            {
+              "handle": "h1",
+              "gramps_id": "N0001",
+              "text": "x",
+              "format": 0,
+              "private": false,
+              "type": { "_class": "NoteType", "string": "Test", "value": 0 }
+            }
+            """;
+        const string newNote = """
+            {
+              "handle": "h1",
+              "gramps_id": "N0001",
+              "text": "x",
+              "format": 0,
+              "private": false,
+              "type": { "_class": "NoteType", "string": "", "value": 19 }
+            }
+            """;
+
+        var old = JsonSerializer.Deserialize<GrampsNote>(oldNote, GrampsJson.Options);
+        var neu = JsonSerializer.Deserialize<GrampsNote>(newNote, GrampsJson.Options);
+        Assert.NotNull(old);
+        Assert.NotNull(neu);
+        Assert.Equal("Test", old!.Type);
+        Assert.Equal("19", neu!.Type);
+    }
+
+    [Fact]
     public void Serialize_CreateEvent_OmitsNullAndEmptyCollections()
     {
         var req = new CreateEventRequest
