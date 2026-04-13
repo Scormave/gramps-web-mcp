@@ -22,7 +22,7 @@ public static class TypeTools
     [Description(
         "Read-only discovery: built-in Gramps type vocabularies (event_types, place_types, note_types, repository_types, " +
         "family_relation_types, child_reference_types, event_role_types, name_types, name_origin_types, etc.). " +
-        "Call before create_* or update_* whenever you set a type or role string so values match the tree. " +
+        "CRITICAL: You MUST call this before create_* or update_* whenever you set a type/role/origin string so values match the tree. " +
         "Invalid type strings can corrupt or reject data.")]
     public static async Task<string> GetTypes(GrampsApiClient client)
     {
@@ -45,7 +45,7 @@ public static class TypeTools
     [McpServerTool]
     [Description(
         "Read-only discovery: custom types added in this database only. " +
-        "Use with get_types for the full set of allowed type strings before writes.")]
+        "CRITICAL: You MUST combine this with get_types to get the full allowed type vocabulary before writes.")]
     public static async Task<string> GetCustomTypes(GrampsApiClient client)
     {
         try
@@ -66,7 +66,7 @@ public static class TypeTools
     [McpServerTool]
     [Description(
         "Read-only reference JSON: how to write date strings for MCP tools (ISO vs slash/dot, dateComponentOrder, modifiers, ranges). " +
-        "Call before any tool parameter named date, primaryNameDate, or similar.")]
+        "CRITICAL: You MUST call this before any tool parameter named date, primaryNameDate, or similar.")]
     public static Task<string> GetDateInputGuide()
     {
         var json = JsonSerializer.Serialize(BuildDateInputGuidePayload(), new JsonSerializerOptions { WriteIndented = true });
@@ -79,7 +79,7 @@ public static class TypeTools
     [McpServerTool]
     [Description(
         "Read-only reference JSON: flexible string/array forms for attributes, URLs, addresses, person refs, and shorthand names. " +
-        "Call before passing FlexibleAttributeList, FlexibleUrlList, FlexibleAddressList, FlexiblePersonRefList, or simple name strings.")]
+        "CRITICAL: You MUST call this before passing FlexibleAttributeList, FlexibleUrlList, FlexibleAddressList, FlexiblePersonRefList, or simple name strings.")]
     public static Task<string> GetStructuredFieldInputGuide()
     {
         var json = JsonSerializer.Serialize(
@@ -211,7 +211,7 @@ public static class TypeTools
     [McpServerTool]
     [Description(
         "Read-only reference JSON: full Gramps Name object (first_name, surname_list, type, call, nick, …). " +
-        "Call before create_person or update_person when building structured names (not only shorthand strings). " +
+        "CRITICAL: You MUST call this before create_person or update_person when building structured names (not only shorthand strings). " +
         "Field names match the Gramps Web API.")]
     public static Task<string> GetNameSchema()
     {

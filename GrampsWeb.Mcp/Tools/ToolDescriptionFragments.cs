@@ -24,14 +24,14 @@ public static class ToolDescriptionFragments
         "Omit to leave unchanged.";
 
     public const string CallGetTypes =
-        "Call get_types first for valid custom type strings where applicable.";
+        "CRITICAL: You MUST call get_types before setting any type/role/origin string so values match the tree vocabulary.";
 
     public const string CallGetDateInputGuide =
-        "Call get_date_input_guide for Gramps date string formats.";
+        "CRITICAL: You MUST call get_date_input_guide before sending date text so format parsing is deterministic.";
 
     public const string CallGetNameSchema =
-        "Call get_name_schema for name field structure and examples.";
+        "CRITICAL: You MUST call get_name_schema before building structured name payloads.";
 
     public const string CallGetStructuredFieldInputGuide =
-        "Call get_structured_field_input_guide for attributes, URLs, addresses, person refs, and flexible handle/name list syntax.";
+        "CRITICAL: You MUST call get_structured_field_input_guide before sending attributes, URLs, addresses, person refs, or flexible list/name shorthand.";
 }
