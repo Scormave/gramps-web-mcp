@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
@@ -16,7 +17,9 @@ public class GrampsSurname
     [JsonPropertyName("connector")]
     public string? Connector { get; set; }
 
+    /// <summary>Gramps surname origin type (JSON key <c>origintype</c>). May arrive as string or wire type object.</summary>
     [JsonPropertyName("origintype")]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? OriginType { get; set; }
 
     [JsonPropertyName("primary")]

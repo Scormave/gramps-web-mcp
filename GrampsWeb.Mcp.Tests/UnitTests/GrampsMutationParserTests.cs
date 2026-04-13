@@ -122,6 +122,49 @@ public class GrampsMutationParserTests
     }
 
     [Fact]
+    public void ExtractNewObject_PersonSurnameOriginTypeObject_ParsesOriginTypeValue()
+    {
+        const string json = """
+            [{
+              "_class":"Person",
+              "handle":"p1",
+              "type":"update",
+              "old":null,
+              "new":{
+                "_class":"Person",
+                "handle":"p1",
+                "gramps_id":"I2160",
+                "gender":1,
+                "private":false,
+                "primary_name":{
+                  "_class":"Name",
+                  "first_name":"Aleksandra",
+                  "private":false,
+                  "display_as":0,
+                  "sort_as":0,
+                  "surname_list":[
+                    {
+                      "_class":"Surname",
+                      "surname":"Andreeva",
+                      "prefix":"",
+                      "connector":"",
+                      "origintype":{"_class":"NameOriginType","string":"","value":1},
+                      "primary":true
+                    }
+                  ]
+                }
+              }
+            }]
+            """;
+
+        var person = GrampsMutationParser.ExtractNewObject<GrampsPerson>(json, "Person");
+        Assert.NotNull(person.PrimaryName);
+        Assert.NotNull(person.PrimaryName!.SurnameList);
+        Assert.Single(person.PrimaryName.SurnameList!);
+        Assert.Equal("1", person.PrimaryName.SurnameList![0].OriginType);
+    }
+
+    [Fact]
     public void ExtractNewObject_PersonEventRefEventRoleTypeObject_ParsesRoleValue()
     {
         const string json = """
