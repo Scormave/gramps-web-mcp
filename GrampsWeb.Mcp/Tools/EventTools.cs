@@ -51,8 +51,6 @@ public static class EventTools
         string eventType,
         [Description("Optional event date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("How to read ambiguous slash/dot numeric dates. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Place handle for this event. Optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,
         [Description("Event description (optional)")]
@@ -79,7 +77,7 @@ public static class EventTools
             var typeError = await TypeCache.ValidateTypeAsync(eventType, "event_types", client);
             if (typeError != null) throw McpToolErrors.ValidationError(typeError);
 
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder);
+            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso);
 
             var request = new CreateEventRequest
             {
@@ -119,8 +117,6 @@ public static class EventTools
         string? eventType = null,
         [Description("Event date text. Omit to keep current. Empty string may clear per parser rules. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Place handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,
         [Description("Description text. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -152,7 +148,7 @@ public static class EventTools
                 return NotFoundHelper.NotFoundMessage("Event", handle);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
                 : GrampsRequestMapping.ToDateRequestOrNull(evt.Date);
 
             var updateRequest = new CreateEventRequest

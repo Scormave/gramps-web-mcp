@@ -51,8 +51,6 @@ public static class MediaTools
         string? description = null,
         [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
@@ -72,7 +70,7 @@ public static class MediaTools
                 return NotFoundHelper.NotFoundMessage("Media", handle);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
                 : GrampsRequestMapping.ToDateRequestOrNull(media.Date);
 
             var updateRequest = new CreateMediaRequest

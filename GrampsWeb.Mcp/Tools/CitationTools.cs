@@ -55,8 +55,6 @@ public static class CitationTools
         string confidence = "Normal",
         [Description("Access or reference date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Citation text / transcript (optional)")]
@@ -78,7 +76,7 @@ public static class CitationTools
 
             var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
 
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder);
+            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso);
 
             var request = new CreateCitationRequest
             {
@@ -120,8 +118,6 @@ public static class CitationTools
         string? confidence = null,
         [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Transcript or citation text. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -148,7 +144,7 @@ public static class CitationTools
                 4);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
                 : GrampsRequestMapping.ToDateRequestOrNull(citation.Date);
 
             var updateRequest = new CreateCitationRequest

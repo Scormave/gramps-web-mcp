@@ -168,7 +168,6 @@ Link to persons/families via their create/update tools' `eventRefs`.
 |-----------|------|----------|---------|-------------|
 | `eventType` | `string` | yes | — | Event type key from tree |
 | `date` | `string?` | no | — | Date text |
-| `dateComponentOrder` | `DateComponentOrder` | no | `Iso` | Ambiguous date order |
 | `placeHandle` | `string?` | no | — | Place handle |
 | `description` | `string?` | no | — | Event description |
 | `citationHandles`, `noteHandles`, `tagHandles`, `mediaHandles` | `FlexibleHandleList?` | no | — | Linked handles |
@@ -262,7 +261,6 @@ Attach to persons/events/places via their `citationHandles`.
 | `page` | `string?` | no | — | Page reference |
 | `confidence` | `string` | no | `"Normal"` | Very Low / Low / Normal / High / Very High |
 | `date` | `string?` | no | — | Access or reference date |
-| `dateComponentOrder` | `DateComponentOrder` | no | `Iso` | Ambiguous date order |
 | `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
 | `text` | `string?` | no | — | Transcript text |
 | `mediaHandles` | `FlexibleHandleList?` | no | — | Media handles |
@@ -317,7 +315,6 @@ Update media metadata (no binary upload).
 | `handle` | `string` | yes | — | Media handle |
 | `description` | `string?` | no | — | Description |
 | `date` | `string?` | no | — | Date text |
-| `dateComponentOrder` | `DateComponentOrder` | no | `Iso` | Ambiguous date order |
 | `noteHandles`, `tagHandles`, `citationHandles` | `FlexibleHandleList?` | no | — | Linked handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
 | `isPrivate` | `bool?` | no | — | Private flag |

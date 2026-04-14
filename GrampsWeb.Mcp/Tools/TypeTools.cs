@@ -162,7 +162,7 @@ public static class TypeTools
         date_component_order = new
         {
             Iso =
-                "Default. Use hyphenated ISO only for full dates. Slash or dot triplets (e.g. 15/03/1990 or 15.03.1990) require DayMonthYear or MonthDayYear or you get a validation error.",
+                "Default parser behavior in MCP write tools. Use hyphenated ISO for full dates. Slash or dot triplets (e.g. 15/03/1990 or 15.03.1990) are not accepted and produce validation errors.",
             DayMonthYear = "dd/MM/yyyy, dd-MM-yyyy, dd.MM.yyyy — day first.",
             MonthDayYear = "MM/dd/yyyy, MM-dd-yyyy, MM.dd.yyyy — US style."
         },
@@ -179,9 +179,9 @@ public static class TypeTools
         },
         tools = new
         {
-            events = "create_event / update_event — parameter date (string) + dateComponentOrder",
-            citations = "create_citation / update_citation — date + dateComponentOrder",
-            media = "update_media — date + dateComponentOrder",
+            events = "create_event / update_event — parameter date (string)",
+            citations = "create_citation / update_citation — date",
+            media = "update_media — date",
             persons =
                 "create_person / update_person — gender: Female, Male, or Unknown"
         },
