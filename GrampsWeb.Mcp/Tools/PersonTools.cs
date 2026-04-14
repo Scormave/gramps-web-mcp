@@ -499,47 +499,8 @@ public static class PersonTools
     {
         try
         {
-            // Get object with backlinks to check dependencies
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/people/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return NotFoundHelper.NotFoundMessage("Person", handle);
-            var response = payload.Value;
-
-            // Check for backlinks
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                            foreach (var item in property.Value.EnumerateArray().Take(3))
-                            {
-                                if (item.TryGetProperty("gramps_id", out var grampsId))
-                                    backlinksInfo.AppendLine($"    - {grampsId.GetString()}");
-                            }
-                        }
-                    }
-                }
-            }
-
-            // If backlinks exist and force is false, return warning
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete person [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}\n" +
-                       $"To delete anyway, call delete_person(handle, force=true).\n" +
-                       $"Warning: this will leave dangling references in Family objects.";
-            }
-
-            // Delete the person
-            await client.DeleteAsync($"/api/people/{handle}");
-            return ResponseEnvelope.DeleteSuccess("Person", handle);
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Person", "people", handle, force);
         }
         catch (Exception ex)
         {

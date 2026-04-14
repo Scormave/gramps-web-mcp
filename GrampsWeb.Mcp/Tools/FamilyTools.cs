@@ -249,38 +249,8 @@ public static class FamilyTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/families/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return NotFoundHelper.NotFoundMessage("Family", handle);
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete family [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_family(handle, force=true).\n" +
-                       $"Warning: family will NOT be removed from Person.family_list.";
-            }
-
-            await client.DeleteAsync($"/api/families/{handle}");
-            return ResponseEnvelope.DeleteSuccess("Family", handle);
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Family", "families", handle, force);
         }
         catch (Exception ex)
         {

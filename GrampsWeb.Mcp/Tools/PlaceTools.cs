@@ -252,38 +252,8 @@ public static class PlaceTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/places/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return NotFoundHelper.NotFoundMessage("Place", handle);
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete place [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_place(handle, force=true).\n" +
-                       $"Warning: child places will lose parent reference.";
-            }
-
-            await client.DeleteAsync($"/api/places/{handle}");
-            return ResponseEnvelope.DeleteSuccess("Place", handle);
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Place", "places", handle, force);
         }
         catch (Exception ex)
         {

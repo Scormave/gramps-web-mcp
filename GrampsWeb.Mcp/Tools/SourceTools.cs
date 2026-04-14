@@ -183,38 +183,8 @@ public static class SourceTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/sources/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return NotFoundHelper.NotFoundMessage("Source", handle);
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete source [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_source(handle, force=true).\n" +
-                       $"WARNING: all citations referencing this source will lose their source link.";
-            }
-
-            await client.DeleteAsync($"/api/sources/{handle}");
-            return ResponseEnvelope.DeleteSuccess("Source", handle);
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Source", "sources", handle, force);
         }
         catch (Exception ex)
         {
