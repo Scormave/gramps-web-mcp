@@ -12,8 +12,8 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleGrampsName
 {
     public const string DescriptionHint =
-        "Name: full Gramps name JSON (get_name_schema), or a string: optional \"Married Name:: Jane|Smith\" or \"Jane Doe\" (last space splits given/surname; use | to force). " +
-        "Grammar: get_structured_field_input_guide().";
+        "Name: full Gramps name JSON (see gramps://input-guide), or a string: optional \"Married Name:: Jane|Smith\" or \"Jane Doe\" (last space splits given/surname; use | to force). " +
+        "Grammar: gramps://input-guide.";
 
     public required GrampsName Name { get; init; }
 

@@ -14,7 +14,7 @@ public sealed class FlexibleAddressList
 {
     public const string DescriptionHint =
         "Addresses: JSON array of Gramps address objects; or text blocks with lines like street:, city:, … (blank line or --- between addresses); " +
-        "or one plain line = street only. Grammar: get_structured_field_input_guide().";
+        "or one plain line = street only. Grammar: gramps://input-guide.";
 
     public required GrampsAddress[] Items { get; init; }
 

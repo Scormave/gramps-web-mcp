@@ -2,54 +2,68 @@ using System.ComponentModel;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Serialization;
+using GrampsWeb.Mcp.Tools;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace GrampsWeb.Mcp.Tools;
+namespace GrampsWeb.Mcp.Resources;
 
 /// <summary>
-/// MCP Server tools for retrieving Gramps type vocabularies, name schemas, and the date-string input guide.
-/// These are essential for validating data before create/update operations.
+/// MCP resources with reference/discovery data used by agents before write operations.
 /// </summary>
-[McpServerToolType]
-public static class TypeTools
+[McpServerResourceType]
+public sealed class GrampsResources
 {
-    [McpServerTool]
-    [Description(
-        "Read-only discovery: Gramps type vocabularies (event_types, place_types, note_types, etc.). " +
-        "When includeCustom is true (default), custom types from this database are merged with built-in types. " +
-        "CRITICAL: call this before create/update tools to get valid type/role/origin strings.")]
-    public static async Task<string> GetTypes(
-        [Description("Include custom types from this database alongside built-in types (default: true)")]
-        bool includeCustom = true,
-        GrampsApiClient client = null!)
+    [McpServerResource(
+        Name = "input-guide",
+        UriTemplate = "gramps://input-guide")]
+    [Description("Complete write-input reference: date formats, structured fields, and full Name schema.")]
+    public static Task<TextResourceContents> GetInputGuide()
+    {
+        return Task.FromResult(new TextResourceContents
+        {
+            Uri = "gramps://input-guide",
+            MimeType = "application/json",
+            Text = BuildInputGuideText()
+        });
+    }
+
+    [McpServerResource(
+        Name = "types",
+        UriTemplate = "gramps://types")]
+    [Description("Read-only type vocabularies (built-in + custom) for validating type/role/origin strings.")]
+    public static async Task<TextResourceContents> GetTypes(GrampsApiClient client)
     {
         try
         {
             var defaultRoot = await client.GetAsync<JsonElement>("/api/types/default/");
             var types = TypesPayloadParser.ParseCategories(defaultRoot);
 
-            if (includeCustom)
-            {
-                var customRoot = await client.GetAsync<JsonElement>("/api/types/custom/");
-                var customTypes = TypesPayloadParser.ParseCategories(customRoot);
+            var customRoot = await client.GetAsync<JsonElement>("/api/types/custom/");
+            var customTypes = TypesPayloadParser.ParseCategories(customRoot);
 
-                foreach (var kvp in customTypes)
+            foreach (var kvp in customTypes)
+            {
+                if (types.TryGetValue(kvp.Key, out var existing))
                 {
-                    if (types.TryGetValue(kvp.Key, out var existing))
-                    {
-                        var merged = existing.ToList();
-                        merged.AddRange(kvp.Value);
-                        types[kvp.Key] = merged;
-                    }
-                    else
-                    {
-                        types[kvp.Key] = kvp.Value.ToList();
-                    }
+                    var merged = existing.ToList();
+                    merged.AddRange(kvp.Value);
+                    types[kvp.Key] = merged;
+                }
+                else
+                {
+                    types[kvp.Key] = kvp.Value.ToList();
                 }
             }
 
-            return TypesFormatter.FormatTypesResponse(types);
+            return new TextResourceContents
+            {
+                Uri = "gramps://types",
+                MimeType = "text/plain",
+                Text = TypesFormatter.FormatTypesResponse(types)
+            };
         }
         catch (Exception ex)
         {
@@ -57,12 +71,74 @@ public static class TypeTools
         }
     }
 
-    [McpServerTool]
-    [Description(
-        "Read-only reference: complete input guide for MCP write tools — date strings, structured fields " +
-        "(attributes, URLs, addresses, person refs, name shorthand), and the full Gramps Name object schema. " +
-        "Call this once before using any create/update tool.")]
-    public static Task<string> GetInputGuide()
+    [McpServerResource(
+        Name = "metadata",
+        UriTemplate = "gramps://metadata")]
+    [Description("Connection and tree metadata (API version, tree id/name, owner, default person, etc.).")]
+    public static async Task<TextResourceContents> GetMetadata(GrampsApiClient client)
+    {
+        try
+        {
+            var metadata = await client.GetAsync<JsonElement>("/api/metadata/");
+            string? defaultPersonFullName = null;
+            if (metadata.TryGetProperty("default_person", out var defaultPersonEl)
+                && defaultPersonEl.ValueKind == JsonValueKind.String)
+            {
+                var handle = defaultPersonEl.GetString();
+                if (!string.IsNullOrEmpty(handle))
+                {
+                    try
+                    {
+                        var person = await client.GetAsync<GrampsPerson>(
+                            $"/api/people/{Uri.EscapeDataString(handle)}");
+                        if (person.PrimaryName != null)
+                            defaultPersonFullName = GrampsValueFormatter.FormatName(person.PrimaryName);
+                    }
+                    catch
+                    {
+                        // Keep handle-only output if the person cannot be loaded.
+                    }
+                }
+            }
+
+            return new TextResourceContents
+            {
+                Uri = "gramps://metadata",
+                MimeType = "text/plain",
+                Text = SystemFormatter.FormatMetadata(metadata, defaultPersonFullName)
+            };
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    [McpServerResource(
+        Name = "name-settings",
+        UriTemplate = "gramps://name-settings")]
+    [Description("Name display format definitions and surname grouping rules configured in this tree.")]
+    public static async Task<TextResourceContents> GetNameSettings(GrampsApiClient client)
+    {
+        try
+        {
+            var formats = await client.GetAsync<dynamic>("/api/name-formats/");
+            var groups = await client.GetAsync<dynamic>("/api/name-groups/");
+            return new TextResourceContents
+            {
+                Uri = "gramps://name-settings",
+                MimeType = "text/plain",
+                Text = $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
+                       $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}"
+            };
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    private static string BuildInputGuideText()
     {
         var guide = new
         {
@@ -70,8 +146,7 @@ public static class TypeTools
             structured_fields = BuildStructuredFieldInputGuidePayload(),
             name_schema = BuildNameSchemaPayload()
         };
-        var json = JsonSerializer.Serialize(guide, new JsonSerializerOptions { WriteIndented = true });
-        return Task.FromResult(json);
+        return JsonSerializer.Serialize(guide, new JsonSerializerOptions { WriteIndented = true });
     }
 
     private static object BuildStructuredFieldInputGuidePayload() => new
@@ -84,7 +159,7 @@ public static class TypeTools
             primary = new
             {
                 grammar =
-                    "Full Gramps name object (get_name_schema), or one string. Optional Gramps name type uses double colon: \"Married Name:: Jane|Smith\" or \"Also Known As:: Mary Ann Jones\" (last space splits given and surname when | is absent).",
+                    "Full Gramps name object (see gramps://input-guide name schema), or one string. Optional Gramps name type uses double colon: \"Married Name:: Jane|Smith\" or \"Also Known As:: Mary Ann Jones\" (last space splits given and surname when | is absent).",
                 examples = new[]
                 {
                     "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}",
@@ -97,14 +172,14 @@ public static class TypeTools
             alternate_names = new
             {
                 grammar =
-                    "JSON array of name objects or of simple strings (same rules as primary). One JSON string with multiple names: use newlines between names only — do not use | between names (| separates given|surname within one name).",
+                    "JSON array of name objects or of simple strings (same rules as primary). One JSON string with multiple names: use newlines between names only - do not use | between names (| separates given|surname within one name).",
                 examples = new[] { "[\"Also Known As:: Sue|Smith\", \"Nickname:: Red\"]", "Married Name:: Jane|Roe\\nAlso Known As:: Jane Doe" },
                 tools = "create_person, update_person"
             }
         },
         attributes = new
         {
-            grammar = "Type: Value — only the first colon separates type from value; the value may contain more colons.",
+            grammar = "Type: Value - only the first colon separates type from value; the value may contain more colons.",
             examples = new[] { "Nickname: Joe", "Occupation: Farmer" },
             forms = new[]
             {
@@ -117,8 +192,8 @@ public static class TypeTools
         urls = new
         {
             grammar =
-                "Type: URL — first colon separates type from path. Optional description after path: em dash — or ASCII \" - \" (space hyphen space).",
-            examples = new[] { "Web Home: http://example.com", "Web Home: https://x.org — my site" },
+                "Type: URL - first colon separates type from path. Optional description after path: em dash - or ASCII \" - \" (space hyphen space).",
+            examples = new[] { "Web Home: http://example.com", "Web Home: https://x.org - my site" },
             forms = new[]
             {
                 "JSON array of objects {\"type\",\"path\",\"desc\"}",
@@ -142,7 +217,7 @@ public static class TypeTools
         person_associations = new
         {
             grammar =
-                "HANDLE:: relationship — double colon after the related person's handle; relationship text is free-form (may include spaces).",
+                "HANDLE:: relationship - double colon after the related person's handle; relationship text is free-form (may include spaces).",
             examples = new[] { "a1b2c3d4e5f678901234567890abcd:: Godfather" },
             forms = new[]
             {
@@ -163,8 +238,8 @@ public static class TypeTools
         {
             Iso =
                 "Default parser behavior in MCP write tools. Use hyphenated ISO for full dates. Slash or dot triplets (e.g. 15/03/1990 or 15.03.1990) are not accepted and produce validation errors.",
-            DayMonthYear = "dd/MM/yyyy, dd-MM-yyyy, dd.MM.yyyy — day first.",
-            MonthDayYear = "MM/dd/yyyy, MM-dd-yyyy, MM.dd.yyyy — US style."
+            DayMonthYear = "dd/MM/yyyy, dd-MM-yyyy, dd.MM.yyyy - day first.",
+            MonthDayYear = "MM/dd/yyyy, MM-dd-yyyy, MM.dd.yyyy - US style."
         },
         modifiers = new
         {
@@ -173,17 +248,17 @@ public static class TypeTools
         },
         year_ranges = new
         {
-            dash_between_years = "1800-1850 (both parts 3–4 digit years)",
+            dash_between_years = "1800-1850 (both parts 3-4 digit years)",
             between = "between 1800 and 1850",
             span = "from 1800 to 1850"
         },
         tools = new
         {
-            events = "create_event / update_event — parameter date (string)",
-            citations = "create_citation / update_citation — date",
-            media = "update_media — date",
+            events = "create_event / update_event - parameter date (string)",
+            citations = "create_citation / update_citation - date",
+            media = "update_media - date",
             persons =
-                "create_person / update_person — gender: Female, Male, or Unknown"
+                "create_person / update_person - gender: Female, Male, or Unknown"
         },
         fallback =
             "Strings that do not match structured patterns are stored as Gramps text-only dates (modifier 6)."
@@ -200,7 +275,7 @@ public static class TypeTools
                 type = new
                 {
                     type = "string",
-                    description = "Name type from name_types (get_types). Examples: 'Birth Name', 'Married Name', 'Also Known As', 'Patronymic'",
+                    description = "Name type from name_types (see gramps://types). Examples: 'Birth Name', 'Married Name', 'Also Known As', 'Patronymic'",
                     examples = new[] { "Birth Name", "Married Name", "Also Known As" }
                 },
                 first_name = new
@@ -275,7 +350,7 @@ public static class TypeTools
                 origintype = new
                 {
                     type = "string",
-                    description = "Origin of surname (from name_origin_types via get_types()). Examples: 'Inherited', 'Patronymic', 'Matronymic', 'Occupation', 'Location'",
+                    description = "Origin of surname (from name_origin_types via gramps://types). Examples: 'Inherited', 'Patronymic', 'Matronymic', 'Occupation', 'Location'",
                     examples = new[] { "Inherited", "Patronymic", "Matronymic", "Occupation", "Location" }
                 },
                 primary = new
@@ -288,7 +363,7 @@ public static class TypeTools
         },
         parsing_example = new
         {
-            full_name_text = "Dr. Edwin Jose von der Smith and Weston Wilson Sr. (Jose) — Underhills",
+            full_name_text = "Dr. Edwin Jose von der Smith and Weston Wilson Sr. (Jose) - Underhills",
             parsed = new
             {
                 title = "Dr.",
@@ -319,5 +394,4 @@ public static class TypeTools
             }
         }
     };
-
 }

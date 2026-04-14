@@ -13,7 +13,7 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleAlternateNameList
 {
     public const string DescriptionHint =
-        "Alternate names: JSON array of full name objects, or strings per entry (see FlexibleGrampsName / get_structured_field_input_guide). " +
+        "Alternate names: JSON array of full name objects, or strings per entry (see FlexibleGrampsName / gramps://input-guide). " +
         "Multiple names in one string: separate with newlines only (not | — | is given|surname within one name).";
 
     public required GrampsName[] Items { get; init; }

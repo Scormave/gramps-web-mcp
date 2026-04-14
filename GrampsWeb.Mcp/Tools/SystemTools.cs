@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
-using GrampsWeb.Mcp.Models;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -13,44 +12,6 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class SystemTools
 {
-    [McpServerTool]
-    [Description(
-        "Read-only: connection and tree metadata (API version, tree id/name, owner, default person, etc.). " +
-        "Call early to confirm which database you are editing.")]
-    public static async Task<string> GetMetadata(GrampsApiClient client)
-    {
-        try
-        {
-            var metadata = await client.GetAsync<JsonElement>("/api/metadata/");
-            string? defaultPersonFullName = null;
-            if (metadata.TryGetProperty("default_person", out var defaultPersonEl)
-                && defaultPersonEl.ValueKind == JsonValueKind.String)
-            {
-                var handle = defaultPersonEl.GetString();
-                if (!string.IsNullOrEmpty(handle))
-                {
-                    try
-                    {
-                        var person = await client.GetAsync<GrampsPerson>(
-                            $"/api/people/{Uri.EscapeDataString(handle)}");
-                        if (person.PrimaryName != null)
-                            defaultPersonFullName = GrampsValueFormatter.FormatName(person.PrimaryName);
-                    }
-                    catch
-                    {
-                        // Keep handle-only output if the person cannot be loaded.
-                    }
-                }
-            }
-
-            return SystemFormatter.FormatMetadata(metadata, defaultPersonFullName);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
     [McpServerTool]
     [Description(
         "Read-only: recent transaction history (most recently changed objects). " +

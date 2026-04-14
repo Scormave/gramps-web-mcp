@@ -94,7 +94,7 @@ public static class TypeCache
 
         var categoryLabel = category.Replace("_", " ");
         return $"Invalid {categoryLabel} '{value}'.{suggestionText} " +
-               $"Valid values from get_types(): {validPreview}";
+               $"Valid values from gramps://types: {validPreview}";
     }
 
     /// <summary>Invalidates the cache, forcing a reload on next access.</summary>

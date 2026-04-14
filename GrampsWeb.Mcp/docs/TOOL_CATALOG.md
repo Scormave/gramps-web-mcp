@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 56 MCP tools exposed by the server.
+Complete catalog of the 52 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -14,6 +14,17 @@ decorated with `[McpServerTool]`.
 | C | Create (write) |
 | U | Update (write) |
 | D | Delete (destructive write) |
+
+## Resources
+
+Read-only reference/discovery data exposed as MCP resources:
+
+| URI | Description |
+|-----|-------------|
+| `gramps://input-guide` | Complete write-input guide: date strings, structured fields, and full name schema |
+| `gramps://types` | Built-in and custom type vocabularies (event/place/note/etc.) |
+| `gramps://metadata` | Connection/tree metadata (API version, tree id/name, owner, default person) |
+| `gramps://name-settings` | Name display formats and surname grouping rules |
 
 ---
 
@@ -72,7 +83,7 @@ path distance, common-ancestor handles.
 
 ### C — `CreatePerson`
 Create a new person.  Returns handle and Gramps ID.
-**Prerequisites:** `get_name_schema`, `get_types`, `get_date_input_guide`, `get_structured_field_input_guide`.
+**Prerequisites:** `gramps://input-guide`, `gramps://types`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -133,7 +144,7 @@ Chronological events for one family.
 | `dates` | `string?` | no | — | Date range filter |
 
 ### C — `CreateFamily`
-Create a family unit.  **Prerequisites:** `get_types`, `get_structured_field_input_guide`.
+Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -160,7 +171,7 @@ Delete a family.  Does not remove the family from person records automatically.
 One event: type, date/modifiers, place, description, citations, notes, tags, media.
 
 ### C — `CreateEvent`
-Create an event.  **Prerequisites:** `get_types`, `get_date_input_guide`, `get_structured_field_input_guide`.
+Create an event.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
 Link to persons/families via their create/update tools' `eventRefs`.
 
 | Parameter | Type | Required | Default | Description |
@@ -196,7 +207,7 @@ Chronological events whose place equals this handle.
 | `dates` | `string?` | no | — | Date range filter |
 
 ### C — `CreatePlace`
-Create a place.  **Prerequisites:** `get_types`.
+Create a place.  **Prerequisites:** `gramps://types`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -280,7 +291,7 @@ Delete a citation.  Blocked when linked from other objects unless `force=true`.
 One note: text, type, format (Plain / Html).
 
 ### C — `CreateNote`
-Create a note.  **Prerequisites:** `get_types`.
+Create a note.  **Prerequisites:** `gramps://types`.
 Link via `noteHandles` on other objects.
 
 | Parameter | Type | Required | Default | Description |
@@ -328,7 +339,7 @@ Delete a media record.  Removes the Gramps object, not necessarily the file on d
 One repository: name, type, address, URLs.
 
 ### C — `CreateRepository`
-Create a repository.  **Prerequisites:** `get_types`.
+Create a repository.  **Prerequisites:** `gramps://types`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -402,11 +413,7 @@ Paginated list of one object type with optional filtering.
 
 ---
 
-## System (`SystemTools.cs`) — 3 tools
-
-### R — `GetMetadata`
-Connection and tree metadata: API version, tree id/name, owner, default person.
-Call early to confirm which database is connected.
+## System (`SystemTools.cs`) — 2 tools
 
 ### R — `GetRecentChanges`
 Recent transaction history (most recently changed objects).
@@ -417,32 +424,6 @@ Recent transaction history (most recently changed objects).
 
 ### R — `GetBookmarks`
 Gramps Web user bookmarks (saved shortcuts).
-
----
-
-## Type & Schema discovery (`TypeTools.cs`) — 2 tools
-
-### R — `GetTypes`
-Gramps type vocabularies (event_types, place_types, note_types, etc.).
-When `includeCustom` is true (default), custom types from this database
-are merged with built-in types.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `includeCustom` | `bool` | no | `true` | Merge custom types from this database |
-
-### R — `GetInputGuide`
-Combined reference for all write-tool input formats: date strings, structured
-fields (attributes, URLs, addresses, person refs, name shorthand), and the
-full Gramps Name object schema.  Call once before using any create/update tool.
-
----
-
-## Name (`NameTools.cs`) — 1 tool
-
-### R — `GetNameSettings`
-Name display format definitions and surname grouping rules configured in this
-tree (combines the former `GetNameFormats` and `GetNameGroups`).
 
 ---
 
@@ -502,11 +483,9 @@ Handles event creation + person update automatically.
 | Repository | 1 | 1 | 1 | 1 | 4 |
 | Tag | 1 | 1 | 1 | 1 | 4 |
 | Search | 2 | 0 | 0 | 0 | 2 |
-| System | 3 | 0 | 0 | 0 | 3 |
-| Types/Schema | 2 | 0 | 0 | 0 | 2 |
-| Name | 1 | 0 | 0 | 0 | 1 |
+| System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 1 | 2 | 0 | 0 | 3 |
-| **Total** | **25** | **11** | **10** | **10** | **56** |
+| **Total** | **21** | **11** | **10** | **10** | **52** |
 
 ## Prerequisites for write tools
 
@@ -514,10 +493,10 @@ Before calling create/update tools, agents should call discovery tools to
 learn valid values.  Type strings are also validated server-side by
 `TypeCache`, which returns helpful error messages with suggestions on typos.
 
-| Discovery tool | When useful |
-|----------------|-------------|
-| `get_types` | Before setting any type/role/origin string (server validates, but calling first avoids round-trip errors) |
-| `get_input_guide` | Before any `date`, `Flexible*`, or structured name parameter (covers dates, structured fields, and name schema) |
+| Resource | When useful |
+|----------|-------------|
+| `gramps://types` | Before setting any type/role/origin string (server validates, but checking first avoids round-trip errors) |
+| `gramps://input-guide` | Before any `date`, `Flexible*`, or structured name parameter (covers dates, structured fields, and name schema) |
 
 ## Delete safety
 

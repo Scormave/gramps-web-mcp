@@ -203,7 +203,7 @@ public static class CompositeTools
         [Description("Person handle or Gramps ID (e.g. I0001). " + ToolDescriptionFragments.HandleDiscovery)]
         string personHandle,
         [Description("Event type (e.g. 'Birth', 'Death', 'Baptism', 'Marriage', 'Burial', 'Immigration'). " +
-                     "Call get_types() to see all options.")]
+                     "See gramps://types for all options.")]
         string eventType,
         [Description("Event date as text (e.g. '1985-04-12', 'about 1920'). Optional.")]
         string? date = null,
@@ -218,7 +218,7 @@ public static class CompositeTools
         try
         {
             if (string.IsNullOrWhiteSpace(eventType))
-                throw McpToolErrors.ValidationError("Error: eventType is required. Call get_types() to see valid values.");
+                throw McpToolErrors.ValidationError("Error: eventType is required. See gramps://types for valid values.");
 
             // Resolve person handle
             var resolvedPersonHandle = await HandleResolver.ResolveToHandleAsync(personHandle, client);

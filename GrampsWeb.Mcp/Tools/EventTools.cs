@@ -72,7 +72,7 @@ public static class EventTools
         try
         {
             if (string.IsNullOrWhiteSpace(eventType))
-                throw McpToolErrors.ValidationError("Error: eventType is required. Call get_types() to see valid values.");
+                throw McpToolErrors.ValidationError("Error: eventType is required. See gramps://types for valid values.");
 
             var typeError = await TypeCache.ValidateTypeAsync(eventType, "event_types", client);
             if (typeError != null) throw McpToolErrors.ValidationError(typeError);

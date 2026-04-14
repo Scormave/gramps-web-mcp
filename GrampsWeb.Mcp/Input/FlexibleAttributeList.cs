@@ -14,7 +14,7 @@ public sealed class FlexibleAttributeList
 {
     public const string DescriptionHint =
         "Attributes: JSON array of objects {type,value,...}, or strings \"Type: Value\" (first colon), " +
-        "or one string with lines or | between entries. Full grammar: get_structured_field_input_guide().";
+        "or one string with lines or | between entries. Full grammar: gramps://input-guide.";
 
     public required GrampsAttribute[] Items { get; init; }
 

@@ -14,7 +14,7 @@ public sealed class FlexibleUrlList
 {
     public const string DescriptionHint =
         "URLs: JSON array of {type,path,desc}, or strings \"Web Home: https://…\" with optional \" — note\" after URL, " +
-        "or lines/| separated. Grammar: get_structured_field_input_guide().";
+        "or lines/| separated. Grammar: gramps://input-guide.";
 
     public required GrampsUrl[] Items { get; init; }
 

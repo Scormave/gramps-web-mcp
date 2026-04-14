@@ -1,5 +1,6 @@
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
+using GrampsWeb.Mcp.Resources;
 using Microsoft.AspNetCore.Builder;
 using ModelContextProtocol.AspNetCore;
 using ModelContextProtocol.Server;
@@ -50,7 +51,8 @@ static async Task RunStdioAsync(GrampsConfig config)
     builder.Services
         .AddMcpServer()
         .WithStdioServerTransport()
-        .WithToolsFromAssembly();
+        .WithToolsFromAssembly()
+        .WithResources<GrampsResources>();
 
     await builder.Build().RunAsync();
 }
@@ -82,7 +84,8 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
 #pragma warning restore MCP9004
             }
         })
-        .WithToolsFromAssembly();
+        .WithToolsFromAssembly()
+        .WithResources<GrampsResources>();
 
     var app = builder.Build();
     app.MapMcp(transport.MapPath);
