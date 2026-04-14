@@ -30,7 +30,7 @@ public static class MediaTools
         {
             var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>($"/api/media/{handle}");
             return media == null
-                ? $"Media not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Media", handle)
                 : MediaFormatter.FormatMediaFull(media);
         }
         catch (Exception ex)
@@ -51,8 +51,6 @@ public static class MediaTools
         string? description = null,
         [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
@@ -69,10 +67,10 @@ public static class MediaTools
         {
             var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>($"/api/media/{handle}");
             if (media == null)
-                return $"Media not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Media", handle);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
                 : GrampsRequestMapping.ToDateRequestOrNull(media.Date);
 
             var updateRequest = new CreateMediaRequest
@@ -95,10 +93,7 @@ public static class MediaTools
             };
 
             var response = await client.PutMutationAsync<GrampsMedia>($"/api/media/{handle}", updateRequest, "Media");
-            return $"Media updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Description: {response.Description ?? "—"}";
+            return ResponseEnvelope.UpdateSuccess("Media", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -119,38 +114,8 @@ public static class MediaTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/media/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Media not found: {handle}";
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete media [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_media(handle, force=true).\n" +
-                       $"Note: database entry will be removed, but the physical file remains.";
-            }
-
-            await client.DeleteAsync($"/api/media/{handle}");
-            return $"Media deleted successfully [{handle}]\nNote: database entry removed, physical file remains.";
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Media", "media", handle, force);
         }
         catch (Exception ex)
         {

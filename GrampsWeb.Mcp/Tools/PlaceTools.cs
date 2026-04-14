@@ -30,7 +30,7 @@ public static class PlaceTools
         {
             var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
             return place == null
-                ? $"Place not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Place", handle)
                 : await PlaceFormatter.FormatPlaceFull(place, client);
         }
         catch (Exception ex)
@@ -44,7 +44,7 @@ public static class PlaceTools
         "Read-only: chronological events whose place field equals this handle (computed via backlinks; not a single API route). " +
         "Events on a child place (e.g. city) do not appear when querying the parent country handle. " +
         "events filters by category (same set as person timeline). dates uses YYYY/M/D ranges with zero-stripping. " +
-        "include_undated default true keeps sortval-0 events. Output may include event handles for get_event.")]
+        "Output may include event handles for get_event.")]
     public static async Task<string> GetPlaceTimeline(
         [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
@@ -52,19 +52,17 @@ public static class PlaceTools
         string[]? events = null,
         [Description("Date range filter; e.g. 1999/1/1-2010/12/31 (zeros normalized)")]
         string? dates = null,
-        [Description("Include events with no sortable date (sortval 0 or missing); default true. Use false to match strict undated exclusion.")]
-        bool includeUndated = true,
         GrampsApiClient client = null!)
     {
         try
         {
             var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
             if (place == null)
-                return $"Place not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Place", handle);
 
             var datesNormalized = PersonTools.NormalizeTimelineDatesForGrampsApi(dates);
             var outcome = await PlaceTimelineFallback.CollectAsync(
-                client, handle, place, events, datesNormalized, includeUndated);
+                client, handle, place, events, datesNormalized, true);
 
             if (outcome.MatchedPlaceCount == 0)
                 return
@@ -75,7 +73,7 @@ public static class PlaceTools
             if (outcome.Entries.Length == 0)
                 return
                     $"No events at place {handle} match the filters (event categories and/or date range). " +
-                    "Try broader categories, widen the date range, or set include_undated=true if undated events were excluded.";
+                    "Try broader categories or widen the date range.";
 
             return TimelineFormatter.FormatTimelineChronological(outcome.Entries);
         }
@@ -122,6 +120,12 @@ public static class PlaceTools
             if (string.IsNullOrWhiteSpace(name))
                 throw McpToolErrors.ValidationError("Error: name is required");
 
+            if (placeType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(placeType, "place_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var enclosed = (string[]?)enclosedByHandles;
             var placeRefList = enclosed?.Length > 0
                 ? enclosed.Select(h => new { @ref = h } as object).ToArray()
@@ -148,11 +152,9 @@ public static class PlaceTools
 
             var response = await client.PostMutationAsync<GrampsPlace>("/api/places/", request, "Place");
             var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
-            return $"Place created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {response.Name}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.CreateSuccess(
+                "Place", response.Handle, response.GrampsId,
+                typeLabel, ResponseEnvelope.PlaceCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -193,9 +195,15 @@ public static class PlaceTools
     {
         try
         {
+            if (placeType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(placeType, "place_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
             if (place == null)
-                return $"Place not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Place", handle);
 
             var enclosedUpdate = (string[]?)enclosedByHandles;
             var placeRefList = enclosedUpdate != null && enclosedUpdate.Length > 0
@@ -223,12 +231,7 @@ public static class PlaceTools
             };
 
             var response = await client.PutMutationAsync<GrampsPlace>($"/api/places/{handle}", updateRequest, "Place");
-            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
-            return $"Place updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {response.Name ?? "—"}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.UpdateSuccess("Place", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -249,38 +252,8 @@ public static class PlaceTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/places/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Place not found: {handle}";
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete place [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_place(handle, force=true).\n" +
-                       $"Warning: child places will lose parent reference.";
-            }
-
-            await client.DeleteAsync($"/api/places/{handle}");
-            return $"Place deleted successfully [{handle}]";
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Place", "places", handle, force);
         }
         catch (Exception ex)
         {

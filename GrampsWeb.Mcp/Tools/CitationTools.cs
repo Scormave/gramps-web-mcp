@@ -31,7 +31,7 @@ public static class CitationTools
         {
             var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>($"/api/citations/{handle}");
             return citation == null
-                ? $"Citation not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Citation", handle)
                 : await CitationFormatter.FormatCitationFull(citation, client);
         }
         catch (Exception ex)
@@ -55,8 +55,6 @@ public static class CitationTools
         string confidence = "Normal",
         [Description("Access or reference date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Citation text / transcript (optional)")]
@@ -78,7 +76,7 @@ public static class CitationTools
 
             var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
 
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder);
+            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso);
 
             var request = new CreateCitationRequest
             {
@@ -95,12 +93,8 @@ public static class CitationTools
             };
 
             var response = await client.PostMutationAsync<GrampsCitation>("/api/citations/", request, "Citation");
-            var confidenceLabel = CitationFormatter.ConfidenceLabels[Math.Clamp(response.Confidence, 0, 4)];
-            return $"Citation created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Source: {response.Source}\n" +
-                   $"Confidence: {confidenceLabel}";
+            return ResponseEnvelope.CreateSuccess("Citation", response.Handle, response.GrampsId,
+                response.Page, ResponseEnvelope.CitationCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -124,8 +118,6 @@ public static class CitationTools
         string? confidence = null,
         [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Transcript or citation text. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -144,7 +136,7 @@ public static class CitationTools
         {
             var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>($"/api/citations/{handle}");
             if (citation == null)
-                return $"Citation not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Citation", handle);
 
             var finalConfidence = Math.Clamp(
                 CitationConfidenceParser.ParseOptional(confidence) ?? citation.Confidence,
@@ -152,7 +144,7 @@ public static class CitationTools
                 4);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
                 : GrampsRequestMapping.ToDateRequestOrNull(citation.Date);
 
             var updateRequest = new CreateCitationRequest
@@ -176,9 +168,7 @@ public static class CitationTools
             };
 
             var response = await client.PutMutationAsync<GrampsCitation>($"/api/citations/{handle}", updateRequest, "Citation");
-            return $"Citation updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+            return ResponseEnvelope.UpdateSuccess("Citation", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -198,37 +188,8 @@ public static class CitationTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/citations/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Citation not found: {handle}";
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete citation [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_citation(handle, force=true).";
-            }
-
-            await client.DeleteAsync($"/api/citations/{handle}");
-            return $"Citation deleted successfully [{handle}]";
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Citation", "citations", handle, force);
         }
         catch (Exception ex)
         {

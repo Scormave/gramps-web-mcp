@@ -119,7 +119,7 @@ public class FormatterIntegrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void FormatTimeline_WithLegacyMethod_FormatsCorrectly()
+    public void FormatTimelineChronological_FormatsEntryDetailsCorrectly()
     {
         // Arrange
         var entries = new[]
@@ -134,10 +134,10 @@ public class FormatterIntegrationTests
         };
 
         // Act
-        var result = TimelineFormatter.FormatTimeline("TIMELINE", entries);
+        var result = TimelineFormatter.FormatTimelineChronological(entries);
 
         // Assert
-        Assert.Contains("TIMELINE", result);
+        Assert.Contains("Timeline (1 events)", result);
         Assert.Contains("Birth", result);
         Assert.Contains("Boston", result);
         Assert.Contains("Primary", result);

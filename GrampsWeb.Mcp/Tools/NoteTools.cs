@@ -29,7 +29,7 @@ public static class NoteTools
         {
             var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>($"/api/notes/{handle}");
             return note == null
-                ? $"Note not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Note", handle)
                 : await NoteFormatter.FormatNoteFullAsync(note, client);
         }
         catch (Exception ex)
@@ -61,6 +61,9 @@ public static class NoteTools
             if (string.IsNullOrWhiteSpace(text))
                 throw McpToolErrors.ValidationError("Error: text is required");
 
+            var typeError = await TypeCache.ValidateTypeAsync(noteType, "note_types", client);
+            if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+
             var formatCode = NoteTextFormatParser.ParseRequired(format);
 
             var request = new CreateNoteRequest
@@ -76,11 +79,9 @@ public static class NoteTools
             var typeLabel = string.IsNullOrWhiteSpace(response.Type)
                 ? "General"
                 : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, response.Type);
-            return $"Note created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {typeLabel}\n" +
-                   $"Text preview: {(response.Text?.Substring(0, Math.Min(50, response.Text.Length)) ?? "—")}...";
+            return ResponseEnvelope.CreateSuccess(
+                "Note", response.Handle, response.GrampsId,
+                typeLabel, ResponseEnvelope.NoteCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -110,9 +111,15 @@ public static class NoteTools
     {
         try
         {
+            if (noteType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(noteType, "note_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>($"/api/notes/{handle}");
             if (note == null)
-                return $"Note not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Note", handle);
 
             var updateRequest = new CreateNoteRequest
             {
@@ -132,13 +139,7 @@ public static class NoteTools
             };
 
             var response = await client.PutMutationAsync<GrampsNote>($"/api/notes/{handle}", updateRequest, "Note");
-            var typeLabel = string.IsNullOrWhiteSpace(response.Type)
-                ? "General"
-                : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, response.Type);
-            return $"Note updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.UpdateSuccess("Note", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -158,37 +159,8 @@ public static class NoteTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/notes/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Note not found: {handle}";
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete note [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_note(handle, force=true).";
-            }
-
-            await client.DeleteAsync($"/api/notes/{handle}");
-            return $"Note deleted successfully [{handle}]";
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Note", "notes", handle, force);
         }
         catch (Exception ex)
         {

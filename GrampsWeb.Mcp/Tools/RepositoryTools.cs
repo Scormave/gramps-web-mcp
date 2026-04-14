@@ -28,7 +28,7 @@ public static class RepositoryTools
         {
             var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
             return repo == null
-                ? $"Repository not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Repository", handle)
                 : await RepositoryFormatter.FormatRepositoryFullAsync(repo, client);
         }
         catch (Exception ex)
@@ -63,6 +63,12 @@ public static class RepositoryTools
             if (string.IsNullOrWhiteSpace(name))
                 throw McpToolErrors.ValidationError("Error: name is required");
 
+            if (repoType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(repoType, "repository_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var request = new CreateRepositoryRequest
             {
                 Name = name,
@@ -76,11 +82,9 @@ public static class RepositoryTools
 
             var response = await client.PostMutationAsync<GrampsRepository>("/api/repositories/", request, "Repository");
             var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
-            return $"Repository created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {response.Name}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.CreateSuccess(
+                "Repository", response.Handle, response.GrampsId,
+                typeLabel, ResponseEnvelope.RepositoryCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -114,9 +118,15 @@ public static class RepositoryTools
     {
         try
         {
+            if (repoType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(repoType, "repository_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
             if (repo == null)
-                return $"Repository not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Repository", handle);
 
             var updateRequest = new CreateRepositoryRequest
             {
@@ -135,11 +145,7 @@ public static class RepositoryTools
             };
 
             var response = await client.PutMutationAsync<GrampsRepository>($"/api/repositories/{handle}", updateRequest, "Repository");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
-            return $"Repository updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.UpdateSuccess("Repository", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -159,37 +165,8 @@ public static class RepositoryTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/repositories/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Repository not found: {handle}";
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete repository [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_repository(handle, force=true).";
-            }
-
-            await client.DeleteAsync($"/api/repositories/{handle}");
-            return $"Repository deleted successfully [{handle}]";
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Repository", "repositories", handle, force);
         }
         catch (Exception ex)
         {

@@ -30,7 +30,7 @@ public static class EventTools
         {
             var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>($"/api/events/{handle}");
             if (evt is null)
-                return $"Event not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Event", handle);
 
             return await EventFormatter.FormatEventFull(evt, client);
         }
@@ -51,8 +51,6 @@ public static class EventTools
         string eventType,
         [Description("Optional event date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("How to read ambiguous slash/dot numeric dates. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Place handle for this event. Optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,
         [Description("Event description (optional)")]
@@ -76,7 +74,10 @@ public static class EventTools
             if (string.IsNullOrWhiteSpace(eventType))
                 throw McpToolErrors.ValidationError("Error: eventType is required. Call get_types() to see valid values.");
 
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder);
+            var typeError = await TypeCache.ValidateTypeAsync(eventType, "event_types", client);
+            if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+
+            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso);
 
             var request = new CreateEventRequest
             {
@@ -93,13 +94,10 @@ public static class EventTools
             };
 
             var response = await client.PostMutationAsync<GrampsEvent>("/api/events/", request, "Event");
-            var dateStr = response.Date != null ? GrampsValueFormatter.FormatDate(response.Date) : "—";
             var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
-            return $"Event created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {typeLabel}\n" +
-                   $"Date: {dateStr}";
+            return ResponseEnvelope.CreateSuccess(
+                "Event", response.Handle, response.GrampsId,
+                typeLabel, ResponseEnvelope.EventCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -119,8 +117,6 @@ public static class EventTools
         string? eventType = null,
         [Description("Event date text. Omit to keep current. Empty string may clear per parser rules. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder dateComponentOrder = DateComponentOrder.Iso,
         [Description("Place handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,
         [Description("Description text. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -141,12 +137,18 @@ public static class EventTools
     {
         try
         {
+            if (eventType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(eventType, "event_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>($"/api/events/{handle}");
             if (evt is null)
-                return $"Event not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Event", handle);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
                 : GrampsRequestMapping.ToDateRequestOrNull(evt.Date);
 
             var updateRequest = new CreateEventRequest
@@ -170,11 +172,7 @@ public static class EventTools
             };
 
             var response = await client.PutMutationAsync<GrampsEvent>($"/api/events/{handle}", updateRequest, "Event");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
-            return $"Event updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.UpdateSuccess("Event", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -194,37 +192,8 @@ public static class EventTools
     {
         try
         {
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/events/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Event not found: {handle}";
-            var response = payload.Value;
-
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                        }
-                    }
-                }
-            }
-
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete event [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}" +
-                       $"To delete anyway, call delete_event(handle, force=true).";
-            }
-
-            await client.DeleteAsync($"/api/events/{handle}");
-            return $"Event deleted successfully [{handle}]";
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Event", "events", handle, force);
         }
         catch (Exception ex)
         {

@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
-using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
@@ -26,46 +25,33 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Read-only: fetch one person by handle as formatted text (names, gender, Gramps ID, birth/death, " +
-        "attributes, addresses, URLs, associations, and handles of linked events, families, notes, media). " +
-        "Use get_person_extended when you need names/places/events resolved in one response. " +
-        "Use get_ancestors / get_descendants for tree traversal. " +
-        ToolDescriptionFragments.CallGetNameSchema)]
+        "Read-only: fetch one person by handle. With extended=true, resolves linked objects " +
+        "(event dates/places, note text, tag names, citations, media) for a fuller picture in one call. " +
+        "Default extended=false returns core fields with handles only (faster).")]
     public static async Task<string> GetPerson(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        GrampsApiClient client)
+        [Description("When true, resolve linked events/notes/tags/citations/media inline. Slower but more complete. Default: false.")]
+        bool extended = false,
+        GrampsApiClient client = null!)
     {
         try
         {
-            var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
-            return person == null
-                ? $"Person not found: {handle}"
-                : await PersonFormatter.FormatPersonFull(person, client);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool]
-    [Description(
-        "Read-only: like get_person but resolves many linked objects (event dates/places, note text, tag names, citations, media) " +
-        "so you get a fuller narrative in one call. Slower and heavier than get_person. " +
-        "Use get_person when you only need handles and core fields.")]
-    public static async Task<string> GetPersonExtended(
-        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        GrampsApiClient client)
-    {
-        try
-        {
-            var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>($"/api/people/{handle}?extend=all");
-            if (person == null)
-                return $"Person not found: {handle}";
-            await ExtendedEntityEnrichment.EnrichPersonExtendedAsync(person, client);
-            return await PersonFormatter.FormatPersonExtended(person, client);
+            if (extended)
+            {
+                var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>($"/api/people/{handle}?extend=all");
+                if (person == null)
+                    return NotFoundHelper.NotFoundMessage("Person", handle);
+                await ExtendedEntityEnrichment.EnrichPersonExtendedAsync(person, client);
+                return await PersonFormatter.FormatPersonExtended(person, client);
+            }
+            else
+            {
+                var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
+                return person == null
+                    ? NotFoundHelper.NotFoundMessage("Person", handle)
+                    : await PersonFormatter.FormatPersonFull(person, client);
+            }
         }
         catch (Exception ex)
         {
@@ -84,7 +70,7 @@ public static class PersonTools
         [Description("Number of ancestor generations to include (default: 3, max: 10)")]
         int generations = 3,
         [Description("When true (default), add kinship text from the father/mother chain (e.g. Father's mother). When false, only Gen N.")]
-        bool kinship_labels = true,
+        bool kinshipLabels = true,
         GrampsApiClient client = null!)
     {
         try
@@ -92,13 +78,13 @@ public static class PersonTools
             generations = Math.Clamp(generations, 1, 10);
             var ancestors = await PersonTreeTraversal.CollectAncestorsAsync(client, handle, generations);
             if (ancestors == null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
             if (ancestors.Length == 0)
                 return
                     $"No ancestors found for {handle}. " +
                     "Only people linked through a parent family (where this person is the child) appear. " +
                     "Spouse-only links do not count as ancestors. Use get_person_extended to inspect family links.";
-            return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", handle, ancestors, kinship_labels, client);
+            return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", handle, ancestors, kinshipLabels, client);
         }
         catch (Exception ex)
         {
@@ -117,7 +103,7 @@ public static class PersonTools
         [Description("Number of descendant generations to include (default: 3, max: 10)")]
         int generations = 3,
         [Description("When true (default), add kinship (Son/Daughter/Grandson/…). When false, only Gen N.")]
-        bool kinship_labels = true,
+        bool kinshipLabels = true,
         GrampsApiClient client = null!)
     {
         try
@@ -125,12 +111,12 @@ public static class PersonTools
             generations = Math.Clamp(generations, 1, 10);
             var descendants = await PersonTreeTraversal.CollectDescendantsAsync(client, handle, generations);
             if (descendants == null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
             if (descendants.Length == 0)
                 return
                     $"No descendants found for {handle}. " +
                     "Only children linked on families where this person is a parent are included; if none are recorded, the list is empty.";
-            return await PersonFormatter.FormatPersonTreeRows("DESCENDANT TREE", handle, descendants, kinship_labels, client);
+            return await PersonFormatter.FormatPersonTreeRows("DESCENDANT TREE", handle, descendants, kinshipLabels, client);
         }
         catch (Exception ex)
         {
@@ -144,7 +130,6 @@ public static class PersonTools
         "Filter with events (categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom), " +
         "relatives (father, mother, brother, sister, wife, husband, son, daughter), and relative_events (same categories). " +
         "dates: range YYYY/M/D-YYYY/M/D or open-ended; month/day leading zeros are stripped for the API. " +
-        "include_undated default true keeps events with sortval 0; false matches stricter API filtering. " +
         "Output may include event handles for follow-up with get_event.")]
     public static async Task<string> GetPersonTimeline(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -157,20 +142,17 @@ public static class PersonTools
         string[]? relativeEvents = null,
         [Description("Date range filter; e.g. 1999/1/1-2010/12/31 or 1999/01/01-2010/01/01 (zeros stripped for API)")]
         string? dates = null,
-        [Description("Include events Gramps marks undated (sortval 0); default true. Use false for API-strict filtering.")]
-        bool includeUndated = true,
         GrampsApiClient client = null!)
     {
         try
         {
-            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, includeUndated);
+            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, true);
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
                 $"/api/people/{handle}/timeline{qs}");
             if (timeline == null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
             if (timeline.Length == 0)
                 return $"No timeline events found for {handle}. " +
-                    "If you use include_undated=false, events with sortval 0 are hidden by the API even when a date displays in Gramps. " +
                     "Only linked events (and relatives per filters) appear; a name date alone is not a timeline event.";
             return TimelineFormatter.FormatTimelineChronological(timeline);
         }
@@ -194,13 +176,13 @@ public static class PersonTools
         try
         {
             var result = await client.GetJsonOrNullIfNotFoundAsync(
-                $"/api/people/{handle1}/relationships?other={Uri.EscapeDataString(handle2)}");
+                $"/api/relations/{handle1}/{handle2}");
             if (result is null)
             {
                 if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle1}") is null)
-                    return $"Person not found: {handle1}";
+                    return NotFoundHelper.NotFoundMessage("Person", handle1);
                 if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle2}") is null)
-                    return $"Person not found: {handle2}";
+                    return NotFoundHelper.NotFoundMessage("Person", handle2);
                 return "Could not retrieve relationship data for these handles.";
             }
 
@@ -217,22 +199,16 @@ public static class PersonTools
         "Create a new person (write). Returns handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetNameSchema + " " + ToolDescriptionFragments.CallGetTypes + " " +
         ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
-        "Link events in one call with eventRefHandles + eventRefRoles (same array length; use Primary for the person's main role).")]
+        "Link events in one call with eventRefs, including per-link role metadata.")]
     public static async Task<string> CreatePerson(
         [Description(FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName,
-        [Description("Optional primary name date; overrides any date inside primaryName. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        string? primaryNameDate = null,
-        [Description("Interpretation order for ambiguous numeric dates (slash/dot). " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
         [Description("Gender: Female, Male, or Unknown (default Unknown).")]
         string gender = "Unknown",
         [Description(FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Event handles to attach to this person. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? eventRefHandles = null,
-        [Description("Role string per event in eventRefHandles (same length). Examples: Primary, Witness. Order must match one-to-one.")]
-        string[]? eventRefRoles = null,
+        [Description("Event links to attach to this person. " + FlexibleEventRefList.DescriptionHint)]
+        FlexibleEventRefList? eventRefs = null,
         [Description("Family handles (where this person is parent/spouse). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
         [Description("Parent family handles (where this person is child). " + FlexibleHandleList.DescriptionHint)]
@@ -265,7 +241,7 @@ public static class PersonTools
             var primary = primaryName.Name;
             var genderCode = GrampsGenderParser.ParseRequired(gender);
 
-            var eventRefArr = GrampsRequestMapping.BuildEventRefList((string[]?)eventRefHandles, eventRefRoles);
+            var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
 
             // Build parent family list
             var parentFamilyList = new List<FamilyRefRequest>();
@@ -281,7 +257,7 @@ public static class PersonTools
             var request = new CreatePersonRequest
             {
                 Gender = genderCode,
-                PrimaryName = ConvertNameToRequest(primary, primaryNameDate, primaryNameDateOrder),
+                PrimaryName = ConvertNameToRequest(primary),
                 AlternateNames = (GrampsName[]?)alternateNames is { Length: > 0 } alts
                     ? alts.Select(an => ConvertNameToRequest(an)).ToArray()
                     : null,
@@ -300,10 +276,10 @@ public static class PersonTools
             };
 
             var response = await client.PostMutationAsync<GrampsPerson>("/api/people/", request, "Person");
-            return $"Person created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {GrampsValueFormatter.FormatName(primary)}";
+            return ResponseEnvelope.CreateSuccess(
+                "Person", response.Handle, response.GrampsId,
+                GrampsValueFormatter.FormatName(primary),
+                ResponseEnvelope.PersonCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -315,26 +291,19 @@ public static class PersonTools
     [Description(
         "Update an existing person (write). Only include arguments you want to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        "Replacing eventRefHandles replaces the full event list; parallel eventRefRoles must match length. " +
-        "If primaryName is omitted, primaryNameDate can still update the stored primary name date (requires an existing primary name). " +
+        "Replacing eventRefs replaces the full event list. " +
         ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdatePerson(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Replace primary name. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName = null,
-        [Description("Name date text. With primaryName: overrides that name's date. Without primaryName: updates existing primary name date only. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        string? primaryNameDate = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
         [Description("Gender: Female, Male, or Unknown. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? gender = null,
         [Description("Replace all alternate names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Replace all person–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? eventRefHandles = null,
-        [Description("One role per eventRefHandles entry (same length). " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string[]? eventRefRoles = null,
+        [Description("Replace all person–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleEventRefList.DescriptionHint)]
+        FlexibleEventRefList? eventRefs = null,
         [Description("Replace families where this person is parent/spouse. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
         [Description("Replace parent (child-of) families. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
@@ -364,20 +333,11 @@ public static class PersonTools
             // Get current person first
             var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
             if (person == null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
 
-            GrampsNameRequest? primaryReq;
-            if (primaryName?.Name != null)
-                primaryReq = ConvertNameToRequest(primaryName.Name, primaryNameDate, primaryNameDateOrder);
-            else if (primaryNameDate != null)
-            {
-                if (person.PrimaryName == null)
-                    throw McpToolErrors.ValidationError(
-                        "primaryNameDate requires an existing primary name on the person, or pass primaryName.");
-                primaryReq = ConvertNameToRequest(person.PrimaryName, primaryNameDate, primaryNameDateOrder);
-            }
-            else
-                primaryReq = person.PrimaryName != null ? ConvertNameToRequest(person.PrimaryName) : null;
+            var primaryReq = primaryName?.Name != null
+                ? ConvertNameToRequest(primaryName.Name)
+                : person.PrimaryName != null ? ConvertNameToRequest(person.PrimaryName) : null;
 
             // Build update request with provided fields or existing values
             var updateRequest = new CreatePersonRequest
@@ -391,8 +351,8 @@ public static class PersonTools
                 AlternateNames = alternateNames != null
                     ? ((GrampsName[]?)alternateNames)!.Select(an => ConvertNameToRequest(an)).ToArray()
                     : person.AlternateNames?.Select(an => ConvertNameToRequest(an)).ToArray(),
-                EventRefList = eventRefHandles != null
-                    ? GrampsRequestMapping.BuildEventRefList((string[]?)eventRefHandles, eventRefRoles)
+                EventRefList = eventRefs != null
+                    ? (EventRefRequest[]?)eventRefs
                     : GrampsRequestMapping.ToEventRefRequests(person.EventRefList),
                 FamilyList = (string[]?)familyHandles ?? person.FamilyList,
                 ParentFamilyList = parentFamilyHandles != null
@@ -412,9 +372,7 @@ public static class PersonTools
             };
 
             var response = await client.PutMutationAsync<GrampsPerson>($"/api/people/{handle}", updateRequest, "Person");
-            return $"Person updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+            return ResponseEnvelope.UpdateSuccess("Person", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -497,14 +455,9 @@ public static class PersonTools
         return $"{y}/{m}/{d}";
     }
 
-    private static GrampsNameRequest ConvertNameToRequest(
-        GrampsName name,
-        string? dateOverride = null,
-        DateComponentOrder dateOrder = DateComponentOrder.Iso)
+    private static GrampsNameRequest ConvertNameToRequest(GrampsName name)
     {
-        var dateReq = dateOverride != null
-            ? AgentDateParser.ToDateRequestOrNull(dateOverride, dateOrder)
-            : GrampsRequestMapping.ToDateRequestOrNull(name.Date);
+        var dateReq = GrampsRequestMapping.ToDateRequestOrNull(name.Date);
 
         return new GrampsNameRequest
         {
@@ -546,47 +499,8 @@ public static class PersonTools
     {
         try
         {
-            // Get object with backlinks to check dependencies
-            var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/people/{handle}?backlinks=true");
-            if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Person not found: {handle}";
-            var response = payload.Value;
-
-            // Check for backlinks
-            var hasBacklinks = false;
-            var backlinksInfo = new StringBuilder();
-            if (response.TryGetProperty("backlinks", out var backlinksElement))
-            {
-                if (backlinksElement.ValueKind == JsonValueKind.Object)
-                {
-                    foreach (var property in backlinksElement.EnumerateObject())
-                    {
-                        if (property.Value.ValueKind == JsonValueKind.Array && property.Value.GetArrayLength() > 0)
-                        {
-                            hasBacklinks = true;
-                            backlinksInfo.AppendLine($"  • {property.Name}: {property.Value.GetArrayLength()} reference(s)");
-                            foreach (var item in property.Value.EnumerateArray().Take(3))
-                            {
-                                if (item.TryGetProperty("gramps_id", out var grampsId))
-                                    backlinksInfo.AppendLine($"    - {grampsId.GetString()}");
-                            }
-                        }
-                    }
-                }
-            }
-
-            // If backlinks exist and force is false, return warning
-            if (hasBacklinks && !force)
-            {
-                return $"⚠️ Cannot delete person [{handle}] — it has references:\n" +
-                       $"{backlinksInfo}\n" +
-                       $"To delete anyway, call delete_person(handle, force=true).\n" +
-                       $"Warning: this will leave dangling references in Family objects.";
-            }
-
-            // Delete the person
-            await client.DeleteAsync($"/api/people/{handle}");
-            return $"Person deleted successfully [{handle}]";
+            return await DeleteHelper.DeleteWithBacklinksAsync(
+                client, "Person", "people", handle, force);
         }
         catch (Exception ex)
         {
