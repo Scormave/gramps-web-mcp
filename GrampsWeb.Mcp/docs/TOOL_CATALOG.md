@@ -26,6 +26,18 @@ Read-only reference/discovery data exposed as MCP resources:
 | `gramps://metadata` | Connection/tree metadata (API version, tree id/name, owner, default person) |
 | `gramps://name-settings` | Name display formats and surname grouping rules |
 
+## Prompts
+
+Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each prompt expands to a user-role chat message that guides an agent through typical Gramps Web MCP tool usage.
+
+| Name | Parameters | Purpose |
+|------|------------|---------|
+| `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details; instructs use of `quick_add_person` and confirmation with handle and Gramps ID. |
+| `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Build a full dossier: resolve identity, `get_person` with extended=true, timeline, ancestors and descendants (3 generations each), then present a structured biographical summary. |
+| `add-family` | optional `father`, `mother`, `relationship` (default Married), optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_family`. |
+| `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_ancestors` if no direct link. |
+| `import-from-text` | `text` | Parse free-form genealogy text: search/create people with `quick_add_person`, `create_family`, `add_event_to_person`, sources/citations as needed, then report import summary and gaps. |
+
 ---
 
 ## Person (`PersonTools.cs`) — 8 tools
