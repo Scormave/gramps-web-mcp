@@ -70,7 +70,7 @@ public static class PersonTools
         [Description("Number of ancestor generations to include (default: 3, max: 10)")]
         int generations = 3,
         [Description("When true (default), add kinship text from the father/mother chain (e.g. Father's mother). When false, only Gen N.")]
-        bool kinship_labels = true,
+        bool kinshipLabels = true,
         GrampsApiClient client = null!)
     {
         try
@@ -84,7 +84,7 @@ public static class PersonTools
                     $"No ancestors found for {handle}. " +
                     "Only people linked through a parent family (where this person is the child) appear. " +
                     "Spouse-only links do not count as ancestors. Use get_person_extended to inspect family links.";
-            return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", handle, ancestors, kinship_labels, client);
+            return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", handle, ancestors, kinshipLabels, client);
         }
         catch (Exception ex)
         {
@@ -103,7 +103,7 @@ public static class PersonTools
         [Description("Number of descendant generations to include (default: 3, max: 10)")]
         int generations = 3,
         [Description("When true (default), add kinship (Son/Daughter/Grandson/…). When false, only Gen N.")]
-        bool kinship_labels = true,
+        bool kinshipLabels = true,
         GrampsApiClient client = null!)
     {
         try
@@ -116,7 +116,7 @@ public static class PersonTools
                 return
                     $"No descendants found for {handle}. " +
                     "Only children linked on families where this person is a parent are included; if none are recorded, the list is empty.";
-            return await PersonFormatter.FormatPersonTreeRows("DESCENDANT TREE", handle, descendants, kinship_labels, client);
+            return await PersonFormatter.FormatPersonTreeRows("DESCENDANT TREE", handle, descendants, kinshipLabels, client);
         }
         catch (Exception ex)
         {
@@ -180,7 +180,7 @@ public static class PersonTools
         try
         {
             var result = await client.GetJsonOrNullIfNotFoundAsync(
-                $"/api/people/{handle1}/relationships?other={Uri.EscapeDataString(handle2)}");
+                $"/api/relations/{handle1}/{handle2}");
             if (result is null)
             {
                 if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle1}") is null)

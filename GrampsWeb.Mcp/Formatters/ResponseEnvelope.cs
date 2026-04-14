@@ -8,23 +8,6 @@ namespace GrampsWeb.Mcp.Formatters;
 public static class ResponseEnvelope
 {
     /// <summary>
-    /// Wraps a read-tool response with a machine-readable YAML-like header.
-    /// </summary>
-    public static string WithMetadata(string body, string objectType, string? handle, string? grampsId)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("---");
-        sb.AppendLine($"type: {objectType}");
-        if (!string.IsNullOrWhiteSpace(handle))
-            sb.AppendLine($"handle: {handle}");
-        if (!string.IsNullOrWhiteSpace(grampsId))
-            sb.AppendLine($"gramps_id: {grampsId}");
-        sb.AppendLine("---");
-        sb.Append(body);
-        return sb.ToString();
-    }
-
-    /// <summary>
     /// Formats a successful create response with next steps.
     /// </summary>
     public static string CreateSuccess(string objectType, string? handle, string? grampsId, string? displayName, string[]? nextSteps = null)

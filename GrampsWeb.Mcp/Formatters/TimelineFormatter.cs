@@ -11,32 +11,6 @@ public static class TimelineFormatter
 {
     private static readonly Regex YearToken = new(@"\b(1[0-9]{3}|20[0-9]{2})\b", RegexOptions.Compiled);
 
-    public static string FormatTimeline(string header, GrampsTimelineEntry[] entries)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"{header} ({entries.Length} events)");
-        sb.AppendLine(new string('=', 60));
-        sb.AppendLine();
-
-        foreach (var entry in entries)
-        {
-            var dateStr = FormatDateText(entry);
-            var type = EventHeading(entry);
-            var role = !string.IsNullOrEmpty(entry.Role) ? $" [{entry.Role}]" : "";
-            var place = FormatPlaceSuffix(entry);
-            var relative = !string.IsNullOrEmpty(entry.Name) ? $" ({entry.Name})" : "";
-            var rating = entry.Rating.HasValue ? $" ★{entry.Rating:F1}" : "";
-            var desc = !string.IsNullOrEmpty(entry.Description) ? $"\n    {entry.Description}" : "";
-            var handleSuffix = !string.IsNullOrWhiteSpace(entry.Handle)
-                ? $"  [event: {entry.Handle.Trim()}]"
-                : "";
-
-            sb.AppendLine($"{dateStr}: {type}{role}{place}{relative}{rating}{desc}{handleSuffix}");
-        }
-
-        return sb.ToString();
-    }
-
     /// <summary>
     /// Renders timeline rows in chronological order (by decade when there are more than 20 rows).
     /// Each row appends <c>[event: handle]</c> when the entry has a handle.
