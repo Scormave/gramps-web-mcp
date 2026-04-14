@@ -168,19 +168,34 @@ public static class CompositeTools
             var displayName = GrampsValueFormatter.FormatName(parsedName);
             var genderLabel = genderCode switch { 0 => "Female", 1 => "Male", _ => "Unknown" };
 
-            summary.AppendLine($"Person created: {displayName}");
-            summary.AppendLine($"  Handle: {person.Handle}, Gramps ID: {person.GrampsId}, Gender: {genderLabel}");
-
             var birthLine = FormatVitalLine(birthDate, birthPlaceResult, birthEvent);
-            summary.AppendLine($"  Birth: {birthLine}");
-
             var deathLine = FormatVitalLine(deathDate, deathPlaceResult, deathEvent);
-            summary.AppendLine($"  Death: {deathLine}");
 
+            summary.AppendLine("---");
+            summary.AppendLine("type: Person");
+            summary.AppendLine("action: created");
+            summary.AppendLine($"handle: {person.Handle}");
+            summary.AppendLine($"gramps_id: {person.GrampsId}");
+            summary.AppendLine($"name: {displayName}");
+            summary.AppendLine($"gender: {genderLabel}");
+            summary.AppendLine("---");
+            if (birthLine != "\u2014")
+                summary.AppendLine($"Birth: {birthLine}");
+            if (deathLine != "\u2014")
+                summary.AppendLine($"Death: {deathLine}");
+            if (createdObjects.Count > 1)
+            {
+                summary.AppendLine();
+                summary.AppendLine("Related objects created:");
+                foreach (var obj in createdObjects.Skip(1))
+                    summary.AppendLine($"  • {obj}");
+            }
+
+            var nextSteps = ResponseEnvelope.PersonCreateNextSteps(person.Handle!);
             summary.AppendLine();
-            summary.AppendLine("Objects created:");
-            foreach (var obj in createdObjects)
-                summary.AppendLine($"  \u2022 {obj}");
+            summary.AppendLine("Next steps:");
+            foreach (var step in nextSteps)
+                summary.AppendLine($"  • {step}");
 
             return summary.ToString();
         }
@@ -321,16 +336,27 @@ public static class CompositeTools
             var placeStr = placeResult?.Name ?? "\u2014";
 
             var sb = new StringBuilder();
-            sb.AppendLine($"Event added to person: {personName} [{person.GrampsId}]");
-            sb.AppendLine($"  Event type: {eventType}");
-            sb.AppendLine($"  Date: {dateStr}");
-            sb.AppendLine($"  Place: {placeStr}");
-            sb.AppendLine($"  Role: {role}");
-            sb.AppendLine($"  Event handle: {newEvent.Handle}, Gramps ID: {newEvent.GrampsId}");
-            sb.AppendLine();
-            sb.AppendLine("Objects created:");
-            foreach (var obj in createdObjects)
-                sb.AppendLine($"  \u2022 {obj}");
+            sb.AppendLine("---");
+            sb.AppendLine("type: Event");
+            sb.AppendLine("action: created");
+            sb.AppendLine($"handle: {newEvent.Handle}");
+            sb.AppendLine($"gramps_id: {newEvent.GrampsId}");
+            sb.AppendLine($"event_type: {eventType}");
+            sb.AppendLine($"attached_to: {person.Handle} ({personName})");
+            sb.AppendLine("---");
+            if (dateStr != "\u2014")
+                sb.AppendLine($"Date: {dateStr}");
+            if (placeStr != "\u2014")
+                sb.AppendLine($"Place: {placeStr}");
+            if (role != "Primary")
+                sb.AppendLine($"Role: {role}");
+            if (createdObjects.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Related objects created:");
+                foreach (var obj in createdObjects)
+                    sb.AppendLine($"  • {obj}");
+            }
 
             return sb.ToString();
         }

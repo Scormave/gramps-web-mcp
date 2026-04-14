@@ -20,12 +20,9 @@ public static class ResponseEnvelope
             sb.AppendLine($"handle: {handle}");
         if (!string.IsNullOrWhiteSpace(grampsId))
             sb.AppendLine($"gramps_id: {grampsId}");
-        sb.AppendLine("---");
-        sb.AppendLine($"{objectType} created successfully");
         if (!string.IsNullOrWhiteSpace(displayName))
-            sb.AppendLine($"Name: {displayName}");
-        sb.AppendLine($"Handle: {handle}");
-        sb.AppendLine($"Gramps ID: {grampsId}");
+            sb.AppendLine($"name: {displayName}");
+        sb.AppendLine("---");
 
         if (nextSteps is { Length: > 0 })
         {
@@ -52,9 +49,6 @@ public static class ResponseEnvelope
         if (!string.IsNullOrWhiteSpace(grampsId))
             sb.AppendLine($"gramps_id: {grampsId}");
         sb.AppendLine("---");
-        sb.AppendLine($"{objectType} updated successfully");
-        sb.AppendLine($"Handle: {handle}");
-        sb.AppendLine($"Gramps ID: {grampsId}");
         return sb.ToString();
     }
 
@@ -63,7 +57,7 @@ public static class ResponseEnvelope
     /// </summary>
     public static string DeleteSuccess(string objectType, string handle)
     {
-        return $"---\ntype: {objectType}\naction: deleted\nhandle: {handle}\n---\n{objectType} deleted successfully [{handle}]";
+        return $"---\ntype: {objectType}\naction: deleted\nhandle: {handle}\n---";
     }
 
     public static string[] PersonCreateNextSteps(string handle) => new[]
