@@ -44,7 +44,7 @@ public static class PlaceTools
         "Read-only: chronological events whose place field equals this handle (computed via backlinks; not a single API route). " +
         "Events on a child place (e.g. city) do not appear when querying the parent country handle. " +
         "events filters by category (same set as person timeline). dates uses YYYY/M/D ranges with zero-stripping. " +
-        "include_undated default true keeps sortval-0 events. Output may include event handles for get_event.")]
+        "Output may include event handles for get_event.")]
     public static async Task<string> GetPlaceTimeline(
         [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
@@ -52,8 +52,6 @@ public static class PlaceTools
         string[]? events = null,
         [Description("Date range filter; e.g. 1999/1/1-2010/12/31 (zeros normalized)")]
         string? dates = null,
-        [Description("Include events with no sortable date (sortval 0 or missing); default true. Use false to match strict undated exclusion.")]
-        bool includeUndated = true,
         GrampsApiClient client = null!)
     {
         try
@@ -64,7 +62,7 @@ public static class PlaceTools
 
             var datesNormalized = PersonTools.NormalizeTimelineDatesForGrampsApi(dates);
             var outcome = await PlaceTimelineFallback.CollectAsync(
-                client, handle, place, events, datesNormalized, includeUndated);
+                client, handle, place, events, datesNormalized, true);
 
             if (outcome.MatchedPlaceCount == 0)
                 return
@@ -75,7 +73,7 @@ public static class PlaceTools
             if (outcome.Entries.Length == 0)
                 return
                     $"No events at place {handle} match the filters (event categories and/or date range). " +
-                    "Try broader categories, widen the date range, or set include_undated=true if undated events were excluded.";
+                    "Try broader categories or widen the date range.";
 
             return TimelineFormatter.FormatTimelineChronological(outcome.Entries);
         }

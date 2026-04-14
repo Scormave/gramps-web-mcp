@@ -130,7 +130,6 @@ public static class PersonTools
         "Filter with events (categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom), " +
         "relatives (father, mother, brother, sister, wife, husband, son, daughter), and relative_events (same categories). " +
         "dates: range YYYY/M/D-YYYY/M/D or open-ended; month/day leading zeros are stripped for the API. " +
-        "include_undated default true keeps events with sortval 0; false matches stricter API filtering. " +
         "Output may include event handles for follow-up with get_event.")]
     public static async Task<string> GetPersonTimeline(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -143,20 +142,17 @@ public static class PersonTools
         string[]? relativeEvents = null,
         [Description("Date range filter; e.g. 1999/1/1-2010/12/31 or 1999/01/01-2010/01/01 (zeros stripped for API)")]
         string? dates = null,
-        [Description("Include events Gramps marks undated (sortval 0); default true. Use false for API-strict filtering.")]
-        bool includeUndated = true,
         GrampsApiClient client = null!)
     {
         try
         {
-            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, includeUndated);
+            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, true);
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
                 $"/api/people/{handle}/timeline{qs}");
             if (timeline == null)
                 return NotFoundHelper.NotFoundMessage("Person", handle);
             if (timeline.Length == 0)
                 return $"No timeline events found for {handle}. " +
-                    "If you use include_undated=false, events with sortval 0 are hidden by the API even when a date displays in Gramps. " +
                     "Only linked events (and relatives per filters) appear; a name date alone is not a timeline event.";
             return TimelineFormatter.FormatTimelineChronological(timeline);
         }

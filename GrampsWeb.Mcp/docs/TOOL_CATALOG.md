@@ -60,7 +60,6 @@ Chronological timeline of events for one person, with optional relative events.
 | `relatives` | `string[]?` | no | none | Relatives: father, mother, brother, sister, wife, husband, son, daughter |
 | `relativeEvents` | `string[]?` | no | none | Event categories for relatives |
 | `dates` | `string?` | no | — | Date range `YYYY/M/D-YYYY/M/D` |
-| `includeUndated` | `bool` | no | `true` | Include events with sortval 0 |
 
 ### R — `GetRelations`
 Genealogical relationship between two people (e.g. "3rd cousin twice removed"),
@@ -195,7 +194,6 @@ Chronological events whose place equals this handle.
 | `handle` | `string` | yes | — | Place handle |
 | `events` | `string[]?` | no | all | Event categories |
 | `dates` | `string?` | no | — | Date range filter |
-| `includeUndated` | `bool` | no | `true` | Include events with sortval 0 |
 
 ### C — `CreatePlace`
 Create a place.  **Prerequisites:** `get_types`.
