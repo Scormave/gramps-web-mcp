@@ -82,8 +82,7 @@ Create a new person.  Returns handle and Gramps ID.
 | `primaryNameDateOrder` | `DateComponentOrder` | no | `Iso` | Ambiguous date parse order |
 | `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
 | `alternateNames` | `FlexibleAlternateNameList?` | no | — | Alternate names |
-| `eventRefHandles` | `FlexibleHandleList?` | no | — | Event handles to attach |
-| `eventRefRoles` | `string[]?` | no | — | Roles per event (parallel array) |
+| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
 | `familyHandles` | `FlexibleHandleList?` | no | — | Families (as parent/spouse) |
 | `parentFamilyHandles` | `FlexibleHandleList?` | no | — | Parent families (as child) |
 | `mediaHandles` | `FlexibleHandleList?` | no | — | Media handles |
@@ -144,10 +143,8 @@ Create a family unit.  **Prerequisites:** `get_types`, `get_structured_field_inp
 | `fatherHandle` | `string?` | no | — | Father person handle |
 | `motherHandle` | `string?` | no | — | Mother person handle |
 | `relationshipType` | `string?` | no | `"Married"` | Married, Unmarried, Civil Union, Unknown |
-| `childHandles` | `FlexibleHandleList?` | no | — | Child person handles |
-| `childRefTypes` | `string[]?` | no | — | Ref types per child (parallel): Birth, Adopted, Stepchild, … |
-| `eventRefHandles` | `FlexibleHandleList?` | no | — | Event handles |
-| `eventRefRoles` | `string[]?` | no | — | Roles per event (parallel) |
+| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`) |
+| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
 | `mediaHandles`, `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
 | `isPrivate` | `bool` | no | `false` | Mark private |
@@ -167,7 +164,7 @@ One event: type, date/modifiers, place, description, citations, notes, tags, med
 
 ### C — `CreateEvent`
 Create an event.  **Prerequisites:** `get_types`, `get_date_input_guide`, `get_structured_field_input_guide`.
-Link to persons/families via their create/update tools' `eventRefHandles`.
+Link to persons/families via their create/update tools' `eventRefs`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

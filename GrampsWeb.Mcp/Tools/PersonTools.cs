@@ -204,7 +204,7 @@ public static class PersonTools
         "Create a new person (write). Returns handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetNameSchema + " " + ToolDescriptionFragments.CallGetTypes + " " +
         ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
-        "Link events in one call with eventRefHandles + eventRefRoles (same array length; use Primary for the person's main role).")]
+        "Link events in one call with eventRefs, including per-link role metadata.")]
     public static async Task<string> CreatePerson(
         [Description(FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName,
@@ -216,10 +216,8 @@ public static class PersonTools
         string gender = "Unknown",
         [Description(FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Event handles to attach to this person. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? eventRefHandles = null,
-        [Description("Role string per event in eventRefHandles (same length). Examples: Primary, Witness. Order must match one-to-one.")]
-        string[]? eventRefRoles = null,
+        [Description("Event links to attach to this person. " + FlexibleEventRefList.DescriptionHint)]
+        FlexibleEventRefList? eventRefs = null,
         [Description("Family handles (where this person is parent/spouse). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
         [Description("Parent family handles (where this person is child). " + FlexibleHandleList.DescriptionHint)]
@@ -252,7 +250,7 @@ public static class PersonTools
             var primary = primaryName.Name;
             var genderCode = GrampsGenderParser.ParseRequired(gender);
 
-            var eventRefArr = GrampsRequestMapping.BuildEventRefList((string[]?)eventRefHandles, eventRefRoles);
+            var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
 
             // Build parent family list
             var parentFamilyList = new List<FamilyRefRequest>();
@@ -302,7 +300,7 @@ public static class PersonTools
     [Description(
         "Update an existing person (write). Only include arguments you want to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        "Replacing eventRefHandles replaces the full event list; parallel eventRefRoles must match length. " +
+        "Replacing eventRefs replaces the full event list. " +
         "If primaryName is omitted, primaryNameDate can still update the stored primary name date (requires an existing primary name). " +
         ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdatePerson(
@@ -318,10 +316,8 @@ public static class PersonTools
         string? gender = null,
         [Description("Replace all alternate names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Replace all person–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? eventRefHandles = null,
-        [Description("One role per eventRefHandles entry (same length). " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string[]? eventRefRoles = null,
+        [Description("Replace all person–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleEventRefList.DescriptionHint)]
+        FlexibleEventRefList? eventRefs = null,
         [Description("Replace families where this person is parent/spouse. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
         [Description("Replace parent (child-of) families. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
@@ -378,8 +374,8 @@ public static class PersonTools
                 AlternateNames = alternateNames != null
                     ? ((GrampsName[]?)alternateNames)!.Select(an => ConvertNameToRequest(an)).ToArray()
                     : person.AlternateNames?.Select(an => ConvertNameToRequest(an)).ToArray(),
-                EventRefList = eventRefHandles != null
-                    ? GrampsRequestMapping.BuildEventRefList((string[]?)eventRefHandles, eventRefRoles)
+                EventRefList = eventRefs != null
+                    ? (EventRefRequest[]?)eventRefs
                     : GrampsRequestMapping.ToEventRefRequests(person.EventRefList),
                 FamilyList = (string[]?)familyHandles ?? person.FamilyList,
                 ParentFamilyList = parentFamilyHandles != null
