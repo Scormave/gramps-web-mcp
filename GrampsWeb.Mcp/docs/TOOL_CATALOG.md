@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 52 MCP tools exposed by the server.
+Complete catalog of the 51 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -370,7 +370,7 @@ Delete a repository.  Blocked when sources reference it unless `force=true`.
 
 ---
 
-## Tag (`TagTools.cs`) — 4 tools
+## Tag (`TagTools.cs`) — 3 tools
 
 ### R — `GetTag`
 One tag: name, color (hex), priority.
@@ -383,16 +383,6 @@ Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
 | `name` | `string` | yes | — | Display name |
 | `color` | `string` | no | `"000000"` | RRGGBB (no `#`) |
 | `priority` | `int` | no | `0` | Sort priority |
-
-### U — `UpdateTag`
-Update a tag.  Only include arguments you want to change.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Tag handle |
-| `name` | `string?` | no | — | Display name |
-| `color` | `string?` | no | — | RRGGBB (no `#`) |
-| `priority` | `int?` | no | — | Sort priority |
 
 ### D — `DeleteTag`
 Delete a tag.  Blocked when objects carry it unless `force=true`.
@@ -493,11 +483,11 @@ Handles event creation + person update automatically.
 | Note | 1 | 1 | 1 | 1 | 4 |
 | Media | 1 | 0 | 1 | 1 | 3 |
 | Repository | 1 | 1 | 1 | 1 | 4 |
-| Tag | 1 | 1 | 1 | 1 | 4 |
+| Tag | 1 | 1 | 0 | 1 | 3 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 1 | 2 | 0 | 0 | 3 |
-| **Total** | **21** | **11** | **10** | **10** | **52** |
+| **Total** | **21** | **11** | **9** | **10** | **51** |
 
 ## Prerequisites for write tools
 

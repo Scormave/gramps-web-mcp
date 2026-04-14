@@ -18,10 +18,12 @@ public class GrampsSearchHit
     public string? GrampsId { get; set; }
 
     [JsonPropertyName("rank")]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public double Rank { get; set; }
 
     /// <summary>Relevance score; some responses use <c>rank</c> instead.</summary>
     [JsonPropertyName("score")]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public double Score { get; set; }
 
     [JsonPropertyName("object")]

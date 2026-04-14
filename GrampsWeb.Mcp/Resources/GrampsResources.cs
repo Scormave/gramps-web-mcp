@@ -18,7 +18,8 @@ public sealed class GrampsResources
 {
     [McpServerResource(
         Name = "input-guide",
-        UriTemplate = "gramps://input-guide")]
+        UriTemplate = "gramps://input-guide",
+        MimeType = "application/json")]
     [Description("Complete write-input reference: date formats, structured fields, and full Name schema.")]
     public static Task<TextResourceContents> GetInputGuide()
     {
@@ -32,7 +33,8 @@ public sealed class GrampsResources
 
     [McpServerResource(
         Name = "types",
-        UriTemplate = "gramps://types")]
+        UriTemplate = "gramps://types",
+        MimeType = "text/plain")]
     [Description("Read-only type vocabularies (built-in + custom) for validating type/role/origin strings.")]
     public static async Task<TextResourceContents> GetTypes(GrampsApiClient client)
     {
@@ -73,7 +75,8 @@ public sealed class GrampsResources
 
     [McpServerResource(
         Name = "metadata",
-        UriTemplate = "gramps://metadata")]
+        UriTemplate = "gramps://metadata",
+        MimeType = "text/plain")]
     [Description("Connection and tree metadata (API version, tree id/name, owner, default person, etc.).")]
     public static async Task<TextResourceContents> GetMetadata(GrampsApiClient client)
     {
@@ -116,7 +119,8 @@ public sealed class GrampsResources
 
     [McpServerResource(
         Name = "name-settings",
-        UriTemplate = "gramps://name-settings")]
+        UriTemplate = "gramps://name-settings",
+        MimeType = "text/plain")]
     [Description("Name display format definitions and surname grouping rules configured in this tree.")]
     public static async Task<TextResourceContents> GetNameSettings(GrampsApiClient client)
     {

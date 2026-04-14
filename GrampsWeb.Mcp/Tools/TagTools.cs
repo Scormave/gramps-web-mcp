@@ -75,46 +75,6 @@ public static class TagTools
 
     [McpServerTool]
     [Description(
-        "Update a tag (write). Scalar fields: omit to leave unchanged (no list-clear semantics on this tool).")]
-    public static async Task<string> UpdateTag(
-        [Description("Tag handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("Name. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string? name = null,
-        [Description("RRGGBB six hex digits without #. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string? color = null,
-        [Description("Priority. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        int? priority = null,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var tag = await client.GetOrNullIfNotFoundAsync<GrampsTag>($"/api/tags/{handle}");
-            if (tag == null)
-                return NotFoundHelper.NotFoundMessage("Tag", handle);
-
-            var updateRequest = new CreateTagRequest
-            {
-                Class = "Tag",
-                Handle = tag.Handle,
-                GrampsId = tag.GrampsId,
-                Change = tag.Change,
-                Name = name ?? tag.Name,
-                Color = color ?? tag.Color,
-                Priority = priority ?? tag.Priority
-            };
-
-            var response = await client.PutMutationAsync<GrampsTag>($"/api/tags/{handle}", updateRequest, "Tag");
-            return ResponseEnvelope.UpdateSuccess("Tag", response.Handle, response.GrampsId);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool]
-    [Description(
         "Delete a tag (destructive). Blocked when objects still carry the tag unless force=true.")]
     public static async Task<string> DeleteTag(
         [Description("Tag handle. " + ToolDescriptionFragments.HandleDiscovery)]
