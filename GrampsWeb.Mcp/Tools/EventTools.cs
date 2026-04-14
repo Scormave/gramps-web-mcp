@@ -30,7 +30,7 @@ public static class EventTools
         {
             var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>($"/api/events/{handle}");
             if (evt is null)
-                return $"Event not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Event", handle);
 
             return await EventFormatter.FormatEventFull(evt, client);
         }
@@ -96,13 +96,10 @@ public static class EventTools
             };
 
             var response = await client.PostMutationAsync<GrampsEvent>("/api/events/", request, "Event");
-            var dateStr = response.Date != null ? GrampsValueFormatter.FormatDate(response.Date) : "—";
             var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
-            return $"Event created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {typeLabel}\n" +
-                   $"Date: {dateStr}";
+            return ResponseEnvelope.CreateSuccess(
+                "Event", response.Handle, response.GrampsId,
+                typeLabel, ResponseEnvelope.EventCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -152,7 +149,7 @@ public static class EventTools
 
             var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>($"/api/events/{handle}");
             if (evt is null)
-                return $"Event not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Event", handle);
 
             var dateRequest = date != null
                 ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
@@ -179,11 +176,7 @@ public static class EventTools
             };
 
             var response = await client.PutMutationAsync<GrampsEvent>($"/api/events/{handle}", updateRequest, "Event");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
-            return $"Event updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.UpdateSuccess("Event", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -205,7 +198,7 @@ public static class EventTools
         {
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/events/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Event not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Event", handle);
             var response = payload.Value;
 
             var hasBacklinks = false;
@@ -233,7 +226,7 @@ public static class EventTools
             }
 
             await client.DeleteAsync($"/api/events/{handle}");
-            return $"Event deleted successfully [{handle}]";
+            return ResponseEnvelope.DeleteSuccess("Event", handle);
         }
         catch (Exception ex)
         {

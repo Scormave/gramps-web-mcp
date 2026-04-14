@@ -42,7 +42,7 @@ public static class PersonTools
             {
                 var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>($"/api/people/{handle}?extend=all");
                 if (person == null)
-                    return $"Person not found: {handle}";
+                    return NotFoundHelper.NotFoundMessage("Person", handle);
                 await ExtendedEntityEnrichment.EnrichPersonExtendedAsync(person, client);
                 return await PersonFormatter.FormatPersonExtended(person, client);
             }
@@ -50,7 +50,7 @@ public static class PersonTools
             {
                 var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
                 return person == null
-                    ? $"Person not found: {handle}"
+                    ? NotFoundHelper.NotFoundMessage("Person", handle)
                     : await PersonFormatter.FormatPersonFull(person, client);
             }
         }
@@ -79,7 +79,7 @@ public static class PersonTools
             generations = Math.Clamp(generations, 1, 10);
             var ancestors = await PersonTreeTraversal.CollectAncestorsAsync(client, handle, generations);
             if (ancestors == null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
             if (ancestors.Length == 0)
                 return
                     $"No ancestors found for {handle}. " +
@@ -112,7 +112,7 @@ public static class PersonTools
             generations = Math.Clamp(generations, 1, 10);
             var descendants = await PersonTreeTraversal.CollectDescendantsAsync(client, handle, generations);
             if (descendants == null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
             if (descendants.Length == 0)
                 return
                     $"No descendants found for {handle}. " +
@@ -154,7 +154,7 @@ public static class PersonTools
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
                 $"/api/people/{handle}/timeline{qs}");
             if (timeline == null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
             if (timeline.Length == 0)
                 return $"No timeline events found for {handle}. " +
                     "If you use include_undated=false, events with sortval 0 are hidden by the API even when a date displays in Gramps. " +
@@ -185,9 +185,9 @@ public static class PersonTools
             if (result is null)
             {
                 if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle1}") is null)
-                    return $"Person not found: {handle1}";
+                    return NotFoundHelper.NotFoundMessage("Person", handle1);
                 if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle2}") is null)
-                    return $"Person not found: {handle2}";
+                    return NotFoundHelper.NotFoundMessage("Person", handle2);
                 return "Could not retrieve relationship data for these handles.";
             }
 
@@ -287,10 +287,10 @@ public static class PersonTools
             };
 
             var response = await client.PostMutationAsync<GrampsPerson>("/api/people/", request, "Person");
-            return $"Person created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {GrampsValueFormatter.FormatName(primary)}";
+            return ResponseEnvelope.CreateSuccess(
+                "Person", response.Handle, response.GrampsId,
+                GrampsValueFormatter.FormatName(primary),
+                ResponseEnvelope.PersonCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -351,7 +351,7 @@ public static class PersonTools
             // Get current person first
             var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
             if (person == null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
 
             GrampsNameRequest? primaryReq;
             if (primaryName?.Name != null)
@@ -399,9 +399,7 @@ public static class PersonTools
             };
 
             var response = await client.PutMutationAsync<GrampsPerson>($"/api/people/{handle}", updateRequest, "Person");
-            return $"Person updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+            return ResponseEnvelope.UpdateSuccess("Person", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -536,7 +534,7 @@ public static class PersonTools
             // Get object with backlinks to check dependencies
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/people/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Person not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Person", handle);
             var response = payload.Value;
 
             // Check for backlinks
@@ -573,7 +571,7 @@ public static class PersonTools
 
             // Delete the person
             await client.DeleteAsync($"/api/people/{handle}");
-            return $"Person deleted successfully [{handle}]";
+            return ResponseEnvelope.DeleteSuccess("Person", handle);
         }
         catch (Exception ex)
         {

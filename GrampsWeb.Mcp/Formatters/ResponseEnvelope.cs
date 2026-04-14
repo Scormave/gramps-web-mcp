@@ -123,4 +123,17 @@ public static class ResponseEnvelope
     {
         $"Attach to person/event/place via citationHandles on create/update",
     };
+
+    public static string[] FamilyCreateNextSteps(string handle) => new[]
+    {
+        $"Add child: update_family(handle: \"{handle}\", childHandles: [\"<person_handle>\"])",
+        $"Add events: update_family(handle: \"{handle}\", eventRefHandles: [\"<event_handle>\"])",
+        $"View family: get_family(handle: \"{handle}\", extended: true)",
+    };
+
+    public static string[] RepositoryCreateNextSteps(string handle) => new[]
+    {
+        $"Create source referencing this repository",
+        $"View: get_repository(handle: \"{handle}\")",
+    };
 }

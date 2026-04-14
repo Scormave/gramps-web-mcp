@@ -30,7 +30,7 @@ public static class PlaceTools
         {
             var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
             return place == null
-                ? $"Place not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Place", handle)
                 : await PlaceFormatter.FormatPlaceFull(place, client);
         }
         catch (Exception ex)
@@ -60,7 +60,7 @@ public static class PlaceTools
         {
             var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
             if (place == null)
-                return $"Place not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Place", handle);
 
             var datesNormalized = PersonTools.NormalizeTimelineDatesForGrampsApi(dates);
             var outcome = await PlaceTimelineFallback.CollectAsync(
@@ -154,11 +154,9 @@ public static class PlaceTools
 
             var response = await client.PostMutationAsync<GrampsPlace>("/api/places/", request, "Place");
             var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
-            return $"Place created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {response.Name}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.CreateSuccess(
+                "Place", response.Handle, response.GrampsId,
+                typeLabel, ResponseEnvelope.PlaceCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -207,7 +205,7 @@ public static class PlaceTools
 
             var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
             if (place == null)
-                return $"Place not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Place", handle);
 
             var enclosedUpdate = (string[]?)enclosedByHandles;
             var placeRefList = enclosedUpdate != null && enclosedUpdate.Length > 0
@@ -235,12 +233,7 @@ public static class PlaceTools
             };
 
             var response = await client.PutMutationAsync<GrampsPlace>($"/api/places/{handle}", updateRequest, "Place");
-            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
-            return $"Place updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {response.Name ?? "—"}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.UpdateSuccess("Place", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -263,7 +256,7 @@ public static class PlaceTools
         {
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/places/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Place not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Place", handle);
             var response = payload.Value;
 
             var hasBacklinks = false;
@@ -292,7 +285,7 @@ public static class PlaceTools
             }
 
             await client.DeleteAsync($"/api/places/{handle}");
-            return $"Place deleted successfully [{handle}]";
+            return ResponseEnvelope.DeleteSuccess("Place", handle);
         }
         catch (Exception ex)
         {

@@ -28,7 +28,7 @@ public static class RepositoryTools
         {
             var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
             return repo == null
-                ? $"Repository not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Repository", handle)
                 : await RepositoryFormatter.FormatRepositoryFullAsync(repo, client);
         }
         catch (Exception ex)
@@ -82,11 +82,9 @@ public static class RepositoryTools
 
             var response = await client.PostMutationAsync<GrampsRepository>("/api/repositories/", request, "Repository");
             var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
-            return $"Repository created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {response.Name}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.CreateSuccess(
+                "Repository", response.Handle, response.GrampsId,
+                typeLabel, ResponseEnvelope.RepositoryCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -128,7 +126,7 @@ public static class RepositoryTools
 
             var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
             if (repo == null)
-                return $"Repository not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Repository", handle);
 
             var updateRequest = new CreateRepositoryRequest
             {
@@ -147,11 +145,7 @@ public static class RepositoryTools
             };
 
             var response = await client.PutMutationAsync<GrampsRepository>($"/api/repositories/{handle}", updateRequest, "Repository");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
-            return $"Repository updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Type: {typeLabel}";
+            return ResponseEnvelope.UpdateSuccess("Repository", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -173,7 +167,7 @@ public static class RepositoryTools
         {
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/repositories/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Repository not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Repository", handle);
             var response = payload.Value;
 
             var hasBacklinks = false;
@@ -201,7 +195,7 @@ public static class RepositoryTools
             }
 
             await client.DeleteAsync($"/api/repositories/{handle}");
-            return $"Repository deleted successfully [{handle}]";
+            return ResponseEnvelope.DeleteSuccess("Repository", handle);
         }
         catch (Exception ex)
         {

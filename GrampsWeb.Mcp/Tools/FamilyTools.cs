@@ -39,7 +39,7 @@ public static class FamilyTools
             {
                 var family = await client.GetOrNullIfNotFoundAsync<GrampsFamilyExtended>($"/api/families/{handle}?extend=all");
                 if (family == null)
-                    return $"Family not found: {handle}";
+                    return NotFoundHelper.NotFoundMessage("Family", handle);
                 await ExtendedEntityEnrichment.EnrichFamilyExtendedAsync(family, client);
                 return await FamilyFormatter.FormatFamilyExtended(family, client);
             }
@@ -47,7 +47,7 @@ public static class FamilyTools
             {
                 var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>($"/api/families/{handle}");
                 return family == null
-                    ? $"Family not found: {handle}"
+                    ? NotFoundHelper.NotFoundMessage("Family", handle)
                     : await FamilyFormatter.FormatFamilyFullAsync(family, client);
             }
         }
@@ -78,7 +78,7 @@ public static class FamilyTools
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
                 $"/api/families/{handle}/timeline{qs}");
             if (timeline == null)
-                return $"Family not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Family", handle);
             if (timeline.Length == 0)
                 return $"No timeline events found for family {handle}";
             return TimelineFormatter.FormatTimelineChronological(timeline);
@@ -169,13 +169,9 @@ public static class FamilyTools
             var relLabel = string.IsNullOrWhiteSpace(response.Relationship)
                 ? "Unknown"
                 : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, response.Relationship);
-            return $"Family created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Relationship: {relLabel}\n" +
-                   $"Father: {response.FatherHandle ?? "—"}\n" +
-                   $"Mother: {response.MotherHandle ?? "—"}\n" +
-                   $"Children: {response.ChildRefList?.Length ?? 0}";
+            return ResponseEnvelope.CreateSuccess(
+                "Family", response.Handle, response.GrampsId,
+                relLabel, ResponseEnvelope.FamilyCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -230,7 +226,7 @@ public static class FamilyTools
 
             var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>($"/api/families/{handle}");
             if (family == null)
-                return $"Family not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Family", handle);
 
             var childRefList = new List<GrampsChildRef>();
             var childHandleArrayUpdate = (string[]?)childHandles;
@@ -272,13 +268,7 @@ public static class FamilyTools
             };
 
             var response = await client.PutMutationAsync<GrampsFamily>($"/api/families/{handle}", updateRequest, "Family");
-            var relLabel = string.IsNullOrWhiteSpace(response.Relationship)
-                ? "Unknown"
-                : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, response.Relationship);
-            return $"Family updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Relationship: {relLabel}";
+            return ResponseEnvelope.UpdateSuccess("Family", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -301,7 +291,7 @@ public static class FamilyTools
         {
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/families/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Family not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Family", handle);
             var response = payload.Value;
 
             var hasBacklinks = false;
@@ -330,7 +320,7 @@ public static class FamilyTools
             }
 
             await client.DeleteAsync($"/api/families/{handle}");
-            return $"Family deleted successfully [{handle}]";
+            return ResponseEnvelope.DeleteSuccess("Family", handle);
         }
         catch (Exception ex)
         {
