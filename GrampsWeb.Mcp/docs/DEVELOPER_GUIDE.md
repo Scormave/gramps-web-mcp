@@ -35,15 +35,18 @@ to `demo.grampsweb.org`.
 [McpServerTool]
 [Description("Read-only: ... OR Create/Update/Delete ...")]
 public static async Task<string> ToolName(
-    [Description("...")] string param1,
+    [Description("Handle or Gramps ID. " + ToolDescriptionFragments.HandleDiscovery)]
+    string handle,
     [Description("...")] int param2 = defaultValue,
     GrampsApiClient client = null!)  // injected by host
 {
     try
     {
-        // 1. Validate input
-        // 2. Call client
-        // 3. Format and return
+        // 1. Resolve Gramps ID → handle (if applicable)
+        var resolved = await HandleResolver.ResolveToHandleAsync(handle, client);
+        // 2. Validate input (use TypeCache.ValidateTypeAsync for type strings)
+        // 3. Call client
+        // 4. Format and return (use NotFoundHelper for 404s)
     }
     catch (Exception ex)
     {
@@ -58,6 +61,10 @@ Key rules:
 - Every tool wraps its body in `try/catch` and rethrows via `McpToolErrors`.
 - `[Description]` must clearly state read-only vs write and prerequisites.
 - Use constants from `ToolDescriptionFragments` for consistent documentation.
+- Handle parameters should accept both handles and Gramps IDs — use
+  `HandleResolver.ResolveToHandleAsync` to normalize.
+- For not-found responses, use `NotFoundHelper.NotFoundMessage` to provide
+  contextual hints.
 
 ### Error handling
 
@@ -109,6 +116,11 @@ objects and return formatted strings.
 3. For write tools, include appropriate `ToolDescriptionFragments` constants
    in the `[Description]`.
 4. For write tools, create a request DTO in `Requests/` if needed.
+5. For write tools with type parameters, add server-side validation via
+   `TypeCache.ValidateTypeAsync(value, "category_name", client)`.
+6. For handle parameters, use `HandleResolver.ResolveToHandleAsync` so
+   agents can pass either handles or Gramps IDs.
+7. For not-found cases, return `NotFoundHelper.NotFoundMessage(type, id)`.
 
 ### Step 6: Add tests
 
@@ -160,6 +172,25 @@ When you want agents to pass data in free-form text as well as structured JSON:
 3. Use `Flexible{Thing}` as the parameter type in tool methods.
 4. Add unit tests in `Tests/UnitTests/Flexible{Thing}Tests.cs`.
 5. Update the `get_structured_field_input_guide` output in `TypeTools.cs`.
+
+---
+
+## How to add a composite tool
+
+Composite tools (`CompositeTools.cs`) combine multiple API calls into a single
+tool invocation, reducing the number of sequential tool calls an agent must
+make.  Examples: `FindByGrampsId`, `QuickAddPerson`, `AddEventToPerson`.
+
+Pattern:
+1. Add a new `[McpServerTool]` method in `CompositeTools.cs`.
+2. Use `HandleResolver.ResolveToHandleAsync` for any handle parameter.
+3. Call the API client directly (not other tool methods) to create/fetch
+   sub-objects.
+4. Aggregate results into a single formatted response.
+5. Track created objects and list them in the output for transparency.
+
+Keep private helpers (place resolution, name conversion) in the same class
+to avoid coupling with entity-specific tool files.
 
 ---
 
@@ -341,6 +372,11 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | I need to... | Look in... |
 |--------------|-----------|
 | Add/modify a tool | `Tools/{Entity}Tools.cs` |
+| Add a multi-step convenience tool | `Tools/CompositeTools.cs` |
+| Resolve Gramps ID → handle | `Client/HandleResolver.cs` |
+| Validate type strings server-side | `Client/TypeCache.cs` |
+| Return helpful not-found messages | `Tools/NotFoundHelper.cs` |
+| Add structured metadata to responses | `Formatters/ResponseEnvelope.cs` |
 | Add a model for an API response | `Models/Gramps{Entity}.cs` |
 | Handle a new wire format quirk | `Serialization/` (new converter) |
 | Format tool output | `Formatters/{Entity}Formatter.cs` |

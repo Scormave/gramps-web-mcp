@@ -14,22 +14,41 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class TypeTools
 {
-    /// <summary>
-    /// Returns all built-in Gramps type vocabularies from /api/types/default/.
-    /// ALWAYS call this before any create or update operation to get valid type values.
-    /// </summary>
     [McpServerTool]
     [Description(
-        "Read-only discovery: built-in Gramps type vocabularies (event_types, place_types, note_types, repository_types, " +
-        "family_relation_types, child_reference_types, event_role_types, name_types, name_origin_types, etc.). " +
-        "CRITICAL: You MUST call this before create_* or update_* whenever you set a type/role/origin string so values match the tree. " +
-        "Invalid type strings can corrupt or reject data.")]
-    public static async Task<string> GetTypes(GrampsApiClient client)
+        "Read-only discovery: Gramps type vocabularies (event_types, place_types, note_types, etc.). " +
+        "When includeCustom is true (default), custom types from this database are merged with built-in types. " +
+        "CRITICAL: call this before create/update tools to get valid type/role/origin strings.")]
+    public static async Task<string> GetTypes(
+        [Description("Include custom types from this database alongside built-in types (default: true)")]
+        bool includeCustom = true,
+        GrampsApiClient client = null!)
     {
         try
         {
-            var root = await client.GetAsync<JsonElement>("/api/types/default/");
-            var types = TypesPayloadParser.ParseCategories(root);
+            var defaultRoot = await client.GetAsync<JsonElement>("/api/types/default/");
+            var types = TypesPayloadParser.ParseCategories(defaultRoot);
+
+            if (includeCustom)
+            {
+                var customRoot = await client.GetAsync<JsonElement>("/api/types/custom/");
+                var customTypes = TypesPayloadParser.ParseCategories(customRoot);
+
+                foreach (var kvp in customTypes)
+                {
+                    if (types.TryGetValue(kvp.Key, out var existing))
+                    {
+                        var merged = existing.ToList();
+                        merged.AddRange(kvp.Value);
+                        types[kvp.Key] = merged;
+                    }
+                    else
+                    {
+                        types[kvp.Key] = kvp.Value.ToList();
+                    }
+                }
+            }
+
             return TypesFormatter.FormatTypesResponse(types);
         }
         catch (Exception ex)
@@ -38,53 +57,20 @@ public static class TypeTools
         }
     }
 
-    /// <summary>
-    /// Returns user-defined custom types added to this specific Gramps database.
-    /// Call alongside get_types() for the complete type vocabulary.
-    /// </summary>
     [McpServerTool]
     [Description(
-        "Read-only discovery: custom types added in this database only. " +
-        "CRITICAL: You MUST combine this with get_types to get the full allowed type vocabulary before writes.")]
-    public static async Task<string> GetCustomTypes(GrampsApiClient client)
+        "Read-only reference: complete input guide for MCP write tools — date strings, structured fields " +
+        "(attributes, URLs, addresses, person refs, name shorthand), and the full Gramps Name object schema. " +
+        "Call this once before using any create/update tool.")]
+    public static Task<string> GetInputGuide()
     {
-        try
+        var guide = new
         {
-            var root = await client.GetAsync<JsonElement>("/api/types/custom/");
-            var customTypes = TypesPayloadParser.ParseCategories(root);
-            return TypesFormatter.FormatCustomTypesResponse(customTypes);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    /// <summary>
-    /// Documents how to pass dates as strings in MCP create/update tools (no Gramps <c>dateval</c> arrays).
-    /// </summary>
-    [McpServerTool]
-    [Description(
-        "Read-only reference JSON: how to write date strings for MCP tools (ISO vs slash/dot, dateComponentOrder, modifiers, ranges). " +
-        "CRITICAL: You MUST call this before any tool parameter named date, primaryNameDate, or similar.")]
-    public static Task<string> GetDateInputGuide()
-    {
-        var json = JsonSerializer.Serialize(BuildDateInputGuidePayload(), new JsonSerializerOptions { WriteIndented = true });
-        return Task.FromResult(json);
-    }
-
-    /// <summary>
-    /// Documents flexible string forms for attributes, URLs, addresses, and person associations in MCP tools.
-    /// </summary>
-    [McpServerTool]
-    [Description(
-        "Read-only reference JSON: flexible string/array forms for attributes, URLs, addresses, person refs, and shorthand names. " +
-        "CRITICAL: You MUST call this before passing FlexibleAttributeList, FlexibleUrlList, FlexibleAddressList, FlexiblePersonRefList, or simple name strings.")]
-    public static Task<string> GetStructuredFieldInputGuide()
-    {
-        var json = JsonSerializer.Serialize(
-            BuildStructuredFieldInputGuidePayload(),
-            new JsonSerializerOptions { WriteIndented = true });
+            dates = BuildDateInputGuidePayload(),
+            structured_fields = BuildStructuredFieldInputGuidePayload(),
+            name_schema = BuildNameSchemaPayload()
+        };
+        var json = JsonSerializer.Serialize(guide, new JsonSerializerOptions { WriteIndented = true });
         return Task.FromResult(json);
     }
 
@@ -203,151 +189,135 @@ public static class TypeTools
             "Strings that do not match structured patterns are stored as Gramps text-only dates (modifier 6)."
     };
 
-    /// <summary>
-    /// Returns the complete Name object schema with field descriptions, constraints, and an example.
-    /// ALWAYS call this before create_person or update_person to understand the name structure.
-    /// Gramps supports multiple surnames with prefix, connector, and origin type per person.
-    /// </summary>
-    [McpServerTool]
-    [Description(
-        "Read-only reference JSON: full Gramps Name object (first_name, surname_list, type, call, nick, …). " +
-        "CRITICAL: You MUST call this before create_person or update_person when building structured names (not only shorthand strings). " +
-        "Field names match the Gramps Web API.")]
-    public static Task<string> GetNameSchema()
+    private static object BuildNameSchemaPayload() => new
     {
-        var schema = new
+        name_object = new
         {
-            name_object = new
+            type = "Object",
+            description = "Represents a person's name in Gramps Web. On Person objects use primary_name plus optional alternate_names array.",
+            fields = new
             {
-                type = "Object",
-                description = "Represents a person's name in Gramps Web. On Person objects use primary_name plus optional alternate_names array.",
-                fields = new
+                type = new
                 {
-                    type = new
-                    {
-                        type = "string",
-                        description = "Name type from name_types (get_types). Examples: 'Birth Name', 'Married Name', 'Also Known As', 'Patronymic'",
-                        examples = new[] { "Birth Name", "Married Name", "Also Known As" }
-                    },
-                    first_name = new
-                    {
-                        type = "string",
-                        description = "Given names (all of them together). Example: 'Edwin Jose'",
-                        examples = new[] { "Edwin Jose", "John", "Mary Anne" }
-                    },
-                    call = new
-                    {
-                        type = "string",
-                        description = "The name by which the person is commonly called. Example: 'Jose' when first_name is 'Edwin Jose'",
-                        examples = new[] { "Jose", "Bob", "Betty" }
-                    },
-                    nick = new
-                    {
-                        type = "string",
-                        description = "Nickname or short form. Example: 'Ed' for Edwin",
-                        examples = new[] { "Ed", "Liz", "Rob" }
-                    },
-                    famnick = new
-                    {
-                        type = "string",
-                        description = "Family nickname. Example: 'Underhills'",
-                        examples = new[] { "Underhills", "The Smiths" }
-                    },
-                    title = new
-                    {
-                        type = "string",
-                        description = "Title prefix. Example: 'Dr.', 'Rev.', 'Sir', 'Count'",
-                        examples = new[] { "Dr.", "Rev.", "Sir", "Count" }
-                    },
-                    suffix = new
-                    {
-                        type = "string",
-                        description = "Suffix after name. Example: 'Jr.', 'III', 'Sr.', 'Ph.D.'",
-                        examples = new[] { "Jr.", "III", "Sr.", "Ph.D." }
-                    },
-                    surname_list = new
-                    {
-                        type = "Array of Surname",
-                        description = "One or more surnames. Most people have one primary surname, but Gramps allows multiples.",
-                        constraint = "Must have at least one surname",
-                        example_structure = "See surname_object schema below"
-                    }
+                    type = "string",
+                    description = "Name type from name_types (get_types). Examples: 'Birth Name', 'Married Name', 'Also Known As', 'Patronymic'",
+                    examples = new[] { "Birth Name", "Married Name", "Also Known As" }
+                },
+                first_name = new
+                {
+                    type = "string",
+                    description = "Given names (all of them together). Example: 'Edwin Jose'",
+                    examples = new[] { "Edwin Jose", "John", "Mary Anne" }
+                },
+                call = new
+                {
+                    type = "string",
+                    description = "The name by which the person is commonly called. Example: 'Jose' when first_name is 'Edwin Jose'",
+                    examples = new[] { "Jose", "Bob", "Betty" }
+                },
+                nick = new
+                {
+                    type = "string",
+                    description = "Nickname or short form. Example: 'Ed' for Edwin",
+                    examples = new[] { "Ed", "Liz", "Rob" }
+                },
+                famnick = new
+                {
+                    type = "string",
+                    description = "Family nickname. Example: 'Underhills'",
+                    examples = new[] { "Underhills", "The Smiths" }
+                },
+                title = new
+                {
+                    type = "string",
+                    description = "Title prefix. Example: 'Dr.', 'Rev.', 'Sir', 'Count'",
+                    examples = new[] { "Dr.", "Rev.", "Sir", "Count" }
+                },
+                suffix = new
+                {
+                    type = "string",
+                    description = "Suffix after name. Example: 'Jr.', 'III', 'Sr.', 'Ph.D.'",
+                    examples = new[] { "Jr.", "III", "Sr.", "Ph.D." }
+                },
+                surname_list = new
+                {
+                    type = "Array of Surname",
+                    description = "One or more surnames. Most people have one primary surname, but Gramps allows multiples.",
+                    constraint = "Must have at least one surname",
+                    example_structure = "See surname_object schema below"
                 }
-            },
-            surname_object = new
+            }
+        },
+        surname_object = new
+        {
+            type = "Object",
+            description = "Represents a single surname within a Name object.",
+            fields = new
             {
-                type = "Object",
-                description = "Represents a single surname within a Name object.",
-                fields = new
+                surname = new
                 {
-                    surname = new
-                    {
-                        type = "string",
-                        description = "The surname itself. Examples: 'Smith', 'van der Berg', 'O'Brien'",
-                        examples = new[] { "Smith", "van der Berg", "O'Brien" }
-                    },
-                    prefix = new
-                    {
-                        type = "string",
-                        description = "Prefix not used for sorting. Examples: 'von', 'de', 'van', 'von der'",
-                        examples = new[] { "von", "de", "van", "von der" }
-                    },
-                    connector = new
-                    {
-                        type = "string",
-                        description = "Connector between surnames. Examples: 'and', 'y', '-'",
-                        examples = new[] { "and", "y", "-" }
-                    },
-                    origintype = new
-                    {
-                        type = "string",
-                        description = "Origin of surname (from name_origin_types via get_types()). Examples: 'Inherited', 'Patronymic', 'Matronymic', 'Occupation', 'Location'",
-                        examples = new[] { "Inherited", "Patronymic", "Matronymic", "Occupation", "Location" }
-                    },
-                    primary = new
-                    {
-                        type = "boolean",
-                        description = "Is this the primary surname for sorting/display? Usually true for the first surname.",
-                        examples = new[] { "true", "false" }
-                    }
+                    type = "string",
+                    description = "The surname itself. Examples: 'Smith', 'van der Berg', 'O'Brien'",
+                    examples = new[] { "Smith", "van der Berg", "O'Brien" }
+                },
+                prefix = new
+                {
+                    type = "string",
+                    description = "Prefix not used for sorting. Examples: 'von', 'de', 'van', 'von der'",
+                    examples = new[] { "von", "de", "van", "von der" }
+                },
+                connector = new
+                {
+                    type = "string",
+                    description = "Connector between surnames. Examples: 'and', 'y', '-'",
+                    examples = new[] { "and", "y", "-" }
+                },
+                origintype = new
+                {
+                    type = "string",
+                    description = "Origin of surname (from name_origin_types via get_types()). Examples: 'Inherited', 'Patronymic', 'Matronymic', 'Occupation', 'Location'",
+                    examples = new[] { "Inherited", "Patronymic", "Matronymic", "Occupation", "Location" }
+                },
+                primary = new
+                {
+                    type = "boolean",
+                    description = "Is this the primary surname for sorting/display? Usually true for the first surname.",
+                    examples = new[] { "true", "false" }
                 }
-            },
-            parsing_example = new
+            }
+        },
+        parsing_example = new
+        {
+            full_name_text = "Dr. Edwin Jose von der Smith and Weston Wilson Sr. (Jose) — Underhills",
+            parsed = new
             {
-                full_name_text = "Dr. Edwin Jose von der Smith and Weston Wilson Sr. (Jose) — Underhills",
-                parsed = new
+                title = "Dr.",
+                first_name = "Edwin Jose",
+                call = "Jose",
+                nick = "",
+                famnick = "Underhills",
+                suffix = "Sr.",
+                surname_list = new object[]
                 {
-                    title = "Dr.",
-                    first_name = "Edwin Jose",
-                    call = "Jose",
-                    nick = "",
-                    famnick = "Underhills",
-                    suffix = "Sr.",
-                    surname_list = new object[]
+                    new
                     {
-                        new
-                        {
-                            surname = "Smith and Weston",
-                            prefix = "von der",
-                            connector = "and",
-                            origintype = "Inherited",
-                            primary = true
-                        },
-                        new
-                        {
-                            surname = "Wilson",
-                            prefix = "",
-                            connector = "",
-                            origintype = "Patronymic",
-                            primary = false
-                        }
+                        surname = "Smith and Weston",
+                        prefix = "von der",
+                        connector = "and",
+                        origintype = "Inherited",
+                        primary = true
+                    },
+                    new
+                    {
+                        surname = "Wilson",
+                        prefix = "",
+                        connector = "",
+                        origintype = "Patronymic",
+                        primary = false
                     }
                 }
             }
-        };
-
-        var json = JsonSerializer.Serialize(schema, new JsonSerializerOptions { WriteIndented = true });
-        return Task.FromResult(json);
-    }
+        }
+    };
 
 }

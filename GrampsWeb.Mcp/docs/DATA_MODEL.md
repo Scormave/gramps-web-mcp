@@ -83,6 +83,21 @@ polymorphic wire shapes.
 
 ## Serialization layer (`Serialization/`)
 
+### TypeCache (`Client/TypeCache.cs`)
+
+`TypeCache` is a thread-safe in-memory cache of merged default + custom type
+vocabularies with a 10-minute TTL.  Write tools call
+`TypeCache.ValidateTypeAsync` to check type strings before sending requests,
+providing fuzzy-match suggestions on invalid values.
+
+### HandleResolver (`Client/HandleResolver.cs`)
+
+`HandleResolver` detects Gramps ID patterns (single uppercase letter + digits,
+e.g. `I0001`, `F0023`) and resolves them to opaque API handles by querying the
+list endpoint with a `gramps_id` filter.  If the value doesn't match the
+pattern, it's returned as-is (assumed to already be a handle).  This allows
+agents to use either identifier format in any tool parameter.
+
 ### Shared options: `GrampsJson`
 
 `GrampsJson.Options` is the single `JsonSerializerOptions` instance used for all
@@ -188,6 +203,13 @@ updates (read-modify-write pattern):
 - `GrampsAttribute[]` → `AttributeRequest[]`
 - Event ref lists, family ref lists → request equivalents
 - Parallel handle/role arrays → `EventRefRequest[]` (`BuildEventRefList`)
+
+### Tool response helpers
+
+| Class | Location | Purpose |
+|-------|----------|---------|
+| `NotFoundHelper` | `Tools/NotFoundHelper.cs` | Builds not-found messages with contextual hints (e.g. suggests `find_by_gramps_id` when identifier looks like a Gramps ID) |
+| `ResponseEnvelope` | `Formatters/ResponseEnvelope.cs` | Adds machine-readable YAML-like headers (`type`, `handle`, `gramps_id`, `action`) to tool responses and provides next-step hints for create operations |
 
 ---
 

@@ -30,7 +30,7 @@ public static class MediaTools
         {
             var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>($"/api/media/{handle}");
             return media == null
-                ? $"Media not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Media", handle)
                 : MediaFormatter.FormatMediaFull(media);
         }
         catch (Exception ex)
@@ -69,7 +69,7 @@ public static class MediaTools
         {
             var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>($"/api/media/{handle}");
             if (media == null)
-                return $"Media not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Media", handle);
 
             var dateRequest = date != null
                 ? AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder)
@@ -95,10 +95,7 @@ public static class MediaTools
             };
 
             var response = await client.PutMutationAsync<GrampsMedia>($"/api/media/{handle}", updateRequest, "Media");
-            return $"Media updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Description: {response.Description ?? "—"}";
+            return ResponseEnvelope.UpdateSuccess("Media", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -121,7 +118,7 @@ public static class MediaTools
         {
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/media/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Media not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Media", handle);
             var response = payload.Value;
 
             var hasBacklinks = false;
@@ -150,7 +147,7 @@ public static class MediaTools
             }
 
             await client.DeleteAsync($"/api/media/{handle}");
-            return $"Media deleted successfully [{handle}]\nNote: database entry removed, physical file remains.";
+            return ResponseEnvelope.DeleteSuccess("Media", handle);
         }
         catch (Exception ex)
         {

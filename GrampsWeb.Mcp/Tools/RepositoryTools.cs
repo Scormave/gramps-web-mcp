@@ -63,6 +63,12 @@ public static class RepositoryTools
             if (string.IsNullOrWhiteSpace(name))
                 throw McpToolErrors.ValidationError("Error: name is required");
 
+            if (repoType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(repoType, "repository_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var request = new CreateRepositoryRequest
             {
                 Name = name,
@@ -114,6 +120,12 @@ public static class RepositoryTools
     {
         try
         {
+            if (repoType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(repoType, "repository_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
             if (repo == null)
                 return $"Repository not found: {handle}";

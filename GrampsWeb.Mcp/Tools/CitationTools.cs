@@ -31,7 +31,7 @@ public static class CitationTools
         {
             var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>($"/api/citations/{handle}");
             return citation == null
-                ? $"Citation not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Citation", handle)
                 : await CitationFormatter.FormatCitationFull(citation, client);
         }
         catch (Exception ex)
@@ -95,12 +95,8 @@ public static class CitationTools
             };
 
             var response = await client.PostMutationAsync<GrampsCitation>("/api/citations/", request, "Citation");
-            var confidenceLabel = CitationFormatter.ConfidenceLabels[Math.Clamp(response.Confidence, 0, 4)];
-            return $"Citation created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Source: {response.Source}\n" +
-                   $"Confidence: {confidenceLabel}";
+            return ResponseEnvelope.CreateSuccess("Citation", response.Handle, response.GrampsId,
+                response.Page, ResponseEnvelope.CitationCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -144,7 +140,7 @@ public static class CitationTools
         {
             var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>($"/api/citations/{handle}");
             if (citation == null)
-                return $"Citation not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Citation", handle);
 
             var finalConfidence = Math.Clamp(
                 CitationConfidenceParser.ParseOptional(confidence) ?? citation.Confidence,
@@ -176,9 +172,7 @@ public static class CitationTools
             };
 
             var response = await client.PutMutationAsync<GrampsCitation>($"/api/citations/{handle}", updateRequest, "Citation");
-            return $"Citation updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+            return ResponseEnvelope.UpdateSuccess("Citation", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -200,7 +194,7 @@ public static class CitationTools
         {
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/citations/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Citation not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Citation", handle);
             var response = payload.Value;
 
             var hasBacklinks = false;
@@ -228,7 +222,7 @@ public static class CitationTools
             }
 
             await client.DeleteAsync($"/api/citations/{handle}");
-            return $"Citation deleted successfully [{handle}]";
+            return ResponseEnvelope.DeleteSuccess("Citation", handle);
         }
         catch (Exception ex)
         {

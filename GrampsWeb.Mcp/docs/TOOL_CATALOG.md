@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 58 MCP tools exposed by the server.
+Complete catalog of the 56 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -17,23 +17,18 @@ decorated with `[McpServerTool]`.
 
 ---
 
-## Person (`PersonTools.cs`) — 9 tools
+## Person (`PersonTools.cs`) — 8 tools
 
 ### R — `GetPerson`
-Fetch one person by handle: names, gender, Gramps ID, birth/death, attributes,
-addresses, URLs, associations, linked handles.
+Fetch one person by handle.  With `extended=true`, resolves linked objects
+(event dates/places, note text, tag names, citations, media) for a fuller
+picture in one call.  Default `extended=false` returns core fields with handles
+only (faster).
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `handle` | `string` | yes | Person handle |
-
-### R — `GetPersonExtended`
-Like `GetPerson` but resolves linked objects (events with dates/places, notes,
-tags, citations, media).  Slower and heavier.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `handle` | `string` | yes | Person handle |
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `handle` | `string` | yes | — | Person handle |
+| `extended` | `bool` | no | `false` | Resolve linked events/notes/tags/citations/media inline |
 
 ### R — `GetAncestors`
 List ancestors up to N generations with names, vital dates/places, and
@@ -120,15 +115,17 @@ Delete a person.  Blocked when backlinks exist unless `force=true`.
 
 ---
 
-## Family (`FamilyTools.cs`) — 6 tools
+## Family (`FamilyTools.cs`) — 5 tools
 
 ### R — `GetFamily`
 One family by handle: parents, children with frel/mrel, relationship type,
-linked events/notes/tags as handles.
+linked events/notes/tags.  With `extended=true`, resolves member names, event
+dates/places, citations, media.
 
-### R — `GetFamilyExtended`
-Like `GetFamily` but resolves member names, event dates/places, citations,
-media.
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `handle` | `string` | yes | — | Family handle |
+| `extended` | `bool` | no | `false` | Resolve linked names/events/places inline |
 
 ### R — `GetFamilyTimeline`
 Chronological events for one family.
@@ -360,7 +357,7 @@ Delete a repository.  Blocked when sources reference it unless `force=true`.
 
 ---
 
-## Tag (`TagTools.cs`) — 3 tools
+## Tag (`TagTools.cs`) — 4 tools
 
 ### R — `GetTag`
 One tag: name, color (hex), priority.
@@ -374,10 +371,18 @@ Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
 | `color` | `string` | no | `"000000"` | RRGGBB (no `#`) |
 | `priority` | `int` | no | `0` | Sort priority |
 
+### U — `UpdateTag`
+Update a tag.  Only include arguments you want to change.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `handle` | `string` | yes | — | Tag handle |
+| `name` | `string?` | no | — | Display name |
+| `color` | `string?` | no | — | RRGGBB (no `#`) |
+| `priority` | `int?` | no | — | Sort priority |
+
 ### D — `DeleteTag`
 Delete a tag.  Blocked when objects carry it unless `force=true`.
-
-> **Note:** `UpdateTag` exists in the code but is intentionally **not** exposed as an MCP tool.
 
 ---
 
@@ -425,39 +430,70 @@ Gramps Web user bookmarks (saved shortcuts).
 
 ---
 
-## Type & Schema discovery (`TypeTools.cs`) — 5 tools
+## Type & Schema discovery (`TypeTools.cs`) — 2 tools
 
 ### R — `GetTypes`
-Built-in Gramps type vocabularies.  **Must call before any write tool** that
-sets type/role/origin strings.
+Gramps type vocabularies (event_types, place_types, note_types, etc.).
+When `includeCustom` is true (default), custom types from this database
+are merged with built-in types.
 
-### R — `GetCustomTypes`
-Custom types added in this database.  Combine with `GetTypes` for the full
-vocabulary.
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `includeCustom` | `bool` | no | `true` | Merge custom types from this database |
 
-### R — `GetDateInputGuide`
-Reference JSON: how to write date strings for MCP tools (ISO, slash/dot,
-modifiers, ranges, `DateComponentOrder`).  **Must call before** any `date`
-parameter.
-
-### R — `GetStructuredFieldInputGuide`
-Reference JSON: flexible input formats for attributes, URLs, addresses,
-person refs, shorthand names.  **Must call before** passing any `Flexible*`
-parameter.
-
-### R — `GetNameSchema`
-Reference JSON: full Gramps Name object schema.  **Must call before**
-`create_person` / `update_person` with structured names.
+### R — `GetInputGuide`
+Combined reference for all write-tool input formats: date strings, structured
+fields (attributes, URLs, addresses, person refs, name shorthand), and the
+full Gramps Name object schema.  Call once before using any create/update tool.
 
 ---
 
-## Name (`NameTools.cs`) — 2 tools
+## Name (`NameTools.cs`) — 1 tool
 
-### R — `GetNameFormats`
-Name display format definitions configured in this tree.
+### R — `GetNameSettings`
+Name display format definitions and surname grouping rules configured in this
+tree (combines the former `GetNameFormats` and `GetNameGroups`).
 
-### R — `GetNameGroups`
-Surname grouping rules (e.g., Smith vs Smythe).
+---
+
+## Composite Tools (`CompositeTools.cs`) — 3 tools
+
+Multi-step convenience tools that combine several API calls into one.
+
+### R — `FindByGrampsId`
+Find any Gramps object by its Gramps ID (e.g. `I0001`, `F0023`, `E0005`).
+Automatically detects the object type from the ID prefix, resolves the handle,
+and returns full details.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `grampsId` | `string` | yes | Gramps ID (e.g. I0001, F0023) |
+
+### C — `QuickAddPerson`
+Create a person with optional birth and death events in a single call.
+Automatically creates place and event objects as needed, then links them.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `name` | `string` | yes | — | Name as `"Given Surname"` or `"Given\|Surname"` |
+| `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
+| `birthDate` | `string?` | no | — | Birth date text |
+| `birthPlace` | `string?` | no | — | Birth place name |
+| `deathDate` | `string?` | no | — | Death date text |
+| `deathPlace` | `string?` | no | — | Death place name |
+
+### C — `AddEventToPerson`
+Create an event and attach it to an existing person in one call.
+Handles event creation + person update automatically.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `personHandle` | `string` | yes | — | Person handle or Gramps ID |
+| `eventType` | `string` | yes | — | Event type (e.g. Birth, Death, Baptism) |
+| `date` | `string?` | no | — | Event date text |
+| `place` | `string?` | no | — | Place name or handle |
+| `description` | `string?` | no | — | Event description |
+| `role` | `string` | no | `"Primary"` | Person's role in the event |
 
 ---
 
@@ -465,8 +501,8 @@ Surname grouping rules (e.g., Smith vs Smythe).
 
 | Domain | R | C | U | D | Total |
 |--------|---|---|---|---|-------|
-| Person | 6 | 1 | 1 | 1 | 9 |
-| Family | 3 | 1 | 1 | 1 | 6 |
+| Person | 5 | 1 | 1 | 1 | 8 |
+| Family | 2 | 1 | 1 | 1 | 5 |
 | Event | 1 | 1 | 1 | 1 | 4 |
 | Place | 2 | 1 | 1 | 1 | 5 |
 | Source | 1 | 1 | 1 | 1 | 4 |
@@ -474,24 +510,24 @@ Surname grouping rules (e.g., Smith vs Smythe).
 | Note | 1 | 1 | 1 | 1 | 4 |
 | Media | 1 | 0 | 1 | 1 | 3 |
 | Repository | 1 | 1 | 1 | 1 | 4 |
-| Tag | 1 | 1 | 0 | 1 | 3 |
+| Tag | 1 | 1 | 1 | 1 | 4 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 3 | 0 | 0 | 0 | 3 |
-| Types/Schema | 5 | 0 | 0 | 0 | 5 |
-| Name | 2 | 0 | 0 | 0 | 2 |
-| **Total** | **30** | **9** | **9** | **10** | **58** |
+| Types/Schema | 2 | 0 | 0 | 0 | 2 |
+| Name | 1 | 0 | 0 | 0 | 1 |
+| Composite | 1 | 2 | 0 | 0 | 3 |
+| **Total** | **25** | **11** | **10** | **10** | **56** |
 
 ## Prerequisites for write tools
 
-Before calling any create/update tool, agents **must** call the following
-discovery tools to learn the correct values:
+Before calling create/update tools, agents should call discovery tools to
+learn valid values.  Type strings are also validated server-side by
+`TypeCache`, which returns helpful error messages with suggestions on typos.
 
-| Discovery tool | When required |
-|----------------|---------------|
-| `get_types` + `get_custom_types` | Before setting any type/role/origin string |
-| `get_date_input_guide` | Before any `date` or `primaryNameDate` parameter |
-| `get_name_schema` | Before building structured name JSON |
-| `get_structured_field_input_guide` | Before using any `Flexible*` parameter |
+| Discovery tool | When useful |
+|----------------|-------------|
+| `get_types` | Before setting any type/role/origin string (server validates, but calling first avoids round-trip errors) |
+| `get_input_guide` | Before any `date`, `primaryNameDate`, `Flexible*`, or structured name parameter (covers dates, structured fields, and name schema) |
 
 ## Delete safety
 

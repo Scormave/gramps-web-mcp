@@ -13,30 +13,15 @@ public static class NameTools
 {
     [McpServerTool]
     [Description(
-        "Read-only: name display format definitions configured in this tree (how Gramps renders names in the UI). " +
-        "Distinct from get_name_schema (person name JSON for create/update).")]
-    public static async Task<string> GetNameFormats(GrampsApiClient client)
+        "Read-only: name display format definitions and surname grouping rules configured in this tree.")]
+    public static async Task<string> GetNameSettings(GrampsApiClient client)
     {
         try
         {
-            var result = await client.GetAsync<dynamic>("/api/name-formats/");
-            return $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(result)}";
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool]
-    [Description(
-        "Read-only: surname grouping rules (e.g. Smith vs Smythe) for this database.")]
-    public static async Task<string> GetNameGroups(GrampsApiClient client)
-    {
-        try
-        {
-            var result = await client.GetAsync<dynamic>("/api/name-groups/");
-            return $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(result)}";
+            var formats = await client.GetAsync<dynamic>("/api/name-formats/");
+            var groups = await client.GetAsync<dynamic>("/api/name-groups/");
+            return $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
+                   $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}";
         }
         catch (Exception ex)
         {

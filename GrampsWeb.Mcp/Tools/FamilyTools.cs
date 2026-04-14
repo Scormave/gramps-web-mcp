@@ -23,42 +23,33 @@ public static class FamilyTools
 
     [McpServerTool]
     [Description(
-        "Read-only: one family by handle (parents, children with frel/mrel, relationship type, linked events/notes/tags as handles). " +
-        "Use get_family_extended for resolved parent/child names and richer event/place text.")]
+        "Read-only: one family by handle (parents, children, relationship type, events). " +
+        "With extended=true, resolves member names, event dates/places, citations, media. " +
+        "Default extended=false returns handles only (faster).")]
     public static async Task<string> GetFamily(
         [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        GrampsApiClient client)
+        [Description("Resolve linked names/events/places inline. Default: false.")]
+        bool extended = false,
+        GrampsApiClient client = null!)
     {
         try
         {
-            var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>($"/api/families/{handle}");
-            return family == null
-                ? $"Family not found: {handle}"
-                : await FamilyFormatter.FormatFamilyFullAsync(family, client);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool]
-    [Description(
-        "Read-only: like get_family but resolves member names, event dates/places, citations, and media where possible. " +
-        "Slower than get_family; use when you need a full household picture in one response.")]
-    public static async Task<string> GetFamilyExtended(
-        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        GrampsApiClient client)
-    {
-        try
-        {
-            var family = await client.GetOrNullIfNotFoundAsync<GrampsFamilyExtended>($"/api/families/{handle}?extend=all");
-            if (family == null)
-                return $"Family not found: {handle}";
-            await ExtendedEntityEnrichment.EnrichFamilyExtendedAsync(family, client);
-            return await FamilyFormatter.FormatFamilyExtended(family, client);
+            if (extended)
+            {
+                var family = await client.GetOrNullIfNotFoundAsync<GrampsFamilyExtended>($"/api/families/{handle}?extend=all");
+                if (family == null)
+                    return $"Family not found: {handle}";
+                await ExtendedEntityEnrichment.EnrichFamilyExtendedAsync(family, client);
+                return await FamilyFormatter.FormatFamilyExtended(family, client);
+            }
+            else
+            {
+                var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>($"/api/families/{handle}");
+                return family == null
+                    ? $"Family not found: {handle}"
+                    : await FamilyFormatter.FormatFamilyFullAsync(family, client);
+            }
         }
         catch (Exception ex)
         {
@@ -135,7 +126,12 @@ public static class FamilyTools
     {
         try
         {
-            // Build child_ref_list
+            if (relationshipType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(relationshipType, "family_relation_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var childRefList = new List<GrampsChildRef>();
             var childHandleArray = (string[]?)childHandles;
             if (childHandleArray?.Length > 0)
@@ -226,6 +222,12 @@ public static class FamilyTools
     {
         try
         {
+            if (relationshipType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(relationshipType, "family_relation_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>($"/api/families/{handle}");
             if (family == null)
                 return $"Family not found: {handle}";

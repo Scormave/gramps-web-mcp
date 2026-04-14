@@ -26,46 +26,33 @@ public static class PersonTools
 
     [McpServerTool]
     [Description(
-        "Read-only: fetch one person by handle as formatted text (names, gender, Gramps ID, birth/death, " +
-        "attributes, addresses, URLs, associations, and handles of linked events, families, notes, media). " +
-        "Use get_person_extended when you need names/places/events resolved in one response. " +
-        "Use get_ancestors / get_descendants for tree traversal. " +
-        ToolDescriptionFragments.CallGetNameSchema)]
+        "Read-only: fetch one person by handle. With extended=true, resolves linked objects " +
+        "(event dates/places, note text, tag names, citations, media) for a fuller picture in one call. " +
+        "Default extended=false returns core fields with handles only (faster).")]
     public static async Task<string> GetPerson(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        GrampsApiClient client)
+        [Description("When true, resolve linked events/notes/tags/citations/media inline. Slower but more complete. Default: false.")]
+        bool extended = false,
+        GrampsApiClient client = null!)
     {
         try
         {
-            var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
-            return person == null
-                ? $"Person not found: {handle}"
-                : await PersonFormatter.FormatPersonFull(person, client);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool]
-    [Description(
-        "Read-only: like get_person but resolves many linked objects (event dates/places, note text, tag names, citations, media) " +
-        "so you get a fuller narrative in one call. Slower and heavier than get_person. " +
-        "Use get_person when you only need handles and core fields.")]
-    public static async Task<string> GetPersonExtended(
-        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        GrampsApiClient client)
-    {
-        try
-        {
-            var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>($"/api/people/{handle}?extend=all");
-            if (person == null)
-                return $"Person not found: {handle}";
-            await ExtendedEntityEnrichment.EnrichPersonExtendedAsync(person, client);
-            return await PersonFormatter.FormatPersonExtended(person, client);
+            if (extended)
+            {
+                var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>($"/api/people/{handle}?extend=all");
+                if (person == null)
+                    return $"Person not found: {handle}";
+                await ExtendedEntityEnrichment.EnrichPersonExtendedAsync(person, client);
+                return await PersonFormatter.FormatPersonExtended(person, client);
+            }
+            else
+            {
+                var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
+                return person == null
+                    ? $"Person not found: {handle}"
+                    : await PersonFormatter.FormatPersonFull(person, client);
+            }
         }
         catch (Exception ex)
         {

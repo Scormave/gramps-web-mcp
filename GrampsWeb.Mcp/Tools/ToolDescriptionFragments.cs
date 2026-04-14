@@ -7,8 +7,9 @@ public static class ToolDescriptionFragments
 {
     /// <summary>Suffix for parameters that take a Gramps object handle (API opaque string).</summary>
     public const string HandleDiscovery =
-        "Handle is an opaque string returned by the API (not the numeric Gramps ID unless the parameter is named grampsId). " +
-        "Find handles with search() or list_objects with the right object type (e.g. list_objects('people')), then pass the handle here.";
+        "Handle or Gramps ID (e.g. I0001). Handles are opaque strings from the API. " +
+        "Gramps IDs (like I0001, F0023) are auto-resolved to handles. " +
+        "Find handles with search() or list_objects().";
 
     /// <summary>Tool-level warning for update tools that replace linked-object lists.</summary>
     public const string UpdateEmptyListRemovesLinks =
@@ -24,14 +25,14 @@ public static class ToolDescriptionFragments
         "Omit to leave unchanged.";
 
     public const string CallGetTypes =
-        "CRITICAL: You MUST call get_types before setting any type/role/origin string so values match the tree vocabulary.";
+        "Type values are validated by the server; call get_types() to browse available values.";
 
     public const string CallGetDateInputGuide =
-        "CRITICAL: You MUST call get_date_input_guide before sending date text so format parsing is deterministic.";
+        "Date format: use ISO dates (1990-03-15), year-only (1920), or modifiers (before 1920, about 1950). Call get_input_guide() for full syntax.";
 
     public const string CallGetNameSchema =
-        "CRITICAL: You MUST call get_name_schema before building structured name payloads.";
+        "Use shorthand 'Given Surname' or full JSON; call get_input_guide() for the Name schema.";
 
     public const string CallGetStructuredFieldInputGuide =
-        "CRITICAL: You MUST call get_structured_field_input_guide before sending attributes, URLs, addresses, person refs, or flexible list/name shorthand.";
+        "Accepts JSON arrays or shorthand strings (e.g. 'Type: Value' for attributes). Call get_input_guide() for all formats.";
 }

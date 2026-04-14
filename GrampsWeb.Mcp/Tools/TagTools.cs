@@ -27,7 +27,7 @@ public static class TagTools
         {
             var tag = await client.GetOrNullIfNotFoundAsync<GrampsTag>($"/api/tags/{handle}");
             return tag == null
-                ? $"Tag not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Tag", handle)
                 : TagFormatter.FormatTagFull(tag);
         }
         catch (Exception ex)
@@ -64,11 +64,8 @@ public static class TagTools
             };
 
             var response = await client.PostMutationAsync<GrampsTag>("/api/tags/", request, "Tag");
-            return $"Tag created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Name: {response.Name}\n" +
-                   $"Color: #{response.Color}";
+            return ResponseEnvelope.CreateSuccess("Tag", response.Handle, response.GrampsId,
+                response.Name, ResponseEnvelope.TagCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -76,8 +73,7 @@ public static class TagTools
         }
     }
 
-    // Intentionally not exposed as an MCP tool for now:
-    // Gramps API currently returns HTTP 500 for tag update requests.
+    [McpServerTool]
     [Description(
         "Update a tag (write). Scalar fields: omit to leave unchanged (no list-clear semantics on this tool).")]
     public static async Task<string> UpdateTag(
@@ -95,7 +91,7 @@ public static class TagTools
         {
             var tag = await client.GetOrNullIfNotFoundAsync<GrampsTag>($"/api/tags/{handle}");
             if (tag == null)
-                return $"Tag not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Tag", handle);
 
             var updateRequest = new CreateTagRequest
             {
@@ -109,9 +105,7 @@ public static class TagTools
             };
 
             var response = await client.PutMutationAsync<GrampsTag>($"/api/tags/{handle}", updateRequest, "Tag");
-            return $"Tag updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+            return ResponseEnvelope.UpdateSuccess("Tag", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -133,7 +127,7 @@ public static class TagTools
         {
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/tags/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Tag not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Tag", handle);
             var response = payload.Value;
 
             var hasBacklinks = false;
@@ -161,7 +155,7 @@ public static class TagTools
             }
 
             await client.DeleteAsync($"/api/tags/{handle}");
-            return $"Tag deleted successfully [{handle}]";
+            return ResponseEnvelope.DeleteSuccess("Tag", handle);
         }
         catch (Exception ex)
         {

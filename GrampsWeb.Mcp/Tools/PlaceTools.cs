@@ -122,6 +122,12 @@ public static class PlaceTools
             if (string.IsNullOrWhiteSpace(name))
                 throw McpToolErrors.ValidationError("Error: name is required");
 
+            if (placeType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(placeType, "place_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var enclosed = (string[]?)enclosedByHandles;
             var placeRefList = enclosed?.Length > 0
                 ? enclosed.Select(h => new { @ref = h } as object).ToArray()
@@ -193,6 +199,12 @@ public static class PlaceTools
     {
         try
         {
+            if (placeType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(placeType, "place_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
             if (place == null)
                 return $"Place not found: {handle}";

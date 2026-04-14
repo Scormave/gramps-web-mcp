@@ -95,13 +95,20 @@ All configuration is loaded from **environment variables** (no appsettings files
 
 Each file exposes a set of `[McpServerTool]` static methods grouped by Gramps
 entity type (Person, Family, Event, Place, Source, Citation, Note, Media, Tag,
-Repository) plus cross-cutting tools (Search, System, Type, Name).
+Repository) plus cross-cutting tools (Search, System, Type, Name) and
+multi-step convenience tools (Composite).
 
 Tools are the **public API surface** of the MCP server.  They:
-- validate input parameters
+- validate input parameters (with server-side type validation via `TypeCache`)
 - call `GrampsApiClient` to interact with the REST API
+- resolve Gramps IDs to handles automatically via `HandleResolver`
 - format responses via `Formatters/` into human-readable text
+- return helpful context on not-found via `NotFoundHelper`
 - map errors to `McpException` via `McpToolErrors`
+
+`CompositeTools.cs` provides multi-step convenience tools (`FindByGrampsId`,
+`QuickAddPerson`, `AddEventToPerson`) that combine multiple API calls into
+a single tool invocation.
 
 The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`.
 
@@ -118,6 +125,15 @@ The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`.
 `GrampsApiClientExtensions` adds null-on-404 helpers.
 `ExtendedEntityEnrichment` refetches nested objects for `?extend=all` responses
 where the API doesn't deeply populate references.
+
+`HandleResolver` detects Gramps ID patterns (e.g. `I0001`, `F0023`) and
+resolves them to opaque API handles via a list-endpoint query. This lets
+agents pass either handles or Gramps IDs to any tool parameter.
+
+`TypeCache` is a thread-safe, TTL-based in-memory cache of Gramps type
+vocabularies (default + custom). Write tools use `TypeCache.ValidateTypeAsync`
+to check type strings before sending requests to the API, providing helpful
+error messages with suggestions on typos.
 
 ### 3. Models (`Models/`)
 
@@ -166,6 +182,9 @@ Convert models into human-readable text for MCP tool responses.  Strategy:
 - resolved type labels via `GrampsDefaultTypeLabels`
 - kinship labels for ancestor/descendant trees
 - indented JSON fallback for dynamic payloads (`JsonResponseFormatter`)
+- `ResponseEnvelope` adds machine-readable YAML-like headers with type,
+  handle, gramps_id, and action metadata to tool responses, plus suggested
+  next-step hints for create operations
 
 ### 8. Dates (`Dates/`)
 

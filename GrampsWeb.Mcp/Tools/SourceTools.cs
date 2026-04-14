@@ -29,7 +29,7 @@ public static class SourceTools
         {
             var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>($"/api/sources/{handle}");
             return source == null
-                ? $"Source not found: {handle}"
+                ? NotFoundHelper.NotFoundMessage("Source", handle)
                 : SourceFormatter.FormatSourceFull(source);
         }
         catch (Exception ex)
@@ -91,10 +91,8 @@ public static class SourceTools
             };
 
             var response = await client.PostMutationAsync<GrampsSource>("/api/sources/", request, "Source");
-            return $"Source created successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}\n" +
-                   $"Title: {response.Title}";
+            return ResponseEnvelope.CreateSuccess("Source", response.Handle, response.GrampsId,
+                response.Title, ResponseEnvelope.SourceCreateNextSteps(response.Handle!));
         }
         catch (Exception ex)
         {
@@ -136,7 +134,7 @@ public static class SourceTools
         {
             var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>($"/api/sources/{handle}");
             if (source == null)
-                return $"Source not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Source", handle);
 
             var repoHandlesUpdate = (string[]?)repositoryHandles;
             var repoRefList = repoHandlesUpdate != null && repoHandlesUpdate.Length > 0
@@ -164,9 +162,7 @@ public static class SourceTools
             };
 
             var response = await client.PutMutationAsync<GrampsSource>($"/api/sources/{handle}", updateRequest, "Source");
-            return $"Source updated successfully\n" +
-                   $"Handle: {response.Handle}\n" +
-                   $"Gramps ID: {response.GrampsId}";
+            return ResponseEnvelope.UpdateSuccess("Source", response.Handle, response.GrampsId);
         }
         catch (Exception ex)
         {
@@ -189,7 +185,7 @@ public static class SourceTools
         {
             var payload = await client.GetJsonOrNullIfNotFoundAsync($"/api/sources/{handle}?backlinks=true");
             if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-                return $"Source not found: {handle}";
+                return NotFoundHelper.NotFoundMessage("Source", handle);
             var response = payload.Value;
 
             var hasBacklinks = false;
@@ -218,7 +214,7 @@ public static class SourceTools
             }
 
             await client.DeleteAsync($"/api/sources/{handle}");
-            return $"Source deleted successfully [{handle}]";
+            return ResponseEnvelope.DeleteSuccess("Source", handle);
         }
         catch (Exception ex)
         {

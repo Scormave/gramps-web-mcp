@@ -76,6 +76,9 @@ public static class EventTools
             if (string.IsNullOrWhiteSpace(eventType))
                 throw McpToolErrors.ValidationError("Error: eventType is required. Call get_types() to see valid values.");
 
+            var typeError = await TypeCache.ValidateTypeAsync(eventType, "event_types", client);
+            if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+
             var dateRequest = AgentDateParser.ToDateRequestOrNull(date, dateComponentOrder);
 
             var request = new CreateEventRequest
@@ -141,6 +144,12 @@ public static class EventTools
     {
         try
         {
+            if (eventType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(eventType, "event_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>($"/api/events/{handle}");
             if (evt is null)
                 return $"Event not found: {handle}";

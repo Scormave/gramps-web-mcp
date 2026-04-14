@@ -61,6 +61,9 @@ public static class NoteTools
             if (string.IsNullOrWhiteSpace(text))
                 throw McpToolErrors.ValidationError("Error: text is required");
 
+            var typeError = await TypeCache.ValidateTypeAsync(noteType, "note_types", client);
+            if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+
             var formatCode = NoteTextFormatParser.ParseRequired(format);
 
             var request = new CreateNoteRequest
@@ -110,6 +113,12 @@ public static class NoteTools
     {
         try
         {
+            if (noteType != null)
+            {
+                var typeError = await TypeCache.ValidateTypeAsync(noteType, "note_types", client);
+                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            }
+
             var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>($"/api/notes/{handle}");
             if (note == null)
                 return $"Note not found: {handle}";
