@@ -78,8 +78,6 @@ Create a new person.  Returns handle and Gramps ID.
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `primaryName` | `FlexibleGrampsName?` | yes | — | Primary name (JSON or shorthand) |
-| `primaryNameDate` | `string?` | no | — | Name date override |
-| `primaryNameDateOrder` | `DateComponentOrder` | no | `Iso` | Ambiguous date parse order |
 | `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
 | `alternateNames` | `FlexibleAlternateNameList?` | no | — | Alternate names |
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
@@ -524,7 +522,7 @@ learn valid values.  Type strings are also validated server-side by
 | Discovery tool | When useful |
 |----------------|-------------|
 | `get_types` | Before setting any type/role/origin string (server validates, but calling first avoids round-trip errors) |
-| `get_input_guide` | Before any `date`, `primaryNameDate`, `Flexible*`, or structured name parameter (covers dates, structured fields, and name schema) |
+| `get_input_guide` | Before any `date`, `Flexible*`, or structured name parameter (covers dates, structured fields, and name schema) |
 
 ## Delete safety
 

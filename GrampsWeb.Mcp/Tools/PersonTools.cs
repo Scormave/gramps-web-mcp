@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
-using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
@@ -208,10 +207,6 @@ public static class PersonTools
     public static async Task<string> CreatePerson(
         [Description(FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName,
-        [Description("Optional primary name date; overrides any date inside primaryName. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        string? primaryNameDate = null,
-        [Description("Interpretation order for ambiguous numeric dates (slash/dot). " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
         [Description("Gender: Female, Male, or Unknown (default Unknown).")]
         string gender = "Unknown",
         [Description(FlexibleAlternateNameList.DescriptionHint)]
@@ -266,7 +261,7 @@ public static class PersonTools
             var request = new CreatePersonRequest
             {
                 Gender = genderCode,
-                PrimaryName = ConvertNameToRequest(primary, primaryNameDate, primaryNameDateOrder),
+                PrimaryName = ConvertNameToRequest(primary),
                 AlternateNames = (GrampsName[]?)alternateNames is { Length: > 0 } alts
                     ? alts.Select(an => ConvertNameToRequest(an)).ToArray()
                     : null,
@@ -301,17 +296,12 @@ public static class PersonTools
         "Update an existing person (write). Only include arguments you want to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
         "Replacing eventRefs replaces the full event list. " +
-        "If primaryName is omitted, primaryNameDate can still update the stored primary name date (requires an existing primary name). " +
         ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdatePerson(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Replace primary name. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName = null,
-        [Description("Name date text. With primaryName: overrides that name's date. Without primaryName: updates existing primary name date only. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        string? primaryNameDate = null,
-        [Description("Ambiguous numeric date order. " + ToolDescriptionFragments.CallGetDateInputGuide)]
-        DateComponentOrder primaryNameDateOrder = DateComponentOrder.Iso,
         [Description("Gender: Female, Male, or Unknown. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? gender = null,
         [Description("Replace all alternate names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAlternateNameList.DescriptionHint)]
@@ -349,18 +339,9 @@ public static class PersonTools
             if (person == null)
                 return NotFoundHelper.NotFoundMessage("Person", handle);
 
-            GrampsNameRequest? primaryReq;
-            if (primaryName?.Name != null)
-                primaryReq = ConvertNameToRequest(primaryName.Name, primaryNameDate, primaryNameDateOrder);
-            else if (primaryNameDate != null)
-            {
-                if (person.PrimaryName == null)
-                    throw McpToolErrors.ValidationError(
-                        "primaryNameDate requires an existing primary name on the person, or pass primaryName.");
-                primaryReq = ConvertNameToRequest(person.PrimaryName, primaryNameDate, primaryNameDateOrder);
-            }
-            else
-                primaryReq = person.PrimaryName != null ? ConvertNameToRequest(person.PrimaryName) : null;
+            var primaryReq = primaryName?.Name != null
+                ? ConvertNameToRequest(primaryName.Name)
+                : person.PrimaryName != null ? ConvertNameToRequest(person.PrimaryName) : null;
 
             // Build update request with provided fields or existing values
             var updateRequest = new CreatePersonRequest
@@ -478,14 +459,9 @@ public static class PersonTools
         return $"{y}/{m}/{d}";
     }
 
-    private static GrampsNameRequest ConvertNameToRequest(
-        GrampsName name,
-        string? dateOverride = null,
-        DateComponentOrder dateOrder = DateComponentOrder.Iso)
+    private static GrampsNameRequest ConvertNameToRequest(GrampsName name)
     {
-        var dateReq = dateOverride != null
-            ? AgentDateParser.ToDateRequestOrNull(dateOverride, dateOrder)
-            : GrampsRequestMapping.ToDateRequestOrNull(name.Date);
+        var dateReq = GrampsRequestMapping.ToDateRequestOrNull(name.Date);
 
         return new GrampsNameRequest
         {
