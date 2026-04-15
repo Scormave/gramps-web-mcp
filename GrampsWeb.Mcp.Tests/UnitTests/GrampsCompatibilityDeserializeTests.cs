@@ -80,8 +80,9 @@ public class GrampsCompatibilityDeserializeTests
         var hit = JsonSerializer.Deserialize<GrampsSearchHit>(Fixture("search_hit_score.json"), GrampsJson.Options);
         Assert.NotNull(hit);
         Assert.Equal("abc123", hit!.Handle);
-        Assert.True(Math.Abs(hit.Score - 5.522300827719273) < 1e-9);
-        Assert.Equal(0, hit.Rank);
+        Assert.NotNull(hit.Score);
+        Assert.True(Math.Abs(hit.Score.Value - 5.522300827719273) < 1e-9);
+        Assert.Null(hit.Rank);
     }
 
     [Fact]
