@@ -40,31 +40,11 @@ public sealed class GrampsResources
     {
         try
         {
-            var defaultRoot = await client.GetAsync<JsonElement>("/api/types/default/");
-            var types = TypesPayloadParser.ParseCategories(defaultRoot);
-
-            var customRoot = await client.GetAsync<JsonElement>("/api/types/custom/");
-            var customTypes = TypesPayloadParser.ParseCategories(customRoot);
-
-            foreach (var kvp in customTypes)
-            {
-                if (types.TryGetValue(kvp.Key, out var existing))
-                {
-                    var merged = existing.ToList();
-                    merged.AddRange(kvp.Value);
-                    types[kvp.Key] = merged;
-                }
-                else
-                {
-                    types[kvp.Key] = kvp.Value.ToList();
-                }
-            }
-
             return new TextResourceContents
             {
                 Uri = "gramps://types",
                 MimeType = "text/plain",
-                Text = TypesFormatter.FormatTypesResponse(types)
+                Text = await FetchTypesTextAsync(client)
             };
         }
         catch (Exception ex)
@@ -82,33 +62,11 @@ public sealed class GrampsResources
     {
         try
         {
-            var metadata = await client.GetAsync<JsonElement>("/api/metadata/");
-            string? defaultPersonFullName = null;
-            if (metadata.TryGetProperty("default_person", out var defaultPersonEl)
-                && defaultPersonEl.ValueKind == JsonValueKind.String)
-            {
-                var handle = defaultPersonEl.GetString();
-                if (!string.IsNullOrEmpty(handle))
-                {
-                    try
-                    {
-                        var person = await client.GetAsync<GrampsPerson>(
-                            $"/api/people/{Uri.EscapeDataString(handle)}");
-                        if (person.PrimaryName != null)
-                            defaultPersonFullName = GrampsValueFormatter.FormatName(person.PrimaryName);
-                    }
-                    catch
-                    {
-                        // Keep handle-only output if the person cannot be loaded.
-                    }
-                }
-            }
-
             return new TextResourceContents
             {
                 Uri = "gramps://metadata",
                 MimeType = "text/plain",
-                Text = SystemFormatter.FormatMetadata(metadata, defaultPersonFullName)
+                Text = await FetchMetadataTextAsync(client)
             };
         }
         catch (Exception ex)
@@ -126,14 +84,11 @@ public sealed class GrampsResources
     {
         try
         {
-            var formats = await client.GetAsync<dynamic>("/api/name-formats/");
-            var groups = await client.GetAsync<dynamic>("/api/name-groups/");
             return new TextResourceContents
             {
                 Uri = "gramps://name-settings",
                 MimeType = "text/plain",
-                Text = $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
-                       $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}"
+                Text = await FetchNameSettingsTextAsync(client)
             };
         }
         catch (Exception ex)
@@ -142,7 +97,67 @@ public sealed class GrampsResources
         }
     }
 
-    private static string BuildInputGuideText()
+    internal static async Task<string> FetchTypesTextAsync(GrampsApiClient client)
+    {
+        var defaultRoot = await client.GetAsync<JsonElement>("/api/types/default/");
+        var types = TypesPayloadParser.ParseCategories(defaultRoot);
+
+        var customRoot = await client.GetAsync<JsonElement>("/api/types/custom/");
+        var customTypes = TypesPayloadParser.ParseCategories(customRoot);
+
+        foreach (var kvp in customTypes)
+        {
+            if (types.TryGetValue(kvp.Key, out var existing))
+            {
+                var merged = existing.ToList();
+                merged.AddRange(kvp.Value);
+                types[kvp.Key] = merged;
+            }
+            else
+            {
+                types[kvp.Key] = kvp.Value.ToList();
+            }
+        }
+
+        return TypesFormatter.FormatTypesResponse(types);
+    }
+
+    internal static async Task<string> FetchMetadataTextAsync(GrampsApiClient client)
+    {
+        var metadata = await client.GetAsync<JsonElement>("/api/metadata/");
+        string? defaultPersonFullName = null;
+        if (metadata.TryGetProperty("default_person", out var defaultPersonEl)
+            && defaultPersonEl.ValueKind == JsonValueKind.String)
+        {
+            var handle = defaultPersonEl.GetString();
+            if (!string.IsNullOrEmpty(handle))
+            {
+                try
+                {
+                    var person = await client.GetAsync<GrampsPerson>(
+                        $"/api/people/{Uri.EscapeDataString(handle)}");
+                    if (person.PrimaryName != null)
+                        defaultPersonFullName = GrampsValueFormatter.FormatName(person.PrimaryName);
+                }
+                catch
+                {
+                    // Keep handle-only output if the person cannot be loaded.
+                }
+            }
+        }
+
+        return SystemFormatter.FormatMetadata(metadata, defaultPersonFullName);
+    }
+
+    internal static async Task<string> FetchNameSettingsTextAsync(GrampsApiClient client)
+    {
+        var formats = await client.GetAsync<dynamic>("/api/name-formats/");
+        var groups = await client.GetAsync<dynamic>("/api/name-groups/");
+        return $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
+               $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}";
+    }
+
+    internal static string BuildInputGuideText()
     {
         var guide = new
         {
@@ -153,7 +168,7 @@ public sealed class GrampsResources
         return JsonSerializer.Serialize(guide, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    private static object BuildStructuredFieldInputGuidePayload() => new
+    internal static object BuildStructuredFieldInputGuidePayload() => new
     {
         overview =
             "Create/update tools accept either JSON arrays of Gramps-shaped objects or simpler strings. " +
@@ -232,7 +247,7 @@ public sealed class GrampsResources
         }
     };
 
-    private static object BuildDateInputGuidePayload() => new
+    internal static object BuildDateInputGuidePayload() => new
     {
         overview =
             "MCP tools take human-readable date strings. The server still receives Gramps Date JSON with dateval; the MCP layer parses your string.",
@@ -268,7 +283,7 @@ public sealed class GrampsResources
             "Strings that do not match structured patterns are stored as Gramps text-only dates (modifier 6)."
     };
 
-    private static object BuildNameSchemaPayload() => new
+    internal static object BuildNameSchemaPayload() => new
     {
         name_object = new
         {

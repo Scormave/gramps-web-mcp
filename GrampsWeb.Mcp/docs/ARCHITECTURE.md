@@ -29,6 +29,7 @@ gramps-web-mcp.sln
 │   ├── Input/              — Flexible* types (agent-friendly deserialization)
 │   ├── Models/             — Gramps entity DTOs
 │   ├── Requests/           — create/update request DTOs
+│   ├── Resources/          — MCP resources (gramps://* reference data)
 │   ├── Serialization/      — JSON converters, wire-format adapters
 │   ├── Tools/              — MCP tool implementations (one file per domain)
 │   │   └── Parsing/        — small parsers (gender, confidence, note format)
@@ -95,7 +96,7 @@ All configuration is loaded from **environment variables** (no appsettings files
 
 Each file exposes a set of `[McpServerTool]` static methods grouped by Gramps
 entity type (Person, Family, Event, Place, Source, Citation, Note, Media, Tag,
-Repository) plus cross-cutting tools (Search, System, Type, Name) and
+Repository) plus cross-cutting tools (Search, System, Reference) and
 multi-step convenience tools (Composite).
 
 Tools are the **public API surface** of the MCP server.  They:
@@ -111,6 +112,17 @@ Tools are the **public API surface** of the MCP server.  They:
 a single tool invocation.
 
 The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`.
+
+### 1b. Resources (`Resources/`)
+
+`GrampsResources.cs` exposes read-only reference payloads as MCP resources:
+`gramps://input-guide`, `gramps://types`, `gramps://metadata`,
+`gramps://name-settings`.
+
+For clients that cannot call MCP `resources/read`, the same payloads are also
+available through compatibility tools in `ReferenceTools.cs`.
+
+The MCP SDK discovers resources at startup via `WithResources<GrampsResources>()`.
 
 ### 2. Client (`Client/`)
 

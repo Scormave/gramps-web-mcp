@@ -171,7 +171,8 @@ When you want agents to pass data in free-form text as well as structured JSON:
    string, array, or object input into the target type.
 3. Use `Flexible{Thing}` as the parameter type in tool methods.
 4. Add unit tests in `Tests/UnitTests/Flexible{Thing}Tests.cs`.
-5. Update the `get_structured_field_input_guide` output in `TypeTools.cs`.
+5. Update the structured field guidance payload in `Resources/GrampsResources.cs`
+   and keep `Tools/ReferenceTools.cs` compatibility output aligned.
 
 ---
 

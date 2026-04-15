@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 51 MCP tools exposed by the server.
+Complete catalog of the 55 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -25,6 +25,30 @@ Read-only reference/discovery data exposed as MCP resources:
 | `gramps://types` | Built-in and custom type vocabularies (event/place/note/etc.) |
 | `gramps://metadata` | Connection/tree metadata (API version, tree id/name, owner, default person) |
 | `gramps://name-settings` | Name display formats and surname grouping rules |
+
+Compatibility note: the same payloads are also available as tools for clients
+without native MCP resource reading support:
+`get_input_guide`, `get_types`, `get_metadata`, `get_name_settings`.
+
+## Reference (`ReferenceTools.cs`) — 4 tools
+
+### R — `GetInputGuide`
+Read-only compatibility mirror of `gramps://input-guide` resource.
+Returns complete write-input guide: date strings, structured fields, and full
+name schema.
+
+### R — `GetTypes`
+Read-only compatibility mirror of `gramps://types` resource.
+Returns built-in and custom type vocabularies used for server-side validation.
+
+### R — `GetMetadata`
+Read-only compatibility mirror of `gramps://metadata` resource.
+Returns connection/tree metadata (API version, tree id/name, owner,
+default person).
+
+### R — `GetNameSettings`
+Read-only compatibility mirror of `gramps://name-settings` resource.
+Returns name display formats and surname grouping rules.
 
 ## Prompts
 
