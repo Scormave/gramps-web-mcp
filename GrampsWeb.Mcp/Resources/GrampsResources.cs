@@ -5,6 +5,7 @@ using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Serialization;
 using GrampsWeb.Mcp.Tools;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Resources;
@@ -20,9 +21,14 @@ public sealed class GrampsResources
         UriTemplate = "gramps://input-guide",
         MimeType = "application/json")]
     [Description("Complete write-input reference: date formats, structured fields, and full Name schema.")]
-    public static string GetInputGuide()
+    public static Task<TextResourceContents> GetInputGuide()
     {
-        return BuildInputGuideText();
+        return Task.FromResult(new TextResourceContents
+        {
+            Uri = "gramps://input-guide",
+            MimeType = "application/json",
+            Text = BuildInputGuideText()
+        });
     }
 
     [McpServerResource(
@@ -30,7 +36,7 @@ public sealed class GrampsResources
         UriTemplate = "gramps://types",
         MimeType = "text/plain")]
     [Description("Read-only type vocabularies (built-in + custom) for validating type/role/origin strings.")]
-    public static async Task<string> GetTypes(GrampsApiClient client)
+    public static async Task<TextResourceContents> GetTypes(GrampsApiClient client)
     {
         try
         {
@@ -54,7 +60,12 @@ public sealed class GrampsResources
                 }
             }
 
-            return TypesFormatter.FormatTypesResponse(types);
+            return new TextResourceContents
+            {
+                Uri = "gramps://types",
+                MimeType = "text/plain",
+                Text = TypesFormatter.FormatTypesResponse(types)
+            };
         }
         catch (Exception ex)
         {
@@ -67,7 +78,7 @@ public sealed class GrampsResources
         UriTemplate = "gramps://metadata",
         MimeType = "text/plain")]
     [Description("Connection and tree metadata (API version, tree id/name, owner, default person, etc.).")]
-    public static async Task<string> GetMetadata(GrampsApiClient client)
+    public static async Task<TextResourceContents> GetMetadata(GrampsApiClient client)
     {
         try
         {
@@ -93,7 +104,12 @@ public sealed class GrampsResources
                 }
             }
 
-            return SystemFormatter.FormatMetadata(metadata, defaultPersonFullName);
+            return new TextResourceContents
+            {
+                Uri = "gramps://metadata",
+                MimeType = "text/plain",
+                Text = SystemFormatter.FormatMetadata(metadata, defaultPersonFullName)
+            };
         }
         catch (Exception ex)
         {
@@ -106,14 +122,19 @@ public sealed class GrampsResources
         UriTemplate = "gramps://name-settings",
         MimeType = "text/plain")]
     [Description("Name display format definitions and surname grouping rules configured in this tree.")]
-    public static async Task<string> GetNameSettings(GrampsApiClient client)
+    public static async Task<TextResourceContents> GetNameSettings(GrampsApiClient client)
     {
         try
         {
             var formats = await client.GetAsync<dynamic>("/api/name-formats/");
             var groups = await client.GetAsync<dynamic>("/api/name-groups/");
-            return $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
-                   $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}";
+            return new TextResourceContents
+            {
+                Uri = "gramps://name-settings",
+                MimeType = "text/plain",
+                Text = $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
+                       $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}"
+            };
         }
         catch (Exception ex)
         {
