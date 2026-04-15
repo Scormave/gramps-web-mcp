@@ -21,8 +21,6 @@ on:
     branches:
       - main
       - master
-    tags:
-      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -65,16 +63,6 @@ jobs:
           IMAGE: ${{ steps.image.outputs.name }}
         run: |
           set -euo pipefail
-          SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
-          docker tag "$IMAGE:build" "$IMAGE:sha-$SHORT_SHA"
-          docker push "$IMAGE:sha-$SHORT_SHA"
-          case "$GITHUB_REF" in
-            refs/tags/*)
-              TAG="${GITHUB_REF#refs/tags/}"
-              docker tag "$IMAGE:build" "$IMAGE:$TAG"
-              docker push "$IMAGE:$TAG"
-              ;;
-          esac
           case "$GITHUB_REF" in
             refs/heads/main|refs/heads/master)
               docker tag "$IMAGE:build" "$IMAGE:latest"
