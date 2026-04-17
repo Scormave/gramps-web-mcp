@@ -63,9 +63,9 @@ public static class TagTools
                 Priority = priority
             };
 
-            var response = await client.PostMutationAsync<GrampsTag>("/api/tags/", request, "Tag");
-            return ResponseEnvelope.CreateSuccess("Tag", response.Handle, response.GrampsId,
-                response.Name, ResponseEnvelope.TagCreateNextSteps(response.Handle!));
+            var (handle, grampsId) = await client.PostMutationAsync("/api/tags/", request, "Tag");
+            return ResponseEnvelope.CreateSuccess("Tag", handle, grampsId,
+                name, ResponseEnvelope.TagCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {

@@ -266,11 +266,11 @@ public static class PersonTools
                 Private = isPrivate
             };
 
-            var response = await client.PostMutationAsync<GrampsPerson>("/api/people/", request, "Person");
+            var (handle, grampsId) = await client.PostMutationAsync("/api/people/", request, "Person");
             return ResponseEnvelope.CreateSuccess(
-                "Person", response.Handle, response.GrampsId,
+                "Person", handle, grampsId,
                 GrampsValueFormatter.FormatName(primary),
-                ResponseEnvelope.PersonCreateNextSteps(response.Handle!));
+                ResponseEnvelope.PersonCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {
@@ -361,8 +361,8 @@ public static class PersonTools
                 Private = isPrivate ?? person.Private
             };
 
-            var response = await client.PutMutationAsync<GrampsPerson>($"/api/people/{handle}", updateRequest, "Person");
-            return ResponseEnvelope.UpdateSuccess("Person", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/people/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Person", person.Handle, person.GrampsId);
         }
         catch (Exception ex)
         {

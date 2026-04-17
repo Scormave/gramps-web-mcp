@@ -114,6 +114,62 @@ internal static class GrampsMutationParser
         return entity;
     }
 
+    /// <summary>
+    /// Minimal extraction: returns handle and gramps_id from a Gramps mutation response without
+    /// fully deserializing the entity. Returns (null, null) on any parse failure — callers should
+    /// treat nulls as "created/updated successfully but handle unknown".
+    /// </summary>
+    public static (string? Handle, string? GrampsId) ExtractHandleAndId(string json, string grampsClass)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            JsonElement? entityEl = root.ValueKind switch
+            {
+                JsonValueKind.Array => FindNewInArray(root, grampsClass),
+                JsonValueKind.Object => FindNewInObject(root),
+                _ => null
+            };
+
+            if (entityEl is not { } el)
+                return (null, null);
+
+            string? handle = el.TryGetProperty("handle", out var h) && h.ValueKind == JsonValueKind.String
+                ? h.GetString() : null;
+            string? grampsId = el.TryGetProperty("gramps_id", out var gid) && gid.ValueKind == JsonValueKind.String
+                ? gid.GetString() : null;
+
+            return (handle, grampsId);
+        }
+        catch
+        {
+            return (null, null);
+        }
+    }
+
+    private static JsonElement? FindNewInArray(JsonElement array, string grampsClass)
+    {
+        foreach (var item in array.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+                continue;
+            if (!item.TryGetProperty("_class", out var cls) || cls.GetString() != grampsClass)
+                continue;
+            if (item.TryGetProperty("new", out var newEl) && newEl.ValueKind == JsonValueKind.Object)
+                return newEl;
+        }
+        return null;
+    }
+
+    private static JsonElement? FindNewInObject(JsonElement obj)
+    {
+        if (obj.TryGetProperty("new", out var newEl) && newEl.ValueKind == JsonValueKind.Object)
+            return newEl;
+        return obj.ValueKind == JsonValueKind.Object ? obj : null;
+    }
+
     private static string Truncate(string s, int max = 120) =>
         s.Length <= max ? s : s[..max] + "...";
 }

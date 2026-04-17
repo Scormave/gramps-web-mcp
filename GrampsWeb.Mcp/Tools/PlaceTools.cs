@@ -150,11 +150,11 @@ public static class PlaceTools
                 PlaceRefList = placeRefList
             };
 
-            var response = await client.PostMutationAsync<GrampsPlace>("/api/places/", request, "Place");
-            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, response.Type);
+            var (handle, grampsId) = await client.PostMutationAsync("/api/places/", request, "Place");
+            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, placeType);
             return ResponseEnvelope.CreateSuccess(
-                "Place", response.Handle, response.GrampsId,
-                typeLabel, ResponseEnvelope.PlaceCreateNextSteps(response.Handle!));
+                "Place", handle, grampsId,
+                typeLabel, ResponseEnvelope.PlaceCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {
@@ -230,8 +230,8 @@ public static class PlaceTools
                 Private = isPrivate ?? place.Private
             };
 
-            var response = await client.PutMutationAsync<GrampsPlace>($"/api/places/{handle}", updateRequest, "Place");
-            return ResponseEnvelope.UpdateSuccess("Place", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/places/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Place", place.Handle, place.GrampsId);
         }
         catch (Exception ex)
         {

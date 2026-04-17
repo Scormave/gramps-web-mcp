@@ -92,9 +92,9 @@ public static class CitationTools
                 Private = isPrivate
             };
 
-            var response = await client.PostMutationAsync<GrampsCitation>("/api/citations/", request, "Citation");
-            return ResponseEnvelope.CreateSuccess("Citation", response.Handle, response.GrampsId,
-                response.Page, ResponseEnvelope.CitationCreateNextSteps(response.Handle!));
+            var (handle, grampsId) = await client.PostMutationAsync("/api/citations/", request, "Citation");
+            return ResponseEnvelope.CreateSuccess("Citation", handle, grampsId,
+                page, ResponseEnvelope.CitationCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {
@@ -167,8 +167,8 @@ public static class CitationTools
                 Private = isPrivate ?? citation.Private
             };
 
-            var response = await client.PutMutationAsync<GrampsCitation>($"/api/citations/{handle}", updateRequest, "Citation");
-            return ResponseEnvelope.UpdateSuccess("Citation", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/citations/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Citation", citation.Handle, citation.GrampsId);
         }
         catch (Exception ex)
         {

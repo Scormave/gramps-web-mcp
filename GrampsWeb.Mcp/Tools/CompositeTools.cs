@@ -118,22 +118,22 @@ public static class CompositeTools
             // Create events
             var eventHandles = new List<string>();
 
-            GrampsEvent? birthEvent = null;
+            (string? Handle, string? GrampsId)? birthEvent = null;
             if (birthDate != null || birthPlaceResult != null)
             {
                 birthEvent = await CreateEventAsync(
                     "Birth", birthDate, birthPlaceResult?.Handle, client);
-                eventHandles.Add(birthEvent.Handle!);
-                createdObjects.Add($"Event (Birth): {birthEvent.GrampsId} (handle: {birthEvent.Handle})");
+                if (birthEvent.Value.Handle != null) eventHandles.Add(birthEvent.Value.Handle);
+                createdObjects.Add($"Event (Birth): {birthEvent.Value.GrampsId} (handle: {birthEvent.Value.Handle})");
             }
 
-            GrampsEvent? deathEvent = null;
+            (string? Handle, string? GrampsId)? deathEvent = null;
             if (deathDate != null || deathPlaceResult != null)
             {
                 deathEvent = await CreateEventAsync(
                     "Death", deathDate, deathPlaceResult?.Handle, client);
-                eventHandles.Add(deathEvent.Handle!);
-                createdObjects.Add($"Event (Death): {deathEvent.GrampsId} (handle: {deathEvent.Handle})");
+                if (deathEvent.Value.Handle != null) eventHandles.Add(deathEvent.Value.Handle);
+                createdObjects.Add($"Event (Death): {deathEvent.Value.GrampsId} (handle: {deathEvent.Value.Handle})");
             }
 
             // Build event ref list
@@ -161,8 +161,8 @@ public static class CompositeTools
                 EventRefList = eventRefList
             };
 
-            var person = await client.PostMutationAsync<GrampsPerson>("/api/people/", personRequest, "Person");
-            createdObjects.Insert(0, $"Person: {person.GrampsId} (handle: {person.Handle})");
+            var (personHandle, personGrampsId) = await client.PostMutationAsync("/api/people/", personRequest, "Person");
+            createdObjects.Insert(0, $"Person: {personGrampsId} (handle: {personHandle})");
 
             // Build output
             var displayName = GrampsValueFormatter.FormatName(parsedName);
@@ -174,8 +174,8 @@ public static class CompositeTools
             summary.AppendLine("---");
             summary.AppendLine("type: Person");
             summary.AppendLine("action: created");
-            summary.AppendLine($"handle: {person.Handle}");
-            summary.AppendLine($"gramps_id: {person.GrampsId}");
+            summary.AppendLine($"handle: {personHandle}");
+            summary.AppendLine($"gramps_id: {personGrampsId}");
             summary.AppendLine($"name: {displayName}");
             summary.AppendLine($"gender: {genderLabel}");
             summary.AppendLine("---");
@@ -191,7 +191,7 @@ public static class CompositeTools
                     summary.AppendLine($"  • {obj}");
             }
 
-            var nextSteps = ResponseEnvelope.PersonCreateNextSteps(person.Handle!);
+            var nextSteps = ResponseEnvelope.PersonCreateNextSteps(personHandle!);
             summary.AppendLine();
             summary.AppendLine("Next steps:");
             foreach (var step in nextSteps)
@@ -283,15 +283,15 @@ public static class CompositeTools
                 Description = description
             };
 
-            var newEvent = await client.PostMutationAsync<GrampsEvent>("/api/events/", eventRequest, "Event");
-            createdObjects.Add($"Event ({eventType}): {newEvent.GrampsId} (handle: {newEvent.Handle})");
+            var (eventHandle, eventGrampsId) = await client.PostMutationAsync("/api/events/", eventRequest, "Event");
+            createdObjects.Add($"Event ({eventType}): {eventGrampsId} (handle: {eventHandle})");
 
             // Build updated event ref list by appending new event
             var existingRefs = GrampsRequestMapping.ToEventRefRequests(person.EventRefList)
                                ?? Array.Empty<EventRefRequest>();
             var updatedRefs = existingRefs.Append(new EventRefRequest
             {
-                Ref = newEvent.Handle,
+                Ref = eventHandle,
                 Role = role
             }).ToArray();
 
@@ -319,22 +319,22 @@ public static class CompositeTools
                 Private = person.Private
             };
 
-            await client.PutMutationAsync<GrampsPerson>(
-                $"/api/people/{Uri.EscapeDataString(person.Handle!)}", updateRequest, "Person");
+            await client.PutMutationAsync(
+                $"/api/people/{Uri.EscapeDataString(person.Handle!)}", updateRequest);
 
             // Build output
             var personName = person.PrimaryName != null
                 ? GrampsValueFormatter.FormatName(person.PrimaryName)
                 : "Unknown";
-            var dateStr = newEvent.Date != null ? GrampsValueFormatter.FormatDate(newEvent.Date) : "\u2014";
+            var dateStr = date ?? "\u2014";
             var placeStr = placeResult?.Name ?? "\u2014";
 
             var sb = new StringBuilder();
             sb.AppendLine("---");
             sb.AppendLine("type: Event");
             sb.AppendLine("action: created");
-            sb.AppendLine($"handle: {newEvent.Handle}");
-            sb.AppendLine($"gramps_id: {newEvent.GrampsId}");
+            sb.AppendLine($"handle: {eventHandle}");
+            sb.AppendLine($"gramps_id: {eventGrampsId}");
             sb.AppendLine($"event_type: {eventType}");
             sb.AppendLine($"attached_to: {person.Handle} ({personName})");
             sb.AppendLine("---");
@@ -474,8 +474,8 @@ public static class CompositeTools
             Name = new PlaceNameRequest { Value = trimmed }
         };
 
-        var newPlace = await client.PostMutationAsync<GrampsPlace>("/api/places/", request, "Place");
-        return new PlaceResult(newPlace.Handle!, newPlace.GrampsId, newPlace.Name ?? trimmed, Existing: false);
+        var (placeHandle, placeGrampsId) = await client.PostMutationAsync("/api/places/", request, "Place");
+        return new PlaceResult(placeHandle!, placeGrampsId, trimmed, Existing: false);
     }
 
     private static string? ExtractPlaceName(JsonElement item)
@@ -495,7 +495,7 @@ public static class CompositeTools
         return null;
     }
 
-    private static async Task<GrampsEvent> CreateEventAsync(
+    private static async Task<(string? Handle, string? GrampsId)> CreateEventAsync(
         string eventType, string? dateText, string? placeHandle, GrampsApiClient client)
     {
         var dateRequest = AgentDateParser.ToDateRequestOrNull(dateText, DateComponentOrder.Iso);
@@ -506,19 +506,17 @@ public static class CompositeTools
             Place = placeHandle
         };
 
-        return await client.PostMutationAsync<GrampsEvent>("/api/events/", request, "Event");
+        return await client.PostMutationAsync("/api/events/", request, "Event");
     }
 
     private static string FormatVitalLine(
-        string? dateText, PlaceResult? placeResult, GrampsEvent? evt)
+        string? dateText, PlaceResult? placeResult, (string? Handle, string? GrampsId)? evt)
     {
         if (dateText == null && placeResult == null && evt == null)
             return "\u2014";
 
         var parts = new List<string>();
-        if (evt?.Date != null)
-            parts.Add(GrampsValueFormatter.FormatDate(evt.Date));
-        else if (dateText != null)
+        if (dateText != null)
             parts.Add(dateText);
 
         if (placeResult != null)
@@ -526,8 +524,8 @@ public static class CompositeTools
 
         var line = parts.Count > 0 ? string.Join(", ", parts) : "\u2014";
 
-        if (evt != null)
-            line += $" [event: {evt.Handle}]";
+        if (evt?.Handle != null)
+            line += $" [event: {evt.Value.Handle}]";
 
         return line;
     }

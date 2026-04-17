@@ -75,13 +75,13 @@ public static class NoteTools
                 Private = isPrivate
             };
 
-            var response = await client.PostMutationAsync<GrampsNote>("/api/notes/", request, "Note");
-            var typeLabel = string.IsNullOrWhiteSpace(response.Type)
+            var (handle, grampsId) = await client.PostMutationAsync("/api/notes/", request, "Note");
+            var typeLabel = string.IsNullOrWhiteSpace(noteType)
                 ? "General"
-                : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, response.Type);
+                : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, noteType);
             return ResponseEnvelope.CreateSuccess(
-                "Note", response.Handle, response.GrampsId,
-                typeLabel, ResponseEnvelope.NoteCreateNextSteps(response.Handle!));
+                "Note", handle, grampsId,
+                typeLabel, ResponseEnvelope.NoteCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {
@@ -138,8 +138,8 @@ public static class NoteTools
                 Private = isPrivate ?? note.Private
             };
 
-            var response = await client.PutMutationAsync<GrampsNote>($"/api/notes/{handle}", updateRequest, "Note");
-            return ResponseEnvelope.UpdateSuccess("Note", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/notes/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Note", note.Handle, note.GrampsId);
         }
         catch (Exception ex)
         {

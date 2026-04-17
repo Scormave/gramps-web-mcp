@@ -145,13 +145,13 @@ public static class FamilyTools
                 Relationship = relationshipType
             };
 
-            var response = await client.PostMutationAsync<GrampsFamily>("/api/families/", request, "Family");
-            var relLabel = string.IsNullOrWhiteSpace(response.Relationship)
+            var (handle, grampsId) = await client.PostMutationAsync("/api/families/", request, "Family");
+            var relLabel = string.IsNullOrWhiteSpace(relationshipType)
                 ? "Unknown"
-                : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, response.Relationship);
+                : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, relationshipType);
             return ResponseEnvelope.CreateSuccess(
-                "Family", response.Handle, response.GrampsId,
-                relLabel, ResponseEnvelope.FamilyCreateNextSteps(response.Handle!));
+                "Family", handle, grampsId,
+                relLabel, ResponseEnvelope.FamilyCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {
@@ -227,8 +227,8 @@ public static class FamilyTools
                 Relationship = relationshipType ?? family.Relationship
             };
 
-            var response = await client.PutMutationAsync<GrampsFamily>($"/api/families/{handle}", updateRequest, "Family");
-            return ResponseEnvelope.UpdateSuccess("Family", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/families/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Family", family.Handle, family.GrampsId);
         }
         catch (Exception ex)
         {

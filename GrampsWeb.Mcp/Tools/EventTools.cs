@@ -93,11 +93,11 @@ public static class EventTools
                 Private = isPrivate
             };
 
-            var response = await client.PostMutationAsync<GrampsEvent>("/api/events/", request, "Event");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, response.Type);
+            var (handle, grampsId) = await client.PostMutationAsync("/api/events/", request, "Event");
+            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, eventType);
             return ResponseEnvelope.CreateSuccess(
-                "Event", response.Handle, response.GrampsId,
-                typeLabel, ResponseEnvelope.EventCreateNextSteps(response.Handle!));
+                "Event", handle, grampsId,
+                typeLabel, ResponseEnvelope.EventCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {
@@ -171,8 +171,8 @@ public static class EventTools
                 Private = isPrivate ?? evt.Private
             };
 
-            var response = await client.PutMutationAsync<GrampsEvent>($"/api/events/{handle}", updateRequest, "Event");
-            return ResponseEnvelope.UpdateSuccess("Event", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/events/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Event", evt.Handle, evt.GrampsId);
         }
         catch (Exception ex)
         {

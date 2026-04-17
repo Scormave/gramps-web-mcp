@@ -292,13 +292,13 @@ public class GrampsApiClient
     }
 
     /// <summary>
-    /// POST to create an object. Deserializes Gramps mutation-array responses
-    /// (<c>[{ "new": { ... } }]</c>) or a bare entity JSON body.
+    /// POST to create an object. Returns the <c>handle</c> and <c>gramps_id</c> extracted from the
+    /// Gramps mutation-array response (<c>[{"_class":"X","new":{...}}]</c>) or bare entity JSON.
+    /// Either value may be null if the API response format is unexpected — callers should treat that
+    /// as "created successfully but handle unknown".
     /// </summary>
-    /// <param name="grampsClass">
-    /// When the response is a change array with multiple <c>_class</c> values, pass the expected one (e.g. <c>"Note"</c>).
-    /// </param>
-    public async Task<T> PostMutationAsync<T>(string path, object body, string? grampsClass = null)
+    public async Task<(string? Handle, string? GrampsId)> PostMutationAsync(
+        string path, object body, string grampsClass)
     {
         await EnsureAuthenticatedAsync();
 
@@ -314,11 +314,9 @@ public class GrampsApiClient
             var responseBody = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-            {
                 throw new GrampsApiException(response.StatusCode, responseBody);
-            }
 
-            return GrampsMutationParser.ExtractNewObject<T>(responseBody, grampsClass);
+            return GrampsMutationParser.ExtractHandleAndId(responseBody, grampsClass);
         }
         catch (HttpRequestException ex)
         {
@@ -327,13 +325,10 @@ public class GrampsApiClient
     }
 
     /// <summary>
-    /// PUT to update an object. Deserializes Gramps mutation-array responses or a bare entity JSON body.
+    /// PUT to update an object. Throws <see cref="GrampsApiException"/> on any non-success status;
+    /// on success returns without parsing the response body.
     /// </summary>
-    /// <remarks>
-    /// When the API returns <c>old</c> and <c>new</c>, only <c>new</c> is deserialized and returned (for MCP success text).
-    /// </remarks>
-    /// <inheritdoc cref="PostMutationAsync{T}(string, object, string?)"/>
-    public async Task<T> PutMutationAsync<T>(string path, object body, string? grampsClass = null)
+    public async Task PutMutationAsync(string path, object body)
     {
         await EnsureAuthenticatedAsync();
 
@@ -349,11 +344,7 @@ public class GrampsApiClient
             var responseBody = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
-            {
                 throw new GrampsApiException(response.StatusCode, responseBody);
-            }
-
-            return GrampsMutationParser.ExtractNewObject<T>(responseBody, grampsClass);
         }
         catch (HttpRequestException ex)
         {

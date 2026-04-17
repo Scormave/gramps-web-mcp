@@ -80,11 +80,11 @@ public static class RepositoryTools
                 Private = isPrivate
             };
 
-            var response = await client.PostMutationAsync<GrampsRepository>("/api/repositories/", request, "Repository");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, response.Type);
+            var (handle, grampsId) = await client.PostMutationAsync("/api/repositories/", request, "Repository");
+            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, repoType);
             return ResponseEnvelope.CreateSuccess(
-                "Repository", response.Handle, response.GrampsId,
-                typeLabel, ResponseEnvelope.RepositoryCreateNextSteps(response.Handle!));
+                "Repository", handle, grampsId,
+                typeLabel, ResponseEnvelope.RepositoryCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {
@@ -144,8 +144,8 @@ public static class RepositoryTools
                 Private = isPrivate ?? repo.Private
             };
 
-            var response = await client.PutMutationAsync<GrampsRepository>($"/api/repositories/{handle}", updateRequest, "Repository");
-            return ResponseEnvelope.UpdateSuccess("Repository", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/repositories/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Repository", repo.Handle, repo.GrampsId);
         }
         catch (Exception ex)
         {

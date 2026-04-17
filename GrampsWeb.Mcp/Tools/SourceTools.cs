@@ -90,9 +90,9 @@ public static class SourceTools
                 Private = isPrivate
             };
 
-            var response = await client.PostMutationAsync<GrampsSource>("/api/sources/", request, "Source");
-            return ResponseEnvelope.CreateSuccess("Source", response.Handle, response.GrampsId,
-                response.Title, ResponseEnvelope.SourceCreateNextSteps(response.Handle!));
+            var (handle, grampsId) = await client.PostMutationAsync("/api/sources/", request, "Source");
+            return ResponseEnvelope.CreateSuccess("Source", handle, grampsId,
+                title, ResponseEnvelope.SourceCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {
@@ -161,8 +161,8 @@ public static class SourceTools
                 Private = isPrivate ?? source.Private
             };
 
-            var response = await client.PutMutationAsync<GrampsSource>($"/api/sources/{handle}", updateRequest, "Source");
-            return ResponseEnvelope.UpdateSuccess("Source", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/sources/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Source", source.Handle, source.GrampsId);
         }
         catch (Exception ex)
         {

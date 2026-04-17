@@ -92,8 +92,8 @@ public static class MediaTools
                 Private = isPrivate ?? media.Private
             };
 
-            var response = await client.PutMutationAsync<GrampsMedia>($"/api/media/{handle}", updateRequest, "Media");
-            return ResponseEnvelope.UpdateSuccess("Media", response.Handle, response.GrampsId);
+            await client.PutMutationAsync($"/api/media/{handle}", updateRequest);
+            return ResponseEnvelope.UpdateSuccess("Media", media.Handle, media.GrampsId);
         }
         catch (Exception ex)
         {
