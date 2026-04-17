@@ -41,14 +41,13 @@ internal static class GrampsRequestMapping
             AttributeList = er.AttributeList
         }).ToArray();
 
-    public static FamilyRefRequest[]? ToFamilyRefRequests(GrampsFamilyRef[]? list) =>
-        list == null ? null : list.Select(fr => new FamilyRefRequest
-        {
-            Ref = fr.Ref,
-            Relationship = fr.Relationship,
-            FatherRelationship = fr.FatherRelationship,
-            MotherRelationship = fr.MotherRelationship
-        }).ToArray();
+    /// <summary>
+    /// Extracts plain handle strings from <see cref="GrampsFamilyRef"/> items for use in
+    /// <c>parent_family_list</c> request bodies. Gramps Web API expects plain handles here,
+    /// not objects — <c>_get_class_name</c> has no mapping for <c>parent_family_list</c>.
+    /// </summary>
+    public static string[]? ToParentFamilyHandles(GrampsFamilyRef[]? list) =>
+        list == null ? null : list.Select(fr => fr.Ref ?? "").Where(r => r.Length > 0).ToArray();
 
     /// <summary>Builds event_ref_list from parallel handle/role arrays (default role Primary).</summary>
     public static EventRefRequest[] BuildEventRefList(string[]? handles, string[]? roles)

@@ -307,13 +307,7 @@ public static class CompositeTools
                 AlternateNames = person.AlternateNames?.Select(an => ConvertNameToRequest(an)).ToArray(),
                 EventRefList = updatedRefs,
                 FamilyList = person.FamilyList,
-                ParentFamilyList = person.ParentFamilyList?.Select(pf => new FamilyRefRequest
-                {
-                    Ref = pf.Ref,
-                    Relationship = pf.Relationship,
-                    FatherRelationship = pf.FatherRelationship,
-                    MotherRelationship = pf.MotherRelationship
-                }).ToArray(),
+                ParentFamilyList = GrampsRequestMapping.ToParentFamilyHandles(person.ParentFamilyList),
                 MediaList = person.MediaList,
                 AddressList = person.AddressList,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests(person.AttributeList),

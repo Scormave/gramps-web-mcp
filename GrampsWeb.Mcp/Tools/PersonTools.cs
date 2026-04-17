@@ -243,16 +243,7 @@ public static class PersonTools
 
             var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
 
-            // Build parent family list
-            var parentFamilyList = new List<FamilyRefRequest>();
             var parentFamilyHandleArray = (string[]?)parentFamilyHandles;
-            if (parentFamilyHandleArray?.Length > 0)
-            {
-                foreach (var pfHandle in parentFamilyHandleArray)
-                {
-                    parentFamilyList.Add(new FamilyRefRequest { Ref = pfHandle });
-                }
-            }
 
             var request = new CreatePersonRequest
             {
@@ -263,7 +254,7 @@ public static class PersonTools
                     : null,
                 EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
                 FamilyList = familyHandles,
-                ParentFamilyList = parentFamilyList.Count > 0 ? parentFamilyList.ToArray() : null,
+                ParentFamilyList = parentFamilyHandleArray?.Length > 0 ? parentFamilyHandleArray : null,
                 MediaList = mediaHandles,
                 CitationList = citationHandles,
                 NoteList = noteHandles,
@@ -355,9 +346,8 @@ public static class PersonTools
                     ? (EventRefRequest[]?)eventRefs
                     : GrampsRequestMapping.ToEventRefRequests(person.EventRefList),
                 FamilyList = (string[]?)familyHandles ?? person.FamilyList,
-                ParentFamilyList = parentFamilyHandles != null
-                    ? ((string[]?)parentFamilyHandles)!.Select(h => new FamilyRefRequest { Ref = h }).ToArray()
-                    : GrampsRequestMapping.ToFamilyRefRequests(person.ParentFamilyList),
+                ParentFamilyList = (string[]?)parentFamilyHandles
+                    ?? GrampsRequestMapping.ToParentFamilyHandles(person.ParentFamilyList),
                 MediaList = (string[]?)mediaHandles ?? person.MediaList,
                 AddressList = addresses is null ? person.AddressList : (GrampsAddress[]?)addresses,
                 AttributeList = attributes != null

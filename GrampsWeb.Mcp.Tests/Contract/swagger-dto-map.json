@@ -39,7 +39,6 @@
     { "typeName": "GrampsWeb.Mcp.Requests.CreateFamilyRequest, GrampsWeb.Mcp", "swaggerDefinition": "Family" },
     { "typeName": "GrampsWeb.Mcp.Requests.CreateEventRequest, GrampsWeb.Mcp", "swaggerDefinition": "Event" },
     { "typeName": "GrampsWeb.Mcp.Requests.EventRefRequest, GrampsWeb.Mcp", "swaggerDefinition": "EventReference" },
-    { "typeName": "GrampsWeb.Mcp.Requests.FamilyRefRequest, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "ref", "relationship", "frel", "mrel" ] },
     { "typeName": "GrampsWeb.Mcp.Requests.CreatePlaceRequest, GrampsWeb.Mcp", "swaggerDefinition": "Place" },
     { "typeName": "GrampsWeb.Mcp.Requests.CreateCitationRequest, GrampsWeb.Mcp", "swaggerDefinition": "Citation", "allowedExtraJsonNames": [ "text" ] },
     { "typeName": "GrampsWeb.Mcp.Requests.CreateSourceRequest, GrampsWeb.Mcp", "swaggerDefinition": "Source" },

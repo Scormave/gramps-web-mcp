@@ -37,7 +37,7 @@ public class CreatePersonRequest
     public string[]? FamilyList { get; set; }
 
     [JsonPropertyName("parent_family_list")]
-    public FamilyRefRequest[]? ParentFamilyList { get; set; }
+    public string[]? ParentFamilyList { get; set; }
 
     [JsonPropertyName("media_list")]
     public string[]? MediaList { get; set; }
@@ -177,21 +177,6 @@ public class EventRefRequest
 
     [JsonPropertyName("attribute_list")]
     public object[]? AttributeList { get; set; }
-}
-
-public class FamilyRefRequest
-{
-    [JsonPropertyName("ref")]
-    public string? Ref { get; set; }
-
-    [JsonPropertyName("relationship")]
-    public string? Relationship { get; set; }
-
-    [JsonPropertyName("frel")]
-    public string? FatherRelationship { get; set; }
-
-    [JsonPropertyName("mrel")]
-    public string? MotherRelationship { get; set; }
 }
 
 public class AttributeRequest
