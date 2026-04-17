@@ -147,6 +147,71 @@ public static class GrampsValueFormatter
         return string.Join(" ", parts).Trim();
     }
 
+    /// <summary>
+    /// Returns a multi-line indented breakdown of a name showing each component with its label.
+    /// Each line starts with <paramref name="indent"/>.
+    /// </summary>
+    public static string FormatNameDetailed(GrampsName? name, string indent = "    ")
+    {
+        if (name == null)
+            return $"{indent}(no name data)";
+
+        var lines = new List<string>();
+
+        if (!string.IsNullOrEmpty(name.Title))
+            lines.Add($"{indent}title:   {name.Title}");
+
+        if (!string.IsNullOrEmpty(name.FirstName))
+            lines.Add($"{indent}first:   {name.FirstName}");
+
+        if (!string.IsNullOrEmpty(name.Call))
+            lines.Add($"{indent}call:    {name.Call}");
+
+        if (!string.IsNullOrEmpty(name.Nick))
+            lines.Add($"{indent}nick:    {name.Nick}");
+
+        if (!string.IsNullOrEmpty(name.FamNick))
+            lines.Add($"{indent}famnick: {name.FamNick}");
+
+        if (name.SurnameList is { Length: > 0 })
+        {
+            foreach (var s in name.SurnameList)
+            {
+                var sn = new StringBuilder();
+                if (!string.IsNullOrEmpty(s.Prefix))
+                    sn.Append(s.Prefix).Append(' ');
+                if (!string.IsNullOrEmpty(s.Surname))
+                    sn.Append(s.Surname);
+                if (!string.IsNullOrEmpty(s.Connector))
+                    sn.Append(' ').Append(s.Connector);
+
+                var snStr = sn.ToString().Trim();
+                if (string.IsNullOrEmpty(snStr))
+                    continue;
+
+                var meta = new List<string>();
+                if (s.Primary)
+                    meta.Add("primary");
+                if (!string.IsNullOrEmpty(s.Prefix))
+                    meta.Add($"prefix: {s.Prefix}");
+                if (!string.IsNullOrEmpty(s.OriginType))
+                    meta.Add(s.OriginType);
+                if (!string.IsNullOrEmpty(s.Connector))
+                    meta.Add($"connector: {s.Connector}");
+
+                var metaStr = meta.Count > 0 ? $" [{string.Join(", ", meta)}]" : "";
+                lines.Add($"{indent}surname: {snStr}{metaStr}");
+            }
+        }
+
+        if (!string.IsNullOrEmpty(name.Suffix))
+            lines.Add($"{indent}suffix:  {name.Suffix}");
+
+        return lines.Count > 0
+            ? string.Join(Environment.NewLine, lines)
+            : $"{indent}(empty name)";
+    }
+
     public static string FormatPlace(GrampsPlace place)
     {
         if (place == null)

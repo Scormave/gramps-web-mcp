@@ -63,9 +63,7 @@ public static class PersonFormatter
 
     public static async Task<string> FormatPersonFull(GrampsPerson person, GrampsApiClient client)
     {
-        IReadOnlyList<string>? nameTypeLabels = null;
-        if (person.AlternateNames is { Length: > 0 })
-            nameTypeLabels = await GrampsDefaultTypeLabels.LoadNameTypeLabelsAsync(client).ConfigureAwait(false);
+        var nameTypeLabels = await GrampsDefaultTypeLabels.LoadNameTypeLabelsAsync(client).ConfigureAwait(false);
 
         var sb = new StringBuilder();
         var name = person.PrimaryName;
@@ -74,6 +72,13 @@ public static class PersonFormatter
         sb.AppendLine($"PERSON: {displayName} [handle: {person.Handle}] (gramps_id: {person.GrampsId})");
         sb.AppendLine(new string('=', 60));
         sb.AppendLine($"Gender:    {GenderLabels[Math.Clamp(person.Gender, 0, 2)]}");
+
+        if (name != null)
+        {
+            var nameTypeLabel = GrampsDefaultTypeLabels.ResolveStored(name.Type, nameTypeLabels);
+            sb.AppendLine($"Primary name [{nameTypeLabel}]: {displayName}");
+            sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(name));
+        }
 
         await AppendBirthDeathHeaderLinesAsync(sb, person, client, preloadedExtendedEvents: null).ConfigureAwait(false);
 
@@ -93,11 +98,12 @@ public static class PersonFormatter
         if (person.AlternateNames is { Length: > 0 })
         {
             sb.AppendLine();
-            sb.AppendLine("Alternate names:");
+            sb.AppendLine($"Alternate names ({person.AlternateNames.Length}):");
             foreach (var n in person.AlternateNames)
             {
                 var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, nameTypeLabels);
-                sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({typeLabel})");
+                sb.AppendLine($"  • [{typeLabel}] {GrampsValueFormatter.FormatName(n)}");
+                sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(n));
             }
         }
 
@@ -123,6 +129,13 @@ public static class PersonFormatter
         sb.AppendLine($"Person (extended): {displayName} [handle: {person.Handle}] (gramps_id: {person.GrampsId})");
         sb.AppendLine(new string('=', 60));
         sb.AppendLine($"Gender:    {GenderLabels[Math.Clamp(person.Gender, 0, 2)]}");
+
+        if (name != null)
+        {
+            var nameTypeLabel = GrampsDefaultTypeLabels.ResolveStored(name.Type, tables.NameTypes);
+            sb.AppendLine($"Primary name [{nameTypeLabel}]: {displayName}");
+            sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(name));
+        }
 
         await AppendBirthDeathHeaderLinesAsync(sb, person, client, person.Extended?.Events).ConfigureAwait(false);
 
@@ -222,11 +235,12 @@ public static class PersonFormatter
         if (person.AlternateNames is { Length: > 0 })
         {
             sb.AppendLine();
-            sb.AppendLine("Alternate names:");
+            sb.AppendLine($"Alternate names ({person.AlternateNames.Length}):");
             foreach (var n in person.AlternateNames)
             {
                 var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, tables.NameTypes);
-                sb.AppendLine($"  • {GrampsValueFormatter.FormatName(n)} ({typeLabel})");
+                sb.AppendLine($"  • [{typeLabel}] {GrampsValueFormatter.FormatName(n)}");
+                sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(n));
             }
         }
 
