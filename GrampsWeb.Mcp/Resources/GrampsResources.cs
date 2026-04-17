@@ -178,21 +178,53 @@ public sealed class GrampsResources
             primary = new
             {
                 grammar =
-                    "Full Gramps name object (see gramps://input-guide name schema), or one string. Optional Gramps name type uses double colon: \"Married Name:: Jane|Smith\" or \"Also Known As:: Mary Ann Jones\" (last space splits given and surname when | is absent).",
+                    "Accepts three formats: " +
+                    "(1) Simple string — optional 'NameType:: given|surname' or 'given surname' (last word is surname). " +
+                    "(2) Simple object with AI-friendly fields (see object_fields below). " +
+                    "(3) Full native Gramps name object with first_name + surname_list (see name_schema).",
+                object_fields = new
+                {
+                    given       = "Given/first name(s)",
+                    surname     = "Primary surname value (aliases: last, family_name)",
+                    prefix      = "Particle before surname: von, de, van, del… (alias: surname_prefix)",
+                    connector   = "Connector between compound surnames: - or y (alias: surname_connector)",
+                    origin_type = "Gramps OriginType of primary surname (alias: surname_origin). " +
+                                  "Values: Inherited, Given, Taken, Patronymic, Matronymic, Feudal, " +
+                                  "Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Custom, Unknown",
+                    patronymic  = "Shortcut: creates a separate surname entry with OriginType=Patronymic",
+                    matronymic  = "Shortcut: creates a separate surname entry with OriginType=Matronymic",
+                    title       = "Name title: Dr., Prof., Sir, Count…",
+                    suffix      = "Name suffix: Jr., Sr., III, PhD…",
+                    call        = "Preferred call name (different from nick)",
+                    nick        = "Nickname (alias: nickname)",
+                    famnick     = "Family nickname (alias: family_nick)",
+                    type        = "Name type: Birth Name, Married Name, Also Known As, Patronymic… " +
+                                  "See gramps://types for full list",
+                    name        = "Shortcut: full-name string parsed as 'given surname', with optional type field (aliases: text, full)"
+                },
                 examples = new[]
                 {
-                    "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}",
                     "John|Doe",
-                    "John Doe",
-                    "Birth Name:: Anna|Kovacs"
+                    "Birth Name:: Anna|Kovacs",
+                    "{\"given\":\"Ludwig\",\"surname\":\"Beethoven\",\"prefix\":\"van\",\"type\":\"Birth Name\"}",
+                    "{\"given\":\"Ivan\",\"surname\":\"Petrov\",\"patronymic\":\"Petrovich\",\"type\":\"Birth Name\"}",
+                    "{\"title\":\"Dr.\",\"given\":\"John\",\"surname\":\"Smith\",\"suffix\":\"Jr.\",\"call\":\"Jack\"}",
+                    "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}"
                 },
                 tools = "create_person (primaryName required), update_person (primaryName optional)"
             },
             alternate_names = new
             {
                 grammar =
-                    "JSON array of name objects or of simple strings (same rules as primary). One JSON string with multiple names: use newlines between names only - do not use | between names (| separates given|surname within one name).",
-                examples = new[] { "[\"Also Known As:: Sue|Smith\", \"Nickname:: Red\"]", "Married Name:: Jane|Roe\\nAlso Known As:: Jane Doe" },
+                    "JSON array where each item uses the same three formats as primaryName (string, simple object, or native Gramps object). " +
+                    "One multiline string: separate names with newlines — do not use | between names (| separates given|surname within one name).",
+                examples = new[]
+                {
+                    "[\"Also Known As:: Sue|Smith\", \"Nickname:: Red\"]",
+                    "Married Name:: Jane|Roe\\nAlso Known As:: Jane Doe",
+                    "[{\"given\":\"Johnny\",\"surname\":\"Smith\",\"type\":\"Also Known As\"}]",
+                    "[{\"given\":\"Ivan\",\"patronymic\":\"Petrovich\",\"type\":\"Patronymic\"}]"
+                },
                 tools = "create_person, update_person"
             }
         },
@@ -369,8 +401,10 @@ public sealed class GrampsResources
                 origintype = new
                 {
                     type = "string",
-                    description = "Origin of surname (from name_origin_types via gramps://types). Examples: 'Inherited', 'Patronymic', 'Matronymic', 'Occupation', 'Location'",
-                    examples = new[] { "Inherited", "Patronymic", "Matronymic", "Occupation", "Location" }
+                    description = "Origin of surname. Standard Gramps values: " +
+                                  "Inherited, Given, Taken, Patronymic, Matronymic, Feudal, " +
+                                  "Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Custom, Unknown",
+                    examples = new[] { "Inherited", "Patronymic", "Matronymic", "Patrilineal", "Matrilineal", "Taken", "Occupation" }
                 },
                 primary = new
                 {
