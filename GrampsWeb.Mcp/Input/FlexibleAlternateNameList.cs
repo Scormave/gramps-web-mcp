@@ -13,8 +13,16 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleAlternateNameList
 {
     public const string DescriptionHint =
-        "Alternate names: JSON array of full name objects, or strings per entry (see FlexibleGrampsName / gramps://input-guide). " +
-        "Multiple names in one string: separate with newlines only (not | — | is given|surname within one name).";
+        "Alternate names: array of strings (\"Married Name:: Jane|Smith\"), simple objects, or full Gramps name objects. " +
+        "Object fields: given/first, surname/last, " +
+        "prefix/surname_prefix (von/de/van), connector/surname_connector, " +
+        "origin_type/surname_origin (Gramps OriginType: Inherited, Given, Taken, Patronymic, Matronymic, " +
+        "Feudal, Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Custom, Unknown), " +
+        "patronymic (→ separate Patronymic surname entry), " +
+        "matronymic (→ separate Matronymic surname entry), " +
+        "title, suffix (Jr./Sr./III), call, nick, famnick, type (name type). " +
+        "For multi-surname names use native surname_list format. " +
+        "Multiple names in one string: separate with newlines (not |).";
 
     public required GrampsName[] Items { get; init; }
 

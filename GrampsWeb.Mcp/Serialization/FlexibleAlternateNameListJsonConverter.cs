@@ -84,7 +84,8 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
                 }
                 case JsonTokenType.StartObject:
                 {
-                    var n = JsonSerializer.Deserialize<GrampsName>(ref reader, options);
+                    using var doc = JsonDocument.ParseValue(ref reader);
+                    var n = FlexibleGrampsNameParsing.ParseObjectElement(doc.RootElement, options);
                     if (n != null)
                         list.Add(n);
                     break;
@@ -112,7 +113,7 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
             }
             else if (el.ValueKind == JsonValueKind.Object)
             {
-                var n = el.Deserialize<GrampsName>(options);
+                var n = FlexibleGrampsNameParsing.ParseObjectElement(el, options);
                 if (n != null)
                     list.Add(n);
             }

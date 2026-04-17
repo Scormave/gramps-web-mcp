@@ -23,8 +23,9 @@ public sealed class FlexibleGrampsNameJsonConverter : JsonConverter<FlexibleGram
             }
             case JsonTokenType.StartObject:
             {
-                var name = JsonSerializer.Deserialize<GrampsName>(ref reader, options)
-                    ?? throw new JsonException("Name object deserialized to null.");
+                using var doc = JsonDocument.ParseValue(ref reader);
+                var name = FlexibleGrampsNameParsing.ParseObjectElement(doc.RootElement, options)
+                    ?? throw new JsonException("Name object contained no recognisable name fields.");
                 return new FlexibleGrampsName { Name = name };
             }
             default:
