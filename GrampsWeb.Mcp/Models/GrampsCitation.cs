@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
@@ -29,6 +30,7 @@ public class GrampsCitation
     public string? Text { get; set; }
 
     [JsonPropertyName("media_list")]
+    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? MediaList { get; set; }
 
     [JsonPropertyName("note_list")]
