@@ -83,7 +83,7 @@ public static class SourceTools
                 PubInfo = pubinfo,
                 Abbrev = abbrev,
                 RepositoryRefList = repoRefList,
-                MediaList = mediaHandles,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
                 NoteList = noteHandles,
                 TagList = tagHandles,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
@@ -151,7 +151,7 @@ public static class SourceTools
                 Author = author ?? source.Author,
                 PubInfo = pubinfo ?? source.PubInfo,
                 Abbrev = abbrev ?? source.Abbrev,
-                MediaList = (string[]?)mediaHandles ?? source.MediaList,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? source.MediaList),
                 RepositoryRefList = repoRefList ?? ToRepositoryRefRequestObjects(source.RepositoryRefList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)

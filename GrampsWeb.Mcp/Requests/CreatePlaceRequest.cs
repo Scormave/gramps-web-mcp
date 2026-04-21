@@ -35,7 +35,7 @@ public class CreatePlaceRequest
     public string? Latitude { get; set; }
 
     [JsonPropertyName("media_list")]
-    public string[]? MediaList { get; set; }
+    public MediaRefRequest[]? MediaList { get; set; }
 
     [JsonPropertyName("note_list")]
     public string[]? NoteList { get; set; }

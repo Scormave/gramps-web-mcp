@@ -32,7 +32,7 @@ public class CreateEventRequest
     public string? Description { get; set; }
 
     [JsonPropertyName("media_list")]
-    public string[]? MediaList { get; set; }
+    public MediaRefRequest[]? MediaList { get; set; }
 
     [JsonPropertyName("attribute_list")]
     public AttributeRequest[]? AttributeList { get; set; }

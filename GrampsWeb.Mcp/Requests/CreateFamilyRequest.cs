@@ -33,7 +33,7 @@ public class CreateFamilyRequest
     public EventRefRequest[]? EventRefList { get; set; }
 
     [JsonPropertyName("media_list")]
-    public string[]? MediaList { get; set; }
+    public MediaRefRequest[]? MediaList { get; set; }
 
     [JsonPropertyName("attribute_list")]
     public AttributeRequest[]? AttributeList { get; set; }

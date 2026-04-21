@@ -49,6 +49,18 @@ internal static class GrampsRequestMapping
     public static string[]? ToParentFamilyHandles(GrampsFamilyRef[]? list) =>
         list == null ? null : list.Select(fr => fr.Ref ?? "").Where(r => r.Length > 0).ToArray();
 
+    /// <summary>
+    /// Gramps <c>get_schema()</c> for Person, Family, Event, etc. expects <c>media_list</c> items to match
+    /// <c>MediaRef</c>, not bare handle strings (Gramps Web API <c>fix_object_dict</c> does not coerce them).
+    /// </summary>
+    public static MediaRefRequest[]? ToMediaRefRequests(string[]? handles)
+    {
+        if (handles is null || handles.Length == 0)
+            return null;
+
+        return handles.Select(h => new MediaRefRequest { Ref = h }).ToArray();
+    }
+
     /// <summary>Builds event_ref_list from parallel handle/role arrays (default role Primary).</summary>
     public static EventRefRequest[] BuildEventRefList(string[]? handles, string[]? roles)
     {

@@ -35,7 +35,7 @@ public class CreateCitationRequest
     public string? Text { get; set; }
 
     [JsonPropertyName("media_list")]
-    public string[]? MediaList { get; set; }
+    public MediaRefRequest[]? MediaList { get; set; }
 
     [JsonPropertyName("note_list")]
     public string[]? NoteList { get; set; }

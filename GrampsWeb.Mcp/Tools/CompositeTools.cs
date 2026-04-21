@@ -303,12 +303,12 @@ public static class CompositeTools
                 GrampsId = person.GrampsId,
                 Change = person.Change,
                 Gender = person.Gender,
-                PrimaryName = person.PrimaryName != null ? ConvertNameToRequest(person.PrimaryName) : null,
-                AlternateNames = person.AlternateNames?.Select(an => ConvertNameToRequest(an)).ToArray(),
+                PrimaryName = person.PrimaryName != null ? PersonTools.ConvertNameToRequest(person.PrimaryName) : null,
+                AlternateNames = person.AlternateNames?.Select(PersonTools.ConvertNameToRequest).ToArray(),
                 EventRefList = updatedRefs,
                 FamilyList = person.FamilyList,
                 ParentFamilyList = GrampsRequestMapping.ToParentFamilyHandles(person.ParentFamilyList),
-                MediaList = person.MediaList,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests(person.MediaList),
                 AddressList = person.AddressList,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests(person.AttributeList),
                 CitationList = person.CitationList,
@@ -536,36 +536,4 @@ public static class CompositeTools
         return $"Place: {place.Name ?? "Unknown"} \u2014 {place.GrampsId} (handle: {place.Handle}) [{status}]";
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Private helpers — name conversion (mirrors PersonTools.ConvertNameToRequest)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private static GrampsNameRequest ConvertNameToRequest(GrampsName name)
-    {
-        return new GrampsNameRequest
-        {
-            Call = name.Call,
-            CitationList = name.CitationList,
-            Date = GrampsRequestMapping.ToDateRequestOrNull(name.Date),
-            DisplayAs = name.DisplayAs,
-            FamNick = name.FamNick,
-            FirstName = name.FirstName,
-            GroupAs = name.GroupAs,
-            Nick = name.Nick,
-            NoteList = name.NoteList,
-            Private = name.Private,
-            SortAs = name.SortAs,
-            Suffix = name.Suffix,
-            SurnameList = name.SurnameList?.Select(s => new SurnameRequest
-            {
-                Surname = s.Surname,
-                Prefix = s.Prefix,
-                Connector = s.Connector,
-                OriginType = s.OriginType,
-                Primary = s.Primary
-            }).ToArray(),
-            Title = name.Title,
-            Type = name.Type
-        };
-    }
 }

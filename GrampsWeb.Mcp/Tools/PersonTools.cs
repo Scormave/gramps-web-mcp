@@ -250,12 +250,12 @@ public static class PersonTools
                 Gender = genderCode,
                 PrimaryName = ConvertNameToRequest(primary),
                 AlternateNames = (GrampsName[]?)alternateNames is { Length: > 0 } alts
-                    ? alts.Select(an => ConvertNameToRequest(an)).ToArray()
+                    ? alts.Select(ConvertNameToRequest).ToArray()
                     : null,
                 EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
                 FamilyList = familyHandles,
                 ParentFamilyList = parentFamilyHandleArray?.Length > 0 ? parentFamilyHandleArray : null,
-                MediaList = mediaHandles,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
@@ -340,15 +340,15 @@ public static class PersonTools
                 Gender = GrampsGenderParser.ParseOptional(gender) ?? person.Gender,
                 PrimaryName = primaryReq,
                 AlternateNames = alternateNames != null
-                    ? ((GrampsName[]?)alternateNames)!.Select(an => ConvertNameToRequest(an)).ToArray()
-                    : person.AlternateNames?.Select(an => ConvertNameToRequest(an)).ToArray(),
+                    ? ((GrampsName[]?)alternateNames)!.Select(ConvertNameToRequest).ToArray()
+                    : person.AlternateNames?.Select(ConvertNameToRequest).ToArray(),
                 EventRefList = eventRefs != null
                     ? (EventRefRequest[]?)eventRefs
                     : GrampsRequestMapping.ToEventRefRequests(person.EventRefList),
                 FamilyList = (string[]?)familyHandles ?? person.FamilyList,
                 ParentFamilyList = (string[]?)parentFamilyHandles
                     ?? GrampsRequestMapping.ToParentFamilyHandles(person.ParentFamilyList),
-                MediaList = (string[]?)mediaHandles ?? person.MediaList,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? person.MediaList),
                 AddressList = addresses is null ? person.AddressList : (GrampsAddress[]?)addresses,
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
@@ -445,7 +445,7 @@ public static class PersonTools
         return $"{y}/{m}/{d}";
     }
 
-    private static GrampsNameRequest ConvertNameToRequest(GrampsName name)
+    internal static GrampsNameRequest ConvertNameToRequest(GrampsName name)
     {
         var dateReq = GrampsRequestMapping.ToDateRequestOrNull(name.Date);
 

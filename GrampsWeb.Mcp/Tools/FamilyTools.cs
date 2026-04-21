@@ -136,7 +136,7 @@ public static class FamilyTools
                 MotherHandle = motherHandle,
                 ChildRefList = childRefArr is { Length: > 0 } ? childRefArr : null,
                 EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
-                MediaList = mediaHandles,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
@@ -216,7 +216,7 @@ public static class FamilyTools
                 EventRefList = eventRefs != null
                     ? (EventRefRequest[]?)eventRefs
                     : GrampsRequestMapping.ToEventRefRequests(family.EventRefList),
-                MediaList = (string[]?)mediaHandles ?? family.MediaList,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? family.MediaList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(family.AttributeList),

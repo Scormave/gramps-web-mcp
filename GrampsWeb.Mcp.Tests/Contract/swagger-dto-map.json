@@ -47,6 +47,7 @@
     { "typeName": "GrampsWeb.Mcp.Requests.CreateNoteRequest, GrampsWeb.Mcp", "swaggerDefinition": "Note" },
     { "typeName": "GrampsWeb.Mcp.Requests.CreateTagRequest, GrampsWeb.Mcp", "swaggerDefinition": "Tag", "allowedExtraJsonNames": [ "gramps_id" ] },
     { "typeName": "GrampsWeb.Mcp.Requests.CreateMediaRequest, GrampsWeb.Mcp", "swaggerDefinition": "Media" },
-    { "typeName": "GrampsWeb.Mcp.Requests.AttributeRequest, GrampsWeb.Mcp", "swaggerDefinition": "Attribute" }
+    { "typeName": "GrampsWeb.Mcp.Requests.AttributeRequest, GrampsWeb.Mcp", "swaggerDefinition": "Attribute" },
+    { "typeName": "GrampsWeb.Mcp.Requests.MediaRefRequest, GrampsWeb.Mcp", "swaggerDefinition": "MediaReference", "allowedExtraJsonNames": [ "_class" ] }
   ]
 }

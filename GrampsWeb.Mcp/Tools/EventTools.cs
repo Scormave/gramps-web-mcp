@@ -85,7 +85,7 @@ public static class EventTools
                 Date = dateRequest,
                 Place = placeHandle,
                 Description = description,
-                MediaList = mediaHandles,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
                 AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
@@ -161,7 +161,7 @@ public static class EventTools
                 Date = dateRequest,
                 Place = placeHandle ?? evt.Place,
                 Description = description ?? evt.Description,
-                MediaList = (string[]?)mediaHandles ?? evt.MediaList,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? evt.MediaList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),

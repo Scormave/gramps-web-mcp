@@ -40,7 +40,7 @@ public class CreatePersonRequest
     public string[]? ParentFamilyList { get; set; }
 
     [JsonPropertyName("media_list")]
-    public string[]? MediaList { get; set; }
+    public MediaRefRequest[]? MediaList { get; set; }
 
     [JsonPropertyName("address_list")]
     public GrampsAddress[]? AddressList { get; set; }

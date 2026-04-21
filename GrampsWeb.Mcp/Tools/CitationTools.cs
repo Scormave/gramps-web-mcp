@@ -85,7 +85,7 @@ public static class CitationTools
                 Confidence = confidenceLevel,
                 Date = dateRequest,
                 Text = text,
-                MediaList = mediaHandles,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
                 NoteList = noteHandles,
                 TagList = tagHandles,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
@@ -158,7 +158,7 @@ public static class CitationTools
                 Confidence = finalConfidence,
                 Date = dateRequest,
                 Text = text ?? citation.Text,
-                MediaList = (string[]?)mediaHandles ?? citation.MediaList,
+                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? citation.MediaList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
