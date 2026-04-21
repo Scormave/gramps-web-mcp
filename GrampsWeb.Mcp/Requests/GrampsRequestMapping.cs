@@ -53,12 +53,69 @@ internal static class GrampsRequestMapping
     /// Gramps <c>get_schema()</c> for Person, Family, Event, etc. expects <c>media_list</c> items to match
     /// <c>MediaRef</c>, not bare handle strings (Gramps Web API <c>fix_object_dict</c> does not coerce them).
     /// </summary>
-    public static MediaRefRequest[]? ToMediaRefRequests(string[]? handles)
+    public static MediaRefRequest[]? ToMediaRefRequests(string[]? handles) =>
+        ToMediaRefRequests(handles, existingMedia: null);
+
+    /// <summary>
+    /// Builds <see cref="MediaRefRequest"/> from tool handle lists. When <paramref name="existingMedia"/> is provided,
+    /// entries whose ref matches a handle (case-insensitive) reuse <c>rect</c>, notes, and other fields from the GET payload.
+    /// </summary>
+    public static MediaRefRequest[]? ToMediaRefRequests(string[]? handles, GrampsMediaRef[]? existingMedia)
     {
         if (handles is null || handles.Length == 0)
             return null;
 
-        return handles.Select(h => new MediaRefRequest { Ref = h }).ToArray();
+        if (existingMedia is null || existingMedia.Length == 0)
+            return handles.Select(static h => new MediaRefRequest { Ref = string.IsNullOrWhiteSpace(h) ? h : h.Trim() }).ToArray();
+
+        var byRef = new Dictionary<string, GrampsMediaRef>(StringComparer.OrdinalIgnoreCase);
+        foreach (var m in existingMedia)
+        {
+            var key = m.ResolvedRef;
+            if (string.IsNullOrEmpty(key))
+                continue;
+            if (!byRef.ContainsKey(key))
+                byRef[key] = m;
+        }
+
+        return handles.Select(h =>
+        {
+            var trimmed = h?.Trim() ?? "";
+            if (trimmed.Length == 0)
+                return new MediaRefRequest { Ref = h };
+
+            if (!byRef.TryGetValue(trimmed, out var m))
+                return new MediaRefRequest { Ref = trimmed };
+
+            return new MediaRefRequest
+            {
+                Ref = trimmed,
+                Private = m.Private,
+                Rect = m.Rect,
+                CitationList = m.CitationList,
+                NoteList = m.NoteList,
+                AttributeList = m.AttributeList
+            };
+        }).ToArray();
+    }
+
+    /// <summary>
+    /// Maps GET <see cref="GrampsMediaRef"/> items to mutation bodies so crop <c>rect</c>, notes, etc. are preserved on PUT.
+    /// </summary>
+    public static MediaRefRequest[]? ToMediaRefRequests(GrampsMediaRef[]? list)
+    {
+        if (list is null || list.Length == 0)
+            return null;
+
+        return list.Select(static m => new MediaRefRequest
+        {
+            Ref = m.ResolvedRef,
+            Private = m.Private,
+            Rect = m.Rect,
+            CitationList = m.CitationList,
+            NoteList = m.NoteList,
+            AttributeList = m.AttributeList
+        }).ToArray();
     }
 
     /// <summary>Builds event_ref_list from parallel handle/role arrays (default role Primary).</summary>

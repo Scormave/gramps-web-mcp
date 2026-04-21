@@ -221,7 +221,9 @@ public static class PlaceTools
                 Code = code ?? place.Code,
                 Latitude = lat ?? place.Latitude,
                 Longitude = lon ?? place.Longitude,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? place.MediaList),
+                MediaList = mediaHandles != null
+                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, place.MediaList)
+                    : GrampsRequestMapping.ToMediaRefRequests(place.MediaList),
                 NoteList = (string[]?)noteHandles ?? place.NoteList,
                 CitationList = (string[]?)citationHandles ?? place.CitationList,
                 TagList = (string[]?)tagHandles ?? place.TagList,

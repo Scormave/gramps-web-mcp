@@ -216,7 +216,9 @@ public static class FamilyTools
                 EventRefList = eventRefs != null
                     ? (EventRefRequest[]?)eventRefs
                     : GrampsRequestMapping.ToEventRefRequests(family.EventRefList),
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? family.MediaList),
+                MediaList = mediaHandles != null
+                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, family.MediaList)
+                    : GrampsRequestMapping.ToMediaRefRequests(family.MediaList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(family.AttributeList),

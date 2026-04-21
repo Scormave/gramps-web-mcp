@@ -161,7 +161,9 @@ public static class EventTools
                 Date = dateRequest,
                 Place = placeHandle ?? evt.Place,
                 Description = description ?? evt.Description,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? evt.MediaList),
+                MediaList = mediaHandles != null
+                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, evt.MediaList)
+                    : GrampsRequestMapping.ToMediaRefRequests(evt.MediaList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),

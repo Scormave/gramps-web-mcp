@@ -30,8 +30,8 @@ public class GrampsCitation
     public string? Text { get; set; }
 
     [JsonPropertyName("media_list")]
-    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
-    public string[]? MediaList { get; set; }
+    [JsonConverter(typeof(GrampsMediaRefArrayConverter))]
+    public GrampsMediaRef[]? MediaList { get; set; }
 
     [JsonPropertyName("note_list")]
     public string[]? NoteList { get; set; }

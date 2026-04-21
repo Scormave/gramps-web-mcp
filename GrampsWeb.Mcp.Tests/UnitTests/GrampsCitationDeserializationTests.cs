@@ -8,7 +8,7 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 public class GrampsCitationDeserializationTests
 {
     [Fact]
-    public void MediaList_As_MediaReference_Objects_Yields_Handle_Strings()
+    public void MediaList_As_MediaReference_Objects_Deserializes_Full_MediaRef()
     {
         const string json = """
             {
@@ -25,8 +25,8 @@ public class GrampsCitationDeserializationTests
         Assert.NotNull(c);
         Assert.NotNull(c!.MediaList);
         Assert.Equal(2, c.MediaList!.Length);
-        Assert.Equal("mhandle1", c.MediaList[0]);
-        Assert.Equal("mhandle2", c.MediaList[1]);
+        Assert.Equal("mhandle1", c.MediaList[0].ResolvedRef);
+        Assert.Equal("mhandle2", c.MediaList[1].ResolvedRef);
     }
 
     [Fact]
@@ -35,6 +35,8 @@ public class GrampsCitationDeserializationTests
         const string json = """{"handle":"c1","media_list":["a","b"]}""";
         var c = JsonSerializer.Deserialize<GrampsCitation>(json, GrampsJson.Options);
         Assert.NotNull(c!.MediaList);
-        Assert.Equal(new[] { "a", "b" }, c.MediaList);
+        Assert.Equal(2, c.MediaList!.Length);
+        Assert.Equal("a", c.MediaList[0].ResolvedRef);
+        Assert.Equal("b", c.MediaList[1].ResolvedRef);
     }
 }

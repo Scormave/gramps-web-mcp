@@ -30,7 +30,9 @@ public class GrampsCompatibilityDeserializeTests
         Assert.Equal(new[] { "CHILD_FAM1", "CHILD_FAM2" }, p.FamilyList);
 
         Assert.NotNull(p.MediaList);
-        Assert.Equal(new[] { "MEDIA1", "MEDIA2" }, p.MediaList);
+        Assert.Equal(2, p.MediaList!.Length);
+        Assert.Equal("MEDIA1", p.MediaList[0].ResolvedRef);
+        Assert.Equal("MEDIA2", p.MediaList[1].ResolvedRef);
     }
 
     [Fact]

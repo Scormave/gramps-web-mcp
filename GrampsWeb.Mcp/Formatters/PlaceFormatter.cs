@@ -50,7 +50,7 @@ public static class PlaceFormatter
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", place.CitationList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", place.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", place.MediaList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(place.MediaList));
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", place.TagList);
 
         return sb.ToString();

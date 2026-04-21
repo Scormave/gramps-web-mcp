@@ -43,7 +43,7 @@ public static class EventFormatter
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", evt.CitationList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", evt.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", evt.MediaList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(evt.MediaList));
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", evt.TagList);
         if (evt.Private)
             sb.AppendLine("⚠ Private record");

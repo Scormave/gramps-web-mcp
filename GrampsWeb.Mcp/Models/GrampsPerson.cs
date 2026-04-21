@@ -105,8 +105,8 @@ public class GrampsPerson
     public GrampsFamilyRef[]? ParentFamilyList { get; set; }
 
     [JsonPropertyName("media_list")]
-    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
-    public string[]? MediaList { get; set; }
+    [JsonConverter(typeof(GrampsMediaRefArrayConverter))]
+    public GrampsMediaRef[]? MediaList { get; set; }
 
     [JsonPropertyName("address_list")]
     public GrampsAddress[]? AddressList { get; set; }

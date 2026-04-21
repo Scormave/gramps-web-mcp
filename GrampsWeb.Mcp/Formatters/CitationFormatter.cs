@@ -52,7 +52,7 @@ public static class CitationFormatter
             sb.AppendLine($"Access Date: {GrampsValueFormatter.FormatDate(citation.Date)}");
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", citation.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", citation.MediaList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(citation.MediaList));
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", citation.TagList);
 
         return sb.ToString();

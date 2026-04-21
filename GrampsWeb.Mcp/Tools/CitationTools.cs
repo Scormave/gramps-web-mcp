@@ -158,7 +158,9 @@ public static class CitationTools
                 Confidence = finalConfidence,
                 Date = dateRequest,
                 Text = text ?? citation.Text,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? citation.MediaList),
+                MediaList = mediaHandles != null
+                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, citation.MediaList)
+                    : GrampsRequestMapping.ToMediaRefRequests(citation.MediaList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),

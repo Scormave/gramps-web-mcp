@@ -52,8 +52,8 @@ public class GrampsFamily
     public GrampsEventRef[]? EventRefList { get; set; }
 
     [JsonPropertyName("media_list")]
-    [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
-    public string[]? MediaList { get; set; }
+    [JsonConverter(typeof(GrampsMediaRefArrayConverter))]
+    public GrampsMediaRef[]? MediaList { get; set; }
 
     [JsonPropertyName("attribute_list")]
     public GrampsAttribute[]? AttributeList { get; set; }

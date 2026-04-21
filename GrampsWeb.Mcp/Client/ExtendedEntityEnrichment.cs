@@ -20,8 +20,9 @@ public static class ExtendedEntityEnrichment
             ext.Citations = await EnrichCitationListAsync(ext.Citations, client).ConfigureAwait(false);
         if (ext.Events is { Length: > 0 })
             ext.Events = await EnrichEventListAsync(ext.Events, client).ConfigureAwait(false);
-        if (ext.Media is not { Length: > 0 } && person.MediaList is { Length: > 0 })
-            ext.Media = await FetchMediaByHandlesAsync(person.MediaList, client).ConfigureAwait(false);
+        var personMediaHandles = GrampsMediaRef.ToHandleStrings(person.MediaList);
+        if (ext.Media is not { Length: > 0 } && personMediaHandles is { Length: > 0 })
+            ext.Media = await FetchMediaByHandlesAsync(personMediaHandles, client).ConfigureAwait(false);
     }
 
     public static async Task EnrichFamilyExtendedAsync(GrampsFamilyExtended? family, GrampsApiClient client)
@@ -34,8 +35,9 @@ public static class ExtendedEntityEnrichment
             ext.Citations = await EnrichCitationListAsync(ext.Citations, client).ConfigureAwait(false);
         if (ext.Events is { Length: > 0 })
             ext.Events = await EnrichEventListAsync(ext.Events, client).ConfigureAwait(false);
-        if (ext.Media is not { Length: > 0 } && family.MediaList is { Length: > 0 })
-            ext.Media = await FetchMediaByHandlesAsync(family.MediaList, client).ConfigureAwait(false);
+        var familyMediaHandles = GrampsMediaRef.ToHandleStrings(family.MediaList);
+        if (ext.Media is not { Length: > 0 } && familyMediaHandles is { Length: > 0 })
+            ext.Media = await FetchMediaByHandlesAsync(familyMediaHandles, client).ConfigureAwait(false);
     }
 
     private static async Task<GrampsCitationExtended[]> EnrichCitationListAsync(

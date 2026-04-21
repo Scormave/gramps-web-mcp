@@ -348,7 +348,9 @@ public static class PersonTools
                 FamilyList = (string[]?)familyHandles ?? person.FamilyList,
                 ParentFamilyList = (string[]?)parentFamilyHandles
                     ?? GrampsRequestMapping.ToParentFamilyHandles(person.ParentFamilyList),
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? person.MediaList),
+                MediaList = mediaHandles != null
+                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, person.MediaList)
+                    : GrampsRequestMapping.ToMediaRefRequests(person.MediaList),
                 AddressList = addresses is null ? person.AddressList : (GrampsAddress[]?)addresses,
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)

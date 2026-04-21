@@ -136,7 +136,7 @@ public static class FamilyFormatter
             }
         }
 
-        MediaFormatter.AppendExtendedMediaSection(sb, null, family.MediaList);
+        MediaFormatter.AppendExtendedMediaSection(sb, null, GrampsMediaRef.ToHandleStrings(family.MediaList));
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", family.CitationList);
@@ -299,7 +299,7 @@ public static class FamilyFormatter
             }
         }
 
-        MediaFormatter.AppendExtendedMediaSection(sb, family.Extended?.Media, family.MediaList);
+        MediaFormatter.AppendExtendedMediaSection(sb, family.Extended?.Media, GrampsMediaRef.ToHandleStrings(family.MediaList));
 
         var extNotes = family.Extended?.Notes;
         if (extNotes?.Length > 0)

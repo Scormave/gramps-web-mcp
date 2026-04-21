@@ -151,7 +151,9 @@ public static class SourceTools
                 Author = author ?? source.Author,
                 PubInfo = pubinfo ?? source.PubInfo,
                 Abbrev = abbrev ?? source.Abbrev,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles ?? source.MediaList),
+                MediaList = mediaHandles != null
+                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, source.MediaList)
+                    : GrampsRequestMapping.ToMediaRefRequests(source.MediaList),
                 RepositoryRefList = repoRefList ?? ToRepositoryRefRequestObjects(source.RepositoryRefList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)

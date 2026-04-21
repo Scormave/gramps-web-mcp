@@ -93,7 +93,7 @@ public static class PersonFormatter
                 sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Gallery (media)", person.MediaList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Gallery (media)", GrampsMediaRef.ToHandleStrings(person.MediaList));
 
         if (person.AlternateNames is { Length: > 0 })
         {
@@ -230,7 +230,7 @@ public static class PersonFormatter
             }
         }
 
-        MediaFormatter.AppendExtendedMediaSection(sb, person.Extended?.Media, person.MediaList);
+        MediaFormatter.AppendExtendedMediaSection(sb, person.Extended?.Media, GrampsMediaRef.ToHandleStrings(person.MediaList));
 
         if (person.AlternateNames is { Length: > 0 })
         {
