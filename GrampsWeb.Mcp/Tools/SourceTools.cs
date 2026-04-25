@@ -71,10 +71,7 @@ public static class SourceTools
             if (string.IsNullOrWhiteSpace(title))
                 throw McpToolErrors.ValidationError("Error: title is required");
 
-            var repoHandlesArray = (string[]?)repositoryHandles;
-            var repoRefList = repoHandlesArray?.Length > 0
-                ? repoHandlesArray.Select(h => new { @ref = h } as object).ToArray()
-                : null;
+            var repoRefList = GrampsRequestMapping.ToRepositoryRefRequests((string[]?)repositoryHandles);
 
             var request = new CreateSourceRequest
             {
@@ -137,9 +134,6 @@ public static class SourceTools
                 return NotFoundHelper.NotFoundMessage("Source", handle);
 
             var repoHandlesUpdate = (string[]?)repositoryHandles;
-            var repoRefList = repoHandlesUpdate != null && repoHandlesUpdate.Length > 0
-                ? repoHandlesUpdate.Select(h => new { @ref = h } as object).ToArray()
-                : null;
 
             var updateRequest = new CreateSourceRequest
             {
@@ -154,7 +148,9 @@ public static class SourceTools
                 MediaList = mediaHandles != null
                     ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, source.MediaList)
                     : GrampsRequestMapping.ToMediaRefRequests(source.MediaList),
-                RepositoryRefList = repoRefList ?? ToRepositoryRefRequestObjects(source.RepositoryRefList),
+                RepositoryRefList = repositoryHandles != null
+                    ? GrampsRequestMapping.ToRepositoryRefRequests(repoHandlesUpdate, source.RepositoryRefList)
+                    : GrampsRequestMapping.ToRepositoryRefRequests(source.RepositoryRefList),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
@@ -194,10 +190,4 @@ public static class SourceTools
         }
     }
 
-    private static object[]? ToRepositoryRefRequestObjects(GrampsRepositoryRef[]? list)
-    {
-        if (list == null)
-            return null;
-        return list.Select(r => (object)new { @ref = r.Ref }).ToArray();
-    }
 }

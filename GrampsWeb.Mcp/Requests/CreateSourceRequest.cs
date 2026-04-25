@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Requests;
 
@@ -38,7 +39,7 @@ public class CreateSourceRequest
     public string[]? NoteList { get; set; }
 
     [JsonPropertyName("reporef_list")]
-    public object[]? RepositoryRefList { get; set; }
+    public GrampsRepositoryRef[]? RepositoryRefList { get; set; }
 
     [JsonPropertyName("attribute_list")]
     public AttributeRequest[]? AttributeList { get; set; }

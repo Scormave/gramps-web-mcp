@@ -118,6 +118,74 @@ internal static class GrampsRequestMapping
         }).ToArray();
     }
 
+    /// <summary>Maps repository handles to <see cref="GrampsRepositoryRef"/> items.</summary>
+    public static GrampsRepositoryRef[]? ToRepositoryRefRequests(string[]? handles) =>
+        ToRepositoryRefRequests(handles, existingRepositoryRefs: null);
+
+    /// <summary>
+    /// Builds repository ref list from tool handle lists and preserves known fields for overlapping refs.
+    /// </summary>
+    public static GrampsRepositoryRef[]? ToRepositoryRefRequests(
+        string[]? handles,
+        GrampsRepositoryRef[]? existingRepositoryRefs)
+    {
+        if (handles is null || handles.Length == 0)
+            return null;
+
+        if (existingRepositoryRefs is null || existingRepositoryRefs.Length == 0)
+        {
+            return handles.Select(static h => new GrampsRepositoryRef
+            {
+                Ref = string.IsNullOrWhiteSpace(h) ? h : h.Trim()
+            }).ToArray();
+        }
+
+        var byRef = new Dictionary<string, GrampsRepositoryRef>(StringComparer.OrdinalIgnoreCase);
+        foreach (var rr in existingRepositoryRefs)
+        {
+            var key = rr.Ref?.Trim();
+            if (string.IsNullOrEmpty(key))
+                continue;
+            if (!byRef.ContainsKey(key))
+                byRef[key] = rr;
+        }
+
+        return handles.Select(h =>
+        {
+            var trimmed = h?.Trim() ?? "";
+            if (trimmed.Length == 0)
+                return new GrampsRepositoryRef { Ref = h };
+
+            if (!byRef.TryGetValue(trimmed, out var rr))
+                return new GrampsRepositoryRef { Ref = trimmed };
+
+            return new GrampsRepositoryRef
+            {
+                Ref = trimmed,
+                CallNumber = rr.CallNumber,
+                MediaType = rr.MediaType,
+                NoteList = rr.NoteList,
+                Private = rr.Private
+            };
+        }).ToArray();
+    }
+
+    /// <summary>Clones repository refs for PUT bodies, preserving all known fields.</summary>
+    public static GrampsRepositoryRef[]? ToRepositoryRefRequests(GrampsRepositoryRef[]? list)
+    {
+        if (list is null || list.Length == 0)
+            return null;
+
+        return list.Select(static rr => new GrampsRepositoryRef
+        {
+            Ref = rr.Ref,
+            CallNumber = rr.CallNumber,
+            MediaType = rr.MediaType,
+            NoteList = rr.NoteList,
+            Private = rr.Private
+        }).ToArray();
+    }
+
     /// <summary>Builds event_ref_list from parallel handle/role arrays (default role Primary).</summary>
     public static EventRefRequest[] BuildEventRefList(string[]? handles, string[]? roles)
     {
