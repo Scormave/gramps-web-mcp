@@ -52,8 +52,8 @@ public static class SourceTools
         string? pubinfo = null,
         [Description("Abbreviation (optional)")]
         string? abbrev = null,
-        [Description("Repository handles. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? repositoryHandles = null,
+        [Description("Repository refs. " + FlexibleRepositoryRefList.DescriptionHint)]
+        FlexibleRepositoryRefList? repositoryHandles = null,
         [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
@@ -71,7 +71,7 @@ public static class SourceTools
             if (string.IsNullOrWhiteSpace(title))
                 throw McpToolErrors.ValidationError("Error: title is required");
 
-            var repoRefList = GrampsRequestMapping.ToRepositoryRefRequests((string[]?)repositoryHandles);
+            var repoRefList = (GrampsRepositoryRef[]?)repositoryHandles;
 
             var request = new CreateSourceRequest
             {
@@ -113,8 +113,8 @@ public static class SourceTools
         string? pubinfo = null,
         [Description("Abbreviation. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? abbrev = null,
-        [Description("Repository refs. Omit to keep. Non-empty replaces the list; empty array does not clear (omit to keep). " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? repositoryHandles = null,
+        [Description("Repository refs. Omit to keep. Non-empty replaces the list; empty array does not clear (omit to keep). " + FlexibleRepositoryRefList.DescriptionHint)]
+        FlexibleRepositoryRefList? repositoryHandles = null,
         [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
@@ -133,7 +133,7 @@ public static class SourceTools
             if (source == null)
                 return NotFoundHelper.NotFoundMessage("Source", handle);
 
-            var repoHandlesUpdate = (string[]?)repositoryHandles;
+            var repoHandlesUpdate = (GrampsRepositoryRef[]?)repositoryHandles;
 
             var updateRequest = new CreateSourceRequest
             {

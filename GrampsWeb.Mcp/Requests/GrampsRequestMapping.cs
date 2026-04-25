@@ -118,25 +118,30 @@ internal static class GrampsRequestMapping
         }).ToArray();
     }
 
-    /// <summary>Maps repository handles to <see cref="GrampsRepositoryRef"/> items.</summary>
-    public static GrampsRepositoryRef[]? ToRepositoryRefRequests(string[]? handles) =>
-        ToRepositoryRefRequests(handles, existingRepositoryRefs: null);
+    /// <summary>Maps repository refs to request payload shape.</summary>
+    public static GrampsRepositoryRef[]? ToRepositoryRefRequests(GrampsRepositoryRef[]? refs) =>
+        ToRepositoryRefRequests(refs, existingRepositoryRefs: null);
 
     /// <summary>
-    /// Builds repository ref list from tool handle lists and preserves known fields for overlapping refs.
+    /// Builds repository ref list from tool input and preserves existing fields for overlapping refs.
+    /// For overlapping refs, explicit input values win; missing values are copied from existing.
     /// </summary>
     public static GrampsRepositoryRef[]? ToRepositoryRefRequests(
-        string[]? handles,
+        GrampsRepositoryRef[]? refs,
         GrampsRepositoryRef[]? existingRepositoryRefs)
     {
-        if (handles is null || handles.Length == 0)
+        if (refs is null || refs.Length == 0)
             return null;
 
         if (existingRepositoryRefs is null || existingRepositoryRefs.Length == 0)
         {
-            return handles.Select(static h => new GrampsRepositoryRef
+            return refs.Select(static rr => new GrampsRepositoryRef
             {
-                Ref = string.IsNullOrWhiteSpace(h) ? h : h.Trim()
+                Ref = rr.Ref,
+                CallNumber = rr.CallNumber,
+                MediaType = rr.MediaType,
+                NoteList = rr.NoteList,
+                Private = rr.Private
             }).ToArray();
         }
 
@@ -150,39 +155,42 @@ internal static class GrampsRequestMapping
                 byRef[key] = rr;
         }
 
-        return handles.Select(h =>
+        return refs.Select(input =>
         {
-            var trimmed = h?.Trim() ?? "";
+            var trimmed = input.Ref?.Trim() ?? "";
             if (trimmed.Length == 0)
-                return new GrampsRepositoryRef { Ref = h };
+                return new GrampsRepositoryRef
+                {
+                    Ref = input.Ref,
+                    CallNumber = input.CallNumber,
+                    MediaType = input.MediaType,
+                    NoteList = input.NoteList,
+                    Private = input.Private
+                };
 
-            if (!byRef.TryGetValue(trimmed, out var rr))
-                return new GrampsRepositoryRef { Ref = trimmed };
+            if (!byRef.TryGetValue(trimmed, out var existing))
+                return new GrampsRepositoryRef
+                {
+                    Ref = trimmed,
+                    CallNumber = string.IsNullOrWhiteSpace(input.CallNumber) ? null : input.CallNumber.Trim(),
+                    MediaType = string.IsNullOrWhiteSpace(input.MediaType) ? null : input.MediaType.Trim(),
+                    NoteList = input.NoteList,
+                    Private = input.Private
+                };
 
             return new GrampsRepositoryRef
             {
                 Ref = trimmed,
-                CallNumber = rr.CallNumber,
-                MediaType = rr.MediaType,
-                NoteList = rr.NoteList,
-                Private = rr.Private
+                CallNumber = string.IsNullOrWhiteSpace(input.CallNumber)
+                    ? existing.CallNumber
+                    : input.CallNumber.Trim(),
+                MediaType = string.IsNullOrWhiteSpace(input.MediaType)
+                    ? existing.MediaType
+                    : input.MediaType.Trim(),
+                NoteList = input.NoteList ?? existing.NoteList,
+                // bool is not nullable here, so keep existing for overlap to avoid accidental reset from shorthand input.
+                Private = existing.Private
             };
-        }).ToArray();
-    }
-
-    /// <summary>Clones repository refs for PUT bodies, preserving all known fields.</summary>
-    public static GrampsRepositoryRef[]? ToRepositoryRefRequests(GrampsRepositoryRef[]? list)
-    {
-        if (list is null || list.Length == 0)
-            return null;
-
-        return list.Select(static rr => new GrampsRepositoryRef
-        {
-            Ref = rr.Ref,
-            CallNumber = rr.CallNumber,
-            MediaType = rr.MediaType,
-            NoteList = rr.NoteList,
-            Private = rr.Private
         }).ToArray();
     }
 

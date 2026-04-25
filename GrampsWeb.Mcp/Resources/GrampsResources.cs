@@ -276,6 +276,27 @@ public sealed class GrampsResources
                 "JSON array of strings or one multiline / |-separated string"
             },
             tools = "create_person, update_person only (person_ref_list)"
+        },
+        repository_refs = new
+        {
+            grammar =
+                "Repository refs accept full GrampsRepositoryRef objects or simple strings: \"Ref : CallNumber : MediaType\". " +
+                "CallNumber and MediaType are optional: \"Ref : CallNumber\" and \"Ref :: MediaType\" are valid.",
+            examples = new[]
+            {
+                "REPO123",
+                "REPO123 : A-1",
+                "REPO123 :: Book",
+                "REPO123 : A-1 : Book",
+                "[{\"ref\":\"REPO123\",\"call_number\":\"A-1\",\"media_type\":\"Book\"}]"
+            },
+            forms = new[]
+            {
+                "JSON array of objects {\"ref\",\"call_number\",\"media_type\",\"note_list\",\"private\"}",
+                "JSON array of strings [\"REPO123 : A-1 : Book\"]",
+                "One multiline / |-separated string with one repository ref per segment"
+            },
+            tools = "create_source, update_source (reporef_list)"
         }
     };
 

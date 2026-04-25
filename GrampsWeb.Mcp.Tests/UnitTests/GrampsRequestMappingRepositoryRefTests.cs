@@ -15,7 +15,12 @@ public class GrampsRequestMappingRepositoryRefTests
             new GrampsRepositoryRef { Ref = "repo-b", CallNumber = "B-1", MediaType = "Microfilm" }
         };
 
-        var mapped = GrampsRequestMapping.ToRepositoryRefRequests(["repo-a", "repo-new"], existing);
+        var mapped = GrampsRequestMapping.ToRepositoryRefRequests(
+            [
+                new GrampsRepositoryRef { Ref = "repo-a" },
+                new GrampsRepositoryRef { Ref = "repo-new" }
+            ],
+            existing);
 
         Assert.NotNull(mapped);
         Assert.Equal(2, mapped!.Length);
