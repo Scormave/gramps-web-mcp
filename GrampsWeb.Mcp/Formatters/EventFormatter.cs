@@ -9,7 +9,10 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class EventFormatter
 {
-    public static async Task<string> FormatEventFull(GrampsEvent evt, GrampsApiClient client)
+    public static async Task<string> FormatEventFull(
+        GrampsEvent evt,
+        GrampsApiClient client,
+        IReadOnlyList<(string Handle, string? DisplayName)>? linkedPeople = null)
     {
         var typeDisplay = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, evt.Type);
         var sb = new StringBuilder();
@@ -45,6 +48,20 @@ public static class EventFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", evt.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(evt.MediaList));
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", evt.TagList);
+
+        if (linkedPeople is { Count: > 0 })
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Linked people ({linkedPeople.Count}):");
+            foreach (var p in linkedPeople)
+            {
+                if (!string.IsNullOrWhiteSpace(p.DisplayName))
+                    sb.AppendLine($"  • {p.DisplayName.Trim()} [handle: {p.Handle}]");
+                else
+                    sb.AppendLine($"  • [handle: {p.Handle}]");
+            }
+        }
+
         if (evt.Private)
             sb.AppendLine("⚠ Private record");
 

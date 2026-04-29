@@ -7,6 +7,7 @@ using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
+using GrampsWeb.Mcp.Serialization;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -32,12 +33,54 @@ public static class EventTools
             if (evt is null)
                 return NotFoundHelper.NotFoundMessage("Event", handle);
 
-            return await EventFormatter.FormatEventFull(evt, client);
+            var linkedPeople = await CollectLinkedPeopleAsync(handle, client);
+            return await EventFormatter.FormatEventFull(evt, client, linkedPeople);
         }
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    private static async Task<IReadOnlyList<(string Handle, string? DisplayName)>> CollectLinkedPeopleAsync(
+        string eventHandle,
+        GrampsApiClient client)
+    {
+        var raw = await client.GetJsonOrNullIfNotFoundAsync($"/api/events/{Uri.EscapeDataString(eventHandle)}?backlinks=true");
+        if (raw is not { } root || root.ValueKind != JsonValueKind.Object)
+            return [];
+
+        if (!root.TryGetProperty("backlinks", out var backlinks) || backlinks.ValueKind != JsonValueKind.Object)
+            return [];
+
+        var handles = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var key in new[] { "person", "people" })
+        {
+            if (!backlinks.TryGetProperty(key, out var arr) || arr.ValueKind != JsonValueKind.Array)
+                continue;
+
+            foreach (var el in arr.EnumerateArray())
+            {
+                var h = HandleElementReader.ReadHandleFromElement(el).Trim();
+                if (h.Length > 0)
+                    handles.Add(h);
+            }
+        }
+
+        if (handles.Count == 0)
+            return [];
+
+        var result = new List<(string Handle, string? DisplayName)>(handles.Count);
+        foreach (var h in handles.OrderBy(static x => x, StringComparer.Ordinal))
+        {
+            string? displayName = null;
+            var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{Uri.EscapeDataString(h)}");
+            if (person?.PrimaryName != null)
+                displayName = GrampsValueFormatter.FormatName(person.PrimaryName);
+            result.Add((h, displayName));
+        }
+
+        return result;
     }
 
     [McpServerTool]
