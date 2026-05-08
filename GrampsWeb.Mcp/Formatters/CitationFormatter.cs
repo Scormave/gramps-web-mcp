@@ -25,7 +25,10 @@ public static class CitationFormatter
         return $"  • {label} [handle: {ch}]{sh}";
     }
 
-    public static async Task<string> FormatCitationFull(GrampsCitation citation, GrampsApiClient client)
+    public static async Task<string> FormatCitationFull(
+        GrampsCitation citation,
+        GrampsApiClient client,
+        IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"CITATION [handle: {citation.Handle}] (gramps_id: {citation.GrampsId})");
@@ -55,6 +58,7 @@ public static class CitationFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(citation.MediaList));
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", citation.TagList);
 
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
         return sb.ToString();
     }
 }

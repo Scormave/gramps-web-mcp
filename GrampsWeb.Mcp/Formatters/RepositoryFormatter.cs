@@ -9,7 +9,10 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class RepositoryFormatter
 {
-    public static async Task<string> FormatRepositoryFullAsync(GrampsRepository repo, GrampsApiClient client)
+    public static async Task<string> FormatRepositoryFullAsync(
+        GrampsRepository repo,
+        GrampsApiClient client,
+        IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"REPOSITORY: {repo.Name} [handle: {repo.Handle}] (gramps_id: {repo.GrampsId})");
@@ -35,6 +38,7 @@ public static class RepositoryFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", repo.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", repo.TagList);
 
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
         return sb.ToString();
     }
 }

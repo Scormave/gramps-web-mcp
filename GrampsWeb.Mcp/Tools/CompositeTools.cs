@@ -391,31 +391,46 @@ public static class CompositeTools
     private static async Task<string> FetchAndFormatSource(string handle, GrampsApiClient client)
     {
         var obj = await client.GetOrNullIfNotFoundAsync<GrampsSource>($"/api/sources/{Uri.EscapeDataString(handle)}");
-        return obj is null ? NotFoundHelper.NotFoundMessage("Source", handle) : SourceFormatter.FormatSourceFull(obj);
+        if (obj is null)
+            return NotFoundHelper.NotFoundMessage("Source", handle);
+        var backlinks = await BacklinkCollector.CollectAsync(client, "sources", handle);
+        return SourceFormatter.FormatSourceFull(obj, backlinks);
     }
 
     private static async Task<string> FetchAndFormatCitation(string handle, GrampsApiClient client)
     {
         var obj = await client.GetOrNullIfNotFoundAsync<GrampsCitation>($"/api/citations/{Uri.EscapeDataString(handle)}");
-        return obj is null ? NotFoundHelper.NotFoundMessage("Citation", handle) : await CitationFormatter.FormatCitationFull(obj, client);
+        if (obj is null)
+            return NotFoundHelper.NotFoundMessage("Citation", handle);
+        var backlinks = await BacklinkCollector.CollectAsync(client, "citations", handle);
+        return await CitationFormatter.FormatCitationFull(obj, client, backlinks);
     }
 
     private static async Task<string> FetchAndFormatRepository(string handle, GrampsApiClient client)
     {
         var obj = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{Uri.EscapeDataString(handle)}");
-        return obj is null ? NotFoundHelper.NotFoundMessage("Repository", handle) : await RepositoryFormatter.FormatRepositoryFullAsync(obj, client);
+        if (obj is null)
+            return NotFoundHelper.NotFoundMessage("Repository", handle);
+        var backlinks = await BacklinkCollector.CollectAsync(client, "repositories", handle);
+        return await RepositoryFormatter.FormatRepositoryFullAsync(obj, client, backlinks);
     }
 
     private static async Task<string> FetchAndFormatNote(string handle, GrampsApiClient client)
     {
         var obj = await client.GetOrNullIfNotFoundAsync<GrampsNote>($"/api/notes/{Uri.EscapeDataString(handle)}");
-        return obj is null ? NotFoundHelper.NotFoundMessage("Note", handle) : await NoteFormatter.FormatNoteFullAsync(obj, client);
+        if (obj is null)
+            return NotFoundHelper.NotFoundMessage("Note", handle);
+        var backlinks = await BacklinkCollector.CollectAsync(client, "notes", handle);
+        return await NoteFormatter.FormatNoteFullAsync(obj, client, backlinks);
     }
 
     private static async Task<string> FetchAndFormatMedia(string handle, GrampsApiClient client)
     {
         var obj = await client.GetOrNullIfNotFoundAsync<GrampsMedia>($"/api/media/{Uri.EscapeDataString(handle)}");
-        return obj is null ? NotFoundHelper.NotFoundMessage("Media", handle) : MediaFormatter.FormatMediaFull(obj);
+        if (obj is null)
+            return NotFoundHelper.NotFoundMessage("Media", handle);
+        var backlinks = await BacklinkCollector.CollectAsync(client, "media", handle);
+        return MediaFormatter.FormatMediaFull(obj, backlinks);
     }
 
     private static async Task<string> FetchAndFormatTag(string handle, GrampsApiClient client)

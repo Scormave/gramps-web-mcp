@@ -12,7 +12,7 @@ public static class EventFormatter
     public static async Task<string> FormatEventFull(
         GrampsEvent evt,
         GrampsApiClient client,
-        IReadOnlyList<(string Handle, string? DisplayName)>? linkedPeople = null)
+        IReadOnlyList<(string Handle, string? DisplayName, string Role)>? linkedPeople = null)
     {
         var typeDisplay = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, evt.Type);
         var sb = new StringBuilder();
@@ -56,9 +56,9 @@ public static class EventFormatter
             foreach (var p in linkedPeople)
             {
                 if (!string.IsNullOrWhiteSpace(p.DisplayName))
-                    sb.AppendLine($"  • {p.DisplayName.Trim()} [handle: {p.Handle}]");
+                    sb.AppendLine($"  • {p.DisplayName.Trim()} [handle: {p.Handle}] role: {p.Role}");
                 else
-                    sb.AppendLine($"  • [handle: {p.Handle}]");
+                    sb.AppendLine($"  • [handle: {p.Handle}] role: {p.Role}");
             }
         }
 

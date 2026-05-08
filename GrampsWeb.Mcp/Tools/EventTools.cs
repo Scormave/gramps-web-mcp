@@ -29,7 +29,8 @@ public static class EventTools
     {
         try
         {
-            var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>($"/api/events/{handle}");
+            var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>(
+                $"/api/events/{Uri.EscapeDataString(handle)}");
             if (evt is null)
                 return NotFoundHelper.NotFoundMessage("Event", handle);
 
@@ -42,7 +43,7 @@ public static class EventTools
         }
     }
 
-    private static async Task<IReadOnlyList<(string Handle, string? DisplayName)>> CollectLinkedPeopleAsync(
+    private static async Task<IReadOnlyList<(string Handle, string? DisplayName, string Role)>> CollectLinkedPeopleAsync(
         string eventHandle,
         GrampsApiClient client)
     {
@@ -70,17 +71,45 @@ public static class EventTools
         if (handles.Count == 0)
             return [];
 
-        var result = new List<(string Handle, string? DisplayName)>(handles.Count);
+        var result = new List<(string Handle, string? DisplayName, string Role)>(handles.Count);
         foreach (var h in handles.OrderBy(static x => x, StringComparer.Ordinal))
         {
             string? displayName = null;
             var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{Uri.EscapeDataString(h)}");
             if (person?.PrimaryName != null)
                 displayName = GrampsValueFormatter.FormatName(person.PrimaryName);
-            result.Add((h, displayName));
+            var role = ResolveDistinctRolesForPersonEvent(person, eventHandle);
+            result.Add((h, displayName, role));
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Distinct roles from a person's event refs targeting <paramref name="eventHandle"/>
+    /// (<see cref="StringComparison.Ordinal"/> on <see cref="GrampsEventRef.Ref"/>).
+    /// Empty roles default to Primary; multiple refs yield one entry per distinct role.
+    /// </summary>
+    internal static string ResolveDistinctRolesForPersonEvent(GrampsPerson? person, string eventHandle)
+    {
+        if (person?.EventRefList is not { Length: > 0 } list)
+            return "Primary";
+
+        static string NormalizeRole(string? role) =>
+            string.IsNullOrWhiteSpace(role) ? "Primary" : role.Trim();
+
+        var orderedDistinct = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var er in list)
+        {
+            if (string.IsNullOrEmpty(er.Ref) || !string.Equals(er.Ref, eventHandle, StringComparison.Ordinal))
+                continue;
+            var r = NormalizeRole(er.Role);
+            if (seen.Add(r))
+                orderedDistinct.Add(r);
+        }
+
+        return orderedDistinct.Count > 0 ? string.Join(", ", orderedDistinct) : "Primary";
     }
 
     [McpServerTool]

@@ -29,10 +29,12 @@ public static class CitationTools
     {
         try
         {
-            var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>($"/api/citations/{handle}");
-            return citation == null
-                ? NotFoundHelper.NotFoundMessage("Citation", handle)
-                : await CitationFormatter.FormatCitationFull(citation, client);
+            var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>(
+                $"/api/citations/{Uri.EscapeDataString(handle)}");
+            if (citation == null)
+                return NotFoundHelper.NotFoundMessage("Citation", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "citations", handle);
+            return await CitationFormatter.FormatCitationFull(citation, client, backlinks);
         }
         catch (Exception ex)
         {

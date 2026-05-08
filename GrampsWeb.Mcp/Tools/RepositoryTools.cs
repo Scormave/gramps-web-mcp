@@ -26,10 +26,12 @@ public static class RepositoryTools
     {
         try
         {
-            var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
-            return repo == null
-                ? NotFoundHelper.NotFoundMessage("Repository", handle)
-                : await RepositoryFormatter.FormatRepositoryFullAsync(repo, client);
+            var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>(
+                $"/api/repositories/{Uri.EscapeDataString(handle)}");
+            if (repo == null)
+                return NotFoundHelper.NotFoundMessage("Repository", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "repositories", handle);
+            return await RepositoryFormatter.FormatRepositoryFullAsync(repo, client, backlinks);
         }
         catch (Exception ex)
         {

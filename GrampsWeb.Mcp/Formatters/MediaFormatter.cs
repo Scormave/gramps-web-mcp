@@ -36,7 +36,7 @@ public static class MediaFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, GallerySectionTitle, handleFallback);
     }
 
-    public static string FormatMediaFull(GrampsMedia media)
+    public static string FormatMediaFull(GrampsMedia media, IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"MEDIA [handle: {media.Handle}] (gramps_id: {media.GrampsId})");
@@ -51,6 +51,7 @@ public static class MediaFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", media.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", media.TagList);
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
         if (media.Private)
             sb.AppendLine("⚠ Private record");
 

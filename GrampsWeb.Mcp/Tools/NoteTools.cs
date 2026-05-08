@@ -27,10 +27,12 @@ public static class NoteTools
     {
         try
         {
-            var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>($"/api/notes/{handle}");
-            return note == null
-                ? NotFoundHelper.NotFoundMessage("Note", handle)
-                : await NoteFormatter.FormatNoteFullAsync(note, client);
+            var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>(
+                $"/api/notes/{Uri.EscapeDataString(handle)}");
+            if (note == null)
+                return NotFoundHelper.NotFoundMessage("Note", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "notes", handle);
+            return await NoteFormatter.FormatNoteFullAsync(note, client, backlinks);
         }
         catch (Exception ex)
         {

@@ -8,7 +8,7 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class SourceFormatter
 {
-    public static string FormatSourceFull(GrampsSource source)
+    public static string FormatSourceFull(GrampsSource source, IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"SOURCE: {source.Title} [handle: {source.Handle}] (gramps_id: {source.GrampsId})");
@@ -39,6 +39,7 @@ public static class SourceFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(source.MediaList));
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", source.TagList);
 
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
         return sb.ToString();
     }
 }

@@ -9,7 +9,10 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class NoteFormatter
 {
-    public static async Task<string> FormatNoteFullAsync(GrampsNote note, GrampsApiClient client)
+    public static async Task<string> FormatNoteFullAsync(
+        GrampsNote note,
+        GrampsApiClient client,
+        IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
         var typeLabel = string.IsNullOrWhiteSpace(note.Type)
             ? "General"
@@ -22,6 +25,7 @@ public static class NoteFormatter
         sb.AppendLine();
         sb.AppendLine(note.Text ?? "(empty)");
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", note.TagList);
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
         return sb.ToString();
     }
 }

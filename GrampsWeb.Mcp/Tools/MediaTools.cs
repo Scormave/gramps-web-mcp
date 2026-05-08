@@ -28,10 +28,12 @@ public static class MediaTools
     {
         try
         {
-            var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>($"/api/media/{handle}");
-            return media == null
-                ? NotFoundHelper.NotFoundMessage("Media", handle)
-                : MediaFormatter.FormatMediaFull(media);
+            var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(
+                $"/api/media/{Uri.EscapeDataString(handle)}");
+            if (media == null)
+                return NotFoundHelper.NotFoundMessage("Media", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "media", handle);
+            return MediaFormatter.FormatMediaFull(media, backlinks);
         }
         catch (Exception ex)
         {

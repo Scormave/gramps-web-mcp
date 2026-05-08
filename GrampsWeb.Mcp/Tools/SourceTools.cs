@@ -27,10 +27,12 @@ public static class SourceTools
     {
         try
         {
-            var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>($"/api/sources/{handle}");
-            return source == null
-                ? NotFoundHelper.NotFoundMessage("Source", handle)
-                : SourceFormatter.FormatSourceFull(source);
+            var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>(
+                $"/api/sources/{Uri.EscapeDataString(handle)}");
+            if (source == null)
+                return NotFoundHelper.NotFoundMessage("Source", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "sources", handle);
+            return SourceFormatter.FormatSourceFull(source, backlinks);
         }
         catch (Exception ex)
         {
