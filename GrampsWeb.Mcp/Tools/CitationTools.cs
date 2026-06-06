@@ -51,8 +51,8 @@ public static class CitationTools
     public static async Task<string> CreateCitation(
         [Description("Source handle (required). " + ToolDescriptionFragments.HandleDiscovery)]
         string sourceHandle,
-        [Description("Page reference within source (optional)")]
-        string? page = null,
+        [Description("Page reference within source (optional). " + FlexibleString.DescriptionHint)]
+        FlexibleString? page = null,
         [Description("Confidence: Very Low, Low, Normal, High, or Very High (default: Normal)")]
         string confidence = "Normal",
         [Description("Access or reference date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
@@ -114,8 +114,8 @@ public static class CitationTools
         string handle,
         [Description("Source handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? sourceHandle = null,
-        [Description("Page within source. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string? page = null,
+        [Description("Page within source. " + FlexibleString.DescriptionHint + " " + ToolDescriptionFragments.OmitToKeepScalar)]
+        FlexibleString? page = null,
         [Description("Confidence: Very Low, Low, Normal, High, Very High. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? confidence = null,
         [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
@@ -156,7 +156,7 @@ public static class CitationTools
                 GrampsId = citation.GrampsId,
                 Change = citation.Change,
                 Source = sourceHandle ?? citation.Source,
-                Page = page ?? citation.Page,
+                Page = (string?)page ?? citation.Page,
                 Confidence = finalConfidence,
                 Date = dateRequest,
                 Text = text ?? citation.Text,

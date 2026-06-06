@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 
 namespace GrampsWeb.Mcp.Formatters;
 
@@ -21,7 +22,7 @@ public static class ResponseEnvelope
         if (!string.IsNullOrWhiteSpace(grampsId))
             sb.AppendLine($"gramps_id: {grampsId}");
         if (!string.IsNullOrWhiteSpace(displayName))
-            sb.AppendLine($"name: {displayName}");
+            sb.AppendLine($"name: {JsonSerializer.Serialize(displayName)}");
         sb.AppendLine("---");
 
         if (nextSteps is { Length: > 0 })
