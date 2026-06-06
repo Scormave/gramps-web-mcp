@@ -197,7 +197,13 @@ Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guid
 Update an existing family.  Same field set as create (all optional).
 
 ### D — `DeleteFamily`
-Delete a family.  Does not remove the family from person records automatically.
+Delete a family.  Blocked when backlinks exist unless `force=true`.
+Does not remove the family from person records automatically.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `handle` | `string` | yes | — | Family handle |
+| `force` | `bool` | no | `false` | Delete despite backlinks |
 
 ---
 
@@ -303,7 +309,7 @@ Attach to persons/events/places via their `citationHandles`.
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `sourceHandle` | `string` | yes | — | Source handle |
-| `page` | `string?` | no | — | Page reference |
+| `page` | `FlexibleString?` | no | — | Page reference (JSON string or number, coerced to text) |
 | `confidence` | `string` | no | `"Normal"` | Very Low / Low / Normal / High / Very High |
 | `date` | `string?` | no | — | Access or reference date |
 | `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
@@ -511,7 +517,8 @@ Handles event creation + person update automatically.
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 1 | 2 | 0 | 0 | 3 |
-| **Total** | **21** | **11** | **9** | **10** | **51** |
+| Reference | 4 | 0 | 0 | 0 | 4 |
+| **Total** | **25** | **11** | **9** | **10** | **55** |
 
 ## Prerequisites for write tools
 

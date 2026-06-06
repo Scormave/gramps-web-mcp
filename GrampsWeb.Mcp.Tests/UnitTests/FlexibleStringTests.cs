@@ -14,7 +14,7 @@ public class FlexibleStringTests
     [InlineData("\"10\"", "10")]
     [InlineData("\"123\"", "123")]
     [InlineData("\"p. 5\"", "p. 5")]
-    [InlineData("\"стр. 5\"", "стр. 5")]
+    [InlineData("\"vol. 3\"", "vol. 3")]
     [InlineData("5", "5")]
     [InlineData("10", "10")]
     [InlineData("123", "123")]

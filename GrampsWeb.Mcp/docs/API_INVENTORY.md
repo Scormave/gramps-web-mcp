@@ -2,6 +2,8 @@
 
 Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, and `GrampsWeb.Mcp/Client/GrampsApiClient.cs`. Paginated browsing of each `GET /api/{type}/` list is exposed only via MCP `list_objects` (and `search`), which formats rows through `SearchFormatter` (shared with search results).
 
+**Vendored OpenAPI spec:** repo-root `apispec.yaml` is the upstream Gramps Web OpenAPI spec. **Do not edit it in place** — when the upstream spec changes, replace the file wholesale from Gramps Web.
+
 **Contract checks:** `dotnet test` runs `[Trait("Category","Contract")]` tests that compare `[JsonPropertyName]` on mapped DTOs to `definitions` in repo-root `apispec.yaml`. The enforced mapping is `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` (update it when adding typed API surfaces). The test project copies `apispec.yaml` into the build output next to `swagger-dto-map.json`.
 
 | HTTP path pattern | Response / body type | Model / notes |
@@ -11,7 +13,8 @@ Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, and `G
 | `GET /api/people/{handle}` | Person | `GrampsPerson` (`primary_name`, `alternate_names`) |
 | `GET /api/people/{handle}?extend=all` | Person extended | `GrampsPersonExtended` |
 | `GET /api/people/{h}/ancestors`, `/descendants` | Array | `GrampsPerson[]` |
-| `GET /api/people/{h}/relationships?other=` | Object | `JsonElement` |
+| `GET /api/people/{handle}/timeline` | Array | `GrampsTimelineEntry[]` (query: `events`, `relatives`, `relativeEvents`, `dates`) |
+| `GET /api/relations/{handle1}/{handle2}` | Object | `JsonElement` |
 | `GET /api/families/{handle}` | Family | `GrampsFamily` |
 | `GET /api/families/{handle}?extend=all` | Family extended | `GrampsFamilyExtended` |
 | `GET /api/families/{h}/timeline` | Array | `GrampsTimelineEntry[]` |

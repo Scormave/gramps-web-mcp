@@ -82,7 +82,7 @@ public static class CompositeTools
         "Automatically creates place and event objects as needed, then links them to the new person. " +
         "For full control over all person fields, use create_person instead.")]
     public static async Task<string> QuickAddPerson(
-        [Description("Person's name as 'Given Surname' or 'Given|Surname' (e.g. 'John Smith', 'Maria|García')")]
+        [Description("Person's name as 'Given Surname' or 'Given|Surname' (e.g. 'John Smith', 'Maria|Garcia')")]
         string name,
         [Description("Gender: Female, Male, or Unknown (default: Unknown)")]
         string gender = "Unknown",

@@ -6,6 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <Authors>Scormave</Authors>
+    <Description>MCP server for Gramps Web genealogy system</Description>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/Scormave/gramps-web-mcp</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

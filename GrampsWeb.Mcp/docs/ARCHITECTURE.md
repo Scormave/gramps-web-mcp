@@ -29,6 +29,7 @@ gramps-web-mcp.sln
 │   ├── Input/              — Flexible* types (agent-friendly deserialization)
 │   ├── Models/             — Gramps entity DTOs
 │   ├── Requests/           — create/update request DTOs
+│   ├── Prompts/            — MCP workflow prompts (add-person, research-person, …)
 │   ├── Resources/          — MCP resources (gramps://* reference data)
 │   ├── Serialization/      — JSON converters, wire-format adapters
 │   ├── Tools/              — MCP tool implementations (one file per domain)
@@ -123,6 +124,15 @@ For clients that cannot call MCP `resources/read`, the same payloads are also
 available through compatibility tools in `ReferenceTools.cs`.
 
 The MCP SDK discovers resources at startup via `WithResources<GrampsResources>()`.
+
+### 1c. Prompts (`Prompts/`)
+
+`GrampsPrompts.cs` exposes workflow templates as MCP prompts (`add-person`,
+`research-person`, `add-family`, `find-connections`, `import-from-text`).
+Each prompt expands to a user-role chat message that guides an agent through
+typical tool usage.
+
+The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 
 ### 2. Client (`Client/`)
 
@@ -242,8 +252,11 @@ HTTP transport on port 8080.
 
 ### CI
 
-Gitea Actions workflow (`.gitea/workflows/docker.yml`) builds and publishes the
-Docker image.
+- **GitHub Actions** (`.github/workflows/ci.yml`): build and test on push/PR.
+- **GitHub Actions** (`.github/workflows/docker.yml`): build and publish the
+  Docker image to `ghcr.io/scormave/gramps-web-mcp`.
+- **Gitea Actions** (`.gitea/workflows/docker.yml`): builds and publishes the
+  Docker image to a private Gitea container registry.
 
 ## Testing strategy
 

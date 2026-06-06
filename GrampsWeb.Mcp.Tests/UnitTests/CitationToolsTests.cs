@@ -17,7 +17,7 @@ public class CitationToolsTests
     [InlineData("10")]
     [InlineData("123")]
     [InlineData("p. 5")]
-    [InlineData("стр. 5")]
+    [InlineData("vol. 3")]
     public async Task CreateCitation_Sends_Page_As_String(string page)
     {
         var handler = new RecordingHandler();

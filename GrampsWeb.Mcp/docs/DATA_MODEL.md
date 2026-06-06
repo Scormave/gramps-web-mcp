@@ -162,6 +162,10 @@ canonical model type.
 | `FlexibleAddressList` | `GrampsAddress[]` | Object array; keyed lines (`street:`, `city:`, …); blocks separated by blank line/`---`; single line → street |
 | `FlexibleUrlList` | `GrampsUrl[]` | Object array; `"Type: URL"` strings with optional description |
 | `FlexiblePersonRefList` | `GrampsPersonRef[]` | Object array; `"HANDLE:: rel"` strings; multiline/pipe-separated |
+| `FlexibleString` | `string` | JSON string; JSON number (coerced to text) |
+| `FlexibleChildRefList` | `GrampsChildRef[]` | Object array; `"HANDLE::RelType"` strings (sets both frel/mrel; default Birth); comma/pipe/newline-separated |
+| `FlexibleEventRefList` | `EventRefRequest[]` | Object array; `"HANDLE::Role"` strings (default role Primary); comma/pipe/newline-separated |
+| `FlexibleRepositoryRefList` | `GrampsRepositoryRef[]` | Object array; `"Ref : CallNumber : MediaType"` strings (trailing parts optional) |
 
 ### Parsing logic
 

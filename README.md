@@ -1,7 +1,96 @@
 # gramps-web-mcp
-MCP Server for Gramps Web open-source genealogy system
 
-## Transports
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
+
+MCP server for the [Gramps Web](https://www.grampsweb.org/) open-source genealogy platform.
+Gives AI agents structured, tool-based access to family trees through the Model Context Protocol.
+
+## Features
+
+- **55 MCP tools** — read, create, update, and delete people, families, events, places,
+  sources, citations, notes, media, repositories, and tags
+- **Search and browse** — full-text search and paginated object listing
+- **Kinship tools** — ancestors, descendants, relationships, and timelines
+- **Composite workflows** — quick-add person, add event to person, find by Gramps ID
+- **MCP resources** — type vocabularies, input guide, tree metadata, name settings
+- **MCP prompts** — guided workflows for research, adding people/families, and imports
+- **Multiple transports** — stdio (local clients), Streamable HTTP, legacy SSE
+
+See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) for the full list.
+
+## Prerequisites
+
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (for local development)
+- A running [Gramps Web](https://www.grampsweb.org/) instance with API access
+- Docker (optional, for container deployment)
+
+## Quick start
+
+### Local development (demo server)
+
+`run-local-server.sh` connects to the public [demo.grampsweb.org](https://demo.grampsweb.org)
+instance using well-known demo credentials (`owner` / `owner`):
+
+```bash
+./run-local-server.sh
+```
+
+The server starts with HTTP transport at `http://127.0.0.1:8080/mcp`.
+
+### Docker
+
+Pre-built images are published to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/scormave/gramps-web-mcp:latest
+
+docker run -p 8080:8080 \
+  -e GRAMPS_API_URL=https://your-gramps.example.com \
+  -e GRAMPS_USERNAME=your-user \
+  -e GRAMPS_PASSWORD=your-password \
+  -e GRAMPS_TREE_ID=your-tree-uuid \
+  ghcr.io/scormave/gramps-web-mcp:latest
+```
+
+### MCP client configuration
+
+**stdio** (e.g. Claude Desktop, Cursor):
+
+```json
+{
+  "mcpServers": {
+    "gramps-web": {
+      "command": "dotnet",
+      "args": ["run", "--project", "/path/to/gramps-web-mcp/GrampsWeb.Mcp/GrampsWeb.Mcp.csproj"],
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "GRAMPS_API_URL": "https://your-gramps.example.com",
+        "GRAMPS_USERNAME": "your-user",
+        "GRAMPS_PASSWORD": "your-password",
+        "GRAMPS_TREE_ID": "your-tree-uuid"
+      }
+    }
+  }
+}
+```
+
+**HTTP** (remote / Docker):
+
+Point your MCP client at `http://host:8080/mcp` with Streamable HTTP transport.
+
+## Configuration
+
+### Required (Gramps connection)
+
+| Variable | Description |
+|----------|-------------|
+| `GRAMPS_API_URL` | Base URL of your Gramps Web instance (no trailing slash) |
+| `GRAMPS_USERNAME` | API user name |
+| `GRAMPS_PASSWORD` | API password or token |
+| `GRAMPS_TREE_ID` | Tree UUID on that server |
+
+### Transports
 
 Set `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and `GRAMPS_TREE_ID` as usual.
 
@@ -11,4 +100,45 @@ Set `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and `GRAMPS_TREE_ID`
 | `http` | [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#streamable-http) at `MCP_PATH` (default `/mcp`). Responses stream over SSE. Set `ASPNETCORE_URLS` (e.g. `http://127.0.0.1:8080`). |
 | `sse` | Legacy MCP SSE: `GET {MCP_PATH}/sse` + `POST {MCP_PATH}/message`. Stateful; use for older clients only. |
 
-Optional: `MCP_STATELESS=true|false` (default `true` for `http`), `MCP_ENABLE_LEGACY_SSE=true` with `MCP_TRANSPORT=http` to expose legacy `/sse` alongside Streamable HTTP (stateful).
+### Optional (MCP transport)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ASPNETCORE_URLS` | Listen URLs for HTTP/SSE | — |
+| `MCP_PATH` | URL prefix for MCP endpoints | `/mcp` |
+| `MCP_STATELESS` | Stateless mode for Streamable HTTP | `true` |
+| `MCP_ENABLE_LEGACY_SSE` | Expose legacy `/sse` with `http` transport | `false` |
+
+## Development
+
+```bash
+dotnet test
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [developer guide](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md).
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs index](GrampsWeb.Mcp/docs/README.md) | All documentation files |
+| [Tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) | Complete MCP tool reference |
+| [System prompt](GrampsWeb.Mcp/docs/SYSTEM_PROMPT.md) | Suggested prompt for MCP clients |
+| [Architecture](GrampsWeb.Mcp/docs/ARCHITECTURE.md) | System design overview |
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Security
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## License
+
+Copyright (c) Scormave
+
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE)
+(AGPL-3.0-or-later). Because this is network server software, hosting a modified
+version requires making the corresponding source available to users interacting
+with it over a network.

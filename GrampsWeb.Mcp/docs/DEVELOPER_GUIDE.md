@@ -86,8 +86,8 @@ Key rules:
 
 ### Step 1: Identify the API endpoint
 
-Check the Gramps Web API spec (`apispec.yaml`) and update
-`docs/API_INVENTORY.md` with the new endpoint.
+Check the Gramps Web API spec (`apispec.yaml`, vendored upstream — do not edit
+in place) and update `API_INVENTORY.md` with the new endpoint.
 
 ### Step 2: Create/update model
 
@@ -95,7 +95,7 @@ If the endpoint returns a new entity type:
 1. Add a model class in `Models/` with `[JsonPropertyName]` attributes.
 2. If any fields have polymorphic wire shapes, add a custom `JsonConverter`
    in `Serialization/`.
-3. Update contract test mapping in `Tests/Contract/swagger-dto-map.json`.
+3. Update contract test mapping in `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json`.
 
 ### Step 3: Add API client method (if needed)
 
@@ -124,8 +124,8 @@ objects and return formatted strings.
 
 ### Step 6: Add tests
 
-- **Unit test** for the formatter in `Tests/UnitTests/`.
-- **Fixture file** in `Tests/Fixtures/` with realistic API response JSON.
+- **Unit test** for the formatter in `GrampsWeb.Mcp.Tests/UnitTests/`.
+- **Fixture file** in `GrampsWeb.Mcp.Tests/Fixtures/` with realistic API response JSON.
 - **Contract test mapping** if new models were added.
 
 ---
@@ -148,7 +148,7 @@ Full checklist for adding support for a completely new entity type
 6. **Search support** → update `SearchFormatter.cs` and
    `SearchTools.ListObjects` if the new type should appear in listings.
 7. **Contract mapping** → update `swagger-dto-map.json`
-8. **API inventory** → update `docs/API_INVENTORY.md`
+8. **API inventory** → update `API_INVENTORY.md`
 9. **Tests** → fixture JSON + unit tests + contract mapping
 
 ---
@@ -170,7 +170,7 @@ When you want agents to pass data in free-form text as well as structured JSON:
 2. Create `Serialization/Flexible{Thing}JsonConverter.cs` that parses
    string, array, or object input into the target type.
 3. Use `Flexible{Thing}` as the parameter type in tool methods.
-4. Add unit tests in `Tests/UnitTests/Flexible{Thing}Tests.cs`.
+4. Add unit tests in `GrampsWeb.Mcp.Tests/UnitTests/Flexible{Thing}Tests.cs`.
 5. Update the structured field guidance payload in `Resources/GrampsResources.cs`
    and keep `Tools/ReferenceTools.cs` compatibility output aligned.
 
@@ -258,7 +258,7 @@ Contract tests ensure C# DTOs stay in sync with the OpenAPI spec:
 
 ### Fixture files
 
-JSON files in `Tests/Fixtures/` represent real API responses. They serve as
+JSON files in `GrampsWeb.Mcp.Tests/Fixtures/` represent real API responses. They serve as
 regression tests for deserialization. When the API changes shape, update or
 add fixtures to document the new format.
 
@@ -352,8 +352,11 @@ Default environment in the image:
 
 ### CI
 
-Gitea Actions workflow in `.gitea/workflows/docker.yml` builds and publishes
-the Docker image on push.
+- **GitHub Actions** (`.github/workflows/ci.yml`): build and test on push/PR.
+- **GitHub Actions** (`.github/workflows/docker.yml`): publish Docker image to
+  `ghcr.io/scormave/gramps-web-mcp` on push to `main`.
+- **Gitea Actions** (`.gitea/workflows/docker.yml`): build and publish the
+  Docker image to a private Gitea container registry.
 
 ### Local development
 
@@ -387,8 +390,8 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Map models to request DTOs | `Requests/GrampsRequestMapping.cs` |
 | Configure API connection | `Config/GrampsConfig.cs` (env vars) |
 | Configure transport | `Config/McpTransportConfig.cs` (env vars) |
-| Add a test fixture | `Tests/Fixtures/{name}.json` |
-| Update contract mapping | `Tests/Contract/swagger-dto-map.json` |
+| Add a test fixture | `GrampsWeb.Mcp.Tests/Fixtures/{name}.json` |
+| Update contract mapping | `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` |
 | Parse dates from agent input | `Dates/AgentDateParser.cs` |
 | Parse gender/confidence enums | `Tools/Parsing/` |
 | Look up default type labels | `Formatters/GrampsDefaultTypeLabels.cs` |
