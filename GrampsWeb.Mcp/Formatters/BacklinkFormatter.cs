@@ -34,7 +34,7 @@ public static class BacklinkFormatter
                 ? s
                 : g.Key;
             sb.AppendLine();
-            sb.AppendLine($"Referenced by {g.Title} ({g.Handles.Count}):");
+            sb.AppendLine($"Referenced by {g.Title} ({g.Handles.Count}) [READ-ONLY — to add/remove this link, update the {singular} record, not this object]:");
             foreach (var h in g.Handles)
                 sb.AppendLine($"  • {singular} [handle: {h}]");
         }

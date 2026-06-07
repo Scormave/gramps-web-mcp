@@ -67,6 +67,24 @@ Full-control tools:
 
 Important update rule: in update_* tools, omitting a list parameter leaves that list unchanged. Passing an empty list [] clears existing links of that type. Never pass [] unless the user specifically asked to remove those links.
 
+## Ownership Model — Links Are One-Way
+
+Gramps uses a one-way ownership model. Each link is stored on exactly one side — the **owner** — and the other side only reflects it as a read-only backlink.
+
+| Goal | Owner to update | Field |
+|------|----------------|-------|
+| Link a person to an event | Person | event_refs |
+| Remove a person from an event | Person | event_refs (omit that ref) |
+| Add a child to a family | Family | child_ref_list |
+| Add a citation to a person | Person | citation_handles |
+| Add a citation to an event | Event | citation_handles |
+| Add media to a person | Person | media_handles |
+| Link a source to a repository | Source | repository_handles |
+
+**Rule:** "Linked people", "Referenced by …", and any backlink section shown in a tool response are **read-only**. They tell you which other objects point to this one. You **cannot** change those links by updating the object you are currently viewing — you must update the object that owns the link.
+
+Example: to attach an event to a person, call update_person with the event handle in event_refs. Do NOT attempt to modify the event to add the person — events do not hold person references.
+
 Be especially careful with deletion. If a delete tool reports backlinks or references, explain the risk and do not force deletion unless the user gives a separate explicit confirmation.
 
 ## Response Style
