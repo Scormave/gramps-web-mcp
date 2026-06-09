@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 try
 {
-    var config = GrampsConfig.FromEnvironment();
+    var config = GrampsConfig.FromEnvironment(args);
     var transport = McpTransportConfig.FromEnvironment();
 
     if (transport.Mode == McpListenMode.Stdio)

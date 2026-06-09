@@ -65,7 +65,7 @@ public class BacklinkCollectorTests
         BacklinkFormatter.AppendReferencedBySections(sb, groups);
 
         var text = sb.ToString();
-        Assert.Contains("Referenced by events (2):", text);
+        Assert.Contains("Referenced by events (2) [READ-ONLY", text);
         Assert.Contains("  • event [handle: e2]", text);
         Assert.Contains("  • event [handle: e1]", text);
     }

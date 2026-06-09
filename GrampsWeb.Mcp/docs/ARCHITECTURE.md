@@ -70,7 +70,8 @@ environment variable.  See `McpTransportConfig` for details.
 
 ## Configuration
 
-All configuration is loaded from **environment variables** (no appsettings files).
+Configuration is loaded from **environment variables** (no appsettings files).
+Read-only mode can also be enabled with a server CLI argument.
 
 ### Required (Gramps connection)
 
@@ -90,6 +91,13 @@ All configuration is loaded from **environment variables** (no appsettings files
 | `MCP_PATH` | URL prefix for MCP endpoints | `/mcp` |
 | `MCP_STATELESS` | Stateless mode for Streamable HTTP | `true` |
 | `MCP_ENABLE_LEGACY_SSE` | Expose legacy `/sse` with `http` transport | `false` |
+
+### Optional (runtime mode)
+
+| Variable / argument | Description | Default |
+|---------------------|-------------|---------|
+| `GRAMPS_READ_ONLY=true` or `--read-only` | Keep all MCP tools visible, but block create/update/delete mutation calls before they reach Gramps Web | read/write |
+| `--read-only=false` | Explicitly disable read-only mode, overriding `GRAMPS_READ_ONLY=true` | — |
 
 ## Architectural layers
 
@@ -113,6 +121,8 @@ Tools are the **public API surface** of the MCP server.  They:
 a single tool invocation.
 
 The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`.
+Read-only mode intentionally keeps this discovery unchanged: write tools remain
+visible to clients, but mutation calls fail with a clear MCP error.
 
 ### 1b. Resources (`Resources/`)
 
@@ -141,6 +151,8 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 - typed GET/POST/PUT/DELETE with `System.Text.Json`
 - mutation response parsing (`PostMutationAsync` / `PutMutationAsync`)
   that handles Gramps' change-array responses
+- read-only enforcement for mutation helpers (`PostMutationAsync`,
+  `PutMutationAsync`, `DeleteAsync`) before authentication or request creation
 - request/response logging with sensitive field redaction
 - paged list support (`GetPagedListAsync<T>`)
 
@@ -245,6 +257,25 @@ docker run -p 8080:8080 \
   -e GRAMPS_PASSWORD=pass \
   -e GRAMPS_TREE_ID=uuid \
   gramps-web-mcp
+```
+
+Enable read-only mode with either an environment variable or an app argument:
+
+```bash
+docker run -p 8080:8080 \
+  -e GRAMPS_API_URL=https://your-gramps.example.com \
+  -e GRAMPS_USERNAME=user \
+  -e GRAMPS_PASSWORD=pass \
+  -e GRAMPS_TREE_ID=uuid \
+  -e GRAMPS_READ_ONLY=true \
+  gramps-web-mcp
+
+docker run -p 8080:8080 \
+  -e GRAMPS_API_URL=https://your-gramps.example.com \
+  -e GRAMPS_USERNAME=user \
+  -e GRAMPS_PASSWORD=pass \
+  -e GRAMPS_TREE_ID=uuid \
+  gramps-web-mcp --read-only
 ```
 
 The Dockerfile uses multi-stage build (SDK → ASP.NET runtime) and defaults to

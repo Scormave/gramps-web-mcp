@@ -300,6 +300,7 @@ public class GrampsApiClient
     public async Task<(string? Handle, string? GrampsId)> PostMutationAsync(
         string path, object body, string grampsClass)
     {
+        EnsureWritable();
         await EnsureAuthenticatedAsync();
 
         var json = JsonSerializer.Serialize(body, GrampsJson.Options);
@@ -330,6 +331,7 @@ public class GrampsApiClient
     /// </summary>
     public async Task PutMutationAsync(string path, object body)
     {
+        EnsureWritable();
         await EnsureAuthenticatedAsync();
 
         var json = JsonSerializer.Serialize(body, GrampsJson.Options);
@@ -358,6 +360,7 @@ public class GrampsApiClient
     /// </summary>
     public async Task DeleteAsync(string path)
     {
+        EnsureWritable();
         await EnsureAuthenticatedAsync();
 
         var url = path;
@@ -391,6 +394,13 @@ public class GrampsApiClient
         }
 
         request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+    }
+
+    private void EnsureWritable()
+    {
+        if (_config.ReadOnly)
+            throw new InvalidOperationException(
+                "Read-only mode is enabled; create, update, and delete tools are disabled.");
     }
 
     private async Task<HttpResponseMessage> SendWithLoggingAsync(

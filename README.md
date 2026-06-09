@@ -16,6 +16,7 @@ Gives AI agents structured, tool-based access to family trees through the Model 
 - **MCP resources** — type vocabularies, input guide, tree metadata, name settings
 - **MCP prompts** — guided workflows for research, adding people/families, and imports
 - **Multiple transports** — stdio (local clients), Streamable HTTP, legacy SSE
+- **Read-only mode** — keep all tools visible while blocking create, update, and delete calls
 
 See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) for the full list.
 
@@ -53,6 +54,18 @@ docker run -p 8080:8080 \
   ghcr.io/scormave/gramps-web-mcp:latest
 ```
 
+For read-only mode, add `-e GRAMPS_READ_ONLY=true` or pass `--read-only` after
+the image name:
+
+```bash
+docker run -p 8080:8080 \
+  -e GRAMPS_API_URL=https://your-gramps.example.com \
+  -e GRAMPS_USERNAME=your-user \
+  -e GRAMPS_PASSWORD=your-password \
+  -e GRAMPS_TREE_ID=your-tree-uuid \
+  ghcr.io/scormave/gramps-web-mcp:latest --read-only
+```
+
 ### MCP client configuration
 
 **stdio** (e.g. Claude Desktop, Cursor):
@@ -75,6 +88,13 @@ docker run -p 8080:8080 \
 }
 ```
 
+To run a stdio server in read-only mode, either add
+`"GRAMPS_READ_ONLY": "true"` to `env` or pass the app argument after `--`:
+
+```json
+"args": ["run", "--project", "/path/to/gramps-web-mcp/GrampsWeb.Mcp/GrampsWeb.Mcp.csproj", "--", "--read-only"]
+```
+
 **HTTP** (remote / Docker):
 
 Point your MCP client at `http://host:8080/mcp` with Streamable HTTP transport.
@@ -89,6 +109,13 @@ Point your MCP client at `http://host:8080/mcp` with Streamable HTTP transport.
 | `GRAMPS_USERNAME` | API user name |
 | `GRAMPS_PASSWORD` | API password or token |
 | `GRAMPS_TREE_ID` | Tree UUID on that server |
+
+### Runtime mode
+
+| Variable / argument | Behavior | Default |
+|---------------------|----------|---------|
+| `GRAMPS_READ_ONLY=true` or `--read-only` | Blocks create, update, and delete mutation calls while keeping tools visible | read/write |
+| `--read-only=false` | Explicitly disables read-only mode, overriding `GRAMPS_READ_ONLY=true` | — |
 
 ### Transports
 

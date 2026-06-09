@@ -21,6 +21,10 @@ WORKDIR /app
 # GRAMPS_USERNAME     API user name.
 # GRAMPS_PASSWORD     API password or token.
 # GRAMPS_TREE_ID      Tree UUID on that server.
+# GRAMPS_READ_ONLY    true|false — when true, block create/update/delete tool calls.
+#
+# You can also enable read-only mode with a container app argument:
+# docker run ... gramps-web-mcp --read-only
 
 # --- MCP transport (optional; these defaults suit a networked container) ---
 # MCP_TRANSPORT       stdio | http | sse — default in image is http for Docker.
