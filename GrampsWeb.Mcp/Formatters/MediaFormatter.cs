@@ -45,6 +45,8 @@ public static class MediaFormatter
         sb.AppendLine($"Path: {media.Path ?? "(not specified)"}");
         if (!string.IsNullOrEmpty(media.Mime))
             sb.AppendLine($"MIME: {media.Mime}");
+        if (!string.IsNullOrEmpty(media.Checksum))
+            sb.AppendLine($"Checksum: {media.Checksum}");
         if (!string.IsNullOrEmpty(media.Description))
             sb.AppendLine($"\nDescription:\n{media.Description}");
 

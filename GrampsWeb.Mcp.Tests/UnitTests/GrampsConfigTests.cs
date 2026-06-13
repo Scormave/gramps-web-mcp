@@ -13,6 +13,12 @@ public class GrampsConfigTests
         var config = LoadConfig(readOnlyEnv: null);
 
         Assert.False(config.ReadOnly);
+        Assert.False(config.MediaResourcesEnabled);
+        Assert.Equal(5 * 1024 * 1024, config.MediaMaxBytes);
+        Assert.Equal(
+            new[] { "image/jpeg", "image/png", "image/webp", "application/pdf" },
+            config.EffectiveMediaAllowedMimeTypes);
+        Assert.False(config.MediaAllowPrivate);
     }
 
     [Theory]
@@ -30,7 +36,7 @@ public class GrampsConfigTests
     [InlineData("--gramps-read-only")]
     public void FromEnvironment_Enables_ReadOnly_From_Cli_Flag(string arg)
     {
-        var config = LoadConfig(readOnlyEnv: null, arg);
+        var config = LoadConfig(readOnlyEnv: null, args: [arg]);
 
         Assert.True(config.ReadOnly);
     }
@@ -40,12 +46,52 @@ public class GrampsConfigTests
     [InlineData("--gramps-read-only=false")]
     public void FromEnvironment_Cli_False_Overrides_Environment_True(string arg)
     {
-        var config = LoadConfig(readOnlyEnv: "true", arg);
+        var config = LoadConfig(readOnlyEnv: "true", args: [arg]);
 
         Assert.False(config.ReadOnly);
     }
 
-    private static GrampsConfig LoadConfig(string? readOnlyEnv, params string[] args)
+    [Fact]
+    public void FromEnvironment_Parses_Media_Resource_Settings()
+    {
+        var config = LoadConfig(
+            readOnlyEnv: null,
+            mediaResourcesEnabled: "true",
+            mediaMaxBytes: "12345",
+            mediaAllowedMimeTypes: " Image/JPEG,application/pdf,image/jpeg ",
+            mediaAllowPrivate: "1");
+
+        Assert.True(config.MediaResourcesEnabled);
+        Assert.Equal(12345, config.MediaMaxBytes);
+        Assert.Equal(new[] { "image/jpeg", "application/pdf" }, config.EffectiveMediaAllowedMimeTypes);
+        Assert.True(config.MediaAllowPrivate);
+    }
+
+    [Fact]
+    public void FromEnvironment_Rejects_Non_Positive_Media_Max_Bytes()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, mediaMaxBytes: "0"));
+
+        Assert.Contains("must be a positive integer", ex.Message);
+    }
+
+    [Fact]
+    public void FromEnvironment_Rejects_Unparseable_Media_Max_Bytes()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, mediaMaxBytes: "not-a-number"));
+
+        Assert.Contains("must be a valid integer", ex.Message);
+    }
+
+    private static GrampsConfig LoadConfig(
+        string? readOnlyEnv,
+        string? mediaResourcesEnabled = null,
+        string? mediaMaxBytes = null,
+        string? mediaAllowedMimeTypes = null,
+        string? mediaAllowPrivate = null,
+        params string[] args)
     {
         lock (EnvironmentLock)
         {
@@ -57,6 +103,10 @@ public class GrampsConfigTests
                 Environment.SetEnvironmentVariable("GRAMPS_PASSWORD", "pass");
                 Environment.SetEnvironmentVariable("GRAMPS_TREE_ID", "tree");
                 Environment.SetEnvironmentVariable("GRAMPS_READ_ONLY", readOnlyEnv);
+                Environment.SetEnvironmentVariable("GRAMPS_MEDIA_RESOURCES_ENABLED", mediaResourcesEnabled);
+                Environment.SetEnvironmentVariable("GRAMPS_MEDIA_MAX_BYTES", mediaMaxBytes);
+                Environment.SetEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES", mediaAllowedMimeTypes);
+                Environment.SetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE", mediaAllowPrivate);
 
                 return GrampsConfig.FromEnvironment(args);
             }
@@ -75,7 +125,11 @@ public class GrampsConfigTests
             ["GRAMPS_USERNAME"] = Environment.GetEnvironmentVariable("GRAMPS_USERNAME"),
             ["GRAMPS_PASSWORD"] = Environment.GetEnvironmentVariable("GRAMPS_PASSWORD"),
             ["GRAMPS_TREE_ID"] = Environment.GetEnvironmentVariable("GRAMPS_TREE_ID"),
-            ["GRAMPS_READ_ONLY"] = Environment.GetEnvironmentVariable("GRAMPS_READ_ONLY")
+            ["GRAMPS_READ_ONLY"] = Environment.GetEnvironmentVariable("GRAMPS_READ_ONLY"),
+            ["GRAMPS_MEDIA_RESOURCES_ENABLED"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_RESOURCES_ENABLED"),
+            ["GRAMPS_MEDIA_MAX_BYTES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_MAX_BYTES"),
+            ["GRAMPS_MEDIA_ALLOWED_MIME_TYPES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES"),
+            ["GRAMPS_MEDIA_ALLOW_PRIVATE"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE")
         };
     }
 

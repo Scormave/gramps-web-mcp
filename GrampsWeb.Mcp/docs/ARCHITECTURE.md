@@ -99,6 +99,15 @@ Read-only mode can also be enabled with a server CLI argument.
 | `GRAMPS_READ_ONLY=true` or `--read-only` | Keep all MCP tools visible, but block create/update/delete mutation calls before they reach Gramps Web | read/write |
 | `--read-only=false` | Explicitly disable read-only mode, overriding `GRAMPS_READ_ONLY=true` | — |
 
+### Optional (media resources)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP resources for media thumbnails and files | `false` |
+| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource | `5242880` |
+| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Comma-separated allowlist; exact MIME types and `type/*` wildcards are supported | `image/jpeg,image/png,image/webp,application/pdf` |
+| `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allow bytes for Gramps media records marked private | `false` |
+
 ## Architectural layers
 
 ### 1. Tools (`Tools/`)
@@ -130,6 +139,12 @@ visible to clients, but mutation calls fail with a clear MCP error.
 `gramps://input-guide`, `gramps://types`, `gramps://metadata`,
 `gramps://name-settings`.
 
+It also exposes opt-in binary media resources:
+`gramps://media/{handle}/thumbnail/{size}` and
+`gramps://media/{handle}/file`. These return `BlobResourceContents`, fetch
+media metadata first, and enforce enabled/private/MIME/size safeguards before
+returning bytes to the MCP client.
+
 For clients that cannot call MCP `resources/read`, the same payloads are also
 available through compatibility tools in `ReferenceTools.cs`.
 
@@ -155,6 +170,8 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
   `PutMutationAsync`, `DeleteAsync`) before authentication or request creation
 - request/response logging with sensitive field redaction
 - paged list support (`GetPagedListAsync<T>`)
+- binary GET support (`GetBytesAsync`) for media resources, with payload-free
+  logging and configured maximum-size enforcement
 
 `GrampsApiClientExtensions` adds null-on-404 helpers.
 `ExtendedEntityEnrichment` refetches nested objects for `?extend=all` responses

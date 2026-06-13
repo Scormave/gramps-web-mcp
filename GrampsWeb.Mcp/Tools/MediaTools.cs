@@ -20,7 +20,7 @@ public static class MediaTools
     [McpServerTool]
     [Description(
         "Read-only: media object metadata (path, MIME, checksum, description). " +
-        "Does not upload or download file bytes via MCP.")]
+        "For opt-in file bytes, use resources gramps://media/{handle}/thumbnail/{size} or gramps://media/{handle}/file.")]
     public static async Task<string> GetMedia(
         [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

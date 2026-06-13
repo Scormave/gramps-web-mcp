@@ -9,7 +9,8 @@ Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, and `G
 **Read-only mode:** when `GRAMPS_READ_ONLY=true` or `--read-only` is set,
 `PostMutationAsync`, `PutMutationAsync`, and `DeleteAsync` block tree mutations
 before sending HTTP requests. Authentication POSTs (`/api/token/` and
-`/api/token/refresh/`) are still allowed because they do not mutate tree data.
+`/api/token/refresh/`) and binary media GETs are still allowed because they do
+not mutate tree data.
 
 | HTTP path pattern | Response / body type | Model / notes |
 |-------------------|----------------------|----------------|
@@ -31,6 +32,8 @@ before sending HTTP requests. Authentication POSTs (`/api/token/` and
 | `GET /api/repositories/{handle}` | Repository | `GrampsRepository` |
 | `GET /api/notes/{handle}` | Note | `GrampsNote` |
 | `GET /api/media/{handle}` | Media | `GrampsMedia` |
+| `GET /api/media/{handle}/thumbnail/{size}` | Binary | MCP resource `gramps://media/{handle}/thumbnail/{size}` via `GetBytesAsync`; opt-in safeguards apply |
+| `GET /api/media/{handle}/file` | Binary | MCP resource `gramps://media/{handle}/file` via `GetBytesAsync`; opt-in safeguards apply |
 | `GET /api/tags/{handle}` | Tag | `GrampsTag` |
 | `GET ...?backlinks=true` | Backlinks | `JsonElement` |
 | `GET /api/types/default/` | Types | `JsonElement` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in apispec) |

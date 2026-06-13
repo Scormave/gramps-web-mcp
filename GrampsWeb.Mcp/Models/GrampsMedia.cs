@@ -19,6 +19,9 @@ public class GrampsMedia
     [JsonPropertyName("mime")]
     public string? Mime { get; set; }
 
+    [JsonPropertyName("checksum")]
+    public string? Checksum { get; set; }
+
     [JsonPropertyName("desc")]
     public string? Description { get; set; }
 

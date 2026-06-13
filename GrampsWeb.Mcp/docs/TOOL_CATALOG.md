@@ -18,6 +18,7 @@ decorated with `[McpServerTool]`.
 Read-only mode (`GRAMPS_READ_ONLY=true` or `--read-only`) keeps C/U/D tools
 and write-capable composite tools visible, but calls to those tools return an
 MCP error before any mutation request is sent to Gramps Web.
+Binary media resources are read-only GETs and are not blocked by read-only mode.
 
 ## Resources
 
@@ -29,10 +30,13 @@ Read-only reference/discovery data exposed as MCP resources:
 | `gramps://types` | Built-in and custom type vocabularies (event/place/note/etc.) |
 | `gramps://metadata` | Connection/tree metadata (API version, tree id/name, owner, default person) |
 | `gramps://name-settings` | Name display formats and surname grouping rules |
+| `gramps://media/{handle}/thumbnail/{size}` | Opt-in binary thumbnail bytes for a media record; recommended for vision agents |
+| `gramps://media/{handle}/file` | Opt-in full media file bytes, subject to size, MIME, and private-record safeguards |
 
 Compatibility note: the same payloads are also available as tools for clients
 without native MCP resource reading support:
 `get_input_guide`, `get_types`, `get_metadata`, `get_name_settings`.
+Binary media resources do not have text-tool mirrors.
 
 ## Reference (`ReferenceTools.cs`) — 4 tools
 
@@ -360,7 +364,13 @@ Delete a note.  Blocked when attached elsewhere unless `force=true`.
 
 ### R — `GetMedia`
 Media object metadata: path, MIME type, checksum, description.
-Does **not** upload/download file bytes.
+Does **not** upload/download file bytes. For AI vision analysis, prefer the
+opt-in resource `gramps://media/{handle}/thumbnail/{size}`; use
+`gramps://media/{handle}/file` only when full resolution is needed.
+
+Media byte resources require `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect
+`GRAMPS_MEDIA_MAX_BYTES` and `GRAMPS_MEDIA_ALLOWED_MIME_TYPES`, and block
+private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
 
 ### U — `UpdateMedia`
 Update media metadata (no binary upload).

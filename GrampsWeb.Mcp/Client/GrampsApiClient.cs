@@ -256,6 +256,43 @@ public class GrampsApiClient
     }
 
     /// <summary>
+    /// Performs a binary GET request without logging or converting the response body as text.
+    /// </summary>
+    public async Task<GrampsBinaryResponse> GetBytesAsync(string path, long maxBytes)
+    {
+        if (maxBytes <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxBytes), "Maximum byte count must be positive.");
+
+        await EnsureAuthenticatedAsync();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        AddAuthorizationHeader(request);
+
+        try
+        {
+            using var response = await SendBinaryWithLoggingAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                throw new GrampsApiException(response.StatusCode, errorBody);
+            }
+
+            var contentLength = response.Content.Headers.ContentLength;
+            if (contentLength.HasValue && contentLength.Value > maxBytes)
+                throw MediaSizeLimitExceeded(contentLength.Value, maxBytes);
+
+            var bytes = await ReadBytesWithLimitAsync(response.Content, maxBytes);
+            var mimeType = response.Content.Headers.ContentType?.MediaType;
+            return new GrampsBinaryResponse(bytes, mimeType);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway, ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Performs a PUT request with the given body and deserializes the response to T.
     /// Adds Authorization header and executes request.
     /// </summary>
@@ -458,6 +495,58 @@ public class GrampsApiClient
 
         response.Content = restoredContent;
         return response;
+    }
+
+    private async Task<HttpResponseMessage> SendBinaryWithLoggingAsync(HttpRequestMessage request)
+    {
+        _logger.LogInformation(
+            "Gramps API binary request: {Method} {Path}",
+            request.Method.Method,
+            request.RequestUri?.ToString() ?? string.Empty);
+
+        var startedAt = DateTime.UtcNow;
+        var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        var elapsedMs = (DateTime.UtcNow - startedAt).TotalMilliseconds;
+
+        _logger.LogInformation(
+            "Gramps API binary response: {Method} {Path} Status={StatusCode} DurationMs={DurationMs} ContentType={ContentType} ContentLength={ContentLength}",
+            request.Method.Method,
+            request.RequestUri?.ToString() ?? string.Empty,
+            (int)response.StatusCode,
+            elapsedMs,
+            response.Content.Headers.ContentType?.ToString() ?? "<unknown>",
+            response.Content.Headers.ContentLength?.ToString() ?? "<unknown>");
+
+        return response;
+    }
+
+    private static async Task<byte[]> ReadBytesWithLimitAsync(HttpContent content, long maxBytes)
+    {
+        await using var stream = await content.ReadAsStreamAsync();
+        using var output = new MemoryStream();
+        var buffer = new byte[81920];
+        long total = 0;
+
+        while (true)
+        {
+            var read = await stream.ReadAsync(buffer);
+            if (read == 0)
+                break;
+
+            total += read;
+            if (total > maxBytes)
+                throw MediaSizeLimitExceeded(total, maxBytes);
+
+            output.Write(buffer, 0, read);
+        }
+
+        return output.ToArray();
+    }
+
+    private static InvalidOperationException MediaSizeLimitExceeded(long actualBytes, long maxBytes)
+    {
+        return new InvalidOperationException(
+            $"Media response is {actualBytes} bytes, exceeding the configured limit of {maxBytes} bytes.");
     }
 
     private static string? SanitizeAndLimitForLog(string? value)

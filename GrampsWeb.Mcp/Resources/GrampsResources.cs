@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Serialization;
@@ -97,6 +98,85 @@ public sealed class GrampsResources
         }
     }
 
+    [McpServerResource(
+        Name = "media-file",
+        UriTemplate = "gramps://media/{handle}/file",
+        MimeType = "application/octet-stream")]
+    [Description(
+        "Opt-in binary media file bytes for vision-capable clients. " +
+        "Prefer thumbnails for AI analysis when full resolution is not required.")]
+    public static async Task<BlobResourceContents> GetMediaFile(
+        string handle,
+        GrampsApiClient client,
+        GrampsConfig config)
+    {
+        try
+        {
+            EnsureMediaResourcesEnabled(config);
+            EnsureMediaHandle(handle);
+            var media = await GetMediaMetadataOrThrowAsync(handle, client);
+            EnsurePrivateAllowed(media, config);
+            EnsureMimeAllowed(media.Mime, config);
+
+            var escapedHandle = Uri.EscapeDataString(handle);
+            var binary = await client.GetBytesAsync(
+                $"/api/media/{escapedHandle}/file",
+                config.MediaMaxBytes);
+            var mimeType = EffectiveMimeType(binary.MimeType, media.Mime);
+            EnsureMimeAllowed(mimeType, config);
+
+            return BlobResourceContents.FromBytes(
+                binary.Bytes,
+                $"gramps://media/{escapedHandle}/file",
+                mimeType);
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    [McpServerResource(
+        Name = "media-thumbnail",
+        UriTemplate = "gramps://media/{handle}/thumbnail/{size}",
+        MimeType = "image/*")]
+    [Description(
+        "Opt-in binary media thumbnail bytes for vision-capable clients. " +
+        "Recommended before requesting full-resolution genealogy media.")]
+    public static async Task<BlobResourceContents> GetMediaThumbnail(
+        string handle,
+        int size,
+        GrampsApiClient client,
+        GrampsConfig config)
+    {
+        try
+        {
+            EnsureMediaResourcesEnabled(config);
+            EnsureMediaHandle(handle);
+            if (size <= 0)
+                throw McpToolErrors.ValidationError("Thumbnail size must be a positive integer.");
+
+            var media = await GetMediaMetadataOrThrowAsync(handle, client);
+            EnsurePrivateAllowed(media, config);
+
+            var escapedHandle = Uri.EscapeDataString(handle);
+            var binary = await client.GetBytesAsync(
+                $"/api/media/{escapedHandle}/thumbnail/{size}",
+                config.MediaMaxBytes);
+            var mimeType = EffectiveMimeType(binary.MimeType, "image/jpeg");
+            EnsureMimeAllowed(mimeType, config);
+
+            return BlobResourceContents.FromBytes(
+                binary.Bytes,
+                $"gramps://media/{escapedHandle}/thumbnail/{size}",
+                mimeType);
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
     internal static async Task<string> FetchTypesTextAsync(GrampsApiClient client)
     {
         var defaultRoot = await client.GetAsync<JsonElement>("/api/types/default/");
@@ -155,6 +235,78 @@ public sealed class GrampsResources
         var groups = await client.GetAsync<dynamic>("/api/name-groups/");
         return $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
                $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}";
+    }
+
+    internal static async Task<GrampsMedia> GetMediaMetadataOrThrowAsync(string handle, GrampsApiClient client)
+    {
+        var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(
+            $"/api/media/{Uri.EscapeDataString(handle)}");
+
+        if (media == null)
+            throw McpToolErrors.ValidationError($"Media not found: {handle}");
+
+        return media;
+    }
+
+    internal static void EnsureMediaHandle(string handle)
+    {
+        if (string.IsNullOrWhiteSpace(handle))
+            throw McpToolErrors.ValidationError("Media handle must not be empty.");
+    }
+
+    internal static void EnsureMediaResourcesEnabled(GrampsConfig config)
+    {
+        if (!config.MediaResourcesEnabled)
+            throw McpToolErrors.ValidationError(
+                "Media file resources are disabled. Set GRAMPS_MEDIA_RESOURCES_ENABLED=true to expose media bytes.");
+    }
+
+    internal static void EnsurePrivateAllowed(GrampsMedia media, GrampsConfig config)
+    {
+        if (media.Private && !config.MediaAllowPrivate)
+            throw McpToolErrors.ValidationError(
+                "Media file resources are blocked for private media records. Set GRAMPS_MEDIA_ALLOW_PRIVATE=true to allow them.");
+    }
+
+    internal static void EnsureMimeAllowed(string? mimeType, GrampsConfig config)
+    {
+        var normalized = NormalizeMimeType(mimeType);
+        if (normalized == null)
+            throw McpToolErrors.ValidationError("Media MIME type is missing and cannot be checked against the allowlist.");
+
+        if (!config.EffectiveMediaAllowedMimeTypes.Any(allowed => MimeMatches(normalized, allowed)))
+            throw McpToolErrors.ValidationError(
+                $"Media MIME type '{normalized}' is not allowed by GRAMPS_MEDIA_ALLOWED_MIME_TYPES.");
+    }
+
+    internal static string EffectiveMimeType(string? responseMimeType, string? fallbackMimeType)
+    {
+        return NormalizeMimeType(responseMimeType)
+               ?? NormalizeMimeType(fallbackMimeType)
+               ?? "application/octet-stream";
+    }
+
+    private static string? NormalizeMimeType(string? mimeType)
+    {
+        var normalized = mimeType?.Split(';', 2)[0].Trim().ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(normalized)
+            ? null
+            : normalized;
+    }
+
+    private static bool MimeMatches(string actual, string allowed)
+    {
+        var normalizedAllowed = NormalizeMimeType(allowed);
+        if (normalizedAllowed == null)
+            return false;
+
+        if (normalizedAllowed.EndsWith("/*", StringComparison.Ordinal))
+        {
+            var prefix = normalizedAllowed[..^1];
+            return actual.StartsWith(prefix, StringComparison.Ordinal);
+        }
+
+        return actual.Equals(normalizedAllowed, StringComparison.Ordinal);
     }
 
     internal static string BuildInputGuideText()

@@ -57,6 +57,8 @@ public static async Task<string> ToolName(
 
 Key rules:
 - Tools return `Task<string>` — always formatted text, never raw JSON.
+- Binary payloads belong in MCP resources, not tools. Media files use
+  `BlobResourceContents` from `Resources/GrampsResources.cs`.
 - `GrampsApiClient client` is the **last** parameter, injected by the MCP host.
 - Every tool wraps its body in `try/catch` and rethrows via `McpToolErrors`.
 - `[Description]` must clearly state read-only vs write and prerequisites.
@@ -101,6 +103,8 @@ If the endpoint returns a new entity type:
 
 Most tools use the generic `client.GetAsync<T>()`, `client.PostMutationAsync<T>()`
 etc.  Only add new client methods if you need special request/response handling.
+Use `GetBytesAsync(path, maxBytes)` for binary responses so payload bytes are
+not logged or converted through text.
 
 ### Step 4: Add formatter
 
@@ -376,6 +380,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | I need to... | Look in... |
 |--------------|-----------|
 | Add/modify a tool | `Tools/{Entity}Tools.cs` |
+| Add/modify an MCP resource | `Resources/GrampsResources.cs` |
 | Add a multi-step convenience tool | `Tools/CompositeTools.cs` |
 | Resolve Gramps ID → handle | `Client/HandleResolver.cs` |
 | Validate type strings server-side | `Client/TypeCache.cs` |
@@ -389,6 +394,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Add shared tool description text | `Tools/ToolDescriptionFragments.cs` |
 | Map models to request DTOs | `Requests/GrampsRequestMapping.cs` |
 | Configure API connection | `Config/GrampsConfig.cs` (env vars) |
+| Configure media resource safeguards | `Config/GrampsConfig.cs` (`GRAMPS_MEDIA_*`) |
 | Configure transport | `Config/McpTransportConfig.cs` (env vars) |
 | Add a test fixture | `GrampsWeb.Mcp.Tests/Fixtures/{name}.json` |
 | Update contract mapping | `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` |

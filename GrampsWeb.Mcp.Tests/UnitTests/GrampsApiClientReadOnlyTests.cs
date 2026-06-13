@@ -52,6 +52,56 @@ public class GrampsApiClientReadOnlyTests
             });
     }
 
+    [Fact]
+    public async Task GetBytesAsync_Still_Authenticates_And_Reads_In_ReadOnly_Mode()
+    {
+        var handler = new RecordingHandler();
+        var client = CreateClient(handler, readOnly: true);
+
+        var result = await client.GetBytesAsync("/api/media/handle1/file", maxBytes: 10);
+
+        Assert.Equal([0, 159, 255], result.Bytes.ToArray());
+        Assert.Equal("image/jpeg", result.MimeType);
+        Assert.Collection(
+            handler.Requests,
+            request =>
+            {
+                Assert.Equal(HttpMethod.Post, request.Method);
+                Assert.Equal("/api/token/", request.Path);
+            },
+            request =>
+            {
+                Assert.Equal(HttpMethod.Get, request.Method);
+                Assert.Equal("/api/media/handle1/file", request.Path);
+            });
+    }
+
+    [Fact]
+    public async Task GetBytesAsync_Rejects_Response_When_Content_Length_Exceeds_Limit()
+    {
+        var handler = new RecordingHandler();
+        var client = CreateClient(handler, readOnly: false);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => client.GetBytesAsync("/api/media/large/file", maxBytes: 2));
+
+        Assert.Contains("exceeding the configured limit", ex.Message);
+        Assert.Contains("3 bytes", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetBytesAsync_Rejects_Streaming_Response_When_Bytes_Exceed_Limit()
+    {
+        var handler = new RecordingHandler();
+        var client = CreateClient(handler, readOnly: false);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => client.GetBytesAsync("/api/media/streaming-large/file", maxBytes: 2));
+
+        Assert.Contains("exceeding the configured limit", ex.Message);
+        Assert.Contains("3 bytes", ex.Message);
+    }
+
     private static GrampsApiClient CreateClient(HttpMessageHandler handler, bool readOnly)
     {
         var httpClient = new HttpClient(handler)
@@ -104,6 +154,24 @@ public class GrampsApiClientReadOnlyTests
                     """);
             }
 
+            if (request.Method == HttpMethod.Get && request.RequestUri?.AbsolutePath == "/api/media/handle1/file")
+            {
+                return BinaryResponse([0, 159, 255], "image/jpeg");
+            }
+
+            if (request.Method == HttpMethod.Get && request.RequestUri?.AbsolutePath == "/api/media/large/file")
+            {
+                return BinaryResponse([1, 2, 3], "image/png");
+            }
+
+            if (request.Method == HttpMethod.Get && request.RequestUri?.AbsolutePath == "/api/media/streaming-large/file")
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new UnknownLengthContent([1, 2, 3], "image/png")
+                };
+            }
+
             return new HttpResponseMessage(HttpStatusCode.NotFound)
             {
                 Content = new StringContent("not found", Encoding.UTF8, "text/plain")
@@ -117,7 +185,32 @@ public class GrampsApiClientReadOnlyTests
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
         }
+
+        private static HttpResponseMessage BinaryResponse(byte[] bytes, string mimeType)
+        {
+            var content = new ByteArrayContent(bytes);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = content
+            };
+        }
     }
 
     private sealed record RecordedRequest(HttpMethod Method, string Path, string? Body);
+
+    private sealed class UnknownLengthContent(byte[] bytes, string mimeType) : HttpContent
+    {
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+        {
+            Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+            return stream.WriteAsync(bytes).AsTask();
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+    }
 }
