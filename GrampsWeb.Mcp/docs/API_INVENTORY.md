@@ -6,7 +6,7 @@ Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, and `G
 
 **Contract checks:** `dotnet test` runs `[Trait("Category","Contract")]` tests that compare `[JsonPropertyName]` on mapped DTOs to `definitions` in repo-root `apispec.yaml`. The enforced mapping is `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` (update it when adding typed API surfaces). The test project copies `apispec.yaml` into the build output next to `swagger-dto-map.json`.
 
-**Read-only mode:** when `GRAMPS_READ_ONLY=true` or `--read-only` is set,
+**Read-only mode:** when `GRAMPS_READ_ONLY=true` is set,
 `PostMutationAsync`, `PutMutationAsync`, and `DeleteAsync` block tree mutations
 before sending HTTP requests. Authentication POSTs (`/api/token/` and
 `/api/token/refresh/`) and binary media GETs are still allowed because they do

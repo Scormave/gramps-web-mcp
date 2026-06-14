@@ -31,26 +31,6 @@ public class GrampsConfigTests
         Assert.True(config.ReadOnly);
     }
 
-    [Theory]
-    [InlineData("--read-only")]
-    [InlineData("--gramps-read-only")]
-    public void FromEnvironment_Enables_ReadOnly_From_Cli_Flag(string arg)
-    {
-        var config = LoadConfig(readOnlyEnv: null, args: [arg]);
-
-        Assert.True(config.ReadOnly);
-    }
-
-    [Theory]
-    [InlineData("--read-only=false")]
-    [InlineData("--gramps-read-only=false")]
-    public void FromEnvironment_Cli_False_Overrides_Environment_True(string arg)
-    {
-        var config = LoadConfig(readOnlyEnv: "true", args: [arg]);
-
-        Assert.False(config.ReadOnly);
-    }
-
     [Fact]
     public void FromEnvironment_Parses_Media_Resource_Settings()
     {
@@ -90,8 +70,7 @@ public class GrampsConfigTests
         string? mediaResourcesEnabled = null,
         string? mediaMaxBytes = null,
         string? mediaAllowedMimeTypes = null,
-        string? mediaAllowPrivate = null,
-        params string[] args)
+        string? mediaAllowPrivate = null)
     {
         lock (EnvironmentLock)
         {
@@ -108,7 +87,7 @@ public class GrampsConfigTests
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES", mediaAllowedMimeTypes);
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE", mediaAllowPrivate);
 
-                return GrampsConfig.FromEnvironment(args);
+                return GrampsConfig.FromEnvironment();
             }
             finally
             {

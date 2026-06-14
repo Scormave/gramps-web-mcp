@@ -96,8 +96,7 @@ Read-only mode can also be enabled with a server CLI argument.
 
 | Variable / argument | Description | Default |
 |---------------------|-------------|---------|
-| `GRAMPS_READ_ONLY=true` or `--read-only` | Keep all MCP tools visible, but block create/update/delete mutation calls before they reach Gramps Web | read/write |
-| `--read-only=false` | Explicitly disable read-only mode, overriding `GRAMPS_READ_ONLY=true` | — |
+| `GRAMPS_READ_ONLY=true` | Keep all MCP tools visible, but block create/update/delete mutation calls before they reach Gramps Web | read/write |
 
 ### Optional (media resources)
 
@@ -280,7 +279,7 @@ docker run -p 8080:8080 \
   gramps-web-mcp
 ```
 
-Enable read-only mode with either an environment variable or an app argument:
+Enable read-only mode with the `GRAMPS_READ_ONLY` environment variable:
 
 ```bash
 docker run -p 8080:8080 \
@@ -290,13 +289,6 @@ docker run -p 8080:8080 \
   -e GRAMPS_TREE_ID=uuid \
   -e GRAMPS_READ_ONLY=true \
   gramps-web-mcp
-
-docker run -p 8080:8080 \
-  -e GRAMPS_API_URL=https://your-gramps.example.com \
-  -e GRAMPS_USERNAME=user \
-  -e GRAMPS_PASSWORD=pass \
-  -e GRAMPS_TREE_ID=uuid \
-  gramps-web-mcp --read-only
 ```
 
 The Dockerfile uses multi-stage build (SDK → ASP.NET runtime) and defaults to

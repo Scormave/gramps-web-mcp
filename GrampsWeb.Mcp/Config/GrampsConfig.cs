@@ -34,7 +34,7 @@ public record GrampsConfig(
     /// Loads configuration from environment variables.
     /// Throws if any required variable is missing or empty.
     /// </summary>
-    public static GrampsConfig FromEnvironment(string[]? args = null)
+    public static GrampsConfig FromEnvironment()
     {
         var apiUrl = Environment.GetEnvironmentVariable("GRAMPS_API_URL");
         var username = Environment.GetEnvironmentVariable("GRAMPS_USERNAME");
@@ -52,9 +52,6 @@ public record GrampsConfig(
         var mediaAllowPrivate = ParseBoolOrDefault(
             Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE"),
             defaultValue: false);
-        var cliReadOnly = ParseReadOnlyArgument(args ?? []);
-        if (cliReadOnly.HasValue)
-            readOnly = cliReadOnly.Value;
 
         var errors = new List<string>();
 
@@ -122,38 +119,5 @@ public record GrampsConfig(
         return items.Length == 0
             ? defaultValue
             : items;
-    }
-
-    private static bool? ParseReadOnlyArgument(string[] args)
-    {
-        for (var i = 0; i < args.Length; i++)
-        {
-            var arg = args[i];
-            if (arg.Equals("--read-only", StringComparison.OrdinalIgnoreCase)
-                || arg.Equals("--gramps-read-only", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            if (TryParseReadOnlyAssignment(arg, "--read-only=", out var value)
-                || TryParseReadOnlyAssignment(arg, "--gramps-read-only=", out value))
-            {
-                return value;
-            }
-        }
-
-        return null;
-    }
-
-    private static bool TryParseReadOnlyAssignment(string arg, string prefix, out bool value)
-    {
-        value = false;
-        if (!arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            return false;
-
-        var raw = arg[prefix.Length..];
-        value = raw.Equals("true", StringComparison.OrdinalIgnoreCase)
-                || raw.Equals("1", StringComparison.OrdinalIgnoreCase);
-        return true;
     }
 }

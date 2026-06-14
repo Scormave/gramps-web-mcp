@@ -15,7 +15,7 @@ decorated with `[McpServerTool]`.
 | U | Update (write) |
 | D | Delete (destructive write) |
 
-Read-only mode (`GRAMPS_READ_ONLY=true` or `--read-only`) keeps C/U/D tools
+Read-only mode (`GRAMPS_READ_ONLY=true`) keeps C/U/D tools
 and write-capable composite tools visible, but calls to those tools return an
 MCP error before any mutation request is sent to Gramps Web.
 Binary media resources are read-only GETs and are not blocked by read-only mode.

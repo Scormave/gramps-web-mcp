@@ -56,8 +56,7 @@ docker run -p 8080:8080 \
   ghcr.io/scormave/gramps-web-mcp:latest
 ```
 
-For read-only mode, add `-e GRAMPS_READ_ONLY=true` or pass `--read-only` after
-the image name:
+For read-only mode, add `-e GRAMPS_READ_ONLY=true`:
 
 ```bash
 docker run -p 8080:8080 \
@@ -65,7 +64,8 @@ docker run -p 8080:8080 \
   -e GRAMPS_USERNAME=your-user \
   -e GRAMPS_PASSWORD=your-password \
   -e GRAMPS_TREE_ID=your-tree-uuid \
-  ghcr.io/scormave/gramps-web-mcp:latest --read-only
+  -e GRAMPS_READ_ONLY=true \
+  ghcr.io/scormave/gramps-web-mcp:latest
 ```
 
 ### MCP client configuration
@@ -90,12 +90,7 @@ docker run -p 8080:8080 \
 }
 ```
 
-To run a stdio server in read-only mode, either add
-`"GRAMPS_READ_ONLY": "true"` to `env` or pass the app argument after `--`:
-
-```json
-"args": ["run", "--project", "/path/to/gramps-web-mcp/GrampsWeb.Mcp/GrampsWeb.Mcp.csproj", "--", "--read-only"]
-```
+To run a stdio server in read-only mode, add `"GRAMPS_READ_ONLY": "true"` to `env`.
 
 **HTTP** (remote / Docker):
 
@@ -121,10 +116,9 @@ content to a model with vision support.
 
 ### Runtime mode
 
-| Variable / argument | Behavior | Default |
+| Variable | Behavior | Default |
 |---------------------|----------|---------|
-| `GRAMPS_READ_ONLY=true` or `--read-only` | Blocks create, update, and delete mutation calls while keeping tools visible | read/write |
-| `--read-only=false` | Explicitly disables read-only mode, overriding `GRAMPS_READ_ONLY=true` | — |
+| `GRAMPS_READ_ONLY=true` | Blocks create, update, and delete mutation calls while keeping tools visible | read/write |
 
 ### Media file access
 
