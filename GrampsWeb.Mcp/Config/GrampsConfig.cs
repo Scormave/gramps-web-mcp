@@ -22,6 +22,7 @@ public record GrampsConfig(
         "image/jpeg",
         "image/png",
         "image/webp",
+        "image/avif",
         "application/pdf"
     ];
 

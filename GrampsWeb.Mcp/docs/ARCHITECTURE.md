@@ -104,7 +104,7 @@ Read-only mode can also be enabled with a server CLI argument.
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP media resources and image-content media tools | `false` |
 | `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource/tool | `5242880` |
-| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Comma-separated allowlist; exact MIME types and `type/*` wildcards are supported | `image/jpeg,image/png,image/webp,application/pdf` |
+| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Comma-separated allowlist; exact MIME types and `type/*` wildcards are supported | `image/jpeg,image/png,image/webp,image/avif,application/pdf` |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allow bytes for Gramps media records marked private | `false` |
 
 ## Architectural layers

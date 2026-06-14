@@ -16,7 +16,7 @@ public class GrampsConfigTests
         Assert.False(config.MediaResourcesEnabled);
         Assert.Equal(5 * 1024 * 1024, config.MediaMaxBytes);
         Assert.Equal(
-            new[] { "image/jpeg", "image/png", "image/webp", "application/pdf" },
+            new[] { "image/jpeg", "image/png", "image/webp", "image/avif", "application/pdf" },
             config.EffectiveMediaAllowedMimeTypes);
         Assert.False(config.MediaAllowPrivate);
     }
