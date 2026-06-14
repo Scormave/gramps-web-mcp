@@ -103,8 +103,8 @@ Read-only mode can also be enabled with a server CLI argument.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP resources for media thumbnails and files | `false` |
-| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource | `5242880` |
+| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP media resources and image-content media tools | `false` |
+| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource/tool | `5242880` |
 | `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Comma-separated allowlist; exact MIME types and `type/*` wildcards are supported | `image/jpeg,image/png,image/webp,application/pdf` |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allow bytes for Gramps media records marked private | `false` |
 
@@ -122,6 +122,7 @@ Tools are the **public API surface** of the MCP server.  They:
 - call `GrampsApiClient` to interact with the REST API
 - resolve Gramps IDs to handles automatically via `HandleResolver`
 - format responses via `Formatters/` into human-readable text
+- return image content for Open WebUI-compatible media thumbnail/file tools
 - return helpful context on not-found via `NotFoundHelper`
 - map errors to `McpException` via `McpToolErrors`
 
@@ -147,6 +148,9 @@ returning bytes to the MCP client.
 
 For clients that cannot call MCP `resources/read`, the same payloads are also
 available through compatibility tools in `ReferenceTools.cs`.
+Media bytes are mirrored through `GetMediaThumbnail` and `GetMediaFile` image
+tools for clients such as Open WebUI that can consume MCP tool image content but
+not MCP binary resources.
 
 The MCP SDK discovers resources at startup via `WithResources<GrampsResources>()`.
 

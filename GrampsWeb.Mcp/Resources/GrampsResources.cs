@@ -112,23 +112,12 @@ public sealed class GrampsResources
     {
         try
         {
-            EnsureMediaResourcesEnabled(config);
-            EnsureMediaHandle(handle);
-            var media = await GetMediaMetadataOrThrowAsync(handle, client);
-            EnsurePrivateAllowed(media, config);
-            EnsureMimeAllowed(media.Mime, config);
-
-            var escapedHandle = Uri.EscapeDataString(handle);
-            var binary = await client.GetBytesAsync(
-                $"/api/media/{escapedHandle}/file",
-                config.MediaMaxBytes);
-            var mimeType = EffectiveMimeType(binary.MimeType, media.Mime);
-            EnsureMimeAllowed(mimeType, config);
+            var mediaFile = await DownloadMediaFileAsync(handle, client, config);
 
             return BlobResourceContents.FromBytes(
-                binary.Bytes,
-                $"gramps://media/{escapedHandle}/file",
-                mimeType);
+                mediaFile.Binary.Bytes,
+                mediaFile.ResourceUri,
+                mediaFile.MimeType);
         }
         catch (Exception ex)
         {
@@ -151,25 +140,12 @@ public sealed class GrampsResources
     {
         try
         {
-            EnsureMediaResourcesEnabled(config);
-            EnsureMediaHandle(handle);
-            if (size <= 0)
-                throw McpToolErrors.ValidationError("Thumbnail size must be a positive integer.");
-
-            var media = await GetMediaMetadataOrThrowAsync(handle, client);
-            EnsurePrivateAllowed(media, config);
-
-            var escapedHandle = Uri.EscapeDataString(handle);
-            var binary = await client.GetBytesAsync(
-                $"/api/media/{escapedHandle}/thumbnail/{size}",
-                config.MediaMaxBytes);
-            var mimeType = EffectiveMimeType(binary.MimeType, "image/jpeg");
-            EnsureMimeAllowed(mimeType, config);
+            var thumbnail = await DownloadMediaThumbnailAsync(handle, size, client, config);
 
             return BlobResourceContents.FromBytes(
-                binary.Bytes,
-                $"gramps://media/{escapedHandle}/thumbnail/{size}",
-                mimeType);
+                thumbnail.Binary.Bytes,
+                thumbnail.ResourceUri,
+                thumbnail.MimeType);
         }
         catch (Exception ex)
         {
@@ -248,6 +224,59 @@ public sealed class GrampsResources
         return media;
     }
 
+    internal static async Task<MediaBinaryDownload> DownloadMediaFileAsync(
+        string handle,
+        GrampsApiClient client,
+        GrampsConfig config)
+    {
+        EnsureMediaResourcesEnabled(config);
+        EnsureMediaHandle(handle);
+        var media = await GetMediaMetadataOrThrowAsync(handle, client);
+        EnsurePrivateAllowed(media, config);
+        EnsureMimeAllowed(media.Mime, config);
+
+        var escapedHandle = Uri.EscapeDataString(handle);
+        var binary = await client.GetBytesAsync(
+            $"/api/media/{escapedHandle}/file",
+            config.MediaMaxBytes);
+        var mimeType = EffectiveMimeType(binary.MimeType, media.Mime);
+        EnsureMimeAllowed(mimeType, config);
+
+        return new MediaBinaryDownload(
+            media,
+            binary,
+            mimeType,
+            $"gramps://media/{escapedHandle}/file");
+    }
+
+    internal static async Task<MediaBinaryDownload> DownloadMediaThumbnailAsync(
+        string handle,
+        int size,
+        GrampsApiClient client,
+        GrampsConfig config)
+    {
+        EnsureMediaResourcesEnabled(config);
+        EnsureMediaHandle(handle);
+        if (size <= 0)
+            throw McpToolErrors.ValidationError("Thumbnail size must be a positive integer.");
+
+        var media = await GetMediaMetadataOrThrowAsync(handle, client);
+        EnsurePrivateAllowed(media, config);
+
+        var escapedHandle = Uri.EscapeDataString(handle);
+        var binary = await client.GetBytesAsync(
+            $"/api/media/{escapedHandle}/thumbnail/{size}",
+            config.MediaMaxBytes);
+        var mimeType = EffectiveMimeType(binary.MimeType, "image/jpeg");
+        EnsureMimeAllowed(mimeType, config);
+
+        return new MediaBinaryDownload(
+            media,
+            binary,
+            mimeType,
+            $"gramps://media/{escapedHandle}/thumbnail/{size}");
+    }
+
     internal static void EnsureMediaHandle(string handle)
     {
         if (string.IsNullOrWhiteSpace(handle))
@@ -286,6 +315,13 @@ public sealed class GrampsResources
                ?? "application/octet-stream";
     }
 
+    internal static void EnsureImageMime(string mimeType)
+    {
+        if (!mimeType.StartsWith("image/", StringComparison.Ordinal))
+            throw McpToolErrors.ValidationError(
+                $"Media MIME type '{mimeType}' cannot be returned as an image tool result. Use MCP resources for non-image media.");
+    }
+
     private static string? NormalizeMimeType(string? mimeType)
     {
         var normalized = mimeType?.Split(';', 2)[0].Trim().ToLowerInvariant();
@@ -308,6 +344,12 @@ public sealed class GrampsResources
 
         return actual.Equals(normalizedAllowed, StringComparison.Ordinal);
     }
+
+    internal sealed record MediaBinaryDownload(
+        GrampsMedia Media,
+        GrampsBinaryResponse Binary,
+        string MimeType,
+        string ResourceUri);
 
     internal static string BuildInputGuideText()
     {

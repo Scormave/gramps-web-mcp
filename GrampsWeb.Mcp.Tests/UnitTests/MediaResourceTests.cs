@@ -1,10 +1,13 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Resources;
+using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
@@ -25,6 +28,36 @@ public class MediaResourceTests
     }
 
     [Fact]
+    public async Task GetMediaThumbnail_Tool_Returns_ImageContentBlock_When_Enabled()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(mediaResourcesEnabled: true);
+
+        var image = await MediaTools.GetMediaThumbnail("handle1", 256, client, config);
+
+        Assert.Equal("image", image.Type);
+        Assert.Equal("image/jpeg", image.MimeType);
+        Assert.Equal([1, 2, 3], image.DecodedData.ToArray());
+    }
+
+    [Fact]
+    public async Task GetMediaThumbnail_Tool_Result_Serializes_As_Image_Content()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(mediaResourcesEnabled: true);
+        var image = await MediaTools.GetMediaThumbnail("handle1", 256, client, config);
+
+        var result = new CallToolResult { Content = [image] };
+        var json = JsonSerializer.Serialize(result, McpJsonUtilities.DefaultOptions);
+        using var doc = JsonDocument.Parse(json);
+
+        var content = doc.RootElement.GetProperty("content")[0];
+        Assert.Equal("image", content.GetProperty("type").GetString());
+        Assert.Equal("image/jpeg", content.GetProperty("mimeType").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(content.GetProperty("data").GetString()));
+    }
+
+    [Fact]
     public async Task GetMediaFile_Returns_Blob_In_ReadOnly_Mode()
     {
         var client = CreateClient(readOnly: true);
@@ -38,6 +71,19 @@ public class MediaResourceTests
     }
 
     [Fact]
+    public async Task GetMediaFile_Tool_Returns_ImageContentBlock_For_Image_File()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(mediaResourcesEnabled: true);
+
+        var image = await MediaTools.GetMediaFile("handle1", client, config);
+
+        Assert.Equal("image", image.Type);
+        Assert.Equal("image/jpeg", image.MimeType);
+        Assert.Equal([4, 5, 6], image.DecodedData.ToArray());
+    }
+
+    [Fact]
     public async Task GetMediaFile_Fails_When_Media_Resources_Disabled()
     {
         var handler = new MediaHandler();
@@ -46,6 +92,20 @@ public class MediaResourceTests
 
         var ex = await Assert.ThrowsAsync<McpException>(
             () => GrampsResources.GetMediaFile("handle1", client, config));
+
+        Assert.Contains("Media file resources are disabled", ex.Message);
+        Assert.Empty(handler.RequestPaths);
+    }
+
+    [Fact]
+    public async Task GetMediaThumbnail_Tool_Fails_When_Media_Resources_Disabled_Before_Http()
+    {
+        var handler = new MediaHandler();
+        var client = CreateClient(handler);
+        var config = CreateConfig(mediaResourcesEnabled: false);
+
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => MediaTools.GetMediaThumbnail("handle1", 256, client, config));
 
         Assert.Contains("Media file resources are disabled", ex.Message);
         Assert.Empty(handler.RequestPaths);
@@ -63,6 +123,22 @@ public class MediaResourceTests
             () => GrampsResources.GetMediaFile(handle, client, config));
 
         Assert.Contains("Media handle must not be empty", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetMediaFile_Tool_Fails_When_Handle_Is_Empty(string handle)
+    {
+        var handler = new MediaHandler();
+        var client = CreateClient(handler);
+        var config = CreateConfig(mediaResourcesEnabled: true);
+
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => MediaTools.GetMediaFile(handle, client, config));
+
+        Assert.Contains("Media handle must not be empty", ex.Message);
+        Assert.Empty(handler.RequestPaths);
     }
 
     [Fact]
@@ -130,6 +206,20 @@ public class MediaResourceTests
         Assert.Contains("not allowed", ex.Message);
     }
 
+    [Fact]
+    public async Task GetMediaFile_Tool_Fails_When_File_Is_Not_Image()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(
+            mediaResourcesEnabled: true,
+            mediaAllowedMimeTypes: ["image/jpeg", "application/pdf"]);
+
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => MediaTools.GetMediaFile("pdf1", client, config));
+
+        Assert.Contains("cannot be returned as an image tool result", ex.Message);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -140,6 +230,20 @@ public class MediaResourceTests
 
         var ex = await Assert.ThrowsAsync<McpException>(
             () => GrampsResources.GetMediaThumbnail("handle1", size, client, config));
+
+        Assert.Contains("Thumbnail size must be a positive integer", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task GetMediaThumbnail_Tool_Fails_When_Size_Is_Not_Positive(int size)
+    {
+        var client = CreateClient();
+        var config = CreateConfig(mediaResourcesEnabled: true);
+
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => MediaTools.GetMediaThumbnail("handle1", size, client, config));
 
         Assert.Contains("Thumbnail size must be a positive integer", ex.Message);
     }
@@ -227,6 +331,8 @@ public class MediaResourceTests
                 "/api/media/png1/thumbnail/256" => BinaryResponse([10, 11, 12], "image/png"),
                 "/api/media/mismatch1" => JsonResponse(MediaJson("mismatch1", "image/jpeg", isPrivate: false)),
                 "/api/media/mismatch1/file" => BinaryResponse([13, 14, 15], "image/tiff"),
+                "/api/media/pdf1" => JsonResponse(MediaJson("pdf1", "application/pdf", isPrivate: false)),
+                "/api/media/pdf1/file" => BinaryResponse([16, 17, 18], "application/pdf"),
                 "/api/media/missing1" => new HttpResponseMessage(HttpStatusCode.NotFound)
                 {
                     Content = new StringContent("not found", Encoding.UTF8, "text/plain")

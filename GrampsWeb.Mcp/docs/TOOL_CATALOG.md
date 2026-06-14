@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 55 MCP tools exposed by the server.
+Complete catalog of the 57 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -33,10 +33,11 @@ Read-only reference/discovery data exposed as MCP resources:
 | `gramps://media/{handle}/thumbnail/{size}` | Opt-in binary thumbnail bytes for a media record; recommended for vision agents |
 | `gramps://media/{handle}/file` | Opt-in full media file bytes, subject to size, MIME, and private-record safeguards |
 
-Compatibility note: the same payloads are also available as tools for clients
+Compatibility note: reference payloads are also available as tools for clients
 without native MCP resource reading support:
 `get_input_guide`, `get_types`, `get_metadata`, `get_name_settings`.
-Binary media resources do not have text-tool mirrors.
+Media thumbnails/files are also available as image-content tools for clients
+such as Open WebUI that handle tool images better than MCP resources.
 
 ## Reference (`ReferenceTools.cs`) — 4 tools
 
@@ -360,17 +361,35 @@ Delete a note.  Blocked when attached elsewhere unless `force=true`.
 
 ---
 
-## Media (`MediaTools.cs`) — 3 tools
+## Media (`MediaTools.cs`) — 5 tools
 
 ### R — `GetMedia`
 Media object metadata: path, MIME type, checksum, description.
-Does **not** upload/download file bytes. For AI vision analysis, prefer the
-opt-in resource `gramps://media/{handle}/thumbnail/{size}`; use
-`gramps://media/{handle}/file` only when full resolution is needed.
+Does **not** upload/download file bytes. For Open WebUI or other tool-only
+vision clients, prefer `GetMediaThumbnail`; use `GetMediaFile` only when full
+resolution is needed. Full MCP clients may also read
+`gramps://media/{handle}/thumbnail/{size}` or `gramps://media/{handle}/file`.
 
-Media byte resources require `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect
+Media byte tools/resources require `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect
 `GRAMPS_MEDIA_MAX_BYTES` and `GRAMPS_MEDIA_ALLOWED_MIME_TYPES`, and block
 private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
+
+### R — `GetMediaThumbnail`
+Download a media thumbnail as MCP image content for vision-capable tool clients
+such as Open WebUI. Preferred before requesting a full media file.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `handle` | `string` | yes | — | Media handle |
+| `size` | `int` | no | `256` | Thumbnail size in pixels; must be positive |
+
+### R — `GetMediaFile`
+Download the full media file as MCP image content. Rejects non-image MIME types;
+PDFs and other documents remain available only through MCP resources.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `handle` | `string` | yes | — | Media handle |
 
 ### U — `UpdateMedia`
 Update media metadata (no binary upload).
@@ -525,14 +544,14 @@ Handles event creation + person update automatically.
 | Source | 1 | 1 | 1 | 1 | 4 |
 | Citation | 1 | 1 | 1 | 1 | 4 |
 | Note | 1 | 1 | 1 | 1 | 4 |
-| Media | 1 | 0 | 1 | 1 | 3 |
+| Media | 3 | 0 | 1 | 1 | 5 |
 | Repository | 1 | 1 | 1 | 1 | 4 |
 | Tag | 1 | 1 | 0 | 1 | 3 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 1 | 2 | 0 | 0 | 3 |
 | Reference | 4 | 0 | 0 | 0 | 4 |
-| **Total** | **25** | **11** | **9** | **10** | **55** |
+| **Total** | **27** | **11** | **9** | **10** | **57** |
 
 ## Prerequisites for write tools
 

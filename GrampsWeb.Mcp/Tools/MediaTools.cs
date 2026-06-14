@@ -7,6 +7,9 @@ using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Requests;
+using GrampsWeb.Mcp.Config;
+using GrampsWeb.Mcp.Resources;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -20,7 +23,8 @@ public static class MediaTools
     [McpServerTool]
     [Description(
         "Read-only: media object metadata (path, MIME, checksum, description). " +
-        "For opt-in file bytes, use resources gramps://media/{handle}/thumbnail/{size} or gramps://media/{handle}/file.")]
+        "For Open WebUI vision access, use GetMediaThumbnail or GetMediaFile. " +
+        "Full MCP clients may also read resources gramps://media/{handle}/thumbnail/{size} or gramps://media/{handle}/file.")]
     public static async Task<string> GetMedia(
         [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
@@ -34,6 +38,52 @@ public static class MediaTools
                 return NotFoundHelper.NotFoundMessage("Media", handle);
             var backlinks = await BacklinkCollector.CollectAsync(client, "media", handle);
             return MediaFormatter.FormatMediaFull(media, backlinks);
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    [McpServerTool]
+    [Description(
+        "Read-only: download a media thumbnail as MCP image content for vision-capable tool clients such as Open WebUI. " +
+        "Preferred before requesting the full media file. Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects media size, MIME, and private-record safeguards.")]
+    public static async Task<ImageContentBlock> GetMediaThumbnail(
+        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        string handle,
+        [Description("Thumbnail size in pixels. Must be positive. Default 256.")]
+        int size = 256,
+        GrampsApiClient client = null!,
+        GrampsConfig config = null!)
+    {
+        try
+        {
+            var thumbnail = await GrampsResources.DownloadMediaThumbnailAsync(handle, size, client, config);
+            GrampsResources.EnsureImageMime(thumbnail.MimeType);
+            return ImageContentBlock.FromBytes(thumbnail.Binary.Bytes, thumbnail.MimeType);
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    [McpServerTool]
+    [Description(
+        "Read-only: download a full media file as MCP image content for vision-capable tool clients such as Open WebUI. " +
+        "Use only when a thumbnail is insufficient. Rejects non-image media; PDFs and other document files remain available only through MCP resources.")]
+    public static async Task<ImageContentBlock> GetMediaFile(
+        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        string handle,
+        GrampsApiClient client,
+        GrampsConfig config)
+    {
+        try
+        {
+            var mediaFile = await GrampsResources.DownloadMediaFileAsync(handle, client, config);
+            GrampsResources.EnsureImageMime(mediaFile.MimeType);
+            return ImageContentBlock.FromBytes(mediaFile.Binary.Bytes, mediaFile.MimeType);
         }
         catch (Exception ex)
         {

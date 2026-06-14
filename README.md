@@ -8,7 +8,7 @@ Gives AI agents structured, tool-based access to family trees through the Model 
 
 ## Features
 
-- **55 MCP tools** — read, create, update, and delete people, families, events, places,
+- **57 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
@@ -101,10 +101,12 @@ To run a stdio server in read-only mode, either add
 
 Point your MCP client at `http://host:8080/mcp` with Streamable HTTP transport.
 
-Vision-capable agents can read opt-in binary media resources such as
-`gramps://media/{handle}/thumbnail/{size}` and `gramps://media/{handle}/file`.
-End-to-end image/document analysis depends on the MCP client forwarding binary
-resources to a model with vision support.
+Vision-capable agents can read opt-in media through tools (`GetMediaThumbnail`,
+`GetMediaFile`) for clients such as Open WebUI, or through binary MCP resources
+such as `gramps://media/{handle}/thumbnail/{size}` and
+`gramps://media/{handle}/file` in clients with resource support. End-to-end
+image/document analysis depends on the MCP client forwarding image or binary
+content to a model with vision support.
 
 ## Configuration
 
@@ -126,19 +128,19 @@ resources to a model with vision support.
 
 ### Media file access
 
-Media byte resources are disabled by default. `get_media` remains available for
-metadata without enabling file downloads.
+Media byte tools/resources are disabled by default. `get_media` remains
+available for metadata without enabling file downloads.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media resources for thumbnails and full files | `false` |
+| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media tools/resources for thumbnails and full files | `false` |
 | `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource | `5242880` |
 | `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Comma-separated allowlist; exact types and `type/*` wildcards are supported | `image/jpeg,image/png,image/webp,application/pdf` |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allows bytes for Gramps media records marked private | `false` |
 
-Prefer `gramps://media/{handle}/thumbnail/{size}` for AI analysis. Full files
-can be large and sensitive, and are still subject to the same size, MIME, and
-private-record checks.
+Prefer `GetMediaThumbnail` or `gramps://media/{handle}/thumbnail/{size}` for AI
+analysis. Full files can be large and sensitive, and are still subject to the
+same size, MIME, and private-record checks.
 
 ### Transports
 

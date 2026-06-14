@@ -29,9 +29,9 @@ Issues in Gramps Web itself should be reported to the [Gramps Web project](https
 
 ## Media file access
 
-Binary media resources are disabled by default. Operators must set
+Binary media tools and resources are disabled by default. Operators must set
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true` before MCP clients can read thumbnails or
-full media files. Keep `GRAMPS_MEDIA_MAX_BYTES`,
+full media files through either surface. Keep `GRAMPS_MEDIA_MAX_BYTES`,
 `GRAMPS_MEDIA_ALLOWED_MIME_TYPES`, and `GRAMPS_MEDIA_ALLOW_PRIVATE` set
 conservatively for the deployment.
 
@@ -39,4 +39,4 @@ Media files can contain sensitive photos, scans, and documents. The server
 blocks bytes for Gramps media records marked private unless
 `GRAMPS_MEDIA_ALLOW_PRIVATE=true`; metadata access through `get_media` remains
 available. End-to-end exposure also depends on the MCP client and model that
-receive the binary resource content.
+receive the image tool content or binary resource content.
