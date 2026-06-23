@@ -21,6 +21,8 @@ on:
     branches:
       - main
       - master
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -67,6 +69,11 @@ jobs:
             refs/heads/main|refs/heads/master)
               docker tag "$IMAGE:build" "$IMAGE:latest"
               docker push "$IMAGE:latest"
+              ;;
+            refs/tags/v*)
+              VERSION="${GITHUB_REF#refs/tags/v}"
+              docker tag "$IMAGE:build" "$IMAGE:$VERSION"
+              docker push "$IMAGE:$VERSION"
               ;;
           esac
 
