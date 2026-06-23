@@ -1,0 +1,89 @@
+# Example stack: Gramps Web + gramps-web-mcp on one Docker network.
+#
+# 1. Copy this file and .env.example to a directory on your host:
+#      cp docker-compose.example.yml docker-compose.yml
+#      cp .env.example .env
+# 2. Complete the Gramps Web first-run wizard at http://<host>:5055
+# 3. Set GRAMPS_USERNAME, GRAMPS_PASSWORD, and GRAMPS_TREE_ID in .env
+#    (tree id is shown in Gramps Web settings or via GET /api/metadata/).
+# 4. Start the stack:
+#      docker compose up -d
+#
+# MCP endpoint: http://<host>:8080/mcp
+# Health check: http://<host>:8080/health
+
+services:
+  grampsweb: &grampsweb
+    image: ghcr.io/gramps-project/grampsweb:latest
+    restart: unless-stopped
+    ports:
+      - "5055:5000"
+    environment:
+      GRAMPSWEB_TREE: "Gramps Web"
+      GRAMPSWEB_CELERY_CONFIG__broker_url: "redis://grampsweb_redis:6379/0"
+      GRAMPSWEB_CELERY_CONFIG__result_backend: "redis://grampsweb_redis:6379/0"
+      GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
+    depends_on:
+      - grampsweb_redis
+    volumes:
+      - gramps_users:/app/users
+      - gramps_index:/app/indexdir
+      - gramps_thumb_cache:/app/thumbnail_cache
+      - gramps_cache:/app/cache
+      - gramps_secret:/app/secret
+      - gramps_db:/root/.gramps/grampsdb
+      - gramps_media:/app/media
+      - gramps_tmp:/tmp
+    networks:
+      - gramps
+
+  grampsweb_celery:
+    <<: *grampsweb
+    ports: []
+    container_name: grampsweb_celery
+    depends_on:
+      - grampsweb
+      - grampsweb_redis
+    command: celery -A gramps_webapi.celery worker --loglevel=INFO --concurrency=2
+
+  grampsweb_redis:
+    image: docker.io/library/redis:7.2.4-alpine
+    container_name: grampsweb_redis
+    restart: unless-stopped
+    networks:
+      - gramps
+
+  gramps-web-mcp:
+    image: ghcr.io/scormave/gramps-web-mcp:latest
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      GRAMPS_API_URL: http://grampsweb:5000
+      GRAMPS_USERNAME: ${GRAMPS_USERNAME}
+      GRAMPS_PASSWORD: ${GRAMPS_PASSWORD}
+      GRAMPS_TREE_ID: ${GRAMPS_TREE_ID}
+      GRAMPS_READ_ONLY: ${GRAMPS_READ_ONLY:-false}
+    depends_on:
+      - grampsweb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - gramps
+
+networks:
+  gramps:
+
+volumes:
+  gramps_users:
+  gramps_index:
+  gramps_thumb_cache:
+  gramps_cache:
+  gramps_secret:
+  gramps_db:
+  gramps_media:
+  gramps_tmp:

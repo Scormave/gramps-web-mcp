@@ -29,6 +29,7 @@ WORKDIR /app
 # MCP_PATH            URL prefix for MCP endpoints (default /mcp).
 # MCP_STATELESS       true|false — Streamable HTTP stateless mode (default true for http).
 # MCP_ENABLE_LEGACY_SSE  true|false — with http, also expose legacy /sse + /message.
+# GET /health         Liveness/readiness probe; 200 when Gramps Web API is reachable.
 
 ENV MCP_TRANSPORT=http \
     ASPNETCORE_URLS=http://0.0.0.0:8080 \
@@ -36,6 +37,15 @@ ENV MCP_TRANSPORT=http \
 
 EXPOSE 8080
 
+# Used by Docker HEALTHCHECK and docker-compose health probes.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 USER $APP_UID
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
 ENTRYPOINT ["dotnet", "GrampsWeb.Mcp.dll"]

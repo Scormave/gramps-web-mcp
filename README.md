@@ -56,6 +56,11 @@ docker run -p 8080:8080 \
   ghcr.io/scormave/gramps-web-mcp:latest
 ```
 
+The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
+container health, and other uptime monitors. It returns HTTP 200 when the MCP
+server can authenticate against Gramps Web, or HTTP 503 otherwise. Startup logs
+include a line such as `Connected to Gramps Web at …` once the API is reachable.
+
 For read-only mode, add `-e GRAMPS_READ_ONLY=true`:
 
 ```bash
@@ -67,6 +72,22 @@ docker run -p 8080:8080 \
   -e GRAMPS_READ_ONLY=true \
   ghcr.io/scormave/gramps-web-mcp:latest
 ```
+
+### Gramps Web + MCP (Docker Compose)
+
+To run Gramps Web and the MCP server on the same host and Docker network, use
+[`docker-compose.example.yml`](docker-compose.example.yml) as a starting point:
+
+```bash
+cp docker-compose.example.yml docker-compose.yml
+cp .env.example .env
+# Complete the Gramps Web setup wizard, then set credentials in .env
+docker compose up -d
+```
+
+Gramps Web is published on port **5055**; MCP is on **8080** (`/mcp` and
+`/health`). Inside the compose network the MCP container reaches Gramps Web at
+`http://grampsweb:5000`.
 
 ### MCP client configuration
 

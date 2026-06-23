@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `GET /health` HTTP endpoint for Docker `HEALTHCHECK` and Unraid monitoring
+- Startup log line confirming Gramps Web connectivity (`Connected to Gramps Web at …`)
+- [`docker-compose.example.yml`](docker-compose.example.yml) stack for Gramps Web + MCP on one network
+
 ## [1.0.0] - 2026-06-23
 
 ### Added

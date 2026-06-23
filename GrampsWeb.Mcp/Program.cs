@@ -1,5 +1,5 @@
-using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
+using GrampsWeb.Mcp.Hosting;
 using GrampsWeb.Mcp.Prompts;
 using GrampsWeb.Mcp.Resources;
 using Microsoft.AspNetCore.Builder;
@@ -38,16 +38,10 @@ static async Task RunStdioAsync(GrampsConfig config)
 {
     var builder = Host.CreateEmptyApplicationBuilder(settings: null);
 
-    builder.Logging
-        .ClearProviders()
-        .AddSimpleConsole(options =>
-        {
-            options.UseUtcTimestamp = true;
-            options.IncludeScopes = false;
-        });
+    ConfigureLogging(builder.Logging);
 
-    builder.Services.AddSingleton(config);
-    builder.Services.AddHttpClient<GrampsApiClient>();
+    builder.Services
+        .AddGrampsMcpCore(config);
 
     builder.Services
         .AddMcpServer()
@@ -63,16 +57,11 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Logging
-        .ClearProviders()
-        .AddSimpleConsole(options =>
-        {
-            options.UseUtcTimestamp = true;
-            options.IncludeScopes = false;
-        });
+    ConfigureLogging(builder.Logging);
 
-    builder.Services.AddSingleton(config);
-    builder.Services.AddHttpClient<GrampsApiClient>();
+    builder.Services
+        .AddGrampsMcpCore(config)
+        .AddGrampsStartupCheck(transport);
 
     builder.Services
         .AddMcpServer()
@@ -91,6 +80,19 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
         .WithPrompts<GrampsPrompts>();
 
     var app = builder.Build();
+    app.MapHealthEndpoint();
     app.MapMcp(transport.MapPath);
     await app.RunAsync();
+}
+
+static void ConfigureLogging(ILoggingBuilder logging)
+{
+    logging
+        .ClearProviders()
+        .AddFilter("System.Net.Http.HttpClient.GrampsHealthService", LogLevel.Warning)
+        .AddSimpleConsole(options =>
+        {
+            options.UseUtcTimestamp = true;
+            options.IncludeScopes = false;
+        });
 }
