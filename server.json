@@ -1,0 +1,53 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.scormave/gramps-web-mcp",
+  "title": "Gramps Web MCP",
+  "description": "MCP server for structured access to Gramps Web genealogy data",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/Scormave/gramps-web-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/scormave/gramps-web-mcp:1.0.0",
+      "runtimeHint": "docker",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "MCP_TRANSPORT",
+          "value": "stdio"
+        },
+        {
+          "name": "GRAMPS_API_URL",
+          "description": "Base URL of your Gramps Web instance",
+          "isRequired": true
+        },
+        {
+          "name": "GRAMPS_USERNAME",
+          "description": "Gramps Web API username",
+          "isRequired": true
+        },
+        {
+          "name": "GRAMPS_PASSWORD",
+          "description": "Gramps Web API password or token",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "GRAMPS_TREE_ID",
+          "description": "Gramps Web tree UUID",
+          "isRequired": true
+        },
+        {
+          "name": "GRAMPS_READ_ONLY",
+          "description": "Set to true to block create, update, and delete tools",
+          "default": "false"
+        }
+      ]
+    }
+  ]
+}

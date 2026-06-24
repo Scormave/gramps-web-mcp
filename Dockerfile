@@ -16,6 +16,8 @@ RUN dotnet publish GrampsWeb.Mcp/GrampsWeb.Mcp.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-bookworm-slim AS final
 WORKDIR /app
 
+LABEL io.modelcontextprotocol.server.name="io.github.scormave/gramps-web-mcp"
+
 # --- Gramps Web API (required at runtime; set with -e / secrets / compose) ---
 # GRAMPS_API_URL      Base URL of your Gramps Web instance (no trailing slash).
 # GRAMPS_USERNAME     API user name.
