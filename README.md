@@ -3,8 +3,13 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
 
-MCP server for the [Gramps Web](https://www.grampsweb.org/) open-source genealogy platform.
-Gives AI agents structured, tool-based access to family trees through the Model Context Protocol.
+Companion MCP server for the [Gramps Web](https://www.grampsweb.org/)
+open-source genealogy platform. It gives AI agents structured, tool-based
+access to family trees through the Model Context Protocol.
+
+This project is **not** a standalone genealogy UI or replacement for Gramps
+Web. Run it alongside an existing Gramps Web instance; your users, trees,
+media, permissions, and genealogy editing UI stay in Gramps Web.
 
 ## Features
 
@@ -75,6 +80,29 @@ docker run -p 8080:8080 \
   -e GRAMPS_READ_ONLY=true \
   ghcr.io/scormave/gramps-web-mcp:latest
 ```
+
+### Unraid installation
+
+Unraid users can install `gramps-web-mcp` from **Community Applications**. The
+template source is maintained at
+[Scormave/gramps-web-mcp-unraid](https://github.com/Scormave/gramps-web-mcp-unraid).
+For Unraid-specific help, see the
+[support thread on the Unraid forums](https://forums.unraid.net/topic/199622-support-gramps-web-mcp-mcp-server-for-gramps-web-ai-genealogy).
+
+Basic setup:
+
+1. In Unraid, open **Apps** / **Community Applications**.
+2. Search for `gramps-web-mcp` and install the template.
+3. Set the Gramps Web connection values:
+   `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and
+   `GRAMPS_TREE_ID`.
+4. Keep the default container port `8080`, or map it to another host port.
+5. Start the container and check `/health`; it returns HTTP 200 once the service
+   can authenticate to Gramps Web.
+
+For the easiest pairing, run Gramps Web and `gramps-web-mcp` on the same Unraid
+Docker network and set `GRAMPS_API_URL` to the Gramps Web container URL. The MCP
+endpoint for clients is `http://<unraid-host>:<mapped-port>/mcp`.
 
 ### Gramps Web + MCP (Docker Compose)
 

@@ -8,6 +8,11 @@ platform.  The server acts as a bridge: it translates MCP tool calls coming from
 an AI client (Claude Desktop, Cursor, custom agents, …) into authenticated
 Gramps Web REST API requests and returns formatted results.
 
+It is a companion service, not a standalone genealogy application. Gramps Web
+remains the browser UI, user and permission system, data store, import/export
+surface, and media manager; `gramps-web-mcp` only exposes that existing Gramps
+Web tree to MCP clients.
+
 ```
 ┌────────────┐   MCP (stdio / HTTP)   ┌──────────────────┐   REST / JSON   ┌────────────────┐
 │  AI Agent  │ ◄─────────────────────► │  gramps-web-mcp  │ ◄─────────────► │  Gramps Web API│

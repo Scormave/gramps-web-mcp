@@ -9,5 +9,17 @@
 | [DATA_MODEL.md](DATA_MODEL.md) | Contributors | Entity models, serialization, and Flexible* input types |
 | [SYSTEM_PROMPT.md](SYSTEM_PROMPT.md) | MCP client users | Suggested system prompt for genealogy assistants |
 
+## Pairing with Gramps Web
+
+`gramps-web-mcp` is a companion service for an existing
+[Gramps Web](https://www.grampsweb.org/) deployment. It does not host a
+genealogy web UI, manage Gramps users, or store family tree data itself.
+Instead, it connects to the Gramps Web REST API and exposes that tree to MCP
+clients as tools, resources, and prompts.
+
+Use Gramps Web for the browser UI, user management, tree storage, imports,
+media management, and normal genealogy workflows. Use `gramps-web-mcp` when an
+MCP-compatible AI client needs controlled access to that same Gramps Web tree.
+
 The repo-root `apispec.yaml` is a **vendored upstream** Gramps Web OpenAPI spec.
 Do not edit it in place — replace wholesale when upstream changes.
