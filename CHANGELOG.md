@@ -6,11 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-24
+
 ### Added
 
 - `GET /health` HTTP endpoint for Docker `HEALTHCHECK` and Unraid monitoring
 - Startup log line confirming Gramps Web connectivity (`Connected to Gramps Web at …`)
 - [`docker-compose.example.yml`](docker-compose.example.yml) stack for Gramps Web + MCP on one network
+- MCP Registry metadata and automated publishing on version tags
+- OCI image ownership label for MCP Registry validation
+
+### Changed
+
+- Docker release workflow now publishes the MCP Registry entry after tagged image builds
 
 ## [1.0.0] - 2026-06-23
 
@@ -31,5 +39,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Scormave/gramps-web-mcp/releases/tag/v1.0.0
