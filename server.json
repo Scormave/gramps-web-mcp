@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.scormave/gramps-web-mcp",
+  "name": "io.github.Scormave/gramps-web-mcp",
   "title": "Gramps Web MCP",
   "description": "MCP server for structured access to Gramps Web genealogy data",
   "version": "1.0.0",
