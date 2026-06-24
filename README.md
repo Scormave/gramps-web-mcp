@@ -43,7 +43,10 @@ The server starts with HTTP transport at `http://127.0.0.1:8080/mcp`.
 
 ### Docker
 
-Pre-built images are published to GitHub Container Registry:
+Pre-built multi-arch images (`linux/amd64`, `linux/arm64`) are published to
+GitHub Container Registry. Docker picks the matching architecture automatically;
+`amd64` covers most Unraid and x86 hosts, `arm64` covers Apple Silicon and ARM
+SBCs:
 
 ```bash
 docker pull ghcr.io/scormave/gramps-web-mcp:latest

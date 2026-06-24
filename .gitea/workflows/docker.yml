@@ -50,6 +50,9 @@ jobs:
           echo "registry=$REG" >> "$GITHUB_OUTPUT"
           echo "name=$REG/$REPO_LOWER" >> "$GITHUB_OUTPUT"
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to container registry
         uses: docker/login-action@v3
         with:
@@ -57,25 +60,23 @@ jobs:
           username: ${{ secrets.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Build image
-        run: docker build -t "${{ steps.image.outputs.name }}:build" .
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
 
-      - name: Push tags
-        env:
-          IMAGE: ${{ steps.image.outputs.name }}
-        run: |
-          set -euo pipefail
-          case "$GITHUB_REF" in
-            refs/heads/main|refs/heads/master)
-              docker tag "$IMAGE:build" "$IMAGE:latest"
-              docker push "$IMAGE:latest"
-              ;;
-            refs/tags/v*)
-              VERSION="${GITHUB_REF#refs/tags/v}"
-              docker tag "$IMAGE:build" "$IMAGE:$VERSION"
-              docker push "$IMAGE:$VERSION"
-              ;;
-          esac
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
       - name: Log out
         if: always()
