@@ -32,7 +32,7 @@ to `demo.grampsweb.org`.
 ### Tool method signature
 
 ```csharp
-[McpServerTool]
+[McpServerTool(Title = "Get person", ReadOnly = true, Destructive = false)]
 [Description("Read-only: ... OR Create/Update/Delete ...")]
 public static async Task<string> ToolName(
     [Description("Handle or Gramps ID. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -120,14 +120,16 @@ objects and return formatted strings.
    or create a new file if it's a new domain (add `[McpServerToolType]` to
    the class).
 2. Follow the standard method signature pattern.
-3. For write tools, include appropriate `ToolDescriptionFragments` constants
+3. Set `Title`, `ReadOnly`, and `Destructive` on `[McpServerTool]` for Claude
+   Connectors Directory compliance (`readOnlyHint` / `destructiveHint`).
+4. For write tools, include appropriate `ToolDescriptionFragments` constants
    in the `[Description]`.
-4. For write tools, create a request DTO in `Requests/` if needed.
-5. For write tools with type parameters, add server-side validation via
+5. For write tools, create a request DTO in `Requests/` if needed.
+6. For write tools with type parameters, add server-side validation via
    `TypeCache.ValidateTypeAsync(value, "category_name", client)`.
-6. For handle parameters, use `HandleResolver.ResolveToHandleAsync` so
+7. For handle parameters, use `HandleResolver.ResolveToHandleAsync` so
    agents can pass either handles or Gramps IDs.
-7. For not-found cases, return `NotFoundHelper.NotFoundMessage(type, id)`.
+8. For not-found cases, return `NotFoundHelper.NotFoundMessage(type, id)`.
 
 ### Step 6: Add tests
 

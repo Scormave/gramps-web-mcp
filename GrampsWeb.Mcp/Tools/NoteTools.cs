@@ -17,7 +17,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class NoteTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Note", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one note (text, type, Plain vs Html format).")]
     public static async Task<string> GetNote(
@@ -40,7 +40,7 @@ public static class NoteTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Note", ReadOnly = false, Destructive = false)]
     [Description(
         "Create a note (write). Returns handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetTypes + " " +
@@ -91,7 +91,7 @@ public static class NoteTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Note", ReadOnly = false, Destructive = false)]
     [Description(
         "Update a note (write). Only pass fields to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
@@ -149,7 +149,7 @@ public static class NoteTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Note", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a note (destructive). Blocked when still attached elsewhere unless force=true.")]
     public static async Task<string> DeleteNote(

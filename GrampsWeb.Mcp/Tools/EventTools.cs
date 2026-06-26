@@ -19,7 +19,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class EventTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Event", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one event by handle (type, date/modifiers, place, description, citations, notes, tags, media).")]
     public static async Task<string> GetEvent(
@@ -112,7 +112,7 @@ public static class EventTools
         return orderedDistinct.Count > 0 ? string.Join(", ", orderedDistinct) : "Primary";
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Event", ReadOnly = false, Destructive = false)]
     [Description(
         "Create an event (write). Returns handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetTypes + " " + ToolDescriptionFragments.CallGetDateInputGuide + " " +
@@ -177,7 +177,7 @@ public static class EventTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Event", ReadOnly = false, Destructive = false)]
     [Description(
         "Update an event (write). Only pass fields to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
@@ -254,7 +254,7 @@ public static class EventTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Event", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete an event (destructive). Blocked when people/families still reference it unless force=true.")]
     public static async Task<string> DeleteEvent(

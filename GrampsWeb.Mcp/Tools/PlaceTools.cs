@@ -17,7 +17,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class PlaceTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Place", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one place by handle (name, type, coordinates, hierarchy by traversing parent places). " +
         "Use when resolving place handles from events or building geographic context.")]
@@ -39,7 +39,7 @@ public static class PlaceTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Place Timeline", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: chronological events whose place field equals this handle (computed via backlinks; not a single API route). " +
         "Events on a child place (e.g. city) do not appear when querying the parent country handle. " +
@@ -83,7 +83,7 @@ public static class PlaceTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Place", ReadOnly = false, Destructive = false)]
     [Description(
         "Create a place (write). Returns handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetTypes + " " +
@@ -162,7 +162,7 @@ public static class PlaceTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Place", ReadOnly = false, Destructive = false)]
     [Description(
         "Update a place (write). Only pass fields to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks)]
@@ -241,7 +241,7 @@ public static class PlaceTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Place", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a place (destructive). Blocked when events or child places reference it unless force=true. " +
         "Deleting a parent can orphan child places in the hierarchy.")]

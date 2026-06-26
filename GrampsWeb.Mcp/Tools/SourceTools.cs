@@ -16,7 +16,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class SourceTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Source", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one source (title, author, publication, abbreviation, repository refs). " +
         "Sources are what citations point at.")]
@@ -40,7 +40,7 @@ public static class SourceTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Source", ReadOnly = false, Destructive = false)]
     [Description(
         "Create a source (write). Create sources before citations. " +
         "Optional repositoryHandles link to where the item is held. " +
@@ -99,7 +99,7 @@ public static class SourceTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Source", ReadOnly = false, Destructive = false)]
     [Description(
         "Update a source (write). Only pass fields to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
@@ -170,7 +170,7 @@ public static class SourceTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Source", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a source (destructive). WARNING: citations pointing at this source break or lose the link. " +
         "Blocked when backlinks exist unless force=true.")]

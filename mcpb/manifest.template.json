@@ -1,0 +1,116 @@
+{
+  "manifest_version": "0.3",
+  "name": "gramps-web-mcp",
+  "display_name": "Gramps Web MCP",
+  "version": "__VERSION__",
+  "description": "Structured MCP access to your Gramps Web family tree",
+  "long_description": "Connect Claude Desktop to a self-hosted [Gramps Web](https://www.grampsweb.org/) instance. Browse, search, and optionally edit people, families, events, places, sources, citations, notes, media, and tags through 57 MCP tools.",
+  "author": {
+    "name": "Scormave",
+    "url": "https://github.com/Scormave"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Scormave/gramps-web-mcp.git"
+  },
+  "homepage": "https://github.com/Scormave/gramps-web-mcp",
+  "documentation": "https://github.com/Scormave/gramps-web-mcp#readme",
+  "support": "https://github.com/Scormave/gramps-web-mcp/issues",
+  "icon": "icon.png",
+  "license": "AGPL-3.0-or-later",
+  "privacy_policies": [
+    "https://github.com/Scormave/gramps-web-mcp/blob/main/PRIVACY.md"
+  ],
+  "keywords": ["genealogy", "gramps", "family-tree", "mcp"],
+  "tools_generated": true,
+  "prompts_generated": true,
+  "resources_generated": true,
+  "server": {
+    "type": "binary",
+    "entry_point": "server/GrampsWeb.Mcp",
+    "mcp_config": {
+      "command": "${__dirname}/server/GrampsWeb.Mcp",
+      "args": [],
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "GRAMPS_API_URL": "${user_config.gramps_api_url}",
+        "GRAMPS_USERNAME": "${user_config.gramps_username}",
+        "GRAMPS_PASSWORD": "${user_config.gramps_password}",
+        "GRAMPS_TREE_ID": "${user_config.gramps_tree_id}",
+        "GRAMPS_READ_ONLY": "${user_config.gramps_read_only}",
+        "GRAMPS_MEDIA_RESOURCES_ENABLED": "${user_config.gramps_media_resources_enabled}",
+        "GRAMPS_MEDIA_MAX_BYTES": "${user_config.gramps_media_max_bytes}",
+        "GRAMPS_MEDIA_ALLOWED_MIME_TYPES": "${user_config.gramps_media_allowed_mime_types}",
+        "GRAMPS_MEDIA_ALLOW_PRIVATE": "${user_config.gramps_media_allow_private}"
+      }
+    }
+  },
+  "user_config": {
+    "gramps_api_url": {
+      "type": "string",
+      "title": "Gramps Web URL",
+      "description": "Base URL of your Gramps Web instance (no trailing slash), e.g. https://gramps.example.com",
+      "required": true
+    },
+    "gramps_username": {
+      "type": "string",
+      "title": "Username",
+      "description": "Gramps Web API username",
+      "required": true
+    },
+    "gramps_password": {
+      "type": "string",
+      "title": "Password or token",
+      "description": "Gramps Web API password or token",
+      "sensitive": true,
+      "required": true
+    },
+    "gramps_tree_id": {
+      "type": "string",
+      "title": "Tree ID",
+      "description": "UUID of the tree on your Gramps Web server",
+      "required": true
+    },
+    "gramps_read_only": {
+      "type": "boolean",
+      "title": "Read-only mode",
+      "description": "When enabled, blocks create, update, and delete tool calls. Recommended for first use.",
+      "default": true,
+      "required": false
+    },
+    "gramps_media_resources_enabled": {
+      "type": "boolean",
+      "title": "Enable media file access",
+      "description": "Allow thumbnail and full-file media tools. Disabled by default for privacy.",
+      "default": false,
+      "required": false
+    },
+    "gramps_media_max_bytes": {
+      "type": "number",
+      "title": "Media max bytes",
+      "description": "Maximum bytes returned by any media download tool",
+      "default": 5242880,
+      "min": 1,
+      "max": 52428800,
+      "required": false
+    },
+    "gramps_media_allowed_mime_types": {
+      "type": "string",
+      "title": "Allowed MIME types",
+      "description": "Comma-separated allowlist for media downloads",
+      "default": "image/jpeg,image/png,image/webp,image/avif,application/pdf",
+      "required": false
+    },
+    "gramps_media_allow_private": {
+      "type": "boolean",
+      "title": "Allow private media",
+      "description": "Allow downloading media records marked private in Gramps",
+      "default": false,
+      "required": false
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": __PLATFORMS__
+  }
+}

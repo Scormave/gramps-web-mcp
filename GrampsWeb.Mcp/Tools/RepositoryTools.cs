@@ -16,7 +16,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class RepositoryTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Repository", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one repository (name, type, address, URLs). Repositories are where sources live.")]
     public static async Task<string> GetRepository(
@@ -39,7 +39,7 @@ public static class RepositoryTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Repository", ReadOnly = false, Destructive = false)]
     [Description(
         "Create a repository (write). Returns handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetTypes)]
@@ -94,7 +94,7 @@ public static class RepositoryTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = false)]
     [Description(
         "Update a repository (write). Only pass fields to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
@@ -155,7 +155,7 @@ public static class RepositoryTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Repository", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a repository (destructive). Blocked when sources still reference it unless force=true.")]
     public static async Task<string> DeleteRepository(

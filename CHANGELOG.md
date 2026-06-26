@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Claude Desktop MCPB (`.mcpb`) packaging with self-contained binaries for macOS and Windows
+- Tag-driven GitHub Release workflow for per-platform desktop extension bundles
+- [`PRIVACY.md`](PRIVACY.md) and MCPB manifest for Connectors Directory readiness
+- Explicit MCP tool annotations (`title`, `readOnlyHint`, `destructiveHint`) on all 57 tools
+
+### Changed
+
+- Upgraded `ModelContextProtocol` packages to 1.3.0 for tool annotation support
+
 ## [1.0.1] - 2026-06-24
 
 ### Added

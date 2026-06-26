@@ -11,27 +11,27 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class ReferenceTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Input Guide", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: complete write-input reference with date formats, structured fields, and full Name schema. " +
         "Same data as gramps://input-guide.")]
     public static string GetInputGuide() => GrampsResources.BuildInputGuideText();
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Types", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: built-in and custom type vocabularies for validating type/role/origin strings. " +
         "Same data as gramps://types.")]
     public static Task<string> GetTypes(GrampsApiClient client) =>
         GrampsResources.FetchTypesTextAsync(client);
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Metadata", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: connection and tree metadata (API version, tree id/name, owner, default person, etc.). " +
         "Same data as gramps://metadata.")]
     public static Task<string> GetMetadata(GrampsApiClient client) =>
         GrampsResources.FetchMetadataTextAsync(client);
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Name Settings", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: name display formats and surname grouping rules configured in this tree. " +
         "Same data as gramps://name-settings.")]

@@ -9,6 +9,8 @@
 | [DATA_MODEL.md](DATA_MODEL.md) | Contributors | Entity models, serialization, and Flexible* input types |
 | [SYSTEM_PROMPT.md](SYSTEM_PROMPT.md) | MCP client users | Suggested system prompt for genealogy assistants |
 
+For Claude Desktop one-click install, see the repo-root [mcpb/README.md](../../mcpb/README.md) and [PRIVACY.md](../../PRIVACY.md).
+
 ## Pairing with Gramps Web
 
 `gramps-web-mcp` is a companion service for an existing

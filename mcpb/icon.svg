@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="gramps-web-mcp">
+  <rect width="128" height="128" rx="24" fill="#1e3a5f"/>
+  <circle cx="64" cy="28" r="10" fill="#7dd3fc"/>
+  <circle cx="36" cy="58" r="9" fill="#38bdf8"/>
+  <circle cx="92" cy="58" r="9" fill="#38bdf8"/>
+  <circle cx="64" cy="92" r="11" fill="#0ea5e9"/>
+  <line x1="64" y1="38" x2="36" y2="49" stroke="#bae6fd" stroke-width="4" stroke-linecap="round"/>
+  <line x1="64" y1="38" x2="92" y2="49" stroke="#bae6fd" stroke-width="4" stroke-linecap="round"/>
+  <line x1="36" y1="67" x2="64" y2="81" stroke="#bae6fd" stroke-width="4" stroke-linecap="round"/>
+  <line x1="92" y1="67" x2="64" y2="81" stroke="#bae6fd" stroke-width="4" stroke-linecap="round"/>
+</svg>

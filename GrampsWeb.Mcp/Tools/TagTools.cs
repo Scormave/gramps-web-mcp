@@ -15,7 +15,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class TagTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Tag", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one tag (name, color hex, priority). Tags label any object type.")]
     public static async Task<string> GetTag(
@@ -36,7 +36,7 @@ public static class TagTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Tag", ReadOnly = false, Destructive = false)]
     [Description(
         "Create a tag (write). Returns handle and Gramps ID. " +
         "color is six hex digits without # (e.g. FF5733). " +
@@ -73,7 +73,7 @@ public static class TagTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Tag", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a tag (destructive). Blocked when objects still carry the tag unless force=true.")]
     public static async Task<string> DeleteTag(

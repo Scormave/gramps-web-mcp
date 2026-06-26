@@ -12,7 +12,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class SystemTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Recent Changes", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: recent transaction history (most recently changed objects). " +
         "Use for sync auditing or 'what changed last' workflows.")]
@@ -34,7 +34,7 @@ public static class SystemTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Bookmarks", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: Gramps Web user bookmarks (saved shortcuts to people, families, etc.).")]
     public static async Task<string> GetBookmarks(GrampsApiClient client)

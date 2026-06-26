@@ -43,3 +43,6 @@ bld/
 # OS
 .DS_Store
 Thumbs.db
+
+# MCPB packaging output
+dist/

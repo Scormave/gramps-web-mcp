@@ -18,7 +18,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class CitationTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Citation", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one citation (source title/handle, page, confidence, access date). " +
         "Citations connect sources to facts on people, events, places, etc.")]
@@ -42,7 +42,7 @@ public static class CitationTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Citation", ReadOnly = false, Destructive = false)]
     [Description(
         "Create a citation (write). Returns handle and Gramps ID. " +
         "sourceHandle must be an existing source (create_source first). " +
@@ -104,7 +104,7 @@ public static class CitationTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Citation", ReadOnly = false, Destructive = false)]
     [Description(
         "Update a citation (write). Only pass fields to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
@@ -180,7 +180,7 @@ public static class CitationTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Citation", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a citation (destructive). Blocked when still linked from other objects unless force=true.")]
     public static async Task<string> DeleteCitation(

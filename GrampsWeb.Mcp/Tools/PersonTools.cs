@@ -23,7 +23,7 @@ public static class PersonTools
     // Tools
     // ─────────────────────────────────────────────────────────────────────────
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Person", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: fetch one person by handle. With extended=true, resolves linked objects " +
         "(event dates/places, note text, tag names, citations, media) for a fuller picture in one call. " +
@@ -59,7 +59,7 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Ancestors", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: list ancestors up to N generations with names and vital dates/places. " +
         "Each row includes generation and optional kinship labels (Father, Mother's father, …). " +
@@ -92,7 +92,7 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Descendants", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: list descendants up to N generations with names and vital dates/places. " +
         "Each row includes generation and optional kinship (Son, Granddaughter, …) from recorded gender. " +
@@ -124,7 +124,7 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Person Timeline", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: chronological timeline of events for one person (and optionally relatives' events). " +
         "Filter with events (categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom), " +
@@ -162,7 +162,7 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Relations", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: genealogical relationship between two people (e.g. '3rd cousin twice removed'), " +
         "path distance, and common-ancestor handles, or a clear message if unrelated.")]
@@ -194,7 +194,7 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Person", ReadOnly = false, Destructive = false)]
     [Description(
         "Create a new person (write). Returns handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetNameSchema + " " + ToolDescriptionFragments.CallGetTypes + " " +
@@ -278,7 +278,7 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Person", ReadOnly = false, Destructive = false)]
     [Description(
         "Update an existing person (write). Only include arguments you want to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
@@ -478,7 +478,7 @@ public static class PersonTools
         };
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Person", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a person (destructive). Blocked when backlinks exist unless force=true. " +
         "WARNING: force=true can leave dangling references in family and event records.")]

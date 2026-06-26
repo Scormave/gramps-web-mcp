@@ -20,7 +20,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class MediaTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Get Media", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: media object metadata (path, MIME, checksum, description). " +
         "For Open WebUI vision access, use GetMediaThumbnail or GetMediaFile. " +
@@ -45,7 +45,7 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Media Thumbnail", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: download a media thumbnail as MCP image content for vision-capable tool clients such as Open WebUI. " +
         "Preferred before requesting the full media file. Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects media size, MIME, and private-record safeguards.")]
@@ -69,7 +69,7 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Media File", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: download a full media file as MCP image content for vision-capable tool clients such as Open WebUI. " +
         "Use only when a thumbnail is insufficient. Rejects non-image media; PDFs and other document files remain available only through MCP resources.")]
@@ -91,7 +91,7 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Media", ReadOnly = false, Destructive = false)]
     [Description(
         "Update media metadata (write). Binary upload is not supported here—only fields stored on the media record. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
@@ -153,7 +153,7 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Media", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a media record (destructive). Removes the Gramps object, not necessarily the file on disk. " +
         "Blocked when other objects reference it unless force=true.")]

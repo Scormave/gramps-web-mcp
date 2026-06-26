@@ -1,0 +1,77 @@
+name: MCPB Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-mcpb:
+    name: Pack MCPB (${{ matrix.rid }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-arm64
+            runner: macos-latest
+          - rid: osx-x64
+            runner: macos-latest
+          - rid: win-x64
+            runner: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(grep -o '<Version>[^<]*</Version>' GrampsWeb.Mcp/GrampsWeb.Mcp.csproj | sed 's/<[^>]*>//g' | head -1)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Test
+        run: dotnet test gramps-web-mcp.sln -c Release
+
+      - name: Install MCPB CLI
+        run: npm install -g @anthropic-ai/mcpb
+
+      - name: Pack MCPB bundle
+        shell: bash
+        run: ./scripts/pack-mcpb.sh "${{ matrix.rid }}" "${{ steps.version.outputs.version }}"
+
+      - name: Upload MCPB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcpb-${{ matrix.rid }}
+          path: dist/*.mcpb
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release assets
+    needs: build-mcpb
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mcpb-*
+          merge-multiple: true
+          path: dist
+
+      - name: Attach MCPB bundles to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.mcpb
+          generate_release_notes: true

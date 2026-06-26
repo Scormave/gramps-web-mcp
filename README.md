@@ -120,7 +120,36 @@ Gramps Web is published on port **5055**; MCP is on **8080** (`/mcp` and
 `/health`). Inside the compose network the MCP container reaches Gramps Web at
 `http://grampsweb:5000`.
 
-### MCP client configuration
+### Claude Desktop (MCPB extension)
+
+One-click install for Claude Desktop is available as an **MCP Bundle** (`.mcpb`) from
+[GitHub Releases](https://github.com/Scormave/gramps-web-mcp/releases). Download the
+bundle for your platform:
+
+| Platform | Artifact |
+|----------|----------|
+| macOS Apple Silicon | `gramps-web-mcp-claude-desktop-osx-arm64-v*.mcpb` |
+| macOS Intel | `gramps-web-mcp-claude-desktop-osx-x64-v*.mcpb` |
+| Windows x64 | `gramps-web-mcp-claude-desktop-win-x64-v*.mcpb` |
+
+1. Download the `.mcpb` file for your OS from the latest release.
+2. Double-click it, or drag it into the Claude Desktop window.
+3. Enter your Gramps Web URL, username, password/token, and tree UUID.
+4. Leave **Read-only mode** enabled for your first session; disable it only when you
+   want Claude to create or edit records.
+5. Complete installation and start a new chat.
+
+The extension runs locally over stdio and does not require the .NET SDK on your machine.
+See [`mcpb/README.md`](mcpb/README.md) for packaging details and
+[`PRIVACY.md`](PRIVACY.md) for the privacy policy.
+
+To build a bundle locally:
+
+```bash
+./scripts/pack-mcpb.sh osx-arm64   # or osx-x64, win-x64
+```
+
+### MCP client configuration (manual)
 
 **stdio** (e.g. Claude Desktop, Cursor):
 
@@ -221,6 +250,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the [developer guide](GrampsWeb.Mcp/d
 |----------|-------------|
 | [docs index](GrampsWeb.Mcp/docs/README.md) | All documentation files |
 | [Tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) | Complete MCP tool reference |
+| [Claude Desktop MCPB](mcpb/README.md) | Desktop extension packaging |
+| [Privacy policy](PRIVACY.md) | Data handling for the desktop extension |
 | [System prompt](GrampsWeb.Mcp/docs/SYSTEM_PROMPT.md) | Suggested prompt for MCP clients |
 | [Architecture](GrampsWeb.Mcp/docs/ARCHITECTURE.md) | System design overview |
 
@@ -231,6 +262,12 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Security
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## Privacy Policy
+
+The Claude Desktop extension is a **local** MCP server. It sends data only to the
+Gramps Web instance you configure and does not collect analytics or conversation
+data. See [PRIVACY.md](PRIVACY.md) for full details.
 
 ## License
 

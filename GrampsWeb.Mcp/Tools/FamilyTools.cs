@@ -21,7 +21,7 @@ public static class FamilyTools
     // Tools
     // ─────────────────────────────────────────────────────────────────────────
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Family", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one family by handle (parents, children, relationship type, events). " +
         "With extended=true, resolves member names, event dates/places, citations, media. " +
@@ -57,7 +57,7 @@ public static class FamilyTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Get Family Timeline", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: chronological events for one family. " +
         "events filters by category (vital, family, religious, vocational, academic, travel, legal, residence, other, custom). " +
@@ -89,7 +89,7 @@ public static class FamilyTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Create Family", ReadOnly = false, Destructive = false)]
     [Description(
         "Create a family unit (write). Returns family handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetTypes + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
@@ -159,7 +159,7 @@ public static class FamilyTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Update Family", ReadOnly = false, Destructive = false)]
     [Description(
         "Update an existing family (write). Only pass fields you want to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
@@ -238,7 +238,7 @@ public static class FamilyTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "Delete Family", ReadOnly = false, Destructive = true)]
     [Description(
         "Delete a family (destructive). Blocked when backlinks exist unless force=true. " +
         "Does not remove this family from person records automatically; fix person links separately if needed.")]

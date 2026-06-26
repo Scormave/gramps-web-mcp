@@ -23,7 +23,7 @@ public static class CompositeTools
     // FindByGrampsId
     // ─────────────────────────────────────────────────────────────────────────
 
-    [McpServerTool]
+    [McpServerTool(Title = "Find By Gramps Id", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: find any Gramps object by its Gramps ID (e.g. I0001, F0023, E0005). " +
         "Automatically detects the object type from the ID prefix and returns full details. " +
@@ -76,7 +76,7 @@ public static class CompositeTools
     // QuickAddPerson
     // ─────────────────────────────────────────────────────────────────────────
 
-    [McpServerTool]
+    [McpServerTool(Title = "Quick Add Person", ReadOnly = false, Destructive = false)]
     [Description(
         "Convenience: create a person with optional birth and death events in a single call. " +
         "Automatically creates place and event objects as needed, then links them to the new person. " +
@@ -209,7 +209,7 @@ public static class CompositeTools
     // AddEventToPerson
     // ─────────────────────────────────────────────────────────────────────────
 
-    [McpServerTool]
+    [McpServerTool(Title = "Add Event To Person", ReadOnly = false, Destructive = false)]
     [Description(
         "Convenience: create an event and attach it to an existing person in one call. " +
         "Handles event creation + person update automatically. " +

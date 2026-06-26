@@ -15,7 +15,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class SearchTools
 {
-    [McpServerTool]
+    [McpServerTool(Title = "Search", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: full-text search across all object types (people, families, events, places, sources, citations, repositories, notes, media, tags). " +
         "Use * wildcards (e.g. Smith*). " +
@@ -52,7 +52,7 @@ public static class SearchTools
         }
     }
 
-    [McpServerTool]
+    [McpServerTool(Title = "List Objects", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: paginated list of one object type. Primary way to browse the tree when you know the type. " +
         "objectType must be exactly: people, families, events, places, sources, citations, repositories, notes, media, or tags (lowercase). " +
