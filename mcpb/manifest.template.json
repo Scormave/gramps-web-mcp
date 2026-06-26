@@ -24,7 +24,6 @@
   "keywords": ["genealogy", "gramps", "family-tree", "mcp"],
   "tools_generated": true,
   "prompts_generated": true,
-  "resources_generated": true,
   "server": {
     "type": "binary",
     "entry_point": "server/GrampsWeb.Mcp",
