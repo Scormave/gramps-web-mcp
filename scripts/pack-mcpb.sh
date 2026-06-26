@@ -46,10 +46,10 @@ dotnet publish "$PROJECT" \
   -r "$RID" \
   --self-contained true \
   -o "$STAGING/server" \
-  /p:PublishSingleFile=true \
-  /p:IncludeNativeLibrariesForSelfExtract=true \
-  /p:DebugType=none \
-  /p:DebugSymbols=false
+  -p:PublishSingleFile=true \
+  -p:IncludeNativeLibrariesForSelfExtract=true \
+  -p:DebugType=none \
+  -p:DebugSymbols=false
 
 if [[ "$RID" == win-* ]]; then
   BINARY_NAME="GrampsWeb.Mcp.exe"
