@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-06-26
+
 ### Added
 
 - Claude Desktop MCPB (`.mcpb`) packaging with self-contained binaries for macOS and Windows
@@ -50,6 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Scormave/gramps-web-mcp/releases/tag/v1.0.0
