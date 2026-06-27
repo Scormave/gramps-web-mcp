@@ -6,9 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Shared JWT token cache across concurrent API clients so parallel MCP tool calls no longer each POST `/api/token/` and hit Gramps Web rate limits (HTTP 429)
+- Included date in `get_media` output (was omitted from the formatter despite being present in the API response)
+
 ### Changed
 
-- Reduced `/health` response to a minimal status payload
+- Reduced `/health` response to a minimal `{ "status": "healthy" | "unhealthy" }` payload instead of exposing API URL, tree, database, and Gramps version to unauthenticated callers
 
 ## [1.0.2] - 2026-06-26
 
