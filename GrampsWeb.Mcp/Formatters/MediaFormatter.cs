@@ -47,6 +47,8 @@ public static class MediaFormatter
             sb.AppendLine($"MIME: {media.Mime}");
         if (!string.IsNullOrEmpty(media.Checksum))
             sb.AppendLine($"Checksum: {media.Checksum}");
+        if (media.Date != null)
+            sb.AppendLine($"Date:  {GrampsValueFormatter.FormatDate(media.Date)}");
         if (!string.IsNullOrEmpty(media.Description))
             sb.AppendLine($"\nDescription:\n{media.Description}");
 
