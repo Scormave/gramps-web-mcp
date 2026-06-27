@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Reduced `/health` response to a minimal `{ "status": "healthy" | "unhealthy" }` payload instead of exposing API URL, tree, database, and Gramps version to unauthenticated callers
+- Docker release workflow now runs `dotnet test` before building and pushing the container image (GitHub Actions and Gitea Actions)
 
 ## [1.0.2] - 2026-06-26
 
