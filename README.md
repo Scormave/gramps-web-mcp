@@ -66,8 +66,10 @@ docker run -p 8080:8080 \
 
 The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
 container health, and other uptime monitors. It returns HTTP 200 when the MCP
-server can authenticate against Gramps Web, or HTTP 503 otherwise. Startup logs
-include a line such as `Connected to Gramps Web at …` once the API is reachable.
+server can authenticate against Gramps Web, or HTTP 503 otherwise. The public
+response is minimal by default: `{ "status": "healthy" }` or
+`{ "status": "unhealthy" }`. Startup logs include a line such as
+`Connected to Gramps Web at …` once the API is reachable.
 
 For read-only mode, add `-e GRAMPS_READ_ONLY=true`:
 
@@ -98,7 +100,7 @@ Basic setup:
    `GRAMPS_TREE_ID`.
 4. Keep the default container port `8080`, or map it to another host port.
 5. Start the container and check `/health`; it returns HTTP 200 once the service
-   can authenticate to Gramps Web.
+   can authenticate to Gramps Web, with a minimal JSON response by default.
 
 For the easiest pairing, run Gramps Web and `gramps-web-mcp` on the same Unraid
 Docker network and set `GRAMPS_API_URL` to the Gramps Web container URL. The MCP

@@ -12,17 +12,7 @@ internal static class HealthEndpointExtensions
         app.MapGet("/health", async (GrampsHealthService healthService, CancellationToken cancellationToken) =>
         {
             var status = await healthService.CheckAsync(cancellationToken);
-
-            var payload = new
-            {
-                status = status.IsHealthy ? "healthy" : "unhealthy",
-                gramps_api_url = status.ApiUrl,
-                gramps_tree_id = status.ConfiguredTreeId,
-                tree_name = status.TreeName,
-                tree_database_id = status.TreeDatabaseId,
-                gramps_version = status.GrampsVersion,
-                error = status.Error
-            };
+            var payload = CreateHealthPayload(status);
 
             return status.IsHealthy
                 ? Results.Json(payload)
@@ -30,5 +20,13 @@ internal static class HealthEndpointExtensions
         });
 
         return app;
+    }
+
+    internal static object CreateHealthPayload(GrampsConnectivityStatus status)
+    {
+        return new
+        {
+            status = status.IsHealthy ? "healthy" : "unhealthy"
+        };
     }
 }

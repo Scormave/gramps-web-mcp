@@ -31,7 +31,7 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # MCP_PATH            URL prefix for MCP endpoints (default /mcp).
 # MCP_STATELESS       true|false — Streamable HTTP stateless mode (default true for http).
 # MCP_ENABLE_LEGACY_SSE  true|false — with http, also expose legacy /sse + /message.
-# GET /health         Liveness/readiness probe; 200 when Gramps Web API is reachable.
+# GET /health         Liveness/readiness probe; minimal JSON by default.
 
 ENV MCP_TRANSPORT=http \
     ASPNETCORE_URLS=http://0.0.0.0:8080 \

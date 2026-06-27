@@ -359,6 +359,8 @@ Default environment in the image:
 - `ASPNETCORE_URLS=http://0.0.0.0:8080`
 - `MCP_PATH=/mcp`
 
+`GET /health` returns a minimal status payload for liveness/readiness checks.
+
 ### CI
 
 - **GitHub Actions** (`.github/workflows/ci.yml`): build and test on push/PR.
