@@ -102,25 +102,84 @@ public class GrampsApiClientReadOnlyTests
         Assert.Contains("3 bytes", ex.Message);
     }
 
+    [Fact]
+    public async Task Concurrent_Client_Instances_Share_Token_Request()
+    {
+        var handler = new RecordingHandler
+        {
+            TokenDelay = TimeSpan.FromMilliseconds(50)
+        };
+        var config = CreateConfig(readOnly: true);
+        var tokenProvider = CreateTokenProvider(handler, config);
+        var client1 = CreateClient(handler, config, tokenProvider);
+        var client2 = CreateClient(handler, config, tokenProvider);
+
+        await Task.WhenAll(
+            client1.GetAsync<JsonElement>("/api/metadata/"),
+            client2.GetAsync<JsonElement>("/api/metadata/"));
+
+        Assert.Equal(1, handler.Requests.Count(r => r.Method == HttpMethod.Post && r.Path == "/api/token/"));
+        Assert.Equal(2, handler.Requests.Count(r => r.Method == HttpMethod.Get && r.Path == "/api/metadata/"));
+    }
+
     private static GrampsApiClient CreateClient(HttpMessageHandler handler, bool readOnly)
+    {
+        var config = CreateConfig(readOnly);
+        return CreateClient(handler, config, CreateTokenProvider(handler, config));
+    }
+
+    private static GrampsApiClient CreateClient(
+        HttpMessageHandler handler,
+        GrampsConfig config,
+        GrampsAuthTokenProvider tokenProvider)
     {
         var httpClient = new HttpClient(handler)
         {
             BaseAddress = new Uri("https://gramps-web.test")
         };
-        var config = new GrampsConfig(
+
+        return new GrampsApiClient(
+            httpClient,
+            config,
+            NullLogger<GrampsApiClient>.Instance,
+            tokenProvider);
+    }
+
+    private static GrampsAuthTokenProvider CreateTokenProvider(HttpMessageHandler handler, GrampsConfig config)
+    {
+        return new GrampsAuthTokenProvider(
+            new HttpClient(handler),
+            config,
+            NullLogger<GrampsAuthTokenProvider>.Instance);
+    }
+
+    private static GrampsConfig CreateConfig(bool readOnly)
+    {
+        return new GrampsConfig(
             ApiUrl: "https://gramps-web.test",
             Username: "user",
             Password: "pass",
             TreeId: "tree",
             ReadOnly: readOnly);
-
-        return new GrampsApiClient(httpClient, config, NullLogger<GrampsApiClient>.Instance);
     }
 
     private sealed class RecordingHandler : HttpMessageHandler
     {
-        public List<RecordedRequest> Requests { get; } = [];
+        private readonly object _gate = new();
+        private readonly List<RecordedRequest> _requests = [];
+
+        public TimeSpan TokenDelay { get; init; } = TimeSpan.Zero;
+
+        public IReadOnlyList<RecordedRequest> Requests
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _requests.ToList();
+                }
+            }
+        }
 
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -129,13 +188,17 @@ public class GrampsApiClientReadOnlyTests
             var body = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken);
-            Requests.Add(new RecordedRequest(
-                request.Method,
-                request.RequestUri?.AbsolutePath ?? string.Empty,
-                body));
-
-            if (request.Method == HttpMethod.Post && request.RequestUri?.AbsolutePath == "/api/token/")
+            var path = request.RequestUri?.AbsolutePath ?? string.Empty;
+            lock (_gate)
             {
+                _requests.Add(new RecordedRequest(request.Method, path, body));
+            }
+
+            if (request.Method == HttpMethod.Post && path == "/api/token/")
+            {
+                if (TokenDelay > TimeSpan.Zero)
+                    await Task.Delay(TokenDelay, cancellationToken);
+
                 return JsonResponse("""
                     {
                       "access_token": "token",
@@ -145,7 +208,7 @@ public class GrampsApiClientReadOnlyTests
                     """);
             }
 
-            if (request.Method == HttpMethod.Get && request.RequestUri?.AbsolutePath == "/api/metadata/")
+            if (request.Method == HttpMethod.Get && path == "/api/metadata/")
             {
                 return JsonResponse("""
                     {
@@ -154,17 +217,17 @@ public class GrampsApiClientReadOnlyTests
                     """);
             }
 
-            if (request.Method == HttpMethod.Get && request.RequestUri?.AbsolutePath == "/api/media/handle1/file")
+            if (request.Method == HttpMethod.Get && path == "/api/media/handle1/file")
             {
                 return BinaryResponse([0, 159, 255], "image/jpeg");
             }
 
-            if (request.Method == HttpMethod.Get && request.RequestUri?.AbsolutePath == "/api/media/large/file")
+            if (request.Method == HttpMethod.Get && path == "/api/media/large/file")
             {
                 return BinaryResponse([1, 2, 3], "image/png");
             }
 
-            if (request.Method == HttpMethod.Get && request.RequestUri?.AbsolutePath == "/api/media/streaming-large/file")
+            if (request.Method == HttpMethod.Get && path == "/api/media/streaming-large/file")
             {
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {

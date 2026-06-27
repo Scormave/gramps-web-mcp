@@ -22,21 +22,24 @@ public class GrampsApiClient
     private readonly HttpClient _httpClient;
     private readonly GrampsConfig _config;
     private readonly ILogger<GrampsApiClient> _logger;
-
+    private readonly GrampsAuthTokenProvider _tokenProvider;
     private string? _accessToken;
-    private string? _refreshToken;
-    private DateTime _tokenExpiration = DateTime.MinValue;
 
     /// <summary>
     /// Timeout for HTTP requests (30 seconds).
     /// </summary>
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
 
-    public GrampsApiClient(HttpClient httpClient, GrampsConfig config, ILogger<GrampsApiClient> logger)
+    public GrampsApiClient(
+        HttpClient httpClient,
+        GrampsConfig config,
+        ILogger<GrampsApiClient> logger,
+        GrampsAuthTokenProvider tokenProvider)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _tokenProvider = tokenProvider ?? throw new ArgumentNullException(nameof(tokenProvider));
 
         // Set base address without /api suffix; it's added per endpoint
         _httpClient.BaseAddress = new Uri(_config.ApiUrl);
@@ -48,36 +51,7 @@ public class GrampsApiClient
     /// </summary>
     public async Task GetTokenAsync()
     {
-        _logger.LogDebug("Requesting new JWT token from {Url}", _config.ApiUrl);
-
-        var tokenRequest = new { username = _config.Username, password = _config.Password };
-        var json = JsonSerializer.Serialize(tokenRequest, GrampsJson.Options);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        try
-        {
-            var response = await SendWithLoggingAsync(HttpMethod.Post, "/api/token/", content, skipRequestBodyLogging: true);
-            var body = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new GrampsApiException(response.StatusCode, body,
-                    $"Failed to obtain token: {response.StatusCode}");
-            }
-
-            var tokenResponse = ParseTokenResponse(body);
-            _accessToken = tokenResponse.AccessToken;
-            _refreshToken = tokenResponse.RefreshToken;
-            // Token expiration is 15 minutes from now
-            _tokenExpiration = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn ?? 900);
-
-            _logger.LogDebug("Token obtained, expires at {Expiration}", _tokenExpiration);
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway,
-                ex.Message, $"Failed to connect to Gramps API: {ex.Message}");
-        }
+        _accessToken = await _tokenProvider.GetTokenAsync();
     }
 
     /// <summary>
@@ -85,42 +59,7 @@ public class GrampsApiClient
     /// </summary>
     public async Task RefreshTokenAsync()
     {
-        if (string.IsNullOrEmpty(_accessToken) && string.IsNullOrEmpty(_refreshToken))
-        {
-            throw new InvalidOperationException("No token to refresh; call GetTokenAsync() first");
-        }
-
-        _logger.LogDebug("Refreshing JWT token");
-
-        var refreshRequest = !string.IsNullOrEmpty(_refreshToken)
-            ? new Dictionary<string, string> { ["refresh_token"] = _refreshToken }
-            : new Dictionary<string, string> { ["access"] = _accessToken! };
-        var json = JsonSerializer.Serialize(refreshRequest, GrampsJson.Options);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        try
-        {
-            var response = await SendWithLoggingAsync(HttpMethod.Post, "/api/token/refresh/", content, skipRequestBodyLogging: true);
-            var body = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new GrampsApiException(response.StatusCode, body,
-                    $"Failed to refresh token: {response.StatusCode}");
-            }
-
-            var tokenResponse = ParseTokenResponse(body);
-            _accessToken = tokenResponse.AccessToken;
-            _refreshToken = tokenResponse.RefreshToken ?? _refreshToken;
-            _tokenExpiration = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn ?? 900);
-
-            _logger.LogDebug("Token refreshed, expires at {Expiration}", _tokenExpiration);
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway,
-                ex.Message, $"Failed to refresh token: {ex.Message}");
-        }
+        _accessToken = await _tokenProvider.RefreshTokenAsync();
     }
 
     /// <summary>
@@ -129,21 +68,7 @@ public class GrampsApiClient
     /// </summary>
     public async Task EnsureAuthenticatedAsync()
     {
-        var now = DateTime.UtcNow;
-        var timeUntilExpiration = _tokenExpiration - now;
-
-        // If no token or expires in less than 2 minutes, refresh/obtain
-        if (string.IsNullOrEmpty(_accessToken) || timeUntilExpiration < TimeSpan.FromMinutes(2))
-        {
-            if (string.IsNullOrEmpty(_accessToken))
-            {
-                await GetTokenAsync();
-            }
-            else
-            {
-                await RefreshTokenAsync();
-            }
-        }
+        _accessToken = await _tokenProvider.GetAccessTokenAsync();
     }
 
     /// <summary>
@@ -621,37 +546,6 @@ public class GrampsApiClient
         return SensitiveFieldNames.Any(lowered.Contains);
     }
 
-    private static TokenResponse ParseTokenResponse(string body)
-    {
-        using var doc = JsonDocument.Parse(body);
-        var root = doc.RootElement;
-
-        var accessToken = GetString(root, "access_token")
-                          ?? GetString(root, "access");
-        if (string.IsNullOrWhiteSpace(accessToken))
-            throw new InvalidOperationException("Token response does not contain access token");
-
-        var refreshToken = GetString(root, "refresh_token")
-                           ?? GetString(root, "refresh");
-        var expiresIn = GetInt(root, "expires_in");
-
-        return new TokenResponse(accessToken, refreshToken, expiresIn);
-    }
-
-    private static string? GetString(JsonElement root, string propertyName)
-    {
-        return root.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.String
-            ? prop.GetString()
-            : null;
-    }
-
-    private static int? GetInt(JsonElement root, string propertyName)
-    {
-        return root.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.Number
-            ? prop.GetInt32()
-            : null;
-    }
-
     private static int? GetIntQuery(string path, string key)
     {
         var idx = path.IndexOf('?', StringComparison.Ordinal);
@@ -705,9 +599,4 @@ public class GrampsApiClient
         return null;
     }
 
-    /// <summary>
-    /// DTO for token response from /api/token/ and /api/token/refresh/.
-    /// Supports both snake_case and legacy field names via ParseTokenResponse.
-    /// </summary>
-    private record TokenResponse(string AccessToken, string? RefreshToken, int? ExpiresIn);
 }

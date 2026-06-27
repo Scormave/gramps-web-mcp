@@ -272,7 +272,15 @@ public class MediaResourceTests
             BaseAddress = new Uri("https://gramps-web.test")
         };
         var config = CreateConfig(mediaResourcesEnabled: true, readOnly: readOnly);
-        return new GrampsApiClient(httpClient, config, NullLogger<GrampsApiClient>.Instance);
+        var tokenProvider = new GrampsAuthTokenProvider(
+            new HttpClient(handler),
+            config,
+            NullLogger<GrampsAuthTokenProvider>.Instance);
+        return new GrampsApiClient(
+            httpClient,
+            config,
+            NullLogger<GrampsApiClient>.Instance,
+            tokenProvider);
     }
 
     private static GrampsConfig CreateConfig(

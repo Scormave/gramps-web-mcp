@@ -19,9 +19,13 @@ public static class TestSetup
     {
         var config = GrampsConfig.FromEnvironment();
         var httpClient = new HttpClient();
-        var logger = LoggerFactory.Create(builder => builder.AddConsole())
-            .CreateLogger<GrampsApiClient>();
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<GrampsApiClient>();
+        var tokenProvider = new GrampsAuthTokenProvider(
+            new HttpClient(),
+            config,
+            loggerFactory.CreateLogger<GrampsAuthTokenProvider>());
 
-        return new GrampsApiClient(httpClient, config, logger);
+        return new GrampsApiClient(httpClient, config, logger, tokenProvider);
     }
 }

@@ -48,8 +48,16 @@ public class CitationToolsTests
             Username: "user",
             Password: "pass",
             TreeId: "tree");
+        var tokenProvider = new GrampsAuthTokenProvider(
+            new HttpClient(handler),
+            config,
+            NullLogger<GrampsAuthTokenProvider>.Instance);
 
-        return new GrampsApiClient(httpClient, config, NullLogger<GrampsApiClient>.Instance);
+        return new GrampsApiClient(
+            httpClient,
+            config,
+            NullLogger<GrampsApiClient>.Instance,
+            tokenProvider);
     }
 
     private sealed class RecordingHandler : HttpMessageHandler
