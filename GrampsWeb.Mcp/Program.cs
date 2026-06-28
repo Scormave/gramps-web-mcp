@@ -8,6 +8,7 @@ using ModelContextProtocol.Server;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 
 try
 {
@@ -95,4 +96,9 @@ static void ConfigureLogging(ILoggingBuilder logging)
             options.UseUtcTimestamp = true;
             options.IncludeScopes = false;
         });
+
+    logging.Services.Configure<ConsoleLoggerOptions>(options =>
+    {
+        options.LogToStandardErrorThreshold = LogLevel.Trace;
+    });
 }
