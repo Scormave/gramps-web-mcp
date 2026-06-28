@@ -47,6 +47,11 @@ public class GrampsApiClient
     }
 
     /// <summary>
+    /// Stable key for caches scoped to this client's API URL and configured tree.
+    /// </summary>
+    public string CacheScopeKey => HandleCache.BuildScopeKey(_config.ApiUrl, _config.TreeId);
+
+    /// <summary>
     /// Gets a new JWT access token via POST /api/token/{username}/{password}.
     /// </summary>
     public async Task GetTokenAsync()

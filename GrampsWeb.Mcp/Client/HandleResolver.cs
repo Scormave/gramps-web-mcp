@@ -69,33 +69,55 @@ public static class HandleResolver
         if (objectType is null)
             return handleOrGrampsId;
 
+        var scopeKey = client.CacheScopeKey;
+
+        var cached = HandleCache.TryGet(scopeKey, handleOrGrampsId);
+        if (cached is not null)
+            return cached;
+
+        await HandleCache.AcquireKeyLockAsync(scopeKey, handleOrGrampsId);
         try
         {
-            var path = $"/api/{objectType}/?gramps_id={Uri.EscapeDataString(handleOrGrampsId)}&pagesize=1";
-            var raw = await client.GetAsync<JsonElement>(path);
+            // Double-check after acquiring lock.
+            cached = HandleCache.TryGet(scopeKey, handleOrGrampsId);
+            if (cached is not null)
+                return cached;
 
-            // The response is either a JSON array or an object with an "objects" array.
-            var items = raw.ValueKind == JsonValueKind.Array
-                ? raw
-                : raw.TryGetProperty("objects", out var objArr) ? objArr : raw;
-
-            if (items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0)
+            try
             {
-                var first = items[0];
-                if (first.TryGetProperty("handle", out var handleProp) &&
-                    handleProp.ValueKind == JsonValueKind.String)
+                var path = $"/api/{objectType}/?gramps_id={Uri.EscapeDataString(handleOrGrampsId)}&pagesize=1";
+                var raw = await client.GetAsync<JsonElement>(path);
+
+                // The response is either a JSON array or an object with an "objects" array.
+                var items = raw.ValueKind == JsonValueKind.Array
+                    ? raw
+                    : raw.TryGetProperty("objects", out var objArr) ? objArr : raw;
+
+                if (items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0)
                 {
-                    var handle = handleProp.GetString();
-                    if (!string.IsNullOrEmpty(handle))
-                        return handle;
+                    var first = items[0];
+                    if (first.TryGetProperty("handle", out var handleProp) &&
+                        handleProp.ValueKind == JsonValueKind.String)
+                    {
+                        var handle = handleProp.GetString();
+                        if (!string.IsNullOrEmpty(handle))
+                        {
+                            HandleCache.Set(scopeKey, handleOrGrampsId, handle);
+                            return handle;
+                        }
+                    }
                 }
             }
-        }
-        catch
-        {
-            // Graceful degradation: return the original value and let the caller surface the error.
-        }
+            catch
+            {
+                // Graceful degradation: return the original value and let the caller surface the error.
+            }
 
-        return handleOrGrampsId;
+            return handleOrGrampsId;
+        }
+        finally
+        {
+            HandleCache.ReleaseKeyLock(scopeKey, handleOrGrampsId);
+        }
     }
 }
