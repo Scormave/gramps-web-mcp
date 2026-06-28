@@ -27,11 +27,12 @@ public static class NoteTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "notes");
             var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>(
-                $"/api/notes/{Uri.EscapeDataString(handle)}");
+                $"/api/notes/{Uri.EscapeDataString(resolvedHandle)}");
             if (note == null)
                 return NotFoundHelper.NotFoundMessage("Note", handle);
-            var backlinks = await BacklinkCollector.CollectAsync(client, "notes", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "notes", resolvedHandle);
             return await NoteFormatter.FormatNoteFullAsync(note, client, backlinks);
         }
         catch (Exception ex)
@@ -119,7 +120,9 @@ public static class NoteTools
                 if (typeError != null) throw McpToolErrors.ValidationError(typeError);
             }
 
-            var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>($"/api/notes/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "notes");
+            var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>(
+                $"/api/notes/{Uri.EscapeDataString(resolvedHandle)}");
             if (note == null)
                 return NotFoundHelper.NotFoundMessage("Note", handle);
 
@@ -140,7 +143,7 @@ public static class NoteTools
                 Private = isPrivate ?? note.Private
             };
 
-            await client.PutMutationAsync($"/api/notes/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/notes/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Note", note.Handle, note.GrampsId);
         }
         catch (Exception ex)
@@ -161,8 +164,9 @@ public static class NoteTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "notes");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Note", "notes", handle, force);
+                client, "Note", "notes", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

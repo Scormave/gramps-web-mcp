@@ -37,9 +37,11 @@ public static class PersonTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
             if (extended)
             {
-                var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>($"/api/people/{handle}?extend=all");
+                var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>(
+                    $"/api/people/{Uri.EscapeDataString(resolvedHandle)}?extend=all");
                 if (person == null)
                     return NotFoundHelper.NotFoundMessage("Person", handle);
                 await ExtendedEntityEnrichment.EnrichPersonExtendedAsync(person, client);
@@ -47,7 +49,8 @@ public static class PersonTools
             }
             else
             {
-                var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
+                var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
+                    $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");
                 return person == null
                     ? NotFoundHelper.NotFoundMessage("Person", handle)
                     : await PersonFormatter.FormatPersonFull(person, client);
@@ -76,7 +79,8 @@ public static class PersonTools
         try
         {
             generations = Math.Clamp(generations, 1, 10);
-            var ancestors = await PersonTreeTraversal.CollectAncestorsAsync(client, handle, generations);
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
+            var ancestors = await PersonTreeTraversal.CollectAncestorsAsync(client, resolvedHandle, generations);
             if (ancestors == null)
                 return NotFoundHelper.NotFoundMessage("Person", handle);
             if (ancestors.Length == 0)
@@ -84,7 +88,7 @@ public static class PersonTools
                     $"No ancestors found for {handle}. " +
                     "Only people linked through a parent family (where this person is the child) appear. " +
                     "Spouse-only links do not count as ancestors. Use get_person_extended to inspect family links.";
-            return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", handle, ancestors, kinshipLabels, client);
+            return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", resolvedHandle, ancestors, kinshipLabels, client);
         }
         catch (Exception ex)
         {
@@ -109,14 +113,15 @@ public static class PersonTools
         try
         {
             generations = Math.Clamp(generations, 1, 10);
-            var descendants = await PersonTreeTraversal.CollectDescendantsAsync(client, handle, generations);
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
+            var descendants = await PersonTreeTraversal.CollectDescendantsAsync(client, resolvedHandle, generations);
             if (descendants == null)
                 return NotFoundHelper.NotFoundMessage("Person", handle);
             if (descendants.Length == 0)
                 return
                     $"No descendants found for {handle}. " +
                     "Only children linked on families where this person is a parent are included; if none are recorded, the list is empty.";
-            return await PersonFormatter.FormatPersonTreeRows("DESCENDANT TREE", handle, descendants, kinshipLabels, client);
+            return await PersonFormatter.FormatPersonTreeRows("DESCENDANT TREE", resolvedHandle, descendants, kinshipLabels, client);
         }
         catch (Exception ex)
         {
@@ -146,9 +151,10 @@ public static class PersonTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
             var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, true);
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
-                $"/api/people/{handle}/timeline{qs}");
+                $"/api/people/{Uri.EscapeDataString(resolvedHandle)}/timeline{qs}");
             if (timeline == null)
                 return NotFoundHelper.NotFoundMessage("Person", handle);
             if (timeline.Length == 0)
@@ -175,18 +181,22 @@ public static class PersonTools
     {
         try
         {
+            var resolvedHandle1 = await HandleResolver.ResolveToHandleAsync(handle1, client, "people");
+            var resolvedHandle2 = await HandleResolver.ResolveToHandleAsync(handle2, client, "people");
             var result = await client.GetJsonOrNullIfNotFoundAsync(
-                $"/api/relations/{handle1}/{handle2}");
+                $"/api/relations/{Uri.EscapeDataString(resolvedHandle1)}/{Uri.EscapeDataString(resolvedHandle2)}");
             if (result is null)
             {
-                if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle1}") is null)
+                if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
+                        $"/api/people/{Uri.EscapeDataString(resolvedHandle1)}") is null)
                     return NotFoundHelper.NotFoundMessage("Person", handle1);
-                if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle2}") is null)
+                if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
+                        $"/api/people/{Uri.EscapeDataString(resolvedHandle2)}") is null)
                     return NotFoundHelper.NotFoundMessage("Person", handle2);
                 return "Could not retrieve relationship data for these handles.";
             }
 
-            return PersonFormatter.FormatRelationships(handle1, handle2, result.Value);
+            return PersonFormatter.FormatRelationships(resolvedHandle1, resolvedHandle2, result.Value);
         }
         catch (Exception ex)
         {
@@ -322,7 +332,9 @@ public static class PersonTools
         try
         {
             // Get current person first
-            var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
+            var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
+                $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");
             if (person == null)
                 return NotFoundHelper.NotFoundMessage("Person", handle);
 
@@ -363,7 +375,7 @@ public static class PersonTools
                 Private = isPrivate ?? person.Private
             };
 
-            await client.PutMutationAsync($"/api/people/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/people/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Person", person.Handle, person.GrampsId);
         }
         catch (Exception ex)
@@ -491,8 +503,9 @@ public static class PersonTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Person", "people", handle, force);
+                client, "Person", "people", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

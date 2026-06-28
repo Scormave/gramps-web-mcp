@@ -60,13 +60,19 @@ public static class HandleResolver
     /// If resolution fails (not found or API error), returns the original value so the caller
     /// gets a meaningful 404 rather than a cryptic error.
     /// </summary>
-    public static async Task<string> ResolveToHandleAsync(string handleOrGrampsId, GrampsApiClient client)
+    public static async Task<string> ResolveToHandleAsync(
+        string handleOrGrampsId,
+        GrampsApiClient client,
+        string? expectedObjectType = null)
     {
         if (!LooksLikeGrampsId(handleOrGrampsId))
             return handleOrGrampsId;
 
         var objectType = PrefixToObjectType(handleOrGrampsId[0]);
         if (objectType is null)
+            return handleOrGrampsId;
+        if (expectedObjectType is not null &&
+            !string.Equals(objectType, expectedObjectType, StringComparison.OrdinalIgnoreCase))
             return handleOrGrampsId;
 
         var scopeKey = client.CacheScopeKey;

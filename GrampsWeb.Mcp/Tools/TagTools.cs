@@ -25,7 +25,9 @@ public static class TagTools
     {
         try
         {
-            var tag = await client.GetOrNullIfNotFoundAsync<GrampsTag>($"/api/tags/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "tags");
+            var tag = await client.GetOrNullIfNotFoundAsync<GrampsTag>(
+                $"/api/tags/{Uri.EscapeDataString(resolvedHandle)}");
             return tag == null
                 ? NotFoundHelper.NotFoundMessage("Tag", handle)
                 : TagFormatter.FormatTagFull(tag);
@@ -85,8 +87,9 @@ public static class TagTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "tags");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Tag", "tags", handle, force);
+                client, "Tag", "tags", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

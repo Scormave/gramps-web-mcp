@@ -28,7 +28,9 @@ public static class PlaceTools
     {
         try
         {
-            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
+            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
+                $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");
             return place == null
                 ? NotFoundHelper.NotFoundMessage("Place", handle)
                 : await PlaceFormatter.FormatPlaceFull(place, client);
@@ -56,13 +58,15 @@ public static class PlaceTools
     {
         try
         {
-            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
+            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
+                $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");
             if (place == null)
                 return NotFoundHelper.NotFoundMessage("Place", handle);
 
             var datesNormalized = PersonTools.NormalizeTimelineDatesForGrampsApi(dates);
             var outcome = await PlaceTimelineFallback.CollectAsync(
-                client, handle, place, events, datesNormalized, true);
+                client, resolvedHandle, place, events, datesNormalized, true);
 
             if (outcome.MatchedPlaceCount == 0)
                 return
@@ -127,6 +131,8 @@ public static class PlaceTools
             }
 
             var enclosed = (string[]?)enclosedByHandles;
+            if (enclosed is { Length: > 0 })
+                enclosed = await ResolveHandlesAsync(enclosed, client, "places");
             var placeRefList = enclosed?.Length > 0
                 ? enclosed.Select(h => new { @ref = h } as object).ToArray()
                 : null;
@@ -201,11 +207,15 @@ public static class PlaceTools
                 if (typeError != null) throw McpToolErrors.ValidationError(typeError);
             }
 
-            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>($"/api/places/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
+            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
+                $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");
             if (place == null)
                 return NotFoundHelper.NotFoundMessage("Place", handle);
 
             var enclosedUpdate = (string[]?)enclosedByHandles;
+            if (enclosedUpdate is { Length: > 0 })
+                enclosedUpdate = await ResolveHandlesAsync(enclosedUpdate, client, "places");
             var placeRefList = enclosedUpdate != null && enclosedUpdate.Length > 0
                 ? enclosedUpdate.Select(h => new { @ref = h } as object).ToArray()
                 : null;
@@ -232,7 +242,7 @@ public static class PlaceTools
                 Private = isPrivate ?? place.Private
             };
 
-            await client.PutMutationAsync($"/api/places/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/places/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Place", place.Handle, place.GrampsId);
         }
         catch (Exception ex)
@@ -254,12 +264,24 @@ public static class PlaceTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Place", "places", handle, force);
+                client, "Place", "places", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    private static async Task<string[]> ResolveHandlesAsync(
+        string[] handles,
+        GrampsApiClient client,
+        string expectedObjectType)
+    {
+        var resolved = new string[handles.Length];
+        for (var i = 0; i < handles.Length; i++)
+            resolved[i] = await HandleResolver.ResolveToHandleAsync(handles[i], client, expectedObjectType);
+        return resolved;
     }
 }

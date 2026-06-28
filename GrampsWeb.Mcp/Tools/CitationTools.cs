@@ -29,11 +29,12 @@ public static class CitationTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
             var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>(
-                $"/api/citations/{Uri.EscapeDataString(handle)}");
+                $"/api/citations/{Uri.EscapeDataString(resolvedHandle)}");
             if (citation == null)
                 return NotFoundHelper.NotFoundMessage("Citation", handle);
-            var backlinks = await BacklinkCollector.CollectAsync(client, "citations", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "citations", resolvedHandle);
             return await CitationFormatter.FormatCitationFull(citation, client, backlinks);
         }
         catch (Exception ex)
@@ -75,6 +76,7 @@ public static class CitationTools
         {
             if (string.IsNullOrWhiteSpace(sourceHandle))
                 throw McpToolErrors.ValidationError("Error: sourceHandle is required");
+            var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
 
             var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
 
@@ -82,7 +84,7 @@ public static class CitationTools
 
             var request = new CreateCitationRequest
             {
-                Source = sourceHandle,
+                Source = resolvedSourceHandle,
                 Page = page,
                 Confidence = confidenceLevel,
                 Date = dateRequest,
@@ -136,7 +138,12 @@ public static class CitationTools
     {
         try
         {
-            var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>($"/api/citations/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
+            var resolvedSourceHandle = sourceHandle is null
+                ? null
+                : await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
+            var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>(
+                $"/api/citations/{Uri.EscapeDataString(resolvedHandle)}");
             if (citation == null)
                 return NotFoundHelper.NotFoundMessage("Citation", handle);
 
@@ -155,7 +162,7 @@ public static class CitationTools
                 Handle = citation.Handle,
                 GrampsId = citation.GrampsId,
                 Change = citation.Change,
-                Source = sourceHandle ?? citation.Source,
+                Source = resolvedSourceHandle ?? citation.Source,
                 Page = (string?)page ?? citation.Page,
                 Confidence = finalConfidence,
                 Date = dateRequest,
@@ -171,7 +178,7 @@ public static class CitationTools
                 Private = isPrivate ?? citation.Private
             };
 
-            await client.PutMutationAsync($"/api/citations/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/citations/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Citation", citation.Handle, citation.GrampsId);
         }
         catch (Exception ex)
@@ -192,8 +199,9 @@ public static class CitationTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Citation", "citations", handle, force);
+                client, "Citation", "citations", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

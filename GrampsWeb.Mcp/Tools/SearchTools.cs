@@ -118,7 +118,10 @@ public static class SearchTools
             {
                 queryParams.Add("extend=source_handle");
                 if (!string.IsNullOrEmpty(sourceHandle))
-                    queryParams.Add($"source_handle={Uri.EscapeDataString(sourceHandle)}");
+                {
+                    var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
+                    queryParams.Add($"source_handle={Uri.EscapeDataString(resolvedSourceHandle)}");
+                }
             }
 
             var queryString = $"/api/{objectType.ToLower()}/?{string.Join("&", queryParams)}";

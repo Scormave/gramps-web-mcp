@@ -197,6 +197,26 @@ public class HandleResolverTests
         Assert.Equal(2, handler.ListRequestCount("/api/people/"));
     }
 
+    [Fact]
+    public async Task ResolveToHandleAsync_DoesNotResolve_WhenExpectedObjectTypeDiffers()
+    {
+        var handler = new ResolverRecordingHandler
+        {
+            ListResponses =
+            {
+                ["/api/people/"] = """
+                    [{"handle": "person-handle-abc", "gramps_id": "I0001"}]
+                    """
+            }
+        };
+        var client = CreateClient(handler);
+
+        var result = await HandleResolver.ResolveToHandleAsync("I0001", client, "families");
+
+        Assert.Equal("I0001", result);
+        Assert.Empty(handler.ListRequests);
+    }
+
     private static GrampsApiClient CreateClient(
         ResolverRecordingHandler handler,
         string apiUrl = "https://gramps-web.test",

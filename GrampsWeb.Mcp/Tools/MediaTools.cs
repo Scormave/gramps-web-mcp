@@ -32,11 +32,12 @@ public static class MediaTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(
-                $"/api/media/{Uri.EscapeDataString(handle)}");
+                $"/api/media/{Uri.EscapeDataString(resolvedHandle)}");
             if (media == null)
                 return NotFoundHelper.NotFoundMessage("Media", handle);
-            var backlinks = await BacklinkCollector.CollectAsync(client, "media", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "media", resolvedHandle);
             return MediaFormatter.FormatMediaFull(media, backlinks);
         }
         catch (Exception ex)
@@ -59,7 +60,8 @@ public static class MediaTools
     {
         try
         {
-            var thumbnail = await GrampsResources.DownloadMediaThumbnailAsync(handle, size, client, config);
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
+            var thumbnail = await GrampsResources.DownloadMediaThumbnailAsync(resolvedHandle, size, client, config);
             GrampsResources.EnsureImageMime(thumbnail.MimeType);
             return ImageContentBlock.FromBytes(thumbnail.Binary.Bytes, thumbnail.MimeType);
         }
@@ -81,7 +83,8 @@ public static class MediaTools
     {
         try
         {
-            var mediaFile = await GrampsResources.DownloadMediaFileAsync(handle, client, config);
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
+            var mediaFile = await GrampsResources.DownloadMediaFileAsync(resolvedHandle, client, config);
             GrampsResources.EnsureImageMime(mediaFile.MimeType);
             return ImageContentBlock.FromBytes(mediaFile.Binary.Bytes, mediaFile.MimeType);
         }
@@ -117,7 +120,9 @@ public static class MediaTools
     {
         try
         {
-            var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>($"/api/media/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
+            var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(
+                $"/api/media/{Uri.EscapeDataString(resolvedHandle)}");
             if (media == null)
                 return NotFoundHelper.NotFoundMessage("Media", handle);
 
@@ -144,7 +149,7 @@ public static class MediaTools
                 Private = isPrivate ?? media.Private
             };
 
-            await client.PutMutationAsync($"/api/media/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/media/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Media", media.Handle, media.GrampsId);
         }
         catch (Exception ex)
@@ -166,8 +171,9 @@ public static class MediaTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Media", "media", handle, force);
+                client, "Media", "media", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

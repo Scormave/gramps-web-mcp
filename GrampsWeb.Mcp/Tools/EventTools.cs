@@ -29,12 +29,13 @@ public static class EventTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "events");
             var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>(
-                $"/api/events/{Uri.EscapeDataString(handle)}");
+                $"/api/events/{Uri.EscapeDataString(resolvedHandle)}");
             if (evt is null)
                 return NotFoundHelper.NotFoundMessage("Event", handle);
 
-            var linkedPeople = await CollectLinkedPeopleAsync(handle, client);
+            var linkedPeople = await CollectLinkedPeopleAsync(resolvedHandle, client);
             return await EventFormatter.FormatEventFull(evt, client, linkedPeople);
         }
         catch (Exception ex)
@@ -150,12 +151,15 @@ public static class EventTools
             if (typeError != null) throw McpToolErrors.ValidationError(typeError);
 
             var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso);
+            var resolvedPlaceHandle = placeHandle is null
+                ? null
+                : await HandleResolver.ResolveToHandleAsync(placeHandle, client, "places");
 
             var request = new CreateEventRequest
             {
                 Type = eventType,
                 Date = dateRequest,
-                Place = placeHandle,
+                Place = resolvedPlaceHandle,
                 Description = description,
                 MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
                 AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
@@ -215,7 +219,12 @@ public static class EventTools
                 if (typeError != null) throw McpToolErrors.ValidationError(typeError);
             }
 
-            var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>($"/api/events/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "events");
+            var resolvedPlaceHandle = placeHandle is null
+                ? null
+                : await HandleResolver.ResolveToHandleAsync(placeHandle, client, "places");
+            var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>(
+                $"/api/events/{Uri.EscapeDataString(resolvedHandle)}");
             if (evt is null)
                 return NotFoundHelper.NotFoundMessage("Event", handle);
 
@@ -231,7 +240,7 @@ public static class EventTools
                 Change = evt.Change,
                 Type = eventType ?? evt.Type,
                 Date = dateRequest,
-                Place = placeHandle ?? evt.Place,
+                Place = resolvedPlaceHandle ?? evt.Place,
                 Description = description ?? evt.Description,
                 MediaList = mediaHandles != null
                     ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, evt.MediaList)
@@ -245,7 +254,7 @@ public static class EventTools
                 Private = isPrivate ?? evt.Private
             };
 
-            await client.PutMutationAsync($"/api/events/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/events/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Event", evt.Handle, evt.GrampsId);
         }
         catch (Exception ex)
@@ -266,8 +275,9 @@ public static class EventTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "events");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Event", "events", handle, force);
+                client, "Event", "events", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

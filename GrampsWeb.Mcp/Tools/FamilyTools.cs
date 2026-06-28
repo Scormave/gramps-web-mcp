@@ -35,9 +35,11 @@ public static class FamilyTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
             if (extended)
             {
-                var family = await client.GetOrNullIfNotFoundAsync<GrampsFamilyExtended>($"/api/families/{handle}?extend=all");
+                var family = await client.GetOrNullIfNotFoundAsync<GrampsFamilyExtended>(
+                    $"/api/families/{Uri.EscapeDataString(resolvedHandle)}?extend=all");
                 if (family == null)
                     return NotFoundHelper.NotFoundMessage("Family", handle);
                 await ExtendedEntityEnrichment.EnrichFamilyExtendedAsync(family, client);
@@ -45,7 +47,8 @@ public static class FamilyTools
             }
             else
             {
-                var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>($"/api/families/{handle}");
+                var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>(
+                    $"/api/families/{Uri.EscapeDataString(resolvedHandle)}");
                 return family == null
                     ? NotFoundHelper.NotFoundMessage("Family", handle)
                     : await FamilyFormatter.FormatFamilyFullAsync(family, client);
@@ -74,9 +77,10 @@ public static class FamilyTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
             var qs = PersonTools.BuildTimelineQueryString(events, null, null, dates);
             var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
-                $"/api/families/{handle}/timeline{qs}");
+                $"/api/families/{Uri.EscapeDataString(resolvedHandle)}/timeline{qs}");
             if (timeline == null)
                 return NotFoundHelper.NotFoundMessage("Family", handle);
             if (timeline.Length == 0)
@@ -129,11 +133,17 @@ public static class FamilyTools
 
             var childRefArr = (GrampsChildRef[]?)childRefs;
             var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
+            var resolvedFatherHandle = fatherHandle is null
+                ? null
+                : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
+            var resolvedMotherHandle = motherHandle is null
+                ? null
+                : await HandleResolver.ResolveToHandleAsync(motherHandle, client, "people");
 
             var request = new CreateFamilyRequest
             {
-                FatherHandle = fatherHandle,
-                MotherHandle = motherHandle,
+                FatherHandle = resolvedFatherHandle,
+                MotherHandle = resolvedMotherHandle,
                 ChildRefList = childRefArr is { Length: > 0 } ? childRefArr : null,
                 EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
                 MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
@@ -200,7 +210,15 @@ public static class FamilyTools
                 if (typeError != null) throw McpToolErrors.ValidationError(typeError);
             }
 
-            var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>($"/api/families/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
+            var resolvedFatherHandle = fatherHandle is null
+                ? null
+                : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
+            var resolvedMotherHandle = motherHandle is null
+                ? null
+                : await HandleResolver.ResolveToHandleAsync(motherHandle, client, "people");
+            var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>(
+                $"/api/families/{Uri.EscapeDataString(resolvedHandle)}");
             if (family == null)
                 return NotFoundHelper.NotFoundMessage("Family", handle);
 
@@ -210,8 +228,8 @@ public static class FamilyTools
                 Handle = family.Handle,
                 GrampsId = family.GrampsId,
                 Change = family.Change,
-                FatherHandle = fatherHandle ?? family.FatherHandle,
-                MotherHandle = motherHandle ?? family.MotherHandle,
+                FatherHandle = resolvedFatherHandle ?? family.FatherHandle,
+                MotherHandle = resolvedMotherHandle ?? family.MotherHandle,
                 ChildRefList = childRefs != null ? (GrampsChildRef[]?)childRefs : family.ChildRefList,
                 EventRefList = eventRefs != null
                     ? (EventRefRequest[]?)eventRefs
@@ -229,7 +247,7 @@ public static class FamilyTools
                 Relationship = relationshipType ?? family.Relationship
             };
 
-            await client.PutMutationAsync($"/api/families/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/families/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Family", family.Handle, family.GrampsId);
         }
         catch (Exception ex)
@@ -251,8 +269,9 @@ public static class FamilyTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Family", "families", handle, force);
+                client, "Family", "families", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

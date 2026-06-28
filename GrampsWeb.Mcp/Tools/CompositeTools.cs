@@ -236,7 +236,7 @@ public static class CompositeTools
                 throw McpToolErrors.ValidationError("Error: eventType is required. See gramps://types for valid values.");
 
             // Resolve person handle
-            var resolvedPersonHandle = await HandleResolver.ResolveToHandleAsync(personHandle, client);
+            var resolvedPersonHandle = await HandleResolver.ResolveToHandleAsync(personHandle, client, "people");
 
             // Fetch existing person
             var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
@@ -252,7 +252,7 @@ public static class CompositeTools
             {
                 if (HandleResolver.LooksLikeGrampsId(place))
                 {
-                    var placeHandle = await HandleResolver.ResolveToHandleAsync(place, client);
+                    var placeHandle = await HandleResolver.ResolveToHandleAsync(place, client, "places");
                     var existingPlace = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
                         $"/api/places/{Uri.EscapeDataString(placeHandle)}");
                     if (existingPlace != null)

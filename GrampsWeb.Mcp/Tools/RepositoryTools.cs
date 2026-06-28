@@ -26,11 +26,12 @@ public static class RepositoryTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "repositories");
             var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>(
-                $"/api/repositories/{Uri.EscapeDataString(handle)}");
+                $"/api/repositories/{Uri.EscapeDataString(resolvedHandle)}");
             if (repo == null)
                 return NotFoundHelper.NotFoundMessage("Repository", handle);
-            var backlinks = await BacklinkCollector.CollectAsync(client, "repositories", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "repositories", resolvedHandle);
             return await RepositoryFormatter.FormatRepositoryFullAsync(repo, client, backlinks);
         }
         catch (Exception ex)
@@ -126,7 +127,9 @@ public static class RepositoryTools
                 if (typeError != null) throw McpToolErrors.ValidationError(typeError);
             }
 
-            var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>($"/api/repositories/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "repositories");
+            var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>(
+                $"/api/repositories/{Uri.EscapeDataString(resolvedHandle)}");
             if (repo == null)
                 return NotFoundHelper.NotFoundMessage("Repository", handle);
 
@@ -146,7 +149,7 @@ public static class RepositoryTools
                 Private = isPrivate ?? repo.Private
             };
 
-            await client.PutMutationAsync($"/api/repositories/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/repositories/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Repository", repo.Handle, repo.GrampsId);
         }
         catch (Exception ex)
@@ -167,8 +170,9 @@ public static class RepositoryTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "repositories");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Repository", "repositories", handle, force);
+                client, "Repository", "repositories", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

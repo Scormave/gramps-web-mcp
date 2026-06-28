@@ -27,11 +27,12 @@ public static class SourceTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
             var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>(
-                $"/api/sources/{Uri.EscapeDataString(handle)}");
+                $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}");
             if (source == null)
                 return NotFoundHelper.NotFoundMessage("Source", handle);
-            var backlinks = await BacklinkCollector.CollectAsync(client, "sources", handle);
+            var backlinks = await BacklinkCollector.CollectAsync(client, "sources", resolvedHandle);
             return SourceFormatter.FormatSourceFull(source, backlinks);
         }
         catch (Exception ex)
@@ -131,7 +132,9 @@ public static class SourceTools
     {
         try
         {
-            var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>($"/api/sources/{handle}");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
+            var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>(
+                $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}");
             if (source == null)
                 return NotFoundHelper.NotFoundMessage("Source", handle);
 
@@ -161,7 +164,7 @@ public static class SourceTools
                 Private = isPrivate ?? source.Private
             };
 
-            await client.PutMutationAsync($"/api/sources/{handle}", updateRequest);
+            await client.PutMutationAsync($"/api/sources/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
             return ResponseEnvelope.UpdateSuccess("Source", source.Handle, source.GrampsId);
         }
         catch (Exception ex)
@@ -183,8 +186,9 @@ public static class SourceTools
     {
         try
         {
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Source", "sources", handle, force);
+                client, "Source", "sources", resolvedHandle, force, handle);
         }
         catch (Exception ex)
         {

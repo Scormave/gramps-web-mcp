@@ -15,12 +15,14 @@ internal static class DeleteHelper
         string objectType,
         string apiPath,
         string handle,
-        bool force)
+        bool force,
+        string? originalIdentifier = null)
     {
+        originalIdentifier ??= handle;
         var payload = await client.GetJsonOrNullIfNotFoundAsync(
-            $"/api/{apiPath}/{handle}?backlinks=true");
+            $"/api/{apiPath}/{Uri.EscapeDataString(handle)}?backlinks=true");
         if (payload is null || payload.Value.ValueKind == JsonValueKind.Null)
-            return NotFoundHelper.NotFoundMessage(objectType, handle);
+            return NotFoundHelper.NotFoundMessage(objectType, originalIdentifier);
         var response = payload.Value;
 
         if (!force && response.TryGetProperty("backlinks", out var backlinks)
@@ -40,7 +42,7 @@ internal static class DeleteHelper
             }
         }
 
-        await client.DeleteAsync($"/api/{apiPath}/{handle}");
+        await client.DeleteAsync($"/api/{apiPath}/{Uri.EscapeDataString(handle)}");
         return ResponseEnvelope.DeleteSuccess(objectType, handle);
     }
 }
