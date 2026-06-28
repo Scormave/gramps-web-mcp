@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-06-28
+
+### Fixed
+
+- Tools documented Gramps ID support via handle parameters but passed IDs like `I0002` straight to `/api/.../{handle}`, causing false "not found" errors while `find_by_gramps_id` worked; advertised handle inputs now resolve through `HandleResolver` before API calls
+- Console logging on stdio transport wrote to stdout, so Claude Desktop and other MCP clients tried to parse startup and HTTP log lines as JSON-RPC; all console logs now go to stderr
+
+### Changed
+
+- Gramps ID to handle resolution is cached in memory (10-minute TTL, scoped per API URL and tree) to avoid repeated list-endpoint queries during multi-step agent workflows
+
 ## [1.0.3] - 2026-06-27
 
 ### Fixed
@@ -64,7 +75,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.0...v1.0.1
