@@ -52,8 +52,8 @@ gramps-web-mcp.sln
 | Component | Version |
 |-----------|---------|
 | .NET SDK / Runtime | 8.0 |
-| `ModelContextProtocol` | 1.2.0 |
-| `ModelContextProtocol.AspNetCore` | 1.2.0 |
+| `ModelContextProtocol` | 1.3.0 |
+| `ModelContextProtocol.AspNetCore` | 1.3.0 |
 | `Microsoft.Extensions.Hosting` | 10.0.5 |
 | `Microsoft.Extensions.Http` | 10.0.5 |
 
