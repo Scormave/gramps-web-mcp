@@ -49,10 +49,7 @@ public sealed class GrampsAuthTokenProvider
             if (HasUsableAccessToken())
                 return _accessToken!;
 
-            if (string.IsNullOrEmpty(_accessToken))
-                await RequestNewTokenAsync();
-            else
-                await RefreshCurrentTokenAsync();
+            await EnsureFreshTokenAsync();
 
             return _accessToken!;
         }
@@ -84,7 +81,7 @@ public sealed class GrampsAuthTokenProvider
             if (string.IsNullOrEmpty(_accessToken) && string.IsNullOrEmpty(_refreshToken))
                 throw new InvalidOperationException("No token to refresh; call GetTokenAsync() first");
 
-            await RefreshCurrentTokenAsync();
+            await EnsureFreshTokenAsync();
             return _accessToken!;
         }
         finally
@@ -97,6 +94,34 @@ public sealed class GrampsAuthTokenProvider
     {
         return !string.IsNullOrEmpty(_accessToken)
                && _tokenExpiration - DateTime.UtcNow >= RefreshSkew;
+    }
+
+    private async Task EnsureFreshTokenAsync()
+    {
+        if (string.IsNullOrEmpty(_accessToken))
+        {
+            await RequestNewTokenAsync();
+            return;
+        }
+
+        try
+        {
+            await RefreshCurrentTokenAsync();
+        }
+        catch (GrampsApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            _logger.LogWarning(
+                "Token refresh rejected with 401; clearing cached tokens and re-authenticating");
+            ClearCachedTokens();
+            await RequestNewTokenAsync();
+        }
+    }
+
+    private void ClearCachedTokens()
+    {
+        _accessToken = null;
+        _refreshToken = null;
+        _tokenExpiration = DateTime.MinValue;
     }
 
     private async Task RequestNewTokenAsync()
