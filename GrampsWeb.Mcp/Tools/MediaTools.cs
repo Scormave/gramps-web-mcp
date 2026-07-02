@@ -73,9 +73,11 @@ public static class MediaTools
 
     [McpServerTool(Title = "Get Media File", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: download a full media file as MCP image content for vision-capable tool clients such as Open WebUI. " +
-        "Use only when a thumbnail is insufficient. Rejects non-image media; PDFs and other document files remain available only through MCP resources.")]
-    public static async Task<ImageContentBlock> GetMediaFile(
+        "Read-only: download a full media file as typed MCP tool content. " +
+        "Returns image content for images, audio content for audio MIME types, and embedded blob resources for other allowlisted types such as PDF. " +
+        "Use only when a thumbnail is insufficient. Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects media size, MIME, and private-record safeguards. " +
+        "Full MCP clients may also read gramps://media/{handle}/file.")]
+    public static async Task<CallToolResult> GetMediaFile(
         [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client,
@@ -85,8 +87,7 @@ public static class MediaTools
         {
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             var mediaFile = await GrampsResources.DownloadMediaFileAsync(resolvedHandle, client, config);
-            GrampsResources.EnsureImageMime(mediaFile.MimeType);
-            return ImageContentBlock.FromBytes(mediaFile.Binary.Bytes, mediaFile.MimeType);
+            return GrampsResources.ToMediaFileCallToolResult(mediaFile);
         }
         catch (Exception ex)
         {

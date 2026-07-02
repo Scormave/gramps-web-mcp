@@ -76,11 +76,80 @@ public class MediaResourceTests
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
 
-        var image = await MediaTools.GetMediaFile("handle1", client, config);
+        var result = await MediaTools.GetMediaFile("handle1", client, config);
 
+        Assert.Single(result.Content);
+        var image = Assert.IsType<ImageContentBlock>(result.Content[0]);
         Assert.Equal("image", image.Type);
         Assert.Equal("image/jpeg", image.MimeType);
         Assert.Equal([4, 5, 6], image.DecodedData.ToArray());
+    }
+
+    [Fact]
+    public async Task GetMediaFile_Tool_Returns_AudioContentBlock_For_Audio_File()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(
+            mediaResourcesEnabled: true,
+            mediaAllowedMimeTypes: ["image/jpeg", "audio/aac"]);
+
+        var result = await MediaTools.GetMediaFile("audio1", client, config);
+
+        Assert.Single(result.Content);
+        var audio = Assert.IsType<AudioContentBlock>(result.Content[0]);
+        Assert.Equal("audio", audio.Type);
+        Assert.Equal("audio/aac", audio.MimeType);
+        Assert.Equal([19, 20, 21], audio.DecodedData.ToArray());
+    }
+
+    [Fact]
+    public async Task GetMediaFile_Tool_Returns_EmbeddedResourceBlock_For_Pdf_File()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(
+            mediaResourcesEnabled: true,
+            mediaAllowedMimeTypes: ["image/jpeg", "application/pdf"]);
+
+        var result = await MediaTools.GetMediaFile("pdf1", client, config);
+
+        Assert.Single(result.Content);
+        var embedded = Assert.IsType<EmbeddedResourceBlock>(result.Content[0]);
+        Assert.Equal("resource", embedded.Type);
+        var blob = Assert.IsType<BlobResourceContents>(embedded.Resource);
+        Assert.Equal("gramps://media/pdf1/file", blob.Uri);
+        Assert.Equal("application/pdf", blob.MimeType);
+        Assert.Equal([16, 17, 18], blob.DecodedData.ToArray());
+    }
+
+    [Fact]
+    public async Task GetMediaFile_Returns_Blob_For_Audio_When_Allowlisted()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(
+            mediaResourcesEnabled: true,
+            mediaAllowedMimeTypes: ["audio/aac"]);
+
+        var resource = await GrampsResources.GetMediaFile("audio1", client, config);
+
+        Assert.Equal("gramps://media/audio1/file", resource.Uri);
+        Assert.Equal("audio/aac", resource.MimeType);
+        Assert.Equal([19, 20, 21], resource.DecodedData.ToArray());
+    }
+
+    [Fact]
+    public async Task GetMediaFile_Tool_Result_Serializes_As_Typed_Content()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(mediaResourcesEnabled: true);
+        var result = await MediaTools.GetMediaFile("handle1", client, config);
+
+        var json = JsonSerializer.Serialize(result, McpJsonUtilities.DefaultOptions);
+        using var doc = JsonDocument.Parse(json);
+
+        var content = doc.RootElement.GetProperty("content")[0];
+        Assert.Equal("image", content.GetProperty("type").GetString());
+        Assert.Equal("image/jpeg", content.GetProperty("mimeType").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(content.GetProperty("data").GetString()));
     }
 
     [Fact]
@@ -206,20 +275,6 @@ public class MediaResourceTests
         Assert.Contains("not allowed", ex.Message);
     }
 
-    [Fact]
-    public async Task GetMediaFile_Tool_Fails_When_File_Is_Not_Image()
-    {
-        var client = CreateClient();
-        var config = CreateConfig(
-            mediaResourcesEnabled: true,
-            mediaAllowedMimeTypes: ["image/jpeg", "application/pdf"]);
-
-        var ex = await Assert.ThrowsAsync<McpException>(
-            () => MediaTools.GetMediaFile("pdf1", client, config));
-
-        Assert.Contains("cannot be returned as an image tool result", ex.Message);
-    }
-
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
@@ -341,6 +396,8 @@ public class MediaResourceTests
                 "/api/media/mismatch1/file" => BinaryResponse([13, 14, 15], "image/tiff"),
                 "/api/media/pdf1" => JsonResponse(MediaJson("pdf1", "application/pdf", isPrivate: false)),
                 "/api/media/pdf1/file" => BinaryResponse([16, 17, 18], "application/pdf"),
+                "/api/media/audio1" => JsonResponse(MediaJson("audio1", "audio/aac", isPrivate: false)),
+                "/api/media/audio1/file" => BinaryResponse([19, 20, 21], "audio/aac"),
                 "/api/media/missing1" => new HttpResponseMessage(HttpStatusCode.NotFound)
                 {
                     Content = new StringContent("not found", Encoding.UTF8, "text/plain")

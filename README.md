@@ -180,11 +180,11 @@ To run a stdio server in read-only mode, add `"GRAMPS_READ_ONLY": "true"` to `en
 Point your MCP client at `http://host:8080/mcp` with Streamable HTTP transport.
 
 Vision-capable agents can read opt-in media through tools (`GetMediaThumbnail`,
-`GetMediaFile`) for clients such as Open WebUI, or through binary MCP resources
-such as `gramps://media/{handle}/thumbnail/{size}` and
-`gramps://media/{handle}/file` in clients with resource support. End-to-end
-image/document analysis depends on the MCP client forwarding image or binary
-content to a model with vision support.
+`GetMediaFile`) or through binary MCP resources such as
+`gramps://media/{handle}/thumbnail/{size}` and `gramps://media/{handle}/file`.
+`GetMediaFile` returns image, audio, or embedded blob resource content depending
+on MIME type. End-to-end analysis depends on the MCP client forwarding the typed
+tool content or binary resource content to a capable model.
 
 ## Configuration
 

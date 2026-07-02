@@ -126,7 +126,7 @@ Tools are the **public API surface** of the MCP server.  They:
 - call `GrampsApiClient` to interact with the REST API
 - resolve Gramps IDs to handles automatically via `HandleResolver`
 - format responses via `Formatters/` into human-readable text
-- return image content for Open WebUI-compatible media thumbnail/file tools
+- return typed media content for thumbnail/file tools (image, audio, or embedded blob resource)
 - return helpful context on not-found via `NotFoundHelper`
 - map errors to `McpException` via `McpToolErrors`
 
@@ -152,9 +152,10 @@ returning bytes to the MCP client.
 
 For clients that cannot call MCP `resources/read`, the same payloads are also
 available through compatibility tools in `ReferenceTools.cs`.
-Media bytes are mirrored through `GetMediaThumbnail` and `GetMediaFile` image
-tools for clients such as Open WebUI that can consume MCP tool image content but
-not MCP binary resources.
+Media bytes are mirrored through `GetMediaThumbnail` and `GetMediaFile` tools
+for clients that consume MCP tool content directly. `GetMediaThumbnail` returns
+image content; `GetMediaFile` returns image, audio, or embedded blob resource
+content depending on MIME type. Full MCP clients may also use `resources/read`.
 
 The MCP SDK discovers resources at startup via `WithResources<GrampsResources>()`.
 

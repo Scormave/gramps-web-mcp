@@ -49,10 +49,10 @@ For places:
 
 For sources and evidence:
 - get_source, get_citation, get_note, get_media, and get_repository: use these when checking where information came from.
-- get_media returns metadata. Vision-capable tool clients may use
-  GetMediaThumbnail or GetMediaFile for photo analysis; full MCP clients may
-  read opt-in media resources. Avoid unnecessary access to sensitive or private
-  records.
+- get_media returns metadata. Tool clients may use GetMediaThumbnail for image
+  previews or GetMediaFile for full files (image, audio, or embedded blob resource
+  depending on MIME type); full MCP clients may also read opt-in media resources.
+  Avoid unnecessary access to sensitive or private records.
 - Prefer sourced and cited facts when doing genealogical analysis.
 
 ## Creating or Changing Data

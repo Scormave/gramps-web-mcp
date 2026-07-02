@@ -384,8 +384,9 @@ such as Open WebUI. Preferred before requesting a full media file.
 | `size` | `int` | no | `256` | Thumbnail size in pixels; must be positive |
 
 ### R — `GetMediaFile`
-Download the full media file as MCP image content. Rejects non-image MIME types;
-PDFs and other documents remain available only through MCP resources.
+Download the full media file as typed MCP tool content: image for images, audio
+for audio MIME types, and embedded blob resources for other allowlisted types
+such as PDF. Requires `GRAMPS_MEDIA_RESOURCES_ENABLED=true` and an allowlisted MIME.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

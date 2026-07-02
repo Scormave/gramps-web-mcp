@@ -319,7 +319,32 @@ public sealed class GrampsResources
     {
         if (!mimeType.StartsWith("image/", StringComparison.Ordinal))
             throw McpToolErrors.ValidationError(
-                $"Media MIME type '{mimeType}' cannot be returned as an image tool result. Use MCP resources for non-image media.");
+                $"Media MIME type '{mimeType}' cannot be returned as an image tool result. Use GetMediaFile for audio and other allowlisted media.");
+    }
+
+    internal static ContentBlock ToMediaFileContentBlock(MediaBinaryDownload mediaFile)
+    {
+        var bytes = mediaFile.Binary.Bytes;
+        var mimeType = mediaFile.MimeType;
+
+        if (mimeType.StartsWith("image/", StringComparison.Ordinal))
+            return ImageContentBlock.FromBytes(bytes, mimeType);
+
+        if (mimeType.StartsWith("audio/", StringComparison.Ordinal))
+            return AudioContentBlock.FromBytes(bytes, mimeType);
+
+        return new EmbeddedResourceBlock
+        {
+            Resource = BlobResourceContents.FromBytes(bytes, mediaFile.ResourceUri, mimeType)
+        };
+    }
+
+    internal static CallToolResult ToMediaFileCallToolResult(MediaBinaryDownload mediaFile)
+    {
+        return new CallToolResult
+        {
+            Content = [ToMediaFileContentBlock(mediaFile)]
+        };
     }
 
     private static string? NormalizeMimeType(string? mimeType)

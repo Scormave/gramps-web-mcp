@@ -59,8 +59,10 @@ Key rules:
 - Tools return `Task<string>` — always formatted text, never raw JSON.
 - Binary payloads belong in MCP resources, not tools. Media files use
   `BlobResourceContents` from `Resources/GrampsResources.cs`.
-- Exception: `GetMediaThumbnail` and `GetMediaFile` return `ImageContentBlock`
-  as Open WebUI-compatible mirrors of the media resources.
+- Exception: `GetMediaThumbnail` returns `ImageContentBlock`. `GetMediaFile`
+  returns `CallToolResult` with typed content: image for images, audio for
+  audio MIME types, and `EmbeddedResourceBlock` with `BlobResourceContents` for
+  other allowlisted types.
 - `GrampsApiClient client` is the **last** parameter, injected by the MCP host.
 - Every tool wraps its body in `try/catch` and rethrows via `McpToolErrors`.
 - `[Description]` must clearly state read-only vs write and prerequisites.
@@ -78,8 +80,8 @@ Key rules:
 
 ### Formatting
 
-- Tools usually return **human-readable text**, not JSON. Media image tools are
-  the exception and return MCP image content blocks.
+- Tools usually return **human-readable text**, not JSON. Media byte tools are the
+  exception and return typed MCP content blocks (image, audio, or embedded resource).
 - Use dedicated `*Formatter` static classes.
 - `GrampsDefaultTypeLabels` resolves wire type keys to display labels.
 - `GrampsValueFormatter` handles atomic values (names, dates).

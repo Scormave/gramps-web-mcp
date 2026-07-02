@@ -52,6 +52,16 @@ public static class MediaFormatter
         if (!string.IsNullOrEmpty(media.Description))
             sb.AppendLine($"\nDescription:\n{media.Description}");
 
+        if (!string.IsNullOrWhiteSpace(media.Handle))
+        {
+            var escapedHandle = Uri.EscapeDataString(media.Handle.Trim());
+            sb.AppendLine();
+            sb.AppendLine("Binary access (requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and MIME allowlist):");
+            sb.AppendLine($"  file resource: gramps://media/{escapedHandle}/file");
+            sb.AppendLine($"  thumbnail resource: gramps://media/{escapedHandle}/thumbnail/256");
+            sb.AppendLine("  get_media_file returns image, audio, or embedded-resource content depending on MIME type");
+        }
+
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", media.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", media.TagList);

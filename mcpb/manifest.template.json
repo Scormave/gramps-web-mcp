@@ -80,14 +80,14 @@
     "gramps_media_resources_enabled": {
       "type": "boolean",
       "title": "Enable media file access",
-      "description": "Allow thumbnail and full-file media tools. Disabled by default for privacy.",
+      "description": "Allow thumbnail and full-file media tools (image, audio, or embedded blob resource depending on MIME). Disabled by default for privacy.",
       "default": false,
       "required": false
     },
     "gramps_media_max_bytes": {
       "type": "number",
       "title": "Media max bytes",
-      "description": "Maximum bytes returned by any media download tool",
+      "description": "Maximum bytes returned by any media download tool or resource",
       "default": 5242880,
       "min": 1,
       "max": 52428800,
