@@ -174,4 +174,200 @@ public class NameFormatterTests
         Assert.Contains("de", result);
         Assert.Contains("Bonaparte", result);
     }
+
+    [Fact]
+    public void FormatName_AllSurnameTypesKeepListOrder()
+    {
+        var name = new GrampsName
+        {
+            Type = "Birth Name",
+            FirstName = "Петр",
+            SurnameList = new[]
+            {
+                new GrampsSurname
+                {
+                    Surname = "Соколов",
+                    OriginType = "Inherited",
+                    Primary = true
+                },
+                new GrampsSurname
+                {
+                    Surname = "Иванович",
+                    OriginType = "Patronymic",
+                    Primary = false
+                }
+            }
+        };
+
+        var result = GrampsValueFormatter.FormatName(name);
+
+        Assert.Equal("Петр Соколов Иванович", result);
+    }
+
+    [Fact]
+    public void FormatNameDetailed_ResolvesNumericOriginType()
+    {
+        var name = new GrampsName
+        {
+            FirstName = "Ivan",
+            SurnameList = new[]
+            {
+                new GrampsSurname
+                {
+                    Surname = "Petrov",
+                    OriginType = "5",
+                    Primary = true
+                }
+            }
+        };
+
+        var result = GrampsValueFormatter.FormatNameDetailed(name, originTypeLabels: OriginTypeLabels);
+
+        Assert.Contains("[primary, Patronymic]", result);
+    }
+
+    [Theory]
+    [InlineData("0", "Custom")]
+    [InlineData("2", "Inherited")]
+    [InlineData("3", "Given")]
+    [InlineData("4", "Taken")]
+    [InlineData("5", "Patronymic")]
+    [InlineData("6", "Matronymic")]
+    [InlineData("7", "Feudal")]
+    [InlineData("8", "Pseudonym")]
+    [InlineData("9", "Patrilineal")]
+    [InlineData("10", "Matrilineal")]
+    [InlineData("11", "Occupation")]
+    [InlineData("12", "Location")]
+    public void FormatNameDetailed_ResolvesBuiltInNumericOriginTypes(string stored, string expected)
+    {
+        var name = new GrampsName
+        {
+            SurnameList =
+            [
+                new GrampsSurname
+                {
+                    Surname = "Example",
+                    OriginType = stored,
+                    Primary = true
+                }
+            ]
+        };
+
+        var result = GrampsValueFormatter.FormatNameDetailed(name, originTypeLabels: OriginTypeLabels);
+
+        Assert.Contains($"[primary, {expected}]", result);
+    }
+
+    [Fact]
+    public void FormatNameDetailed_ResolvesCustomOriginTypeFromProvidedLabels()
+    {
+        var name = new GrampsName
+        {
+            SurnameList =
+            [
+                new GrampsSurname
+                {
+                    Surname = "Example",
+                    OriginType = "13",
+                    Primary = true
+                }
+            ]
+        };
+
+        var labels = OriginTypeLabels.Concat(["Clan Name"]).ToArray();
+        var result = GrampsValueFormatter.FormatNameDetailed(name, originTypeLabels: labels);
+
+        Assert.Contains("[primary, Clan Name]", result);
+    }
+
+    [Fact]
+    public void FormatNameDetailed_NumericOriginTypeWithoutLabels_KeepsRawIndex()
+    {
+        var name = new GrampsName
+        {
+            SurnameList =
+            [
+                new GrampsSurname
+                {
+                    Surname = "Example",
+                    OriginType = "5",
+                    Primary = true
+                }
+            ]
+        };
+
+        var result = GrampsValueFormatter.FormatNameDetailed(name);
+
+        Assert.Contains("[primary, 5]", result);
+    }
+
+    [Fact]
+    public void FormatName_MultipleNonPatronymicSurnameTypesKeepListOrder()
+    {
+        var name = new GrampsName
+        {
+            FirstName = "Maria",
+            SurnameList =
+            [
+                new GrampsSurname
+                {
+                    Surname = "Garcia",
+                    OriginType = "Patrilineal",
+                    Primary = true
+                },
+                new GrampsSurname
+                {
+                    Surname = "Lopez",
+                    OriginType = "Matrilineal",
+                    Primary = false
+                }
+            ]
+        };
+
+        var result = GrampsValueFormatter.FormatName(name);
+
+        Assert.Equal("Maria Garcia Lopez", result);
+    }
+
+    [Fact]
+    public void FormatName_PreservesPrefixAndConnectorAroundSurname()
+    {
+        var name = new GrampsName
+        {
+            FirstName = "Ludwig",
+            SurnameList =
+            [
+                new GrampsSurname
+                {
+                    Surname = "Beethoven",
+                    Prefix = "van",
+                    Connector = "und",
+                    OriginType = "Inherited",
+                    Primary = true
+                }
+            ]
+        };
+
+        var result = GrampsValueFormatter.FormatName(name);
+
+        Assert.Equal("Ludwig van Beethoven und", result);
+    }
+
+    private static readonly string[] OriginTypeLabels =
+    [
+        "Custom",
+        "",
+        "Inherited",
+        "Given",
+        "Taken",
+        "Patronymic",
+        "Matronymic",
+        "Feudal",
+        "Pseudonym",
+        "Patrilineal",
+        "Matrilineal",
+        "Occupation",
+        "Location"
+    ];
 }

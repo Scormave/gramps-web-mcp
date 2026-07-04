@@ -63,7 +63,11 @@ public static class PersonFormatter
 
     public static async Task<string> FormatPersonFull(GrampsPerson person, GrampsApiClient client)
     {
-        var nameTypeLabels = await GrampsDefaultTypeLabels.LoadNameTypeLabelsAsync(client).ConfigureAwait(false);
+        var nameTypeLabelsTask = GrampsDefaultTypeLabels.LoadNameTypeLabelsAsync(client);
+        var nameOriginTypeLabelsTask = GrampsDefaultTypeLabels.LoadNameOriginTypeLabelsAsync(client);
+        await Task.WhenAll(nameTypeLabelsTask, nameOriginTypeLabelsTask).ConfigureAwait(false);
+        var nameTypeLabels = await nameTypeLabelsTask.ConfigureAwait(false);
+        var nameOriginTypeLabels = await nameOriginTypeLabelsTask.ConfigureAwait(false);
 
         var sb = new StringBuilder();
         var name = person.PrimaryName;
@@ -77,7 +81,7 @@ public static class PersonFormatter
         {
             var nameTypeLabel = GrampsDefaultTypeLabels.ResolveStored(name.Type, nameTypeLabels);
             sb.AppendLine($"Primary name [{nameTypeLabel}]: {displayName}");
-            sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(name));
+            sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(name, originTypeLabels: nameOriginTypeLabels));
         }
 
         await AppendBirthDeathHeaderLinesAsync(sb, person, client, preloadedExtendedEvents: null).ConfigureAwait(false);
@@ -103,7 +107,7 @@ public static class PersonFormatter
             {
                 var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, nameTypeLabels);
                 sb.AppendLine($"  • [{typeLabel}] {GrampsValueFormatter.FormatName(n)}");
-                sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(n));
+                sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(n, originTypeLabels: nameOriginTypeLabels));
             }
         }
 
@@ -134,7 +138,7 @@ public static class PersonFormatter
         {
             var nameTypeLabel = GrampsDefaultTypeLabels.ResolveStored(name.Type, tables.NameTypes);
             sb.AppendLine($"Primary name [{nameTypeLabel}]: {displayName}");
-            sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(name));
+            sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(name, originTypeLabels: tables.NameOriginTypes));
         }
 
         await AppendBirthDeathHeaderLinesAsync(sb, person, client, person.Extended?.Events).ConfigureAwait(false);
@@ -240,7 +244,7 @@ public static class PersonFormatter
             {
                 var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, tables.NameTypes);
                 sb.AppendLine($"  • [{typeLabel}] {GrampsValueFormatter.FormatName(n)}");
-                sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(n));
+                sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(n, originTypeLabels: tables.NameOriginTypes));
             }
         }
 

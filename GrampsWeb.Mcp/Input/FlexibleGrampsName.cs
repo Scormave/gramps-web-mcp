@@ -13,7 +13,8 @@ public sealed class FlexibleGrampsName
 {
     public const string DescriptionHint =
         "Name: full Gramps name JSON (see gramps://input-guide), a plain string (\"Married Name:: Jane|Smith\"), " +
-        "or a simple object. Object fields: " +
+        "or a simple object. Prefer a JSON object (not a quoted JSON string) when using structured name parts. " +
+        "Object fields: " +
         "given/first (given name), " +
         "surname/last (primary surname value), " +
         "prefix/surname_prefix (particle before surname: von, de, van, del…), " +
@@ -26,6 +27,9 @@ public sealed class FlexibleGrampsName
         "title (Dr./Prof./Sir), suffix (Jr./Sr./III/PhD), " +
         "call (preferred call name), nick/nickname, famnick/family_nick, " +
         "type (name type: Birth Name/Married Name/Also Known As/…). " +
+        "Plain full-name strings (name/text/full or \"Given Middle Surname\") only split into given + surname; " +
+        "they cannot create structured name parts such as patronymic, matronymic, prefix, connector, origin_type, title, suffix, call, nick, or famnick. " +
+        "Use object fields or native surname_list instead. " +
         "For complex multi-surname cases use native Gramps surname_list format. " +
         "Also accepts: name/text/full as a full-name string with optional type field.";
 

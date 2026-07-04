@@ -224,4 +224,80 @@ public class FlexibleGrampsNameTests
         Assert.Equal("Ivan", v!.Name.FirstName);
         Assert.Equal("Petrov", v.Name.SurnameList![0].Surname);
     }
+
+    [Fact]
+    public void Stringified_Object_Given_Surname_Patronymic()
+    {
+        const string json =
+            "\"{\\\"given\\\":\\\"Петр\\\",\\\"surname\\\":\\\"Соколов\\\",\\\"patronymic\\\":\\\"Иванович\\\",\\\"type\\\":\\\"Birth Name\\\"}\"";
+        var v = Deserialize(json);
+        Assert.NotNull(v);
+        Assert.Equal("Петр", v!.Name.FirstName);
+        Assert.Equal(2, v.Name.SurnameList!.Length);
+        Assert.Equal("Соколов", v.Name.SurnameList[0].Surname);
+        Assert.True(v.Name.SurnameList[0].Primary);
+        Assert.Equal("Иванович", v.Name.SurnameList[1].Surname);
+        Assert.False(v.Name.SurnameList[1].Primary);
+        Assert.Equal("Patronymic", v.Name.SurnameList[1].OriginType);
+        Assert.Equal("Birth Name", v.Name.Type);
+    }
+
+    [Fact]
+    public void Stringified_Object_Native_FirstName_SurnameList()
+    {
+        const string json =
+            "\"{\\\"first_name\\\":\\\"Петр\\\",\\\"surname_list\\\":[{\\\"surname\\\":\\\"Соколов\\\",\\\"primary\\\":true,\\\"origintype\\\":\\\"Inherited\\\"},{\\\"surname\\\":\\\"Иванович\\\",\\\"primary\\\":false,\\\"origintype\\\":\\\"Patronymic\\\"}]}\"";
+        var v = Deserialize(json);
+        Assert.NotNull(v);
+        Assert.Equal("Петр", v!.Name.FirstName);
+        Assert.Equal(2, v.Name.SurnameList!.Length);
+        Assert.Equal("Соколов", v.Name.SurnameList[0].Surname);
+        Assert.Equal("Иванович", v.Name.SurnameList[1].Surname);
+        Assert.Equal("Patronymic", v.Name.SurnameList[1].OriginType);
+    }
+
+    [Fact]
+    public void Stringified_Invalid_Json_Throws()
+    {
+        const string json = "\"{\\\"given\\\":\\\"Broken\\\"\"";
+        Assert.Throws<JsonException>(() => Deserialize(json));
+    }
+
+    [Fact]
+    public void Stringified_Object_ConvertsToApiRequest()
+    {
+        const string json =
+            "\"{\\\"given\\\":\\\"Петр\\\",\\\"surname\\\":\\\"Соколов\\\",\\\"patronymic\\\":\\\"Иванович\\\",\\\"type\\\":\\\"Birth Name\\\"}\"";
+        var v = Deserialize(json);
+        Assert.NotNull(v);
+
+        var request = GrampsWeb.Mcp.Tools.PersonTools.ConvertNameToRequest(v!.Name);
+        Assert.Equal("Петр", request.FirstName);
+        Assert.NotNull(request.SurnameList);
+        Assert.Equal(2, request.SurnameList!.Length);
+        Assert.Equal("Соколов", request.SurnameList[0].Surname);
+        Assert.True(request.SurnameList[0].Primary);
+        Assert.Equal("Иванович", request.SurnameList[1].Surname);
+        Assert.False(request.SurnameList[1].Primary);
+        Assert.Equal("Patronymic", request.SurnameList[1].OriginType);
+    }
+
+    [Fact]
+    public void Object_SurnamePartsAndNonPatronymicOrigin_ConvertToApiRequest()
+    {
+        const string json =
+            """{"given":"Ludwig","surname":"Beethoven","prefix":"van","connector":"und","origin_type":"Inherited"}""";
+        var v = Deserialize(json);
+        Assert.NotNull(v);
+
+        var request = GrampsWeb.Mcp.Tools.PersonTools.ConvertNameToRequest(v!.Name);
+
+        Assert.NotNull(request.SurnameList);
+        Assert.Single(request.SurnameList!);
+        Assert.Equal("Beethoven", request.SurnameList[0].Surname);
+        Assert.Equal("van", request.SurnameList[0].Prefix);
+        Assert.Equal("und", request.SurnameList[0].Connector);
+        Assert.Equal("Inherited", request.SurnameList[0].OriginType);
+        Assert.True(request.SurnameList[0].Primary);
+    }
 }

@@ -7,6 +7,53 @@ namespace GrampsWeb.Mcp.Serialization;
 public static class FlexibleGrampsNameParsing
 {
     /// <summary>
+    /// Parses a name from a string that is either a JSON object (when it starts with <c>{</c>)
+    /// or a simple name line (<see cref="ParseSimpleLine"/>).
+    /// </summary>
+    public static GrampsName ParseNameLineOrJsonObject(string line, JsonSerializerOptions options)
+    {
+        line = line.Trim();
+        if (line.Length > 0 && line[0] == '{')
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(line);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    var parsed = ParseObjectElement(doc.RootElement, options);
+                    if (parsed != null)
+                        return parsed;
+                    throw new JsonException("Name object contained no recognisable name fields.");
+                }
+            }
+            catch (JsonException ex) when (ex.Message.Contains("recognisable", StringComparison.Ordinal))
+            {
+                throw;
+            }
+            catch (JsonException ex)
+            {
+                throw new JsonException($"Invalid JSON for name object: {ex.Message}", ex);
+            }
+        }
+
+        return ParseSimpleLine(line);
+    }
+
+    /// <summary>
+    /// Parses a name string that may contain multiple lines; the first non-empty line wins.
+    /// </summary>
+    public static GrampsName ParseStringValue(string s, JsonSerializerOptions options)
+    {
+        foreach (var raw in s.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (raw.Length > 0)
+                return ParseNameLineOrJsonObject(raw, options);
+        }
+
+        return ParseNameLineOrJsonObject(s.Trim(), options);
+    }
+
+    /// <summary>
     /// Optional Gramps name type (e.g. Birth Name, Married Name) as <c>Label:: remainder</c> (double colon).
     /// Remainder: <c>given|surname</c> (first pipe) or Western <c>given … surname</c> (last space).
     /// Single word: stored as <c>first_name</c> with one primary surname entry (empty string).

@@ -61,7 +61,7 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
         {
             if (line.Length == 0)
                 continue;
-            list.Add(FlexibleGrampsNameParsing.ParseSimpleLine(line));
+            list.Add(FlexibleGrampsNameParsing.ParseNameLineOrJsonObject(line, options));
         }
 
         return new FlexibleAlternateNameList { Items = list.ToArray() };
@@ -79,7 +79,7 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
                     var seg = reader.GetString();
                     if (string.IsNullOrWhiteSpace(seg))
                         break;
-                    list.Add(FlexibleGrampsNameParsing.ParseSimpleLine(seg.Trim()));
+                    list.Add(FlexibleGrampsNameParsing.ParseNameLineOrJsonObject(seg.Trim(), options));
                     break;
                 }
                 case JsonTokenType.StartObject:
@@ -109,7 +109,7 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
                 var seg = el.GetString();
                 if (string.IsNullOrWhiteSpace(seg))
                     continue;
-                list.Add(FlexibleGrampsNameParsing.ParseSimpleLine(seg.Trim()));
+                list.Add(FlexibleGrampsNameParsing.ParseNameLineOrJsonObject(seg.Trim(), options));
             }
             else if (el.ValueKind == JsonValueKind.Object)
             {

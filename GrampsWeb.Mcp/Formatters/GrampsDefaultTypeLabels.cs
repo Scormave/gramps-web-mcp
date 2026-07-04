@@ -18,15 +18,23 @@ public static class GrampsDefaultTypeLabels
         var evt = FetchLabelsAsync(client, "event_types", "event_types", "eventTypes");
         var note = FetchLabelsAsync(client, "note_types", "note_types", "noteTypes");
         var fam = FetchLabelsAsync(client, "family_relation_types", "family_relation_types", "familyRelationTypes");
-        var name = FetchLabelsAsync(client, "name_types", "name_types", "nameTypes");
-        await Task.WhenAll(repo, place, evt, note, fam, name).ConfigureAwait(false);
+        var name = FetchMergedLabelsAsync(client, "name_types", "name_types", "nameTypes");
+        var nameOrigin = FetchMergedLabelsAsync(
+            client,
+            "name_origin_types",
+            "name_origin_types",
+            "nameOriginTypes",
+            "origin_types",
+            "originTypes");
+        await Task.WhenAll(repo, place, evt, note, fam, name, nameOrigin).ConfigureAwait(false);
         return new GrampsTypeLabelTables(
             await repo.ConfigureAwait(false),
             await place.ConfigureAwait(false),
             await evt.ConfigureAwait(false),
             await note.ConfigureAwait(false),
             await fam.ConfigureAwait(false),
-            await name.ConfigureAwait(false));
+            await name.ConfigureAwait(false),
+            await nameOrigin.ConfigureAwait(false));
     }
 
     /// <summary>Loads one vocabulary for <see cref="SearchFormatter.FormatObjectListResultsAsync"/>.</summary>
@@ -36,23 +44,23 @@ public static class GrampsDefaultTypeLabels
         {
             "repositories" => new GrampsTypeLabelTables(
                 await FetchLabelsAsync(client, "repository_types", "repository_types", "repositoryTypes").ConfigureAwait(false),
-                null, null, null, null, null),
+                null, null, null, null, null, null),
             "places" => new GrampsTypeLabelTables(
                 null,
                 await FetchLabelsAsync(client, "place_types", "place_types", "placeTypes").ConfigureAwait(false),
-                null, null, null, null),
+                null, null, null, null, null),
             "events" => new GrampsTypeLabelTables(
                 null, null,
                 await FetchLabelsAsync(client, "event_types", "event_types", "eventTypes").ConfigureAwait(false),
-                null, null, null),
+                null, null, null, null),
             "notes" => new GrampsTypeLabelTables(
                 null, null, null,
                 await FetchLabelsAsync(client, "note_types", "note_types", "noteTypes").ConfigureAwait(false),
-                null, null),
+                null, null, null),
             "families" => new GrampsTypeLabelTables(
                 null, null, null, null,
                 await FetchLabelsAsync(client, "family_relation_types", "family_relation_types", "familyRelationTypes").ConfigureAwait(false),
-                null),
+                null, null),
             _ => GrampsTypeLabelTables.Empty
         };
     }
@@ -72,9 +80,29 @@ public static class GrampsDefaultTypeLabels
     public static Task<string> FormatNameTypeAsync(GrampsApiClient client, string? stored) =>
         FormatStoredTypeAsync(client, stored, "name_types", "name_types", "nameTypes");
 
-    /// <summary>Loads only <c>name_types</c> labels (e.g. for alternate names on <see cref="PersonFormatter.FormatPersonFull"/>).</summary>
+    public static Task<string> FormatNameOriginTypeAsync(GrampsApiClient client, string? stored) =>
+        FormatStoredTypeAsync(
+            client,
+            stored,
+            "name_origin_types",
+            "name_origin_types",
+            "nameOriginTypes",
+            "origin_types",
+            "originTypes");
+
+    /// <summary>Loads merged default + custom <c>name_types</c> labels.</summary>
     public static Task<IReadOnlyList<string>?> LoadNameTypeLabelsAsync(GrampsApiClient client) =>
-        FetchLabelsAsync(client, "name_types", "name_types", "nameTypes");
+        FetchMergedLabelsAsync(client, "name_types", "name_types", "nameTypes");
+
+    /// <summary>Loads merged default + custom surname origin labels for resolving <c>NameOriginType</c> values.</summary>
+    public static Task<IReadOnlyList<string>?> LoadNameOriginTypeLabelsAsync(GrampsApiClient client) =>
+        FetchMergedLabelsAsync(
+            client,
+            "name_origin_types",
+            "name_origin_types",
+            "nameOriginTypes",
+            "origin_types",
+            "originTypes");
 
     public static async Task<string> FormatStoredTypeAsync(
         GrampsApiClient client,
@@ -166,6 +194,16 @@ public static class GrampsDefaultTypeLabels
 
     public static bool IsNumericIndex(string t) => t.Length > 0 && t.All(c => c is >= '0' and <= '9');
 
+    internal static async Task<IReadOnlyList<string>?> FetchMergedLabelsAsync(
+        GrampsApiClient client,
+        string typesListSegment,
+        params string[] bulkCategoryKeys)
+    {
+        var defaultLabels = await FetchLabelsAsync(client, typesListSegment, bulkCategoryKeys).ConfigureAwait(false);
+        var customLabels = await FetchCustomCategoryLabelsAsync(client, bulkCategoryKeys).ConfigureAwait(false);
+        return MergeDefaultAndCustomLabels(defaultLabels, customLabels);
+    }
+
     internal static async Task<IReadOnlyList<string>?> FetchLabelsAsync(
         GrampsApiClient client,
         string typesListSegment,
@@ -218,7 +256,8 @@ public sealed record GrampsTypeLabelTables(
     IReadOnlyList<string>? EventTypes,
     IReadOnlyList<string>? NoteTypes,
     IReadOnlyList<string>? FamilyRelationTypes,
-    IReadOnlyList<string>? NameTypes)
+    IReadOnlyList<string>? NameTypes,
+    IReadOnlyList<string>? NameOriginTypes)
 {
-    public static GrampsTypeLabelTables Empty { get; } = new(null, null, null, null, null, null);
+    public static GrampsTypeLabelTables Empty { get; } = new(null, null, null, null, null, null, null);
 }

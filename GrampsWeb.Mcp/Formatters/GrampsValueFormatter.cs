@@ -112,18 +112,11 @@ public static class GrampsValueFormatter
             var surnameParts = new List<string>();
             foreach (var surname in name.SurnameList)
             {
-                var sn = new StringBuilder();
+                var formatted = FormatSurnameSegment(surname);
+                if (string.IsNullOrEmpty(formatted))
+                    continue;
 
-                if (!string.IsNullOrEmpty(surname.Prefix))
-                    sn.Append(surname.Prefix).Append(" ");
-
-                if (!string.IsNullOrEmpty(surname.Surname))
-                    sn.Append(surname.Surname);
-
-                if (!string.IsNullOrEmpty(surname.Connector))
-                    sn.Append(" ").Append(surname.Connector);
-
-                surnameParts.Add(sn.ToString().Trim());
+                surnameParts.Add(formatted);
             }
 
             if (surnameParts.Count > 0)
@@ -147,11 +140,30 @@ public static class GrampsValueFormatter
         return string.Join(" ", parts).Trim();
     }
 
+    private static string FormatSurnameSegment(GrampsSurname surname)
+    {
+        var sn = new StringBuilder();
+
+        if (!string.IsNullOrEmpty(surname.Prefix))
+            sn.Append(surname.Prefix).Append(' ');
+
+        if (!string.IsNullOrEmpty(surname.Surname))
+            sn.Append(surname.Surname);
+
+        if (!string.IsNullOrEmpty(surname.Connector))
+            sn.Append(' ').Append(surname.Connector);
+
+        return sn.ToString().Trim();
+    }
+
     /// <summary>
     /// Returns a multi-line indented breakdown of a name showing each component with its label.
     /// Each line starts with <paramref name="indent"/>.
     /// </summary>
-    public static string FormatNameDetailed(GrampsName? name, string indent = "    ")
+    public static string FormatNameDetailed(
+        GrampsName? name,
+        string indent = "    ",
+        IReadOnlyList<string>? originTypeLabels = null)
     {
         if (name == null)
             return $"{indent}(no name data)";
@@ -195,7 +207,9 @@ public static class GrampsValueFormatter
                 if (!string.IsNullOrEmpty(s.Prefix))
                     meta.Add($"prefix: {s.Prefix}");
                 if (!string.IsNullOrEmpty(s.OriginType))
-                    meta.Add(s.OriginType);
+                {
+                    meta.Add(GrampsDefaultTypeLabels.ResolveStored(s.OriginType, originTypeLabels));
+                }
                 if (!string.IsNullOrEmpty(s.Connector))
                     meta.Add($"connector: {s.Connector}");
 

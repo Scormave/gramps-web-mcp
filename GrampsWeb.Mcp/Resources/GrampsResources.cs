@@ -399,7 +399,9 @@ public sealed class GrampsResources
                 grammar =
                     "Accepts three formats: " +
                     "(1) Simple string — optional 'NameType:: given|surname' or 'given surname' (last word is surname). " +
-                    "(2) Simple object with AI-friendly fields (see object_fields below). " +
+                    "Plain strings only split into given + surname and cannot create structured name parts like patronymic, prefix, connector, origin_type, title, suffix, call, nick, or famnick. " +
+                    "(2) Simple object with AI-friendly fields (see object_fields below). Prefer a JSON object argument, " +
+                    "not a quoted JSON string; stringified JSON objects are also accepted for compatibility. " +
                     "(3) Full native Gramps name object with first_name + surname_list (see name_schema).",
                 object_fields = new
                 {
@@ -419,7 +421,8 @@ public sealed class GrampsResources
                     famnick     = "Family nickname (alias: family_nick)",
                     type        = "Name type: Birth Name, Married Name, Also Known As, Patronymic… " +
                                   "See gramps://types for full list",
-                    name        = "Shortcut: full-name string parsed as 'given surname', with optional type field (aliases: text, full)"
+                    name        = "Shortcut: full-name string parsed as 'given surname', with optional type field (aliases: text, full). " +
+                                  "Does not create structured name parts; use explicit object fields or native surname_list instead."
                 },
                 examples = new[]
                 {
@@ -560,7 +563,9 @@ public sealed class GrampsResources
         name_object = new
         {
             type = "Object",
-            description = "Represents a person's name in Gramps Web. On Person objects use primary_name plus optional alternate_names array.",
+            description =
+                "Represents a person's name in Gramps Web. On Person objects use primary_name plus optional alternate_names array. " +
+                "Use this object form, AI-friendly object fields, or surname_list when you need structured name parts; plain full-name strings only split into given + surname.",
             fields = new
             {
                 type = new

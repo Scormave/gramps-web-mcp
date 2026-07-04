@@ -68,4 +68,22 @@ public class GrampsDefaultTypeLabelsTests
             "Test",
             GrampsDefaultTypeLabels.ResolveStoredWithDefaultAndCustomLists("Test", def, custom));
     }
+
+    [Fact]
+    public void ResolveStoredWithDefaultAndCustomLists_NameOriginTypeIndexIntoMergedList()
+    {
+        var def = new[]
+        {
+            "Custom", "", "Inherited", "Given", "Taken", "Patronymic", "Matronymic",
+            "Feudal", "Pseudonym", "Patrilineal", "Matrilineal", "Occupation", "Location"
+        };
+        var custom = new[] { "Clan Name" };
+
+        Assert.Equal(
+            "Patronymic",
+            GrampsDefaultTypeLabels.ResolveStoredWithDefaultAndCustomLists("5", def, custom));
+        Assert.Equal(
+            "Clan Name",
+            GrampsDefaultTypeLabels.ResolveStoredWithDefaultAndCustomLists("13", def, custom));
+    }
 }
