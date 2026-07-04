@@ -1,5 +1,6 @@
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Hosting;
+using GrampsWeb.Mcp.Logging;
 using GrampsWeb.Mcp.Prompts;
 using GrampsWeb.Mcp.Resources;
 using Microsoft.AspNetCore.Builder;
@@ -90,15 +91,17 @@ static void ConfigureLogging(ILoggingBuilder logging)
 {
     logging
         .ClearProviders()
+        .SetMinimumLevel(LogLevel.Information)
+        .AddFilter("GrampsWeb.Mcp", LogLevel.Information)
+        .AddFilter("Microsoft", LogLevel.Warning)
+        .AddFilter("System", LogLevel.Warning)
         .AddFilter("System.Net.Http.HttpClient.GrampsHealthService", LogLevel.Warning)
-        .AddSimpleConsole(options =>
-        {
-            options.UseUtcTimestamp = true;
-            options.IncludeScopes = false;
-        });
+        .AddConsole(options => options.FormatterName = MinimalConsoleFormatter.FormatterName)
+        .AddConsoleFormatter<MinimalConsoleFormatter, ConsoleFormatterOptions>();
 
     logging.Services.Configure<ConsoleLoggerOptions>(options =>
     {
+        // Stdio MCP clients use stdout for the protocol; keep all logs on stderr.
         options.LogToStandardErrorThreshold = LogLevel.Trace;
     });
 }
