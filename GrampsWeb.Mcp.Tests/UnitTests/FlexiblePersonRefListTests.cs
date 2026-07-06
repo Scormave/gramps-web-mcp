@@ -38,6 +38,21 @@ public class FlexiblePersonRefListTests
     }
 
     [Fact]
+    public void Json_Objects_Relationship_Alias()
+    {
+        var v = Deserialize("""[{"ref":"r1","relationship":"Witness"}]""");
+        Assert.Equal("r1", v!.Items[0].Ref);
+        Assert.Equal("Witness", v.Items[0].Relationship);
+    }
+
+    [Fact]
+    public void Json_Objects_CamelCase_NoteList()
+    {
+        var v = Deserialize("""[{"ref":"r1","rel":"Friend","noteList":["n1"]}]""");
+        Assert.Equal(new[] { "n1" }, v!.Items[0].NoteList);
+    }
+
+    [Fact]
     public void Missing_Double_Colon_Throws()
     {
         Assert.Throws<JsonException>(() => Deserialize("\"handle: only single colon\""));

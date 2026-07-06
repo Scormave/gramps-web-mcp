@@ -14,6 +14,7 @@ public sealed class FlexiblePersonRefList
 {
     public const string DescriptionHint =
         "Person associations: JSON array of {ref, rel, ...}, or strings \"PERSON_HANDLE:: Godfather\" (double colon after handle). " +
+        "JSON objects accept rel or relationship, and snake_case or camelCase list fields (note_list / noteList). " +
         "Grammar: gramps://input-guide.";
 
     public required GrampsPersonRef[] Items { get; init; }

@@ -32,13 +32,8 @@ public sealed class GrampsMediaRefArrayConverter : JsonConverter<GrampsMediaRef[
                     var m = el.Deserialize<GrampsMediaRef>(options);
                     if (m != null)
                     {
-                        // Gramps sometimes uses "handle" for the media id; model maps it to Ref for API/schema alignment.
-                        if (string.IsNullOrWhiteSpace(m.Ref)
-                            && el.TryGetProperty("handle", out var h)
-                            && h.ValueKind == JsonValueKind.String)
-                        {
-                            m.Ref = h.GetString();
-                        }
+                        if (string.IsNullOrWhiteSpace(m.Ref))
+                            m.Ref = JsonElementPropertyReader.GetString(el, "ref", "handle");
 
                         list.Add(m);
                     }

@@ -69,6 +69,14 @@ public class FlexibleEventRefListTests
     }
 
     [Fact]
+    public void Json_Object_Array_CamelCase_NoteList()
+    {
+        var v = Deserialize("""[{"ref":"h1","noteList":["n1"]}]""");
+        Assert.NotNull(v);
+        Assert.Equal(new[] { "n1" }, v!.Items[0].NoteList);
+    }
+
+    [Fact]
     public void Empty_String_Yields_Null()
     {
         Assert.Null(Deserialize("\"   \""));

@@ -1,10 +1,12 @@
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
 /// <summary>
 /// One <c>media_list</c> entry from Gramps GET payloads (Gramps <c>MediaRef</c>).
 /// </summary>
+[JsonConverter(typeof(GrampsMediaRefJsonConverter))]
 public sealed class GrampsMediaRef
 {
     [JsonPropertyName("ref")]

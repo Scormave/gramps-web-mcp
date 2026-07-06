@@ -6,6 +6,7 @@ namespace GrampsWeb.Mcp.Models;
 /// <summary>
 /// Represents an event reference with role and related information.
 /// </summary>
+[JsonConverter(typeof(GrampsEventRefJsonConverter))]
 public class GrampsEventRef
 {
     [JsonPropertyName("ref")]

@@ -1,5 +1,7 @@
 using System.Text.Json;
 using GrampsWeb.Mcp.Input;
+using GrampsWeb.Mcp.Models;
+using GrampsWeb.Mcp.Serialization;
 using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
@@ -63,5 +65,41 @@ public class FlexibleRepositoryRefListTests
         Assert.Equal("C1", v.Items[0].CallNumber);
         Assert.Equal("R2", v.Items[1].Ref);
         Assert.Equal("Journal", v.Items[1].MediaType);
+    }
+
+    [Fact]
+    public void Json_Array_CamelCase_CallNumber()
+    {
+        var v = Deserialize("""[{"ref":"R1","callNumber":"C1"}]""");
+        Assert.NotNull(v);
+        Assert.Single(v!.Items);
+        Assert.Equal("R1", v.Items[0].Ref);
+        Assert.Equal("C1", v.Items[0].CallNumber);
+    }
+
+    [Fact]
+    public void Json_Array_CamelCase_MediaType()
+    {
+        var v = Deserialize("""[{"ref":"R1","mediaType":"Book"}]""");
+        Assert.NotNull(v);
+        Assert.Equal("Book", v!.Items[0].MediaType);
+    }
+
+    [Fact]
+    public void Json_Array_Handle_Alias()
+    {
+        var v = Deserialize("""[{"handle":"R1","callNumber":"C1"}]""");
+        Assert.NotNull(v);
+        Assert.Equal("R1", v!.Items[0].Ref);
+        Assert.Equal("C1", v.Items[0].CallNumber);
+    }
+
+    [Fact]
+    public void CamelCase_Read_Serializes_To_SnakeCase()
+    {
+        var v = Deserialize("""[{"ref":"R1","callNumber":"C1"}]""");
+        Assert.NotNull(v);
+        var json = JsonSerializer.Serialize(v!.Items[0], GrampsJson.Options);
+        Assert.Contains("\"call_number\":\"C1\"", json);
     }
 }

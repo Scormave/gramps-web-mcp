@@ -164,6 +164,7 @@ public class DateRequest
     public bool EndSlash { get; set; }
 }
 
+[JsonConverter(typeof(EventRefRequestJsonConverter))]
 public class EventRefRequest
 {
     [JsonPropertyName("ref")]

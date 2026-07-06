@@ -70,4 +70,21 @@ public class FlexibleChildRefListTests
         Assert.Equal("Birth", v.Items[0].FatherRelType);
         Assert.Equal("Birth", v.Items[0].MotherRelType);
     }
+
+    [Fact]
+    public void Json_Object_Array_CamelCase_FatherRel()
+    {
+        var v = Deserialize("""[{"ref":"h1","fatherRel":"Adopted"}]""");
+        Assert.NotNull(v);
+        Assert.Equal("Adopted", v!.Items[0].FatherRelType);
+        Assert.Null(v.Items[0].MotherRelType);
+    }
+
+    [Fact]
+    public void Json_Object_Array_CamelCase_TagList()
+    {
+        var v = Deserialize("""[{"ref":"h1","tagList":["t1"]}]""");
+        Assert.NotNull(v);
+        Assert.Equal(new[] { "t1" }, v!.Items[0].TagList);
+    }
 }

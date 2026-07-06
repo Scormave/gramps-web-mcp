@@ -120,10 +120,13 @@ structured object.  Custom converters normalize these:
 | `GrampsPlaceNameStringConverter` | Place name: `"Paris"` **or** `{ "value": "Paris", "lang": "en" }` | → `string?` |
 | `GrampsNoteTextStringConverter` | Note text: `"Hello"` **or** `{ "_class": "StyledText", "string": "Hello", "tags": [...] }` | → `string?` |
 | `GrampsHandleStringArrayConverter` | Handle lists: `["h1","h2"]` **or** `[{"ref":"h1"}, "h2"]` **or** `[{"handle":"h1"}]` | → `string[]` |
-| `HandleElementReader` | Single handle element: `"h1"` **or** `{"ref":"h1"}` **or** `{"handle":"h1"}` | → `string?` |
-| `GrampsChildRefJsonConverter` | Child ref: full object **or** plain handle string | → `GrampsChildRef` |
-| `GrampsFamilyRefJsonConverter` | Family ref: full object **or** plain handle string | → `GrampsFamilyRef` |
-| `GrampsRepositoryRefJsonConverter` | Repo ref: full object **or** plain handle string | → `GrampsRepositoryRef` |
+| `HandleElementReader` | Single handle element: `"h1"` **or** `{"ref":"h1"}` **or** `{"handle":"h1"}` (case-insensitive) | → `string?` |
+| `GrampsChildRefJsonConverter` | Child ref: full object **or** plain handle string; read accepts snake_case and camelCase aliases | → `GrampsChildRef` |
+| `GrampsFamilyRefJsonConverter` | Family ref: full object **or** plain handle string; read accepts snake_case and camelCase aliases | → `GrampsFamilyRef` |
+| `GrampsRepositoryRefJsonConverter` | Repo ref: full object **or** plain handle string; read accepts snake_case and camelCase aliases | → `GrampsRepositoryRef` |
+| `GrampsPersonRefJsonConverter` | Person association ref; read accepts `rel`/`relationship` and camelCase list fields | → `GrampsPersonRef` |
+| `GrampsEventRefJsonConverter` | Event ref; read accepts camelCase list fields and wire-type `role` objects | → `GrampsEventRef` |
+| `GrampsMediaRefJsonConverter` | Media ref; read accepts snake_case and camelCase aliases | → `GrampsMediaRef` |
 | `GrampsDateJsonConverter` | Delegates to `GrampsDateWireCodec` | → `GrampsDate` |
 
 ### Date wire codec: `GrampsDateWireCodec`

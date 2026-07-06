@@ -491,10 +491,14 @@ public sealed class GrampsResources
         {
             grammar =
                 "HANDLE:: relationship - double colon after the related person's handle; relationship text is free-form (may include spaces).",
-            examples = new[] { "a1b2c3d4e5f678901234567890abcd:: Godfather" },
+            examples = new[]
+            {
+                "a1b2c3d4e5f678901234567890abcd:: Godfather",
+                "[{\"ref\":\"handle\",\"relationship\":\"Godfather\"}]"
+            },
             forms = new[]
             {
-                "JSON array of objects {\"ref\":\"handle\",\"rel\":\"relationship\",...}",
+                "JSON array of objects {\"ref\":\"handle\",\"rel\":\"relationship\",...} (rel or relationship; snake_case or camelCase list fields)",
                 "JSON array of strings or one multiline / |-separated string"
             },
             tools = "create_person, update_person only (person_ref_list)"
@@ -510,11 +514,12 @@ public sealed class GrampsResources
                 "REPO123 : A-1",
                 "REPO123 :: Book",
                 "REPO123 : A-1 : Book",
-                "[{\"ref\":\"REPO123\",\"call_number\":\"A-1\",\"media_type\":\"Book\"}]"
+                "[{\"ref\":\"REPO123\",\"call_number\":\"A-1\",\"media_type\":\"Book\"}]",
+                "[{\"ref\":\"REPO123\",\"callNumber\":\"A-1\",\"mediaType\":\"Book\"}]"
             },
             forms = new[]
             {
-                "JSON array of objects {\"ref\",\"call_number\",\"media_type\",\"note_list\",\"private\"}",
+                "JSON array of objects {\"ref\",\"call_number\"|\"callNumber\",\"media_type\"|\"mediaType\",\"note_list\"|\"noteList\",\"private\"}",
                 "JSON array of strings [\"REPO123 : A-1 : Book\"]",
                 "One multiline / |-separated string with one repository ref per segment"
             },

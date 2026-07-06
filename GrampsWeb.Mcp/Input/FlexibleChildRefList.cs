@@ -9,7 +9,8 @@ public sealed class FlexibleChildRefList
 {
     public const string DescriptionHint =
         "Child references: JSON array of {ref, frel, mrel}, strings \"HANDLE::RelType\" " +
-        "(sets both frel and mrel; default: Birth), comma/pipe/newline-separated, or a single handle.";
+        "(sets both frel and mrel; default: Birth), comma/pipe/newline-separated, or a single handle. " +
+        "JSON objects accept snake_case (frel, mrel, tag_list) or camelCase (fatherRel, tagList, etc.).";
 
     public required GrampsChildRef[] Items { get; init; }
 

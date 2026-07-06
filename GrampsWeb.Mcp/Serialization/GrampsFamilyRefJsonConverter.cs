@@ -24,10 +24,12 @@ public sealed class GrampsFamilyRefJsonConverter : JsonConverter<GrampsFamilyRef
 
             return new GrampsFamilyRef
             {
-                Ref = GetString(root, "ref"),
-                Relationship = GetString(root, "relationship"),
-                FatherRelationship = GetString(root, "frel"),
-                MotherRelationship = GetString(root, "mrel")
+                Ref = JsonElementPropertyReader.GetString(root, "ref", "handle"),
+                Relationship = JsonElementPropertyReader.GetString(root, "relationship"),
+                FatherRelationship = JsonElementPropertyReader.GetString(
+                    root, "frel", "fatherRelationship", "father_rel", "fatherRel"),
+                MotherRelationship = JsonElementPropertyReader.GetString(
+                    root, "mrel", "motherRelationship", "mother_rel", "motherRel")
             };
         }
 
@@ -52,12 +54,5 @@ public sealed class GrampsFamilyRefJsonConverter : JsonConverter<GrampsFamilyRef
         if (!string.IsNullOrEmpty(value.MotherRelationship))
             writer.WriteString("mrel", value.MotherRelationship);
         writer.WriteEndObject();
-    }
-
-    private static string? GetString(JsonElement root, string propertyName)
-    {
-        return root.TryGetProperty(propertyName, out var p) && p.ValueKind == JsonValueKind.String
-            ? p.GetString()
-            : null;
     }
 }

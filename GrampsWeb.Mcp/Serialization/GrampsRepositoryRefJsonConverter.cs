@@ -23,11 +23,11 @@ public sealed class GrampsRepositoryRefJsonConverter : JsonConverter<GrampsRepos
             var root = doc.RootElement;
             return new GrampsRepositoryRef
             {
-                Ref = GetString(root, "ref"),
-                CallNumber = GetString(root, "call_number"),
-                MediaType = GetString(root, "media_type"),
-                NoteList = ReadStringArray(root, "note_list"),
-                Private = root.TryGetProperty("private", out var priv) && priv.ValueKind == JsonValueKind.True
+                Ref = JsonElementPropertyReader.GetString(root, "ref", "handle"),
+                CallNumber = JsonElementPropertyReader.GetString(root, "call_number", "callNumber"),
+                MediaType = JsonElementPropertyReader.GetString(root, "media_type", "mediaType"),
+                NoteList = JsonElementPropertyReader.GetStringArray(root, "note_list", "noteList"),
+                Private = JsonElementPropertyReader.GetBool(root, "private")
             };
         }
 
@@ -61,27 +61,5 @@ public sealed class GrampsRepositoryRefJsonConverter : JsonConverter<GrampsRepos
         }
 
         writer.WriteEndObject();
-    }
-
-    private static string? GetString(JsonElement root, string propertyName)
-    {
-        return root.TryGetProperty(propertyName, out var p) && p.ValueKind == JsonValueKind.String
-            ? p.GetString()
-            : null;
-    }
-
-    private static string[]? ReadStringArray(JsonElement root, string name)
-    {
-        if (!root.TryGetProperty(name, out var arr) || arr.ValueKind != JsonValueKind.Array)
-            return null;
-
-        var list = new List<string>();
-        foreach (var el in arr.EnumerateArray())
-        {
-            if (el.ValueKind == JsonValueKind.String)
-                list.Add(el.GetString() ?? string.Empty);
-        }
-
-        return list.Count > 0 ? list.ToArray() : null;
     }
 }

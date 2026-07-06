@@ -16,12 +16,7 @@ public static class HandleElementReader
             case JsonTokenType.StartObject:
             {
                 using var doc = JsonDocument.ParseValue(ref reader);
-                var r = doc.RootElement;
-                if (r.TryGetProperty("ref", out var p) && p.ValueKind == JsonValueKind.String)
-                    return p.GetString() ?? string.Empty;
-                if (r.TryGetProperty("handle", out var h) && h.ValueKind == JsonValueKind.String)
-                    return h.GetString() ?? string.Empty;
-                return string.Empty;
+                return ReadHandleFromElement(doc.RootElement);
             }
             default:
                 reader.Skip();
@@ -35,12 +30,7 @@ public static class HandleElementReader
         if (element.ValueKind == JsonValueKind.String)
             return element.GetString() ?? string.Empty;
         if (element.ValueKind == JsonValueKind.Object)
-        {
-            if (element.TryGetProperty("ref", out var p) && p.ValueKind == JsonValueKind.String)
-                return p.GetString() ?? string.Empty;
-            if (element.TryGetProperty("handle", out var h) && h.ValueKind == JsonValueKind.String)
-                return h.GetString() ?? string.Empty;
-        }
+            return JsonElementPropertyReader.GetString(element, "ref", "handle") ?? string.Empty;
 
         return string.Empty;
     }
