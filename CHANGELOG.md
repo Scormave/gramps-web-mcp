@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-07-06
+
+### Added
+
+- `GetMediaFile` returns typed MCP content blocks (image, audio, or embedded blob) for allowlisted MIME types instead of rejecting non-image media
+
+### Fixed
+
+- Re-authenticate automatically when token refresh returns 401 after Gramps Web restarts invalidate cached refresh tokens
+- Parse stringified JSON `primaryName` and alternate name values before falling back to plain name lines, so structured name parts (patronymic, prefix, connector, title) are preserved
+- Resolve surname origin labels from Gramps Web default and custom `name_origin_types` instead of hardcoded mappings
+- Accept camelCase and semantic alias JSON on structured ref inputs (`callNumber`, `noteList`, `relationship`, etc.); outbound API payloads still use snake_case
+
+### Changed
+
+- Console logging uses a minimal one-line format (`info: message`) without category names; framework logs below Warning are suppressed to reduce `/health` probe noise
+
 ## [1.0.4] - 2026-06-28
 
 ### Fixed
@@ -75,7 +92,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.1...v1.0.2
