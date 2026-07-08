@@ -545,7 +545,19 @@ public static class SearchFormatter
     private static string BuildMediaSearchLine(GrampsMedia media)
     {
         var mimeShort = string.IsNullOrEmpty(media.Mime) ? "unknown" : media.Mime.Split('/')[0];
-        var label = Path.GetFileName(media.Path ?? "") is { Length: > 0 } fn ? fn : (media.Description ?? "(unnamed)");
+        var fileName = Path.GetFileName(media.Path ?? "");
+        var description = media.Description?.Trim();
+
+        string label;
+        if (!string.IsNullOrEmpty(description) && !string.IsNullOrEmpty(fileName))
+            label = $"{description} ({fileName})";
+        else if (!string.IsNullOrEmpty(description))
+            label = description;
+        else if (!string.IsNullOrEmpty(fileName))
+            label = fileName;
+        else
+            label = "(unnamed)";
+
         return $"Media: [{mimeShort}] {label}";
     }
 
