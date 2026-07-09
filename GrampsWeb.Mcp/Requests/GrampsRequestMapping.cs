@@ -211,6 +211,36 @@ internal static class GrampsRequestMapping
         return list.ToArray();
     }
 
+    public static PlaceRefRequest[]? ToPlaceRefRequests(GrampsPlaceRef[]? list) =>
+        list == null ? null : list.Select(pr => new PlaceRefRequest
+        {
+            Ref = pr.Ref,
+            Date = ToDateRequestOrNull(pr.Date)
+        }).ToArray();
+
+    public static PlaceNameRequest[]? ToPlaceNameRequests(GrampsPlaceName[]? list) =>
+        list == null ? null : list.Select(n => new PlaceNameRequest
+        {
+            Value = n.Value ?? "",
+            Lang = string.IsNullOrWhiteSpace(n.Lang) ? null : n.Lang,
+            Date = ToDateRequestOrNull(n.Date)
+        }).ToArray();
+
+    public static PlaceNameRequest ToPrimaryPlaceNameRequest(
+        string? value,
+        string? lang,
+        GrampsPlaceName? existing)
+    {
+        var resolvedValue = (value ?? existing?.Value)?.Trim() ?? "";
+        var resolvedLang = lang ?? existing?.Lang;
+        return new PlaceNameRequest
+        {
+            Value = resolvedValue,
+            Lang = string.IsNullOrWhiteSpace(resolvedLang) ? null : resolvedLang.Trim(),
+            Date = ToDateRequestOrNull(existing?.Date)
+        };
+    }
+
     private static bool IsEmptyGrampsDate(GrampsDate? date)
     {
         if (date is null)

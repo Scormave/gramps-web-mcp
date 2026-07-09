@@ -36,7 +36,7 @@ polymorphic wire shapes.
 | `GrampsPerson` | `GrampsPerson.cs` | `Handle`, `GrampsId`, `Gender` (int), `PrimaryName` → `GrampsName`, `AlternateNames` → `GrampsName[]`, `EventRefList` → `GrampsEventRef[]`, `FamilyList`, `ParentFamilyList`, `MediaList`, `NoteList`, `CitationList`, `TagList`, `AddressList`, `AttributeList`, `UrlList`, `PersonRefList`, `BirthRefIndex`, `DeathRefIndex`, `Change`, `Private` |
 | `GrampsFamily` | `GrampsFamily.cs` | `Handle`, `GrampsId`, `FatherHandle`, `MotherHandle`, `ChildRefList` → `GrampsChildRef[]`, `EventRefList`, `MediaList`, `NoteList`, `CitationList`, `TagList`, `AttributeList`, `Relationship` (type), `Change`, `Private` |
 | `GrampsEvent` | `GrampsEvent.cs` | `Handle`, `GrampsId`, `Type`, `Date` → `GrampsDate`, `Place` (handle), `Description`, `MediaList`, `NoteList`, `CitationList`, `TagList`, `Change`, `Private` |
-| `GrampsPlace` | `GrampsPlace.cs` | `Handle`, `GrampsId`, `Name`, `Type` (`place_type`), `Code`, `Longitude`, `Latitude`, `PlaceRefList`, `AlternateLocations`, `MediaList`, `NoteList`, `CitationList`, `TagList`, `Change`, `Private` |
+| `GrampsPlace` | `GrampsPlace.cs` | `Handle`, `GrampsId`, `PrimaryName` → `GrampsPlaceName`, `Name` (display), `Type` (`place_type`), `Code`, `Longitude`, `Latitude`, `PlaceRefList` → `GrampsPlaceRef[]`, `AlternateNames` → `GrampsPlaceName[]`, `AlternateLocations`, `MediaList`, `NoteList`, `CitationList`, `TagList`, `Change`, `Private` |
 | `GrampsSource` | `GrampsSource.cs` | `Handle`, `GrampsId`, `Title`, `Author`, `PubInfo`, `Abbrev`, `RepositoryRefList`, `MediaList`, `NoteList`, `AttributeList`, `TagList`, `Change`, `Private` |
 | `GrampsCitation` | `GrampsCitation.cs` | `Handle`, `GrampsId`, `Source` (`source_handle`), `Page`, `Confidence`, `Date`, `Text`, `MediaList`, `NoteList`, `AttributeList`, `TagList`, `Change`, `Private` |
 | `GrampsNote` | `GrampsNote.cs` | `Handle`, `GrampsId`, `Text`, `Type`, `Format`, `TagList`, `Change`, `Private` |
@@ -59,7 +59,8 @@ polymorphic wire shapes.
 | `GrampsAddress` | `GrampsAddress.cs` | `Street`, `Locality`, `City`, `County`, `State`, `Country`, `Postal`, `Phone`, `Date`, `CitationList`, `NoteList`, `Private` |
 | `GrampsUrl` | `GrampsUrl.cs` | `Type`, `Path`, `Description`, `Private` |
 | `GrampsDate` | `GrampsDate.cs` | Complex date (type-level `GrampsDateJsonConverter`); fields for calendar, modifier, quality, text, day/month/year, end segment, sortval |
-| `GrampsWireTypeObject` | `GrampsWireTypeObject.cs` | `Class`, `String`, `Value` — represents `{ _class, string }` API shapes |
+| `GrampsPlaceName` | `GrampsPlaceName.cs` | Place names (`value`, `lang`, `date`); whole-type converter |
+| `GrampsPlaceRef` | `GrampsPlaceRef.cs` | `Ref`, `Date` — enclosure parent refs (`placeref_list`); whole-type converter |
 
 ### Extended models (with resolved sub-entities)
 
@@ -117,7 +118,8 @@ structured object.  Custom converters normalize these:
 | Converter | Problem solved | Normalization |
 |-----------|---------------|---------------|
 | `GrampsWireTypeStringConverter` | Type fields: `"Birth"` **or** `{ "_class": "EventType", "string": "Birth" }` | → `string?` |
-| `GrampsPlaceNameStringConverter` | Place name: `"Paris"` **or** `{ "value": "Paris", "lang": "en" }` | → `string?` |
+| `GrampsPlaceNameJsonConverter` | Place name: `"Paris"` **or** `{ "value": "Paris", "lang": "en", "date": {...} }` | → `GrampsPlaceName?` |
+| `GrampsPlaceRefJsonConverter` / `GrampsPlaceRefArrayConverter` | Place refs: handle string **or** `{ "ref": "...", "date": {...} }` | → `GrampsPlaceRef` / `GrampsPlaceRef[]` |
 | `GrampsNoteTextStringConverter` | Note text: `"Hello"` **or** `{ "_class": "StyledText", "string": "Hello", "tags": [...] }` | → `string?` |
 | `GrampsHandleStringArrayConverter` | Handle lists: `["h1","h2"]` **or** `[{"ref":"h1"}, "h2"]` **or** `[{"handle":"h1"}]` | → `string[]` |
 | `HandleElementReader` | Single handle element: `"h1"` **or** `{"ref":"h1"}` **or** `{"handle":"h1"}` (case-insensitive) | → `string?` |
@@ -168,7 +170,8 @@ canonical model type.
 | `FlexibleString` | `string` | JSON string; JSON number (coerced to text) |
 | `FlexibleChildRefList` | `GrampsChildRef[]` | Object array; `"HANDLE::RelType"` strings (sets both frel/mrel; default Birth); comma/pipe/newline-separated |
 | `FlexibleEventRefList` | `EventRefRequest[]` | Object array; `"HANDLE::Role"` strings (default role Primary); comma/pipe/newline-separated |
-| `FlexibleRepositoryRefList` | `GrampsRepositoryRef[]` | Object array; `"Ref : CallNumber : MediaType"` strings (trailing parts optional) |
+| `FlexiblePlaceRefList` | `PlaceRefRequest[]` | Handle strings; `"HANDLE::date"`; objects `{ref, date?}` |
+| `FlexiblePlaceNameList` | `PlaceNameRequest[]` | Strings (`"Name"` or `"Name::lang"`); objects `{value, lang?, date?}`; multiline |
 
 ### Parsing logic
 
@@ -200,7 +203,7 @@ Common pattern:
 - `[JsonPropertyName("snake_case")]` for all fields
 - Nested request types: `GrampsNameRequest`, `SurnameRequest`,
   `EventRefRequest`, `FamilyRefRequest`, `AttributeRequest`,
-  `DateRequest`, `PlaceNameRequest`, `StyledTextRequest`
+  `DateRequest`, `PlaceNameRequest`, `PlaceRefRequest`, `StyledTextRequest`
 
 ### Mapping: `GrampsRequestMapping`
 

@@ -47,7 +47,10 @@ public class CreatePlaceRequest
     public string[]? TagList { get; set; }
 
     [JsonPropertyName("placeref_list")]
-    public object[]? PlaceRefList { get; set; }
+    public PlaceRefRequest[]? PlaceRefList { get; set; }
+
+    [JsonPropertyName("alt_names")]
+    public PlaceNameRequest[]? AltNames { get; set; }
 
     [JsonPropertyName("alt_loc")]
     public object[]? AlternateLocations { get; set; }

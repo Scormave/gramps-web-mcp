@@ -129,6 +129,8 @@ public class GrampsCompatibilityDeserializeTests
         Assert.NotNull(place);
         Assert.Equal("Twin Falls", place!.Name);
         Assert.Equal("City", place.Type);
+        Assert.Equal("Twin Falls", place.PrimaryName?.Value);
+        Assert.Equal("", place.PrimaryName?.Lang);
     }
 
     [Fact]

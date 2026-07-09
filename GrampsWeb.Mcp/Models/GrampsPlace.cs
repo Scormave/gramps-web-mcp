@@ -15,8 +15,15 @@ public class GrampsPlace
     public string? GrampsId { get; set; }
 
     [JsonPropertyName("name")]
-    [JsonConverter(typeof(GrampsPlaceNameStringConverter))]
-    public string? Name { get; set; }
+    public GrampsPlaceName? PrimaryName { get; set; }
+
+    /// <summary>Display name (<see cref="GrampsPlaceName.Value"/>).</summary>
+    [JsonIgnore]
+    public string? Name
+    {
+        get => PrimaryName?.Value;
+        set => PrimaryName = value == null ? null : new GrampsPlaceName { Value = value };
+    }
 
     [JsonPropertyName("place_type")]
     [JsonConverter(typeof(GrampsWireTypeStringConverter))]
@@ -51,7 +58,11 @@ public class GrampsPlace
     public string[]? TagList { get; set; }
 
     [JsonPropertyName("placeref_list")]
-    public object[]? PlaceRefList { get; set; }
+    [JsonConverter(typeof(GrampsPlaceRefArrayConverter))]
+    public GrampsPlaceRef[]? PlaceRefList { get; set; }
+
+    [JsonPropertyName("alt_names")]
+    public GrampsPlaceName[]? AlternateNames { get; set; }
 
     [JsonPropertyName("alt_loc")]
     public object[]? AlternateLocations { get; set; }

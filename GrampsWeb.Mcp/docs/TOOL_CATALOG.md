@@ -246,7 +246,7 @@ Delete an event.  Blocked when persons/families reference it unless `force=true`
 ## Place (`PlaceTools.cs`) — 5 tools
 
 ### R — `GetPlace`
-One place: name, type, coordinates, place hierarchy.
+One place: name, type, coordinates, multi-level hierarchy (names, handles, types, enclosure dates), alternate names, enclosed-by parent refs.
 
 ### R — `GetPlaceTimeline`
 Chronological events whose place equals this handle.
@@ -266,14 +266,15 @@ Create a place.  **Prerequisites:** `gramps://types`.
 | `placeType` | `string?` | no | — | Place type key |
 | `lat` | `string?` | no | — | Latitude |
 | `lon` | `string?` | no | — | Longitude |
-| `enclosedByHandles` | `FlexibleHandleList?` | no | — | Parent place handles |
-| `nameLang` | `string?` | no | `"en"` | Language code |
+| `enclosedBy` | `FlexiblePlaceRefList?` | no | — | Parent place refs (handles and optional enclosure dates) |
+| `nameLang` | `string?` | no | — | Language code for primary name |
+| `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate place names (`value`, `lang`, `date`) |
 | `noteHandles`, `mediaHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
 | `code` | `string?` | no | — | Place code / postal reference |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdatePlace`
-Update a place (same field set, all optional).
+Update a place. Same fields as create (all optional). `enclosedBy` and `alternateNames` follow omit-to-keep / empty-to-clear list semantics.
 
 ### D — `DeletePlace`
 Delete a place.  Blocked when events or child places reference it unless `force=true`.

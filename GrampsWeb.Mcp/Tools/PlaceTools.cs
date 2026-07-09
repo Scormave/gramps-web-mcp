@@ -1,6 +1,4 @@
 using System.ComponentModel;
-using System.Text;
-using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
@@ -91,7 +89,7 @@ public static class PlaceTools
     [Description(
         "Create a place (write). Returns handle and Gramps ID. " +
         ToolDescriptionFragments.CallGetTypes + " " +
-        "Parent places go in enclosedByHandles (smaller region → larger region order as in your tree).")]
+        "Parent places go in enclosedBy (smaller region → larger region order as in your tree).")]
     public static async Task<string> CreatePlace(
         [Description("Primary display name (required).")]
         string name,
@@ -101,10 +99,12 @@ public static class PlaceTools
         string? lat = null,
         [Description("Longitude coordinate")]
         string? lon = null,
-        [Description("Parent place handles (enclosure hierarchy). " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? enclosedByHandles = null,
-        [Description("Language code (default: 'en')")]
+        [Description("Parent place refs (enclosure hierarchy). " + FlexiblePlaceRefList.DescriptionHint)]
+        FlexiblePlaceRefList? enclosedBy = null,
+        [Description("Language code for primary name (default: omitted)")]
         string? nameLang = null,
+        [Description("Alternate place names. " + FlexiblePlaceNameList.DescriptionHint)]
+        FlexiblePlaceNameList? alternateNames = null,
         [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Place code / postal reference (optional)")]
@@ -130,12 +130,7 @@ public static class PlaceTools
                 if (typeError != null) throw McpToolErrors.ValidationError(typeError);
             }
 
-            var enclosed = (string[]?)enclosedByHandles;
-            if (enclosed is { Length: > 0 })
-                enclosed = await ResolveHandlesAsync(enclosed, client, "places");
-            var placeRefList = enclosed?.Length > 0
-                ? enclosed.Select(h => new { @ref = h } as object).ToArray()
-                : null;
+            var placeRefList = await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client);
 
             var request = new CreatePlaceRequest
             {
@@ -153,7 +148,8 @@ public static class PlaceTools
                 NoteList = noteHandles,
                 TagList = tagHandles,
                 Private = isPrivate,
-                PlaceRefList = placeRefList
+                PlaceRefList = placeRefList,
+                AltNames = (PlaceNameRequest[]?)alternateNames is { Length: > 0 } alts ? alts : null
             };
 
             var (handle, grampsId) = await client.PostMutationAsync("/api/places/", request, "Place");
@@ -183,8 +179,12 @@ public static class PlaceTools
         string? lat = null,
         [Description("Longitude string. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? lon = null,
-        [Description("Parent place chain. Omit to keep unchanged. When set non-empty, replaces hierarchy; empty value does not clear parents in this API mapping—omit instead. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? enclosedByHandles = null,
+        [Description("Replace parent place chain. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceRefList.DescriptionHint)]
+        FlexiblePlaceRefList? enclosedBy = null,
+        [Description("Language code for primary name. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        string? nameLang = null,
+        [Description("Replace alternate place names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceNameList.DescriptionHint)]
+        FlexiblePlaceNameList? alternateNames = null,
         [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Place code. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -213,12 +213,9 @@ public static class PlaceTools
             if (place == null)
                 return NotFoundHelper.NotFoundMessage("Place", handle);
 
-            var enclosedUpdate = (string[]?)enclosedByHandles;
-            if (enclosedUpdate is { Length: > 0 })
-                enclosedUpdate = await ResolveHandlesAsync(enclosedUpdate, client, "places");
-            var placeRefList = enclosedUpdate != null && enclosedUpdate.Length > 0
-                ? enclosedUpdate.Select(h => new { @ref = h } as object).ToArray()
-                : null;
+            var placeRefList = enclosedBy != null
+                ? await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client)
+                : GrampsRequestMapping.ToPlaceRefRequests(place.PlaceRefList);
 
             var updateRequest = new CreatePlaceRequest
             {
@@ -226,7 +223,7 @@ public static class PlaceTools
                 Handle = place.Handle,
                 GrampsId = place.GrampsId,
                 Change = place.Change,
-                Name = new PlaceNameRequest { Value = (name ?? place.Name)?.Trim() ?? "" },
+                Name = GrampsRequestMapping.ToPrimaryPlaceNameRequest(name, nameLang, place.PrimaryName),
                 Type = placeType ?? place.Type,
                 Code = code ?? place.Code,
                 Latitude = lat ?? place.Latitude,
@@ -237,7 +234,10 @@ public static class PlaceTools
                 NoteList = (string[]?)noteHandles ?? place.NoteList,
                 CitationList = (string[]?)citationHandles ?? place.CitationList,
                 TagList = (string[]?)tagHandles ?? place.TagList,
-                PlaceRefList = placeRefList ?? place.PlaceRefList,
+                PlaceRefList = placeRefList,
+                AltNames = alternateNames != null
+                    ? (PlaceNameRequest[]?)alternateNames
+                    : GrampsRequestMapping.ToPlaceNameRequests(place.AlternateNames),
                 AlternateLocations = place.AlternateLocations,
                 Private = isPrivate ?? place.Private
             };
@@ -274,14 +274,24 @@ public static class PlaceTools
         }
     }
 
-    private static async Task<string[]> ResolveHandlesAsync(
-        string[] handles,
-        GrampsApiClient client,
-        string expectedObjectType)
+    private static async Task<PlaceRefRequest[]?> ResolvePlaceRefListAsync(
+        PlaceRefRequest[]? refs,
+        GrampsApiClient client)
     {
-        var resolved = new string[handles.Length];
-        for (var i = 0; i < handles.Length; i++)
-            resolved[i] = await HandleResolver.ResolveToHandleAsync(handles[i], client, expectedObjectType);
+        if (refs is not { Length: > 0 })
+            return refs;
+
+        var resolved = new PlaceRefRequest[refs.Length];
+        for (var i = 0; i < refs.Length; i++)
+        {
+            var item = refs[i];
+            resolved[i] = new PlaceRefRequest
+            {
+                Ref = await HandleResolver.ResolveToHandleAsync(item.Ref ?? "", client, "places"),
+                Date = item.Date
+            };
+        }
+
         return resolved;
     }
 }

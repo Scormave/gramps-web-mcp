@@ -13,4 +13,8 @@ public sealed class PlaceNameRequest
     [JsonPropertyName("lang")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Lang { get; set; }
+
+    [JsonPropertyName("date")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateRequest? Date { get; set; }
 }
