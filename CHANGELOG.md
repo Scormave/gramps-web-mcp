@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - Date parser accepts ISO day/month ranges, mixed-precision dashes (`1703-1914-08-31`), open-ended forms, richer `between` / `from`…`to` sides, and explicit `from DATE` / `to DATE` (Gramps From/To modifiers)
+- Date parser accepts English month forms matching tool output (`1 Jul 1919`, `July 1919`, `from 1 Oct 1929 to 27 Sep 1937`)
 
 ### Fixed
 
@@ -19,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Ambiguous dash dates default to span/From for places; events, citations, and media use range/After via `DateIntervalPreference`
 - Place tool docs and `get_input_guide` clarify `enclosedBy` (not `enclosedByHandles`) and dated alternate-name / enclosure examples
+- Unrecognized agent date strings now fail validation instead of being stored as Gramps text-only dates
 
 ## [1.0.5] - 2026-07-06
 

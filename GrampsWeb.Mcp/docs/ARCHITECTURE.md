@@ -248,9 +248,10 @@ Convert models into human-readable text for MCP tool responses.  Strategy:
 
 ### 8. Dates (`Dates/`)
 
-- `AgentDateParser`: parses agent-friendly date strings (ISO, year/ISO/mixed ranges,
-  open-ended forms, From/To prefixes) into Gramps date requests; `DateIntervalPreference`
-  chooses span/From (places) vs range/After (events, citations, media) for ambiguous dashes
+- `AgentDateParser`: parses agent-friendly date strings (ISO, English months, year/ISO/mixed ranges,
+  open-ended forms, From/To prefixes) into Gramps date requests; unrecognized input fails validation;
+  `DateIntervalPreference` chooses span/From (places) vs range/After (events, citations, media) for ambiguous dashes
+- `EnglishMonthNames`: shared English abbreviated/full month table for parse and display
 - `GrampsDateHelpers`: shared emptiness check for empty API date objects
 - `GrampsDateSortVal`: computes sortable integer values from date components
 

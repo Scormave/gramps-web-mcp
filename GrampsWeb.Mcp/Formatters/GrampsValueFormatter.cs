@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
@@ -9,12 +10,6 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class GrampsValueFormatter
 {
-    private static readonly string[] MonthNames =
-    {
-        "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    };
-
     public static string FormatDate(GrampsDate date)
     {
         if (date == null)
@@ -82,7 +77,7 @@ public static class GrampsValueFormatter
                 if (day > 0)
                     sb.Append($"{day} ");
                 if (month > 0 && month <= 12)
-                    sb.Append($"{MonthNames[month]} ");
+                    sb.Append($"{EnglishMonthNames.Abbreviated[month]} ");
             }
             sb.Append($"{Math.Abs(year)} B.C.E.");
             return sb.ToString();
@@ -92,7 +87,7 @@ public static class GrampsValueFormatter
             sb.Append($"{day} ");
 
         if (month > 0 && month <= 12)
-            sb.Append($"{MonthNames[month]} ");
+            sb.Append($"{EnglishMonthNames.Abbreviated[month]} ");
 
         if (year > 0)
         {

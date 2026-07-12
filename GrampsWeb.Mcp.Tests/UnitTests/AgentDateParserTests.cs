@@ -101,12 +101,131 @@ public class AgentDateParserTests
     }
 
     [Fact]
-    public void UnrecognizedString_TextOnlyFallback()
+    public void UnrecognizedString_ThrowsValidationError()
     {
-        var d = AgentDateParser.ToDateRequestOrNull("early spring 1847");
+        var ex = Assert.Throws<McpException>(() =>
+            AgentDateParser.ToDateRequestOrNull("early spring 1847"));
+        Assert.Contains("Unrecognized date", ex.Message);
+        Assert.Contains("get_input_guide", ex.Message);
+    }
+
+    [Fact]
+    public void English_DayAbbrMonthYear_Parses()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1 Jul 1919");
         Assert.NotNull(d);
-        Assert.Equal(6, d!.Modifier);
-        Assert.Equal("early spring 1847", d.Text);
+        Assert.Equal(0, d!.Modifier);
+        Assert.Equal(1, d.Day);
+        Assert.Equal(7, d.Month);
+        Assert.Equal(1919, d.Year);
+    }
+
+    [Fact]
+    public void English_DayFullMonthYear_Parses()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("5 July 1944");
+        Assert.NotNull(d);
+        Assert.Equal(5, d!.Day);
+        Assert.Equal(7, d.Month);
+        Assert.Equal(1944, d.Year);
+    }
+
+    [Fact]
+    public void English_DayFullMonthYear_OptionalComma_Parses()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1 July, 1919");
+        Assert.NotNull(d);
+        Assert.Equal(1, d!.Day);
+        Assert.Equal(7, d.Month);
+        Assert.Equal(1919, d.Year);
+    }
+
+    [Fact]
+    public void English_MonthYear_AbbrAndFull_Parse()
+    {
+        var abbr = AgentDateParser.ToDateRequestOrNull("Jul 1919");
+        Assert.Equal(0, abbr!.Day);
+        Assert.Equal(7, abbr.Month);
+        Assert.Equal(1919, abbr.Year);
+
+        var full = AgentDateParser.ToDateRequestOrNull("October 1929");
+        Assert.Equal(0, full!.Day);
+        Assert.Equal(10, full.Month);
+        Assert.Equal(1929, full.Year);
+    }
+
+    [Fact]
+    public void English_FromTo_SpanModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("from 1 Oct 1929 to 27 Sep 1937");
+        Assert.NotNull(d);
+        Assert.Equal(5, d!.Modifier);
+        Assert.Equal(1, d.Day);
+        Assert.Equal(10, d.Month);
+        Assert.Equal(1929, d.Year);
+        Assert.Equal(27, d.EndDay);
+        Assert.Equal(9, d.EndMonth);
+        Assert.Equal(1937, d.EndYear);
+    }
+
+    [Fact]
+    public void English_FromOnly_IsFromModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("from 5 Jul 1944");
+        Assert.NotNull(d);
+        Assert.Equal(7, d!.Modifier);
+        Assert.Equal(5, d.Day);
+        Assert.Equal(7, d.Month);
+        Assert.Equal(1944, d.Year);
+    }
+
+    [Fact]
+    public void English_DashBetween_Default_IsSpan()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1 Oct 1929-5 Jul 1944");
+        Assert.NotNull(d);
+        Assert.Equal(5, d!.Modifier);
+        Assert.Equal(1, d.Day);
+        Assert.Equal(10, d.Month);
+        Assert.Equal(1929, d.Year);
+        Assert.Equal(5, d.EndDay);
+        Assert.Equal(7, d.EndMonth);
+        Assert.Equal(1944, d.EndYear);
+    }
+
+    [Fact]
+    public void English_BeforePrefix_AppliesModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("before 1 Apr 1920");
+        Assert.NotNull(d);
+        Assert.Equal(1, d!.Modifier);
+        Assert.Equal(1, d.Day);
+        Assert.Equal(4, d.Month);
+        Assert.Equal(1920, d.Year);
+    }
+
+    [Fact]
+    public void English_OpenEndedDash_Default_IsFromTo()
+    {
+        var after = AgentDateParser.ToDateRequestOrNull("5 Jul 1944-");
+        Assert.Equal(7, after!.Modifier);
+        Assert.Equal(5, after.Day);
+        Assert.Equal(7, after.Month);
+        Assert.Equal(1944, after.Year);
+
+        var before = AgentDateParser.ToDateRequestOrNull("-1 Apr 1920");
+        Assert.Equal(8, before!.Modifier);
+        Assert.Equal(1, before.Day);
+        Assert.Equal(4, before.Month);
+        Assert.Equal(1920, before.Year);
+    }
+
+    [Fact]
+    public void English_UsMonthDayYear_ThrowsValidationError()
+    {
+        var ex = Assert.Throws<McpException>(() =>
+            AgentDateParser.ToDateRequestOrNull("July 1, 1919"));
+        Assert.Contains("Unrecognized date", ex.Message);
     }
 
     [Fact]

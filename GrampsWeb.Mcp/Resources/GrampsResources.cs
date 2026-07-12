@@ -533,6 +533,12 @@ public sealed class GrampsResources
             "MCP tools take human-readable date strings. The server still receives Gramps Date JSON with dateval; the MCP layer parses your string.",
         preferred_iso = new[] { "yyyy-MM-dd", "yyyy-MM", "yyyy" },
         examples_iso = new[] { "1990-03-15", "1990-03", "1920" },
+        english_months = new
+        {
+            forms = new[] { "1 Jul 1919", "5 July 1944", "1 July, 1919", "Jul 1919", "October 1929" },
+            note =
+                "Day-month-year with English abbreviated or full month names (same style as tool output). US month-first forms like July 1, 1919 are rejected."
+        },
         date_component_order = new
         {
             Iso =
@@ -543,7 +549,7 @@ public sealed class GrampsResources
         modifiers = new
         {
             prefixes = new[] { "before ", "after ", "about ", "circa " },
-            example = "before 1920"
+            example = "before 1 Apr 1920"
         },
         year_ranges = new
         {
@@ -553,11 +559,14 @@ public sealed class GrampsResources
             iso_day_range = "1914-08-31-1924-01-26 (yyyy-MM-dd-yyyy-MM-dd)",
             iso_month_range = "1914-08-1924-01 (yyyy-MM-yyyy-MM)",
             mixed_precision = "1703-1914-08-31 (year to full ISO, or reverse)",
-            between = "between 1800 and 1850 (always range; sides may be yyyy-MM or yyyy-MM-dd)",
-            span = "from 1800 to 1850 (always span; sides may be yyyy-MM or yyyy-MM-dd)",
+            english_dash = "1 Oct 1929-5 Jul 1944 (English month sides)",
+            between =
+                "between 1800 and 1850 (always range; sides may be ISO or English months)",
+            span = "from 1 Oct 1929 to 27 Sep 1937 (always span; sides may be ISO or English months)",
             open_ended_year =
                 "1991- / from 1991 (From for places; After for events/citations/media dashes); -1722 / to 1722 (To vs Before)",
             open_ended_iso = "1924-01-26- or from 1924-01-26; -1914-08-31 or to 1914-08-31",
+            open_ended_english = "5 Jul 1944- or from 5 Jul 1944; -1 Apr 1920 or to 1 Apr 1920",
             explicit_from_to = "from DATE and to DATE always map to Gramps From/To modifiers"
         },
         tools = new
@@ -570,8 +579,8 @@ public sealed class GrampsResources
             persons =
                 "create_person / update_person - gender: Female, Male, or Unknown"
         },
-        fallback =
-            "Strings that do not match structured patterns are stored as Gramps text-only dates (modifier 6)."
+        validation =
+            "Unrecognized date strings fail validation (no text-only dates from agent input). Fix the format and retry; see examples above."
     };
 
     internal static object BuildNameSchemaPayload() => new

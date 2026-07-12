@@ -266,9 +266,9 @@ Create a place.  **Prerequisites:** `gramps://types`.
 | `placeType` | `string?` | no | — | Place type key |
 | `lat` | `string?` | no | — | Latitude |
 | `lon` | `string?` | no | — | Longitude |
-| `enclosedBy` | `FlexiblePlaceRefList?` | no | — | Parent place refs + optional dates (`enclosedBy`, not `enclosedByHandles`). Dashes → span (`from…to`); open `1991-` → From. Examples: `[{ref, date:"1708-1927"}]`, `HANDLE::1991-` |
+| `enclosedBy` | `FlexiblePlaceRefList?` | no | — | Parent place refs + optional dates (`enclosedBy`, not `enclosedByHandles`). Dashes → span (`from…to`); open `1991-` → From. English months OK (`from 1 Oct 1929 to 27 Sep 1937`). Unrecognized dates fail validation. Examples: `[{ref, date:"1708-1927"}]`, `HANDLE::1991-` |
 | `nameLang` | `string?` | no | — | Language code for primary name |
-| `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate names `{value, lang?, date?}`. Dashes → span; open `1991-` → From; ISO day ranges / mixed `1703-1914-08-31` supported |
+| `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate names `{value, lang?, date?}`. Dashes → span; open `1991-` → From; English months / ISO day ranges / mixed `1703-1914-08-31` supported. Unrecognized dates fail validation |
 | `noteHandles`, `mediaHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
 | `code` | `string?` | no | — | Place code / postal reference |
 | `isPrivate` | `bool` | no | `false` | Mark private |

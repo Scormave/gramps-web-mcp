@@ -19,6 +19,11 @@ public static class AgentDateParser
     private const int ModFrom = 7;
     private const int ModTo = 8;
 
+    private const string UnrecognizedDateGuidance =
+        "Use ISO (yyyy-MM-dd / yyyy-MM / yyyy), English months (1 Jul 1919 or July 1919), " +
+        "ranges (1800-1850, from … to …, between … and …), or prefixes (before/after/about). " +
+        "See get_input_guide.";
+
     private static readonly Regex IsoFull = new(
         @"^(?<y>\d{4})-(?<m>\d{1,2})-(?<d>\d{1,2})$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -76,14 +81,35 @@ public static class AgentDateParser
         @"^[-–]\s*(?<y>\d{4})-(?<m>\d{1,2})(?:-(?<d>\d{1,2}))?$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex OpenEndedTrailingDash = new(
+        @"^(?<side>.+?)\s*[-–]\s*$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex OpenEndedLeadingDash = new(
+        @"^[-–]\s*(?<side>.+)$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex NumericTriplet = new(
         @"^(?<p1>\d{1,4})[-/.](?<p2>\d{1,4})[-/.](?<p3>\d{1,4})$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
-    /// Returns <c>null</c> for null/whitespace input. Otherwise parses or uses text-only fallback.
-    /// Throws <see cref="McpException"/> when <paramref name="order"/> is <see cref="DateComponentOrder.Iso"/>
-    /// but the value looks like a day/month/year triplet that is not ISO-8601.
+    /// Day + English month + year, optional comma before year: <c>1 Jul 1919</c>, <c>5 July, 1944</c>.
+    /// </summary>
+    private static readonly Regex EnglishDayMonthYear = new(
+        @"^(?<d>\d{1,2})\s+(?<mon>[A-Za-z]+),?\s+(?<y>\d{3,4})$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>English month + year: <c>Jul 1919</c>, <c>October 1929</c>.</summary>
+    private static readonly Regex EnglishMonthYear = new(
+        @"^(?<mon>[A-Za-z]+)\s+(?<y>\d{3,4})$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Returns <c>null</c> for null/whitespace input. Otherwise parses a structured date.
+    /// Throws <see cref="McpException"/> when the value cannot be parsed, or when
+    /// <paramref name="order"/> is <see cref="DateComponentOrder.Iso"/> but the value looks
+    /// like a day/month/year triplet that is not ISO-8601.
     /// </summary>
     public static DateRequest? ToDateRequestOrNull(
         string? input,
@@ -178,6 +204,9 @@ public static class AgentDateParser
         if (TryParseIso(working, modifier, out var iso))
             return iso;
 
+        if (TryParseEnglish(working, out var englishSide))
+            return CalendarSideDate(modifier, englishSide);
+
         var trip = NumericTriplet.Match(working);
         if (trip.Success)
         {
@@ -207,7 +236,7 @@ public static class AgentDateParser
             return SingleCalendarDate(modifier, day, month, year);
         }
 
-        return TextOnlyDate(raw);
+        throw McpToolErrors.ValidationError($"Unrecognized date \"{raw}\". {UnrecognizedDateGuidance}");
     }
 
     private static bool TryParseMixedPrecisionDash(
@@ -300,6 +329,22 @@ public static class AgentDateParser
             return true;
         }
 
+        var trailing = OpenEndedTrailingDash.Match(working);
+        if (trailing.Success
+            && TryParseSingleCalendarSide(trailing.Groups["side"].Value.Trim(), out var afterSide))
+        {
+            req = CalendarSideDate(openStartMod, afterSide);
+            return true;
+        }
+
+        var leading = OpenEndedLeadingDash.Match(working);
+        if (leading.Success
+            && TryParseSingleCalendarSide(leading.Groups["side"].Value.Trim(), out var beforeSide))
+        {
+            req = CalendarSideDate(openEndMod, beforeSide);
+            return true;
+        }
+
         return false;
     }
 
@@ -335,6 +380,33 @@ public static class AgentDateParser
         {
             var y = int.Parse(side, CultureInfo.InvariantCulture);
             result = new CalendarSide(0, 0, y);
+            return true;
+        }
+
+        return TryParseEnglish(side, out result);
+    }
+
+    private static bool TryParseEnglish(string side, out CalendarSide result)
+    {
+        result = default;
+
+        var dmy = EnglishDayMonthYear.Match(side);
+        if (dmy.Success
+            && EnglishMonthNames.TryParse(dmy.Groups["mon"].Value, out var month)
+            && int.TryParse(dmy.Groups["d"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var day)
+            && int.TryParse(dmy.Groups["y"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var year))
+        {
+            ValidateDayMonth(day, month);
+            result = new CalendarSide(day, month, year);
+            return true;
+        }
+
+        var my = EnglishMonthYear.Match(side);
+        if (my.Success
+            && EnglishMonthNames.TryParse(my.Groups["mon"].Value, out var mon)
+            && int.TryParse(my.Groups["y"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var y))
+        {
+            result = new CalendarSide(0, mon, y);
             return true;
         }
 
@@ -442,14 +514,6 @@ public static class AgentDateParser
         EndDay = end.Day,
         EndMonth = end.Month,
         EndYear = end.Year
-    };
-
-    private static DateRequest TextOnlyDate(string text) => new()
-    {
-        Calendar = 0,
-        Modifier = 6,
-        Quality = 0,
-        Text = text
     };
 
     private static void ValidateDayMonth(int day, int month)
