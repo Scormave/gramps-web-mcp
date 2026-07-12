@@ -21,11 +21,11 @@ public static class GrampsValueFormatter
             return "Unknown date";
 
         if (date.Modifier == 6)
-            return date.Text ?? "Unknown date";
+            return string.IsNullOrWhiteSpace(date.Text) ? "Unknown date" : date.Text.Trim();
 
         if (date.Day == 0 && date.Month == 0 && date.Year == 0 && !date.Slash
             && date.Modifier is not (4 or 5))
-            return date.Text ?? "Unknown date";
+            return string.IsNullOrWhiteSpace(date.Text) ? "Unknown date" : date.Text.Trim();
 
         int day = date.Day, month = date.Month, year = date.Year;
         bool slash = date.Slash;
@@ -49,6 +49,10 @@ public static class GrampsValueFormatter
         var date2 = FormatDateComponents(date.EndDay, date.EndMonth, date.EndYear, date.EndSlash);
         if (string.IsNullOrWhiteSpace(date1) && string.IsNullOrWhiteSpace(date2))
             return "unknown date range";
+        if (string.IsNullOrWhiteSpace(date1))
+            return $"before {date2}";
+        if (string.IsNullOrWhiteSpace(date2))
+            return $"after {date1}";
         return $"between {date1} and {date2}";
     }
 
@@ -58,6 +62,10 @@ public static class GrampsValueFormatter
         var date2 = FormatDateComponents(date.EndDay, date.EndMonth, date.EndYear, date.EndSlash);
         if (string.IsNullOrWhiteSpace(date1) && string.IsNullOrWhiteSpace(date2))
             return "unknown date span";
+        if (string.IsNullOrWhiteSpace(date1))
+            return $"until {date2}";
+        if (string.IsNullOrWhiteSpace(date2))
+            return $"from {date1}";
         return $"from {date1} to {date2}";
     }
 

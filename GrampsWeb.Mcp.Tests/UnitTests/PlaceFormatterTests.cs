@@ -53,8 +53,10 @@ public class PlaceFormatterTests
         var result = await PlaceFormatter.FormatPlaceFull(boise, client);
 
         Assert.Contains("Hierarchy:", result);
-        Assert.Contains("Boise", result);
-        Assert.Contains("[boise-h]", result);
+        Assert.Contains("PLACE: Boise", result);
+        Assert.Contains("[handle: boise-h]", result);
+        Assert.DoesNotContain("Hierarchy: Boise", result);
+        Assert.DoesNotContain("[boise-h]", GetHierarchyLine(result));
         Assert.Contains("Idaho", result);
         Assert.Contains("[idaho-h]", result);
         Assert.Contains("United States", result);
@@ -64,6 +66,68 @@ public class PlaceFormatterTests
         Assert.Contains("Alternate names (1):", result);
         Assert.Contains("Boise City", result);
         Assert.Contains("(en)", result);
+    }
+
+    [Fact]
+    public async Task FormatPlaceFull_Omits_Empty_Enclosure_And_AltName_Dates()
+    {
+        var place = new GrampsPlace
+        {
+            Handle = "city-h",
+            GrampsId = "P2",
+            Name = "City",
+            Type = "City",
+            PlaceRefList =
+            [
+                new GrampsPlaceRef { Ref = "parent-h", Date = new GrampsDate() },
+                new GrampsPlaceRef { Ref = "other-h", Date = new GrampsDate { Text = "" } }
+            ],
+            AlternateNames =
+            [
+                new GrampsPlaceName { Value = "Old", Date = new GrampsDate { Text = "" } }
+            ]
+        };
+
+        var handler = new PlaceHandler(new Dictionary<string, string>
+        {
+            ["parent-h"] = """
+                {
+                  "handle": "parent-h",
+                  "name": { "value": "Parent", "lang": "en" },
+                  "place_type": "State",
+                  "placeref_list": []
+                }
+                """,
+            ["other-h"] = """
+                {
+                  "handle": "other-h",
+                  "name": { "value": "Other", "lang": "en" },
+                  "place_type": "State",
+                  "placeref_list": []
+                }
+                """
+        });
+
+        var client = CreateClient(handler);
+        var result = await PlaceFormatter.FormatPlaceFull(place, client);
+
+        Assert.Contains("Hierarchy: Parent [parent-h]", result);
+        Assert.DoesNotContain("[]", result);
+        Assert.Contains("  - parent-h", result);
+        Assert.Contains("  - other-h", result);
+        Assert.Contains("  - Old", result);
+        Assert.DoesNotContain("Old [", result);
+    }
+
+    private static string GetHierarchyLine(string result)
+    {
+        foreach (var line in result.Split('\n'))
+        {
+            if (line.StartsWith("Hierarchy:", StringComparison.Ordinal))
+                return line;
+        }
+
+        return string.Empty;
     }
 
     [Fact]

@@ -13,7 +13,8 @@ public sealed class FlexiblePlaceNameList
     public const string DescriptionHint =
         "Alternate place names: array of strings (\"Old Name\" or \"Old Name::de\"), " +
         "simple objects {value, lang?, date?}, or JSON array. " +
-        "Dates use ISO/year syntax (see get_input_guide).";
+        "Dated example: [{value:\"New York\", date:\"1914-08-31-1924-01-26\"}]. " +
+        "Dates use ISO/year/range syntax (see get_input_guide).";
 
     public required PlaceNameRequest[] Items { get; init; }
 

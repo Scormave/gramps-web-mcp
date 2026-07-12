@@ -12,8 +12,9 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexiblePlaceRefList
 {
     public const string DescriptionHint =
-        "Parent place refs (enclosure hierarchy): handle string, array of handles, " +
+        "Parent place refs via enclosedBy (not enclosedByHandles): handle string, array of handles, " +
         "JSON array of {ref, date?}, or shorthand \"HANDLE::1920-1950\" (date optional). " +
+        "Examples: [{ref:\"…\", date:\"1708-1927\"}], \"HANDLE::1991-\", date \"1914-08-31-1924-01-26\". " +
         "Smaller region → larger region order. Dates use ISO/year syntax (see get_input_guide).";
 
     public required PlaceRefRequest[] Items { get; init; }

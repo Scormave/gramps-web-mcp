@@ -108,4 +108,107 @@ public class AgentDateParserTests
         Assert.Equal(6, d!.Modifier);
         Assert.Equal("early spring 1847", d.Text);
     }
+
+    [Fact]
+    public void YearDashYear_RangeModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1708-1927");
+        Assert.NotNull(d);
+        Assert.Equal(4, d!.Modifier);
+        Assert.Equal(1708, d.Year);
+        Assert.Equal(1927, d.EndYear);
+    }
+
+    [Fact]
+    public void IsoFullDashRange_Parses_Components()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1914-08-31-1924-01-26");
+        Assert.NotNull(d);
+        Assert.Equal(4, d!.Modifier);
+        Assert.Equal(31, d.Day);
+        Assert.Equal(8, d.Month);
+        Assert.Equal(1914, d.Year);
+        Assert.Equal(26, d.EndDay);
+        Assert.Equal(1, d.EndMonth);
+        Assert.Equal(1924, d.EndYear);
+    }
+
+    [Fact]
+    public void IsoFullDashRange_Second_Example()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1924-01-26-1991-09-06");
+        Assert.NotNull(d);
+        Assert.Equal(4, d!.Modifier);
+        Assert.Equal(1924, d.Year);
+        Assert.Equal(1991, d.EndYear);
+        Assert.Equal(9, d.EndMonth);
+        Assert.Equal(6, d.EndDay);
+    }
+
+    [Fact]
+    public void IsoMonthDashRange_Parses()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1914-08-1924-01");
+        Assert.NotNull(d);
+        Assert.Equal(4, d!.Modifier);
+        Assert.Equal(8, d.Month);
+        Assert.Equal(1914, d.Year);
+        Assert.Equal(1, d.EndMonth);
+        Assert.Equal(1924, d.EndYear);
+        Assert.Equal(0, d.Day);
+        Assert.Equal(0, d.EndDay);
+    }
+
+    [Fact]
+    public void OpenEnded_YearAfter_IsAfterModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1991-");
+        Assert.NotNull(d);
+        Assert.Equal(2, d!.Modifier);
+        Assert.Equal(1991, d.Year);
+    }
+
+    [Fact]
+    public void OpenEnded_YearBefore_IsBeforeModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("-1722");
+        Assert.NotNull(d);
+        Assert.Equal(1, d!.Modifier);
+        Assert.Equal(1722, d.Year);
+    }
+
+    [Fact]
+    public void OpenEnded_IsoAfter_IsAfterModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("1924-01-26-");
+        Assert.NotNull(d);
+        Assert.Equal(2, d!.Modifier);
+        Assert.Equal(26, d.Day);
+        Assert.Equal(1, d.Month);
+        Assert.Equal(1924, d.Year);
+    }
+
+    [Fact]
+    public void Between_IsoDates_RangeModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("between 1914-08-31 and 1924-01-26");
+        Assert.NotNull(d);
+        Assert.Equal(4, d!.Modifier);
+        Assert.Equal(1914, d.Year);
+        Assert.Equal(8, d.Month);
+        Assert.Equal(31, d.Day);
+        Assert.Equal(1924, d.EndYear);
+        Assert.Equal(1, d.EndMonth);
+        Assert.Equal(26, d.EndDay);
+    }
+
+    [Fact]
+    public void FromTo_IsoDates_SpanModifier()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("from 1914-08-31 to 1924-01-26");
+        Assert.NotNull(d);
+        Assert.Equal(5, d!.Modifier);
+        Assert.Equal(1914, d.Year);
+        Assert.Equal(1924, d.EndYear);
+    }
 }

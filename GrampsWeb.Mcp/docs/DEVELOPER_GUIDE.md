@@ -305,18 +305,26 @@ This means the tool must preserve all fields the agent didn't explicitly change.
 
 ### Agent → Gramps
 
-`AgentDateParser` converts free-text dates into `DateRequest` objects:
-- ISO dates: `2024-03-15`
-- Slash dates: `15/03/2024` (order controlled by `DateComponentOrder`)
-- Modifiers: `about 1950`, `before 1900/01/01`, `after 2000`
-- Ranges: `between 1900 and 1950`, `from 1900 to 1950`
-- Spans: `from 1900/01/01 to 1950/12/31`
-- Text dates: anything unparseable → stored as text-only date
+`AgentDateParser` converts free-text dates into `DateRequest` objects (used by
+events, citations, media, composites, place enclosure, and place alternate names):
+
+- ISO dates: `2024-03-15`, `2024-03`, `2024`
+- Slash/dot triplets: `15/03/2024` (order controlled by `DateComponentOrder`; rejected under default `Iso`)
+- Modifiers: `about 1950`, `before 1900`, `after 2000`, `circa 1850`
+- Year ranges: `1800-1850` (dash between 3–4 digit years)
+- ISO day/month ranges: `1914-08-31-1924-01-26`, `1914-08-1924-01`
+- Open-ended: `1991-` / `1924-01-26-` (After), `-1722` / `-1914-08-31` (Before)
+- `between` / `from`…`to`: sides may be year, `yyyy-MM`, or `yyyy-MM-dd`
+  (e.g. `between 1914-08-31 and 1924-01-26`, `from 1800 to 1850`)
+- Text dates: anything unparseable → stored as text-only date (modifier 6)
 
 `DateComponentOrder` enum controls ambiguous date parsing:
-- `Iso` — YYYY/MM/DD (default)
+- `Iso` — hyphenated ISO only for full dates (default)
 - `DayMonthYear` — DD/MM/YYYY
 - `MonthDayYear` — MM/DD/YYYY
+
+`GrampsDateHelpers.IsEmpty` detects empty/zero date objects from the API so
+mappers and formatters can omit them instead of emitting blank `[]` brackets.
 
 ### Gramps → Wire
 
@@ -408,6 +416,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Add a test fixture | `GrampsWeb.Mcp.Tests/Fixtures/{name}.json` |
 | Update contract mapping | `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` |
 | Parse dates from agent input | `Dates/AgentDateParser.cs` |
+| Detect empty Gramps dates | `Dates/GrampsDateHelpers.cs` |
 | Parse gender/confidence enums | `Tools/Parsing/` |
 | Look up default type labels | `Formatters/GrampsDefaultTypeLabels.cs` |
 | Handle extended entity enrichment | `Client/ExtendedEntityEnrichment.cs` |

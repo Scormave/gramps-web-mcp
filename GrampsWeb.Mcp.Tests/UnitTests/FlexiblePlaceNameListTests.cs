@@ -54,4 +54,18 @@ public class FlexiblePlaceNameListTests
         Assert.Equal("Name Two", v.Items[1].Value);
         Assert.Equal("de", v.Items[1].Lang);
     }
+
+    [Fact]
+    public void Json_Object_With_IsoFullRange_Date_Parses()
+    {
+        var v = Deserialize("""[{"value":"New York","date":"1914-08-31-1924-01-26"}]""");
+        Assert.NotNull(v);
+        Assert.Single(v!.Items);
+        Assert.Equal("New York", v.Items[0].Value);
+        Assert.Equal(4, v.Items[0].Date!.Modifier);
+        Assert.Equal(1914, v.Items[0].Date!.Year);
+        Assert.Equal(8, v.Items[0].Date!.Month);
+        Assert.Equal(31, v.Items[0].Date!.Day);
+        Assert.Equal(1924, v.Items[0].Date!.EndYear);
+    }
 }

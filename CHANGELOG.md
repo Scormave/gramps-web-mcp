@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Date parser accepts ISO day/month ranges (`1914-08-31-1924-01-26`), open-ended forms (`1991-`, `-1722`), and richer `between` / `from`…`to` sides (year, `yyyy-MM`, or `yyyy-MM-dd`) for all write tools that use `AgentDateParser`
+
+### Fixed
+
+- Place hierarchy in `get_place` lists parent places only (subject place no longer duplicated from the header)
+- Empty enclosure and alternate-name dates no longer render as blank `[]` brackets in place output
+
+### Changed
+
+- Place tool docs and `get_input_guide` clarify `enclosedBy` (not `enclosedByHandles`) and dated alternate-name / enclosure examples
+
 ## [1.0.5] - 2026-07-06
 
 ### Added

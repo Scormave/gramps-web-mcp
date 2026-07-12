@@ -1,5 +1,6 @@
 using System.Text;
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
@@ -74,6 +75,9 @@ public static class PlaceFormatter
         return string.Join(", ", levels.Select(FormatHierarchyLevel));
     }
 
+    /// <summary>
+    /// Walks parent enclosure chain only (subject place is already shown in the PLACE header).
+    /// </summary>
     private static async Task<List<HierarchyLevel>> CollectHierarchyLevels(
         GrampsPlace place,
         GrampsApiClient client,
@@ -81,8 +85,25 @@ public static class PlaceFormatter
     {
         var levels = new List<HierarchyLevel>();
         var visited = new HashSet<string>(StringComparer.Ordinal);
-        var current = place;
-        GrampsDate? enclosureDate = null;
+        if (!string.IsNullOrEmpty(place.Handle))
+            visited.Add(place.Handle);
+
+        var parentRef = place.PlaceRefList?
+            .FirstOrDefault(r => !string.IsNullOrWhiteSpace(r.Ref));
+        if (parentRef?.Ref == null)
+            return levels;
+
+        GrampsDate? enclosureDate = parentRef.Date;
+        GrampsPlace? current;
+        try
+        {
+            current = await client.GetAsync<GrampsPlace>(
+                $"/api/places/{Uri.EscapeDataString(parentRef.Ref)}").ConfigureAwait(false);
+        }
+        catch
+        {
+            return levels;
+        }
 
         for (var depth = 0; depth < maxLevels && current != null; depth++)
         {
@@ -97,16 +118,16 @@ public static class PlaceFormatter
                 typeLabel,
                 enclosureDate));
 
-            var parentRef = current.PlaceRefList?
+            var nextRef = current.PlaceRefList?
                 .FirstOrDefault(r => !string.IsNullOrWhiteSpace(r.Ref));
-            if (parentRef?.Ref == null)
+            if (nextRef?.Ref == null)
                 break;
 
-            enclosureDate = parentRef.Date;
+            enclosureDate = nextRef.Date;
             try
             {
                 current = await client.GetAsync<GrampsPlace>(
-                    $"/api/places/{Uri.EscapeDataString(parentRef.Ref)}").ConfigureAwait(false);
+                    $"/api/places/{Uri.EscapeDataString(nextRef.Ref)}").ConfigureAwait(false);
             }
             catch
             {
@@ -124,8 +145,10 @@ public static class PlaceFormatter
             parts.Add($"[{level.Handle}]");
         if (!string.IsNullOrWhiteSpace(level.TypeLabel))
             parts.Add($"({level.TypeLabel})");
-        if (level.EnclosureDate != null)
-            parts.Add($"[{GrampsValueFormatter.FormatDate(level.EnclosureDate)}]");
+
+        var dateText = FormatOptionalDate(level.EnclosureDate);
+        if (dateText != null)
+            parts.Add($"[{dateText}]");
 
         return string.Join(" ", parts);
     }
@@ -142,8 +165,9 @@ public static class PlaceFormatter
                 continue;
 
             var line = $"  - {pref.Ref}";
-            if (pref.Date != null)
-                line += $" [{GrampsValueFormatter.FormatDate(pref.Date)}]";
+            var dateText = FormatOptionalDate(pref.Date);
+            if (dateText != null)
+                line += $" [{dateText}]";
             sb.AppendLine(line);
         }
     }
@@ -158,14 +182,23 @@ public static class PlaceFormatter
         {
             var value = alt.Value ?? "—";
             var lang = string.IsNullOrWhiteSpace(alt.Lang) ? null : alt.Lang;
-            var date = alt.Date != null ? GrampsValueFormatter.FormatDate(alt.Date) : null;
+            var dateText = FormatOptionalDate(alt.Date);
 
             var line = $"  - {value}";
             if (lang != null)
                 line += $" ({lang})";
-            if (date != null)
-                line += $" [{date}]";
+            if (dateText != null)
+                line += $" [{dateText}]";
             sb.AppendLine(line);
         }
+    }
+
+    private static string? FormatOptionalDate(GrampsDate? date)
+    {
+        if (GrampsDateHelpers.IsEmpty(date))
+            return null;
+
+        var formatted = GrampsValueFormatter.FormatDate(date!);
+        return string.IsNullOrWhiteSpace(formatted) ? null : formatted;
     }
 }

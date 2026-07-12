@@ -548,14 +548,20 @@ public sealed class GrampsResources
         year_ranges = new
         {
             dash_between_years = "1800-1850 (both parts 3-4 digit years)",
-            between = "between 1800 and 1850",
-            span = "from 1800 to 1850"
+            iso_day_range = "1914-08-31-1924-01-26 (yyyy-MM-dd-yyyy-MM-dd)",
+            iso_month_range = "1914-08-1924-01 (yyyy-MM-yyyy-MM)",
+            between = "between 1800 and 1850 (sides may also be yyyy-MM or yyyy-MM-dd)",
+            span = "from 1800 to 1850 (sides may also be yyyy-MM or yyyy-MM-dd)",
+            open_ended_year = "1991- (after), -1722 (before)",
+            open_ended_iso = "1924-01-26- (after), -1914-08-31 (before)"
         },
         tools = new
         {
             events = "create_event / update_event - parameter date (string)",
             citations = "create_citation / update_citation - date",
             media = "update_media - date",
+            places =
+                "create_place / update_place - enclosedBy dates and alternateNames[].date (parameter is enclosedBy, not enclosedByHandles)",
             persons =
                 "create_person / update_person - gender: Female, Male, or Unknown"
         },

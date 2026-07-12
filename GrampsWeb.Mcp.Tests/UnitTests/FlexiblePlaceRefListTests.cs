@@ -51,4 +51,25 @@ public class FlexiblePlaceRefListTests
         Assert.NotNull(v);
         Assert.Empty(v!.Items);
     }
+
+    [Fact]
+    public void Json_Object_With_OpenEnded_Date_Parses()
+    {
+        var v = Deserialize("""[{"ref":"h1","date":"1991-"}]""");
+        Assert.NotNull(v);
+        Assert.Single(v!.Items);
+        Assert.Equal("h1", v.Items[0].Ref);
+        Assert.Equal(2, v.Items[0].Date!.Modifier);
+        Assert.Equal(1991, v.Items[0].Date!.Year);
+    }
+
+    [Fact]
+    public void Shorthand_With_OpenEnded_Date_Parses()
+    {
+        var v = Deserialize("\"h1::1991-\"");
+        Assert.NotNull(v);
+        Assert.Single(v!.Items);
+        Assert.Equal(2, v.Items[0].Date!.Modifier);
+        Assert.Equal(1991, v.Items[0].Date!.Year);
+    }
 }

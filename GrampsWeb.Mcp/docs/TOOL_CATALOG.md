@@ -266,15 +266,15 @@ Create a place.  **Prerequisites:** `gramps://types`.
 | `placeType` | `string?` | no | — | Place type key |
 | `lat` | `string?` | no | — | Latitude |
 | `lon` | `string?` | no | — | Longitude |
-| `enclosedBy` | `FlexiblePlaceRefList?` | no | — | Parent place refs (handles and optional enclosure dates) |
+| `enclosedBy` | `FlexiblePlaceRefList?` | no | — | Parent place refs + optional dates (`enclosedBy`, not `enclosedByHandles`). Examples: `[{ref, date:"1708-1927"}]`, `HANDLE::1991-` |
 | `nameLang` | `string?` | no | — | Language code for primary name |
-| `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate place names (`value`, `lang`, `date`) |
+| `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate names `{value, lang?, date?}`. Dates: year ranges, ISO day ranges (`1914-08-31-1924-01-26`), open-ended `1991-` |
 | `noteHandles`, `mediaHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
 | `code` | `string?` | no | — | Place code / postal reference |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdatePlace`
-Update a place. Same fields as create (all optional). `enclosedBy` and `alternateNames` follow omit-to-keep / empty-to-clear list semantics.
+Update a place. Same fields as create (all optional). `enclosedBy` and `alternateNames` follow omit-to-keep / empty-to-clear list semantics. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates.
 
 ### D — `DeletePlace`
 Delete a place.  Blocked when events or child places reference it unless `force=true`.
