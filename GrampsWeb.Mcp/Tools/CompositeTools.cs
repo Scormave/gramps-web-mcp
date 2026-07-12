@@ -274,7 +274,7 @@ public static class CompositeTools
             }
 
             // Create event
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso);
+            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             var eventRequest = new CreateEventRequest
             {
                 Type = eventType,
@@ -513,7 +513,7 @@ public static class CompositeTools
     private static async Task<(string? Handle, string? GrampsId)> CreateEventAsync(
         string eventType, string? dateText, string? placeHandle, GrampsApiClient client)
     {
-        var dateRequest = AgentDateParser.ToDateRequestOrNull(dateText, DateComponentOrder.Iso);
+        var dateRequest = AgentDateParser.ToDateRequestOrNull(dateText, DateComponentOrder.Iso, DateIntervalPreference.Range);
         var request = new CreateEventRequest
         {
             Type = eventType,

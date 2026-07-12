@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Date parser accepts ISO day/month ranges (`1914-08-31-1924-01-26`), open-ended forms (`1991-`, `-1722`), and richer `between` / `from`…`to` sides (year, `yyyy-MM`, or `yyyy-MM-dd`) for all write tools that use `AgentDateParser`
+- Date parser accepts ISO day/month ranges, mixed-precision dashes (`1703-1914-08-31`), open-ended forms, richer `between` / `from`…`to` sides, and explicit `from DATE` / `to DATE` (Gramps From/To modifiers)
 
 ### Fixed
 
@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Ambiguous dash dates default to span/From for places; events, citations, and media use range/After via `DateIntervalPreference`
 - Place tool docs and `get_input_guide` clarify `enclosedBy` (not `enclosedByHandles`) and dated alternate-name / enclosure examples
 
 ## [1.0.5] - 2026-07-06

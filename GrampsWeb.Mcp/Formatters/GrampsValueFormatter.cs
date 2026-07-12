@@ -24,7 +24,7 @@ public static class GrampsValueFormatter
             return string.IsNullOrWhiteSpace(date.Text) ? "Unknown date" : date.Text.Trim();
 
         if (date.Day == 0 && date.Month == 0 && date.Year == 0 && !date.Slash
-            && date.Modifier is not (4 or 5))
+            && date.Modifier is not (4 or 5 or 7 or 8))
             return string.IsNullOrWhiteSpace(date.Text) ? "Unknown date" : date.Text.Trim();
 
         int day = date.Day, month = date.Month, year = date.Year;
@@ -39,6 +39,8 @@ public static class GrampsValueFormatter
             3 => $"about {formattedDate}",
             4 => FormatDateRange(date),
             5 => FormatDateSpan(date),
+            7 => $"from {formattedDate}",
+            8 => $"to {formattedDate}",
             _ => formattedDate
         };
     }

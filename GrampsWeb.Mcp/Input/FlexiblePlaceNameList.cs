@@ -14,7 +14,7 @@ public sealed class FlexiblePlaceNameList
         "Alternate place names: array of strings (\"Old Name\" or \"Old Name::de\"), " +
         "simple objects {value, lang?, date?}, or JSON array. " +
         "Dated example: [{value:\"New York\", date:\"1914-08-31-1924-01-26\"}]. " +
-        "Dates use ISO/year/range syntax (see get_input_guide).";
+        "Place dashes are spans (from…to); open \"1991-\" / \"from 1991\" are From (see get_input_guide).";
 
     public required PlaceNameRequest[] Items { get; init; }
 

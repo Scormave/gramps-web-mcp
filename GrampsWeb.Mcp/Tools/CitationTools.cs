@@ -80,7 +80,7 @@ public static class CitationTools
 
             var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
 
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso);
+            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
 
             var request = new CreateCitationRequest
             {
@@ -153,7 +153,7 @@ public static class CitationTools
                 4);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range)
                 : GrampsRequestMapping.ToDateRequestOrNull(citation.Date);
 
             var updateRequest = new CreateCitationRequest

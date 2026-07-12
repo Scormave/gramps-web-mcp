@@ -32,6 +32,7 @@ public class FlexiblePlaceRefListTests
         Assert.NotNull(v.Items[0].Date);
         Assert.Equal(1920, v.Items[0].Date!.Year);
         Assert.Equal(1950, v.Items[0].Date!.EndYear);
+        Assert.Equal(5, v.Items[0].Date!.Modifier);
     }
 
     [Fact]
@@ -59,7 +60,7 @@ public class FlexiblePlaceRefListTests
         Assert.NotNull(v);
         Assert.Single(v!.Items);
         Assert.Equal("h1", v.Items[0].Ref);
-        Assert.Equal(2, v.Items[0].Date!.Modifier);
+        Assert.Equal(7, v.Items[0].Date!.Modifier);
         Assert.Equal(1991, v.Items[0].Date!.Year);
     }
 
@@ -69,7 +70,7 @@ public class FlexiblePlaceRefListTests
         var v = Deserialize("\"h1::1991-\"");
         Assert.NotNull(v);
         Assert.Single(v!.Items);
-        Assert.Equal(2, v.Items[0].Date!.Modifier);
+        Assert.Equal(7, v.Items[0].Date!.Modifier);
         Assert.Equal(1991, v.Items[0].Date!.Year);
     }
 }

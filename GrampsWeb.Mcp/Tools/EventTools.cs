@@ -150,7 +150,7 @@ public static class EventTools
             var typeError = await TypeCache.ValidateTypeAsync(eventType, "event_types", client);
             if (typeError != null) throw McpToolErrors.ValidationError(typeError);
 
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso);
+            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             var resolvedPlaceHandle = placeHandle is null
                 ? null
                 : await HandleResolver.ResolveToHandleAsync(placeHandle, client, "places");
@@ -229,7 +229,7 @@ public static class EventTools
                 return NotFoundHelper.NotFoundMessage("Event", handle);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range)
                 : GrampsRequestMapping.ToDateRequestOrNull(evt.Date);
 
             var updateRequest = new CreateEventRequest

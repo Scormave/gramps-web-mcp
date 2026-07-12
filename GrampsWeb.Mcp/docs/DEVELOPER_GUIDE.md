@@ -311,17 +311,20 @@ events, citations, media, composites, place enclosure, and place alternate names
 - ISO dates: `2024-03-15`, `2024-03`, `2024`
 - Slash/dot triplets: `15/03/2024` (order controlled by `DateComponentOrder`; rejected under default `Iso`)
 - Modifiers: `about 1950`, `before 1900`, `after 2000`, `circa 1850`
-- Year ranges: `1800-1850` (dash between 3–4 digit years)
-- ISO day/month ranges: `1914-08-31-1924-01-26`, `1914-08-1924-01`
-- Open-ended: `1991-` / `1924-01-26-` (After), `-1722` / `-1914-08-31` (Before)
-- `between` / `from`…`to`: sides may be year, `yyyy-MM`, or `yyyy-MM-dd`
-  (e.g. `between 1914-08-31 and 1924-01-26`, `from 1800 to 1850`)
+- Explicit open span: `from 1991`, `to 1917` → Gramps From (7) / To (8)
+- Closed dashes (`1800-1850`, `1914-08-31-1924-01-26`, mixed `1703-1914-08-31`):
+  default **span** (5); events/citations/media pass **range** (4) via `DateIntervalPreference`
+- Open dashes (`1991-`, `-1722`): default **From/To** (7/8); with Range preference → After/Before (2/1)
+- `between A and B` → always range (4); `from A to B` → always span (5)
 - Text dates: anything unparseable → stored as text-only date (modifier 6)
 
 `DateComponentOrder` enum controls ambiguous date parsing:
 - `Iso` — hyphenated ISO only for full dates (default)
 - `DayMonthYear` — DD/MM/YYYY
 - `MonthDayYear` — MM/DD/YYYY
+
+`DateIntervalPreference` controls only ambiguous dashes (places default to Span;
+events, citations, and media use Range).
 
 `GrampsDateHelpers.IsEmpty` detects empty/zero date objects from the API so
 mappers and formatters can omit them instead of emitting blank `[]` brackets.
@@ -416,6 +419,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Add a test fixture | `GrampsWeb.Mcp.Tests/Fixtures/{name}.json` |
 | Update contract mapping | `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` |
 | Parse dates from agent input | `Dates/AgentDateParser.cs` |
+| Date interval preference (span vs range) | `Dates/DateIntervalPreference.cs` |
 | Detect empty Gramps dates | `Dates/GrampsDateHelpers.cs` |
 | Parse gender/confidence enums | `Tools/Parsing/` |
 | Look up default type labels | `Formatters/GrampsDefaultTypeLabels.cs` |

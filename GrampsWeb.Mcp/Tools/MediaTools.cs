@@ -128,7 +128,7 @@ public static class MediaTools
                 return NotFoundHelper.NotFoundMessage("Media", handle);
 
             var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range)
                 : GrampsRequestMapping.ToDateRequestOrNull(media.Date);
 
             var updateRequest = new CreateMediaRequest

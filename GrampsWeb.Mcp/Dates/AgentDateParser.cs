@@ -12,6 +12,13 @@ namespace GrampsWeb.Mcp.Dates;
 /// </summary>
 public static class AgentDateParser
 {
+    private const int ModBefore = 1;
+    private const int ModAfter = 2;
+    private const int ModRange = 4;
+    private const int ModSpan = 5;
+    private const int ModFrom = 7;
+    private const int ModTo = 8;
+
     private static readonly Regex IsoFull = new(
         @"^(?<y>\d{4})-(?<m>\d{1,2})-(?<d>\d{1,2})$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -45,6 +52,14 @@ public static class AgentDateParser
         @"^from\s+(?<a>.+?)\s+to\s+(?<b>.+)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex FromOnly = new(
+        @"^from\s+(?<a>.+)$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ToOnly = new(
+        @"^to\s+(?<a>.+)$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex OpenEndedYearAfter = new(
         @"^(?<y>\d{3,4})\s*[-–]\s*$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -70,7 +85,10 @@ public static class AgentDateParser
     /// Throws <see cref="McpException"/> when <paramref name="order"/> is <see cref="DateComponentOrder.Iso"/>
     /// but the value looks like a day/month/year triplet that is not ISO-8601.
     /// </summary>
-    public static DateRequest? ToDateRequestOrNull(string? input, DateComponentOrder order = DateComponentOrder.Iso)
+    public static DateRequest? ToDateRequestOrNull(
+        string? input,
+        DateComponentOrder order = DateComponentOrder.Iso,
+        DateIntervalPreference intervalPreference = DateIntervalPreference.Span)
     {
         if (string.IsNullOrWhiteSpace(input))
             return null;
@@ -83,7 +101,7 @@ public static class AgentDateParser
             && TryParseSingleCalendarSide(betweenMatch.Groups["a"].Value.Trim(), out var betweenStart)
             && TryParseSingleCalendarSide(betweenMatch.Groups["b"].Value.Trim(), out var betweenEnd))
         {
-            return RangeCalendar(betweenStart, betweenEnd);
+            return IntervalCalendar(betweenStart, betweenEnd, DateIntervalPreference.Range);
         }
 
         var fromToMatch = FromToParts.Match(working);
@@ -91,7 +109,21 @@ public static class AgentDateParser
             && TryParseSingleCalendarSide(fromToMatch.Groups["a"].Value.Trim(), out var spanStart)
             && TryParseSingleCalendarSide(fromToMatch.Groups["b"].Value.Trim(), out var spanEnd))
         {
-            return SpanCalendar(spanStart, spanEnd);
+            return IntervalCalendar(spanStart, spanEnd, DateIntervalPreference.Span);
+        }
+
+        var fromOnly = FromOnly.Match(working);
+        if (fromOnly.Success
+            && TryParseSingleCalendarSide(fromOnly.Groups["a"].Value.Trim(), out var fromSide))
+        {
+            return CalendarSideDate(ModFrom, fromSide);
+        }
+
+        var toOnly = ToOnly.Match(working);
+        if (toOnly.Success
+            && TryParseSingleCalendarSide(toOnly.Groups["a"].Value.Trim(), out var toSide))
+        {
+            return CalendarSideDate(ModTo, toSide);
         }
 
         var isoFullRange = IsoFullDashRange.Match(working);
@@ -105,9 +137,10 @@ public static class AgentDateParser
             var y2 = int.Parse(isoFullRange.Groups["y2"].Value, CultureInfo.InvariantCulture);
             ValidateDayMonth(d1, m1);
             ValidateDayMonth(d2, m2);
-            return RangeCalendar(
+            return IntervalCalendar(
                 new CalendarSide(d1, m1, y1),
-                new CalendarSide(d2, m2, y2));
+                new CalendarSide(d2, m2, y2),
+                intervalPreference);
         }
 
         var isoMonthRange = IsoMonthDashRange.Match(working);
@@ -119,9 +152,10 @@ public static class AgentDateParser
             var y2 = int.Parse(isoMonthRange.Groups["y2"].Value, CultureInfo.InvariantCulture);
             if (m1 is < 1 or > 12 || m2 is < 1 or > 12)
                 throw McpToolErrors.ValidationError("Invalid month in date (use 1–12).");
-            return RangeCalendar(
+            return IntervalCalendar(
                 new CalendarSide(0, m1, y1),
-                new CalendarSide(0, m2, y2));
+                new CalendarSide(0, m2, y2),
+                intervalPreference);
         }
 
         var dash = YearDashYear.Match(working);
@@ -129,10 +163,16 @@ public static class AgentDateParser
         {
             var y1 = int.Parse(dash.Groups["a"].Value, CultureInfo.InvariantCulture);
             var y2 = int.Parse(dash.Groups["b"].Value, CultureInfo.InvariantCulture);
-            return RangeYears(y1, y2);
+            return IntervalCalendar(
+                new CalendarSide(0, 0, y1),
+                new CalendarSide(0, 0, y2),
+                intervalPreference);
         }
 
-        if (TryParseOpenEnded(working, out var openEnded))
+        if (TryParseMixedPrecisionDash(working, intervalPreference, out var mixed))
+            return mixed;
+
+        if (TryParseOpenEnded(working, intervalPreference, out var openEnded))
             return openEnded;
 
         if (TryParseIso(working, modifier, out var iso))
@@ -170,9 +210,43 @@ public static class AgentDateParser
         return TextOnlyDate(raw);
     }
 
-    private static bool TryParseOpenEnded(string working, out DateRequest? req)
+    private static bool TryParseMixedPrecisionDash(
+        string working,
+        DateIntervalPreference preference,
+        out DateRequest? req)
     {
         req = null;
+        for (var i = 1; i < working.Length - 1; i++)
+        {
+            var c = working[i];
+            if (c is not ('-' or '–'))
+                continue;
+
+            var left = working[..i].Trim();
+            var right = working[(i + 1)..].Trim();
+            if (left.Length == 0 || right.Length == 0)
+                continue;
+
+            if (!TryParseSingleCalendarSide(left, out var start))
+                continue;
+            if (!TryParseSingleCalendarSide(right, out var end))
+                continue;
+
+            req = IntervalCalendar(start, end, preference);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParseOpenEnded(
+        string working,
+        DateIntervalPreference preference,
+        out DateRequest? req)
+    {
+        req = null;
+        var openStartMod = preference == DateIntervalPreference.Range ? ModAfter : ModFrom;
+        var openEndMod = preference == DateIntervalPreference.Range ? ModBefore : ModTo;
 
         var isoAfter = OpenEndedIsoAfter.Match(working);
         if (isoAfter.Success)
@@ -187,8 +261,8 @@ public static class AgentDateParser
             if (d > 0)
                 ValidateDayMonth(d, m);
             req = d > 0
-                ? SingleCalendarDate(2, d, m, y)
-                : new DateRequest { Calendar = 0, Modifier = 2, Quality = 0, Month = m, Year = y };
+                ? SingleCalendarDate(openStartMod, d, m, y)
+                : new DateRequest { Calendar = 0, Modifier = openStartMod, Quality = 0, Month = m, Year = y };
             return true;
         }
 
@@ -205,8 +279,8 @@ public static class AgentDateParser
             if (d > 0)
                 ValidateDayMonth(d, m);
             req = d > 0
-                ? SingleCalendarDate(1, d, m, y)
-                : new DateRequest { Calendar = 0, Modifier = 1, Quality = 0, Month = m, Year = y };
+                ? SingleCalendarDate(openEndMod, d, m, y)
+                : new DateRequest { Calendar = 0, Modifier = openEndMod, Quality = 0, Month = m, Year = y };
             return true;
         }
 
@@ -214,7 +288,7 @@ public static class AgentDateParser
         if (yearAfter.Success)
         {
             var y = int.Parse(yearAfter.Groups["y"].Value, CultureInfo.InvariantCulture);
-            req = YearDate(2, y);
+            req = YearDate(openStartMod, y);
             return true;
         }
 
@@ -222,7 +296,7 @@ public static class AgentDateParser
         if (yearBefore.Success)
         {
             var y = int.Parse(yearBefore.Groups["y"].Value, CultureInfo.InvariantCulture);
-            req = YearDate(1, y);
+            req = YearDate(openEndMod, y);
             return true;
         }
 
@@ -271,9 +345,9 @@ public static class AgentDateParser
     {
         var lower = raw;
         if (lower.StartsWith("before ", StringComparison.OrdinalIgnoreCase))
-            return (raw.Substring(7).Trim(), 1);
+            return (raw.Substring(7).Trim(), ModBefore);
         if (lower.StartsWith("after ", StringComparison.OrdinalIgnoreCase))
-            return (raw.Substring(6).Trim(), 2);
+            return (raw.Substring(6).Trim(), ModAfter);
         if (lower.StartsWith("about ", StringComparison.OrdinalIgnoreCase))
             return (raw.Substring(6).Trim(), 3);
         if (lower.StartsWith("circa ", StringComparison.OrdinalIgnoreCase))
@@ -344,26 +418,23 @@ public static class AgentDateParser
         Slash = false
     };
 
-    private static DateRequest RangeYears(int y1, int y2) =>
-        RangeCalendar(new CalendarSide(0, 0, y1), new CalendarSide(0, 0, y2));
-
-    private static DateRequest RangeCalendar(CalendarSide start, CalendarSide end) => new()
+    private static DateRequest CalendarSideDate(int modifier, CalendarSide side) => new()
     {
         Calendar = 0,
-        Modifier = 4,
+        Modifier = modifier,
         Quality = 0,
-        Day = start.Day,
-        Month = start.Month,
-        Year = start.Year,
-        EndDay = end.Day,
-        EndMonth = end.Month,
-        EndYear = end.Year
+        Day = side.Day,
+        Month = side.Month,
+        Year = side.Year
     };
 
-    private static DateRequest SpanCalendar(CalendarSide start, CalendarSide end) => new()
+    private static DateRequest IntervalCalendar(
+        CalendarSide start,
+        CalendarSide end,
+        DateIntervalPreference preference) => new()
     {
         Calendar = 0,
-        Modifier = 5,
+        Modifier = preference == DateIntervalPreference.Range ? ModRange : ModSpan,
         Quality = 0,
         Day = start.Day,
         Month = start.Month,

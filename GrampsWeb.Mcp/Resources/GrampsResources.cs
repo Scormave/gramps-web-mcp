@@ -547,21 +547,26 @@ public sealed class GrampsResources
         },
         year_ranges = new
         {
+            dash_default =
+                "Ambiguous dashes are spans (from…to) for places; events/citations/media treat dashes as ranges (between…and)",
             dash_between_years = "1800-1850 (both parts 3-4 digit years)",
             iso_day_range = "1914-08-31-1924-01-26 (yyyy-MM-dd-yyyy-MM-dd)",
             iso_month_range = "1914-08-1924-01 (yyyy-MM-yyyy-MM)",
-            between = "between 1800 and 1850 (sides may also be yyyy-MM or yyyy-MM-dd)",
-            span = "from 1800 to 1850 (sides may also be yyyy-MM or yyyy-MM-dd)",
-            open_ended_year = "1991- (after), -1722 (before)",
-            open_ended_iso = "1924-01-26- (after), -1914-08-31 (before)"
+            mixed_precision = "1703-1914-08-31 (year to full ISO, or reverse)",
+            between = "between 1800 and 1850 (always range; sides may be yyyy-MM or yyyy-MM-dd)",
+            span = "from 1800 to 1850 (always span; sides may be yyyy-MM or yyyy-MM-dd)",
+            open_ended_year =
+                "1991- / from 1991 (From for places; After for events/citations/media dashes); -1722 / to 1722 (To vs Before)",
+            open_ended_iso = "1924-01-26- or from 1924-01-26; -1914-08-31 or to 1914-08-31",
+            explicit_from_to = "from DATE and to DATE always map to Gramps From/To modifiers"
         },
         tools = new
         {
-            events = "create_event / update_event - parameter date (string)",
-            citations = "create_citation / update_citation - date",
-            media = "update_media - date",
+            events = "create_event / update_event - date (dashes → range/After)",
+            citations = "create_citation / update_citation - date (dashes → range/After)",
+            media = "update_media - date (dashes → range/After)",
             places =
-                "create_place / update_place - enclosedBy dates and alternateNames[].date (parameter is enclosedBy, not enclosedByHandles)",
+                "create_place / update_place - enclosedBy / alternateNames dates (dashes → span/From; parameter is enclosedBy, not enclosedByHandles)",
             persons =
                 "create_person / update_person - gender: Female, Male, or Unknown"
         },
