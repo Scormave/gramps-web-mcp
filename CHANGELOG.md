@@ -6,10 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-07-15
+
 ### Added
 
+- Place hierarchy in `get_place` (cycle-safe walk up to 6 levels), dated parent enclosure refs, and alternate names with language/date on create and update
 - Date parser accepts ISO day/month ranges, mixed-precision dashes (`1703-1914-08-31`), open-ended forms, richer `between` / `from`…`to` sides, and explicit `from DATE` / `to DATE` (Gramps From/To modifiers)
 - Date parser accepts English month forms matching tool output (`1 Jul 1919`, `July 1919`, `from 1 Oct 1929 to 27 Sep 1937`)
+- Media list and search rows show the Gramps description alongside the filename when both are present
+- GitHub Pages landing site (`site/`) with deploy workflow
 
 ### Fixed
 
@@ -19,7 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Ambiguous dash dates default to span/From for places; events, citations, and media use range/After via `DateIntervalPreference`
-- Place tool docs and `get_input_guide` clarify `enclosedBy` (not `enclosedByHandles`) and dated alternate-name / enclosure examples
+- Place write inputs rename `enclosedByHandles` to `enclosedBy` (handles, objects, or `HANDLE::date`); empty-list semantics: omit = keep, `[]` = clear
+- Place tool docs and `get_input_guide` clarify `enclosedBy` and dated alternate-name / enclosure examples
 - Unrecognized agent date strings now fail validation instead of being stored as Gramps text-only dates
 
 ## [1.0.5] - 2026-07-06
@@ -108,7 +114,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.2...v1.0.3
