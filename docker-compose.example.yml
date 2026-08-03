@@ -64,6 +64,7 @@ services:
       GRAMPS_PASSWORD: ${GRAMPS_PASSWORD}
       GRAMPS_TREE_ID: ${GRAMPS_TREE_ID}
       GRAMPS_READ_ONLY: ${GRAMPS_READ_ONLY:-false}
+      MCP_API_KEY: ${MCP_API_KEY}
     depends_on:
       - grampsweb
     healthcheck:

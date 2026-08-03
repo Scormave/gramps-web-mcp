@@ -21,8 +21,8 @@ Registry publishing, so keep the version metadata aligned before tagging.
 - Check whether the Docker runtime surface changed:
   - Update `Dockerfile` comments, labels, exposed ports, health check, or default
     environment variables if needed.
-  - Update `docker-compose.example.yml`, `.env.example`, and `README.md` if new
-    runtime configuration is user-visible.
+  - Update `docker-compose.example.yml`, `.env.example`, `README.md`, and
+    `site/index.html` if new runtime configuration is user-visible.
 - Check whether the MCPB surface changed:
   - Update `mcpb/manifest.template.json` for new prompts, tools, user config,
     compatibility, privacy policy links, or descriptions.

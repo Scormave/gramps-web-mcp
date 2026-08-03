@@ -15,14 +15,15 @@ try
 {
     var config = GrampsConfig.FromEnvironment();
     var transport = McpTransportConfig.FromEnvironment();
+    var auth = McpAuthConfig.FromEnvironment(transport.Mode);
 
     if (transport.Mode == McpListenMode.Stdio)
     {
-        await RunStdioAsync(config);
+        await RunStdioAsync(config, auth);
     }
     else
     {
-        await RunHttpAsync(args, config, transport);
+        await RunHttpAsync(args, config, transport, auth);
     }
 }
 catch (InvalidOperationException ex) when (ex.Message.Contains("Configuration validation failed"))
@@ -36,7 +37,7 @@ catch (Exception ex)
     Environment.Exit(1);
 }
 
-static async Task RunStdioAsync(GrampsConfig config)
+static async Task RunStdioAsync(GrampsConfig config, McpAuthConfig auth)
 {
     var builder = Host.CreateEmptyApplicationBuilder(settings: null);
 
@@ -52,10 +53,17 @@ static async Task RunStdioAsync(GrampsConfig config)
         .WithResources<GrampsResources>()
         .WithPrompts<GrampsPrompts>();
 
-    await builder.Build().RunAsync();
+    var host = builder.Build();
+
+    if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("MCP_API_KEY")))
+    {
+        host.LogIgnoredApiKeyInStdio();
+    }
+
+    await host.RunAsync();
 }
 
-static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportConfig transport)
+static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportConfig transport, McpAuthConfig auth)
 {
     var builder = WebApplication.CreateBuilder(args);
 
@@ -63,7 +71,8 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
 
     builder.Services
         .AddGrampsMcpCore(config)
-        .AddGrampsStartupCheck(transport);
+        .AddGrampsStartupCheck(transport)
+        .AddGrampsMcpAuth(auth);
 
     builder.Services
         .AddMcpServer()
@@ -82,8 +91,8 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
         .WithPrompts<GrampsPrompts>();
 
     var app = builder.Build();
-    app.MapHealthEndpoint();
-    app.MapMcp(transport.MapPath);
+    app.MapGrampsMcpEndpoints(transport, auth);
+    app.LogAuthStartupStatus(auth);
     await app.RunAsync();
 }
 

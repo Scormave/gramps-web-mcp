@@ -420,6 +420,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Configure API connection | `Config/GrampsConfig.cs` (env vars) |
 | Configure media resource safeguards | `Config/GrampsConfig.cs` (`GRAMPS_MEDIA_*`) |
 | Configure transport | `Config/McpTransportConfig.cs` (env vars) |
+| Configure HTTP auth | `Config/McpAuthConfig.cs` + `Auth/` |
 | Add a test fixture | `GrampsWeb.Mcp.Tests/Fixtures/{name}.json` |
 | Update contract mapping | `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` |
 | Parse dates from agent input | `Dates/AgentDateParser.cs` |

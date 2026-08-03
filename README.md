@@ -44,7 +44,8 @@ instance using well-known demo credentials (`owner` / `owner`):
 ./run-local-server.sh
 ```
 
-The server starts with HTTP transport at `http://127.0.0.1:8080/mcp`.
+The server starts with HTTP transport at `http://127.0.0.1:8080/mcp`. No API key is
+required when binding to loopback only.
 
 ### Docker
 
@@ -61,6 +62,7 @@ docker run -p 8080:8080 \
   -e GRAMPS_USERNAME=your-user \
   -e GRAMPS_PASSWORD=your-password \
   -e GRAMPS_TREE_ID=your-tree-uuid \
+  -e MCP_API_KEY=your-secret-api-key \
   ghcr.io/scormave/gramps-web-mcp:latest
 ```
 
@@ -79,6 +81,7 @@ docker run -p 8080:8080 \
   -e GRAMPS_USERNAME=your-user \
   -e GRAMPS_PASSWORD=your-password \
   -e GRAMPS_TREE_ID=your-tree-uuid \
+  -e MCP_API_KEY=your-secret-api-key \
   -e GRAMPS_READ_ONLY=true \
   ghcr.io/scormave/gramps-web-mcp:latest
 ```
@@ -97,7 +100,8 @@ Basic setup:
 2. Search for `gramps-web-mcp` and install the template.
 3. Set the Gramps Web connection values:
    `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and
-   `GRAMPS_TREE_ID`.
+   `GRAMPS_TREE_ID`. Set `MCP_API_KEY` when the MCP port is reachable from
+   other machines on your network.
 4. Keep the default container port `8080`, or map it to another host port.
 5. Start the container and check `/health`; it returns HTTP 200 once the service
    can authenticate to Gramps Web, with a minimal JSON response by default.
@@ -178,6 +182,16 @@ To run a stdio server in read-only mode, add `"GRAMPS_READ_ONLY": "true"` to `en
 **HTTP** (remote / Docker):
 
 Point your MCP client at `http://host:8080/mcp` with Streamable HTTP transport.
+When `MCP_API_KEY` is set, send it as `Authorization: Bearer <key>` or
+`X-Api-Key: <key>` on every MCP request.
+
+```bash
+curl -X POST http://host:8080/mcp \
+  -H "Authorization: Bearer $MCP_API_KEY" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}},"id":1}'
+```
 
 Vision-capable agents can read opt-in media through tools (`GetMediaThumbnail`,
 `GetMediaFile`) or through binary MCP resources such as
@@ -237,6 +251,27 @@ Set `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and `GRAMPS_TREE_ID`
 | `MCP_PATH` | URL prefix for MCP endpoints | `/mcp` |
 | `MCP_STATELESS` | Stateless mode for Streamable HTTP | `true` |
 | `MCP_ENABLE_LEGACY_SSE` | Expose legacy `/sse` with `http` transport | `false` |
+| `MCP_API_KEY` | Shared secret for HTTP/SSE transport (comma-separated for rotation; min 16 characters) | — |
+
+### HTTP authentication
+
+When `MCP_API_KEY` is set, all MCP HTTP/SSE endpoints require the key on every
+request. `GET /health` stays anonymous for Docker and load-balancer probes.
+
+Generate a key:
+
+```bash
+openssl rand -base64 32
+```
+
+Without a key, the server still starts (backward compatible). If the listen
+address is not loopback-only, a warning is logged recommending that you set
+`MCP_API_KEY`, use a reverse proxy with its own authentication, or bind to
+`127.0.0.1` for local use only.
+
+Inside Docker, `ASPNETCORE_URLS` is typically `http://0.0.0.0:8080`, so the
+warning appears even when the host publishes the port on `127.0.0.1` only.
+That is expected when external access is already restricted.
 
 ## Development
 

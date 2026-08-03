@@ -611,6 +611,7 @@ docker run -p 8080:8080 \
   -e GRAMPS_USERNAME=your-user \
   -e GRAMPS_PASSWORD=your-password \
   -e GRAMPS_TREE_ID=your-tree-uuid \
+  -e MCP_API_KEY=your-secret-api-key \
   ghcr.io/scormave/gramps-web-mcp:latest</code></pre>
             </div>
             <p class="mt-3 text-sm text-slate-500">Multi-arch images (<code class="text-slate-400">amd64</code>, <code class="text-slate-400">arm64</code>). Health check at <code class="text-slate-400">GET /health</code>. MCP endpoint at <code class="text-slate-400">/mcp</code>.</p>
@@ -669,7 +670,7 @@ docker run -p 8080:8080 \
   }
 }</code></pre>
             </div>
-            <p class="mt-3 text-sm text-slate-500">For HTTP transport, point your client at <code class="text-slate-400">http://host:8080/mcp</code>. Add <code class="text-slate-400">"GRAMPS_READ_ONLY": "true"</code> for a safer first session.</p>
+            <p class="mt-3 text-sm text-slate-500">For HTTP transport, point your client at <code class="text-slate-400">http://host:8080/mcp</code> and send <code class="text-slate-400">Authorization: Bearer &lt;MCP_API_KEY&gt;</code> when the key is set. Add <code class="text-slate-400">"GRAMPS_READ_ONLY": "true"</code> for a safer first session.</p>
           </div>
         </div>
         <style>
@@ -704,6 +705,7 @@ docker run -p 8080:8080 \
               <tr><td class="px-4 py-3 text-teal-300">GRAMPS_USERNAME</td><td class="px-4 py-3 font-sans text-slate-400">API user name</td></tr>
               <tr><td class="px-4 py-3 text-teal-300">GRAMPS_PASSWORD</td><td class="px-4 py-3 font-sans text-slate-400">API password or token</td></tr>
               <tr><td class="px-4 py-3 text-teal-300">GRAMPS_TREE_ID</td><td class="px-4 py-3 font-sans text-slate-400">Tree UUID on that server</td></tr>
+              <tr><td class="px-4 py-3 text-teal-300">MCP_API_KEY</td><td class="px-4 py-3 font-sans text-slate-400">Shared secret for HTTP/SSE MCP (recommended when port is network-reachable)</td></tr>
               <tr><td class="px-4 py-3 text-gold-300">GRAMPS_READ_ONLY</td><td class="px-4 py-3 font-sans text-slate-400">Block mutations while keeping tools visible</td></tr>
             </tbody>
           </table>

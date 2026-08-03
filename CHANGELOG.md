@@ -6,7 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [1.0.6] - 2026-07-15
+### Added
+
+- Optional HTTP/SSE authentication via `MCP_API_KEY` (Bearer or `X-Api-Key` header); startup warning when MCP is reachable on a non-loopback bind without a key
 
 ### Added
 

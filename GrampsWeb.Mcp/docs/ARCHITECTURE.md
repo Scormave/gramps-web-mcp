@@ -28,6 +28,7 @@ gramps-web-mcp.sln
 │   ├── Program.cs          — entry point, transport selection
 │   ├── Client/             — HTTP client for Gramps Web API
 │   ├── Config/             — environment-based configuration
+│   ├── Auth/               — HTTP/SSE API key authentication
 │   ├── Dates/              — date parsing for agent-friendly input
 │   ├── Exceptions/         — domain exceptions
 │   ├── Formatters/         — model → human-readable text
@@ -71,7 +72,8 @@ environment variable.  See `McpTransportConfig` for details.
 | `sse` | Legacy MCP SSE (`GET /sse` + `POST /message`) | Stateful only |
 
 `Program.cs` selects between `RunStdioAsync` (empty host) and `RunHttpAsync`
-(ASP.NET Core + `MapMcp`).
+(ASP.NET Core + `MapGrampsMcpEndpoints`). HTTP mode optionally gates MCP routes
+with `MCP_API_KEY` via `RequireAuthorization()`; `GET /health` stays anonymous.
 
 ## Configuration
 
@@ -96,6 +98,7 @@ Read-only mode can also be enabled with a server CLI argument.
 | `MCP_PATH` | URL prefix for MCP endpoints | `/mcp` |
 | `MCP_STATELESS` | Stateless mode for Streamable HTTP | `true` |
 | `MCP_ENABLE_LEGACY_SSE` | Expose legacy `/sse` with `http` transport | `false` |
+| `MCP_API_KEY` | Shared secret for HTTP/SSE transport | — |
 
 ### Optional (runtime mode)
 
