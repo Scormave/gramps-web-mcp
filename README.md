@@ -73,6 +73,12 @@ response is minimal by default: `{ "status": "healthy" }` or
 `{ "status": "unhealthy" }`. Startup logs include a line such as
 `Connected to Gramps Web at …` once the API is reachable.
 
+The image defaults to Streamable HTTP (`MCP_TRANSPORT=http`) on port 8080, which
+is what the commands above use. Clients that spawn the container themselves
+(such as MCP Registry installs) instead run it over stdio with
+`-e MCP_TRANSPORT=stdio` and stdin kept open (`docker run -i`); that is the mode
+declared in `server.json`.
+
 For read-only mode, add `-e GRAMPS_READ_ONLY=true`:
 
 ```bash
@@ -137,6 +143,8 @@ bundle for your platform:
 | macOS Apple Silicon | `gramps-web-mcp-claude-desktop-osx-arm64-v*.mcpb` |
 | macOS Intel | `gramps-web-mcp-claude-desktop-osx-x64-v*.mcpb` |
 | Windows x64 | `gramps-web-mcp-claude-desktop-win-x64-v*.mcpb` |
+| Linux x64 | `gramps-web-mcp-claude-desktop-linux-x64-v*.mcpb` |
+| Linux ARM64 | `gramps-web-mcp-claude-desktop-linux-arm64-v*.mcpb` |
 
 1. Download the `.mcpb` file for your OS from the latest release.
 2. Double-click it, or drag it into the Claude Desktop window.
@@ -152,7 +160,7 @@ See [`mcpb/README.md`](mcpb/README.md) for packaging details and
 To build a bundle locally:
 
 ```bash
-./scripts/pack-mcpb.sh osx-arm64   # or osx-x64, win-x64
+./scripts/pack-mcpb.sh osx-arm64   # or osx-x64, win-x64, linux-x64, linux-arm64
 ```
 
 ### MCP client configuration (manual)

@@ -59,12 +59,21 @@ services:
     ports:
       - "8080:8080"
     environment:
-      GRAMPS_API_URL: http://grampsweb:5000
+      GRAMPS_API_URL: ${GRAMPS_API_URL:-http://grampsweb:5000}
       GRAMPS_USERNAME: ${GRAMPS_USERNAME}
       GRAMPS_PASSWORD: ${GRAMPS_PASSWORD}
       GRAMPS_TREE_ID: ${GRAMPS_TREE_ID}
       GRAMPS_READ_ONLY: ${GRAMPS_READ_ONLY:-false}
-      MCP_API_KEY: ${MCP_API_KEY}
+      MCP_API_KEY: ${MCP_API_KEY:-}
+      GRAMPS_MEDIA_RESOURCES_ENABLED: ${GRAMPS_MEDIA_RESOURCES_ENABLED:-false}
+      GRAMPS_MEDIA_MAX_BYTES: ${GRAMPS_MEDIA_MAX_BYTES:-5242880}
+      GRAMPS_MEDIA_ALLOWED_MIME_TYPES: ${GRAMPS_MEDIA_ALLOWED_MIME_TYPES:-image/jpeg,image/png,image/webp,image/avif,application/pdf}
+      GRAMPS_MEDIA_ALLOW_PRIVATE: ${GRAMPS_MEDIA_ALLOW_PRIVATE:-false}
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-http}
+      ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://0.0.0.0:8080}
+      MCP_PATH: ${MCP_PATH:-/mcp}
+      MCP_STATELESS: ${MCP_STATELESS:-true}
+      MCP_ENABLE_LEGACY_SSE: ${MCP_ENABLE_LEGACY_SSE:-false}
     depends_on:
       - grampsweb
     healthcheck:

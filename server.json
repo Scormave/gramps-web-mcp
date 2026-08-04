@@ -19,7 +19,8 @@
       "environmentVariables": [
         {
           "name": "MCP_TRANSPORT",
-          "value": "stdio"
+          "value": "stdio",
+          "description": "Pinned to stdio for registry-installed containers that the client spawns itself. The image's own default is http (Streamable HTTP on port 8080) for networked Docker deployments; see the README for that setup."
         },
         {
           "name": "GRAMPS_API_URL",

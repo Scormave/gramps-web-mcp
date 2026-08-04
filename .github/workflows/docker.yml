@@ -91,7 +91,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           IMAGE="ghcr.io/scormave/gramps-web-mcp:${VERSION}"
           jq --arg version "$VERSION" --arg image "$IMAGE" \
-            '.version = $version | .packages[0].identifier = $image' \
+            '.version = $version | .packages |= map(if .registryType == "oci" then .identifier = $image else . end)' \
             server.json > server.tmp
           mv server.tmp server.json
 

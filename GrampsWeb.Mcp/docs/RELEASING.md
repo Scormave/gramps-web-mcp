@@ -18,6 +18,11 @@ Registry publishing, so keep the version metadata aligned before tagging.
   - Set `"version": "x.y.z"`.
   - Set the OCI package identifier to
     `"ghcr.io/scormave/gramps-web-mcp:x.y.z"`.
+  - The package intentionally declares `stdio` with `MCP_TRANSPORT=stdio`: the
+    registry describes containers that a client spawns itself. The image's own
+    default of `MCP_TRANSPORT=http` on port 8080 is documented in `README.md`
+    instead, because a package transport of `streamable-http` would have to pin a
+    fixed host port that not every deployment uses.
 - Check whether the Docker runtime surface changed:
   - Update `Dockerfile` comments, labels, exposed ports, health check, or default
     environment variables if needed.
@@ -78,7 +83,8 @@ After the tag push, verify these GitHub Actions complete successfully:
     released.
   - Publishes `server.json` to the MCP Registry on `v*` tags.
 - `.github/workflows/mcpb-release.yml`
-  - Builds platform MCPB bundles for `osx-arm64`, `osx-x64`, and `win-x64`.
+  - Builds platform MCPB bundles for `osx-arm64`, `osx-x64`, `win-x64`,
+    `linux-x64`, and `linux-arm64`.
   - Attaches `dist/*.mcpb` assets to the GitHub Release for the tag.
 
 If the Gitea mirror is in use, also verify `.gitea/workflows/docker.yml` pushes
@@ -88,7 +94,7 @@ the equivalent tagged image to the configured container registry.
 
 - Open the GitHub Release for `vx.y.z`:
   - Confirm generated release notes look reasonable.
-  - Confirm all three MCPB assets are attached.
+  - Confirm all five MCPB assets are attached.
 - Check GHCR:
   - Confirm `ghcr.io/scormave/gramps-web-mcp:x.y.z` exists.
   - Confirm `latest` points at the expected image when releasing from the default

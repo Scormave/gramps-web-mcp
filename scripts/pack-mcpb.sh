@@ -7,12 +7,14 @@
 # Examples:
 #   ./scripts/pack-mcpb.sh osx-arm64
 #   ./scripts/pack-mcpb.sh win-x64 1.0.1
+#   ./scripts/pack-mcpb.sh linux-x64
+#   ./scripts/pack-mcpb.sh linux-arm64 1.0.1
 #
 # Requires: .NET 8 SDK. Optional: npm global @anthropic-ai/mcpb for validate/pack.
 
 set -euo pipefail
 
-RID="${1:?Runtime identifier required: osx-arm64, osx-x64, or win-x64}"
+RID="${1:?Runtime identifier required: osx-arm64, osx-x64, win-x64, linux-x64, or linux-arm64}"
 VERSION="${2:-}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -31,8 +33,11 @@ case "$RID" in
   win-x64)
     PLATFORMS='["win32"]'
   ;;
+  linux-x64|linux-arm64)
+    PLATFORMS='["linux"]'
+  ;;
   *)
-    echo "Unsupported RID: $RID (use osx-arm64, osx-x64, or win-x64)" >&2
+    echo "Unsupported RID: $RID (use osx-arm64, osx-x64, win-x64, linux-x64, or linux-arm64)" >&2
     exit 1
   ;;
 esac

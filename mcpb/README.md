@@ -24,6 +24,10 @@ Prerequisites: [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0). O
 
 # Windows x64 (run on Windows or cross-publish from CI)
 ./scripts/pack-mcpb.sh win-x64 1.0.0
+
+# Linux x64 / ARM64
+./scripts/pack-mcpb.sh linux-x64
+./scripts/pack-mcpb.sh linux-arm64
 ```
 
 Output: `dist/gramps-web-mcp-claude-desktop-<rid>-v<version>.mcpb`
@@ -51,7 +55,8 @@ Claude Desktop shows a settings form generated from `user_config` in the manifes
 ## GitHub Releases
 
 Tag pushes (`v*`) trigger [`.github/workflows/mcpb-release.yml`](../.github/workflows/mcpb-release.yml),
-which builds three platform bundles and attaches them to the GitHub Release for that tag.
+which builds five platform bundles (`osx-arm64`, `osx-x64`, `win-x64`, `linux-x64`,
+`linux-arm64`) and attaches them to the GitHub Release for that tag.
 
 This workflow is independent of the Docker / MCP Registry pipeline in `docker.yml`.
 

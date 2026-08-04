@@ -23,6 +23,10 @@ jobs:
             runner: macos-latest
           - rid: win-x64
             runner: windows-latest
+          - rid: linux-x64
+            runner: ubuntu-latest
+          - rid: linux-arm64
+            runner: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
