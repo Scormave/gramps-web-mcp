@@ -6,11 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-08-17
+
 ### Added
 
 - Optional HTTP/SSE authentication via `MCP_API_KEY` (Bearer or `X-Api-Key` header); startup warning when MCP is reachable on a non-loopback bind without a key
 - In-process mutation write policy: serialize create/update/delete HTTP calls by default (`GRAMPS_MUTATION_SERIALIZE`), optional `GRAMPS_MUTATION_MIN_INTERVAL_MS` pacing, and retryable MCP errors for SQLite `database is locked` and upstream HTTP 429
 - Linux MCPB release artifacts (`linux-x64`, `linux-arm64`) alongside macOS and Windows bundles
+
+### Changed
+
+- `.env.example` and `docker-compose.example.yml` document optional media and transport settings
+- `server.json`, `README.md`, and release docs clarify why the registry package declares `stdio` while the Docker image defaults to HTTP
+- MCP Registry publish workflow updates all OCI package identifiers in `server.json`
+
+## [1.0.6] - 2026-07-15
+
+### Added
+
 - Place hierarchy in `get_place` (cycle-safe walk up to 6 levels), dated parent enclosure refs, and alternate names with language/date on create and update
 - Date parser accepts ISO day/month ranges, mixed-precision dashes (`1703-1914-08-31`), open-ended forms, richer `between` / `from`…`to` sides, and explicit `from DATE` / `to DATE` (Gramps From/To modifiers)
 - Date parser accepts English month forms matching tool output (`1 Jul 1919`, `July 1919`, `from 1 Oct 1929 to 27 Sep 1937`)
@@ -28,9 +41,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Place write inputs rename `enclosedByHandles` to `enclosedBy` (handles, objects, or `HANDLE::date`); empty-list semantics: omit = keep, `[]` = clear
 - Place tool docs and `get_input_guide` clarify `enclosedBy` and dated alternate-name / enclosure examples
 - Unrecognized agent date strings now fail validation instead of being stored as Gramps text-only dates
-- `.env.example` and `docker-compose.example.yml` document optional media and transport settings
-- `server.json`, `README.md`, and release docs clarify why the registry package declares `stdio` while the Docker image defaults to HTTP
-- MCP Registry publish workflow updates all OCI package identifiers in `server.json`
 
 ## [1.0.5] - 2026-07-06
 
@@ -118,7 +128,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.7...HEAD
+[1.0.7]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.3...v1.0.4
