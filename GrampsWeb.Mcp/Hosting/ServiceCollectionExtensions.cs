@@ -11,6 +11,7 @@ internal static class ServiceCollectionExtensions
     public static IServiceCollection AddGrampsMcpCore(this IServiceCollection services, GrampsConfig config)
     {
         services.AddSingleton(config);
+        services.AddSingleton(new MutationGate(config));
         services.AddSingleton(sp =>
             new GrampsAuthTokenProvider(
                 sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(GrampsAuthTokenProvider)),

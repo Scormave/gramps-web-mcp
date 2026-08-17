@@ -224,6 +224,17 @@ tool content or binary resource content to a capable model.
 | Variable | Behavior | Default |
 |---------------------|----------|---------|
 | `GRAMPS_READ_ONLY=true` | Blocks create, update, and delete mutation calls while keeping tools visible | read/write |
+| `GRAMPS_MUTATION_SERIALIZE` | Serialize create/update/delete HTTP calls in-process so one write runs at a time | `true` |
+| `GRAMPS_MUTATION_MIN_INTERVAL_MS` | Minimum pause between mutation HTTP calls (applied to each write, including steps inside composite tools) | `0` |
+
+Write serialization and the optional interval protect a typical Gramps Web SQLite
+tree from agent write bursts. They are **in-process only**: they do not coordinate
+across multiple MCP replicas, the Gramps Web UI, or other API clients. SQLite
+deployments that still see `database is locked` on sequential edits should set
+`GRAMPS_MUTATION_MIN_INTERVAL_MS=250` (or `500`). On lock or upstream HTTP 429,
+mutation tools return a retryable MCP error with a short backoff hint instead of
+a generic 500. Disable serialization with `GRAMPS_MUTATION_SERIALIZE=false` if
+Gramps Web is on PostgreSQL and you want parallel writes.
 
 ### Media file access
 

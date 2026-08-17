@@ -75,6 +75,8 @@ Key rules:
 ### Error handling
 
 - API errors → `GrampsApiException` → `McpToolErrors.ToMcpException()` → `McpException`
+- SQLite lock / HTTP 429 on mutations → rewritten retryable `GrampsApiException` message, then the same mapping
+- Composite tools that already created objects → `McpToolErrors.ToMcpException(ex, createdObjects)`
 - Input validation → `McpToolErrors.ValidationError(message)` → `McpException`
 - Never let raw exceptions escape a tool method.
 

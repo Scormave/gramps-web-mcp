@@ -707,6 +707,8 @@ docker run -p 8080:8080 \
               <tr><td class="px-4 py-3 text-teal-300">GRAMPS_TREE_ID</td><td class="px-4 py-3 font-sans text-slate-400">Tree UUID on that server</td></tr>
               <tr><td class="px-4 py-3 text-teal-300">MCP_API_KEY</td><td class="px-4 py-3 font-sans text-slate-400">Shared secret for HTTP/SSE MCP (recommended when port is network-reachable)</td></tr>
               <tr><td class="px-4 py-3 text-gold-300">GRAMPS_READ_ONLY</td><td class="px-4 py-3 font-sans text-slate-400">Block mutations while keeping tools visible</td></tr>
+              <tr><td class="px-4 py-3 text-gold-300">GRAMPS_MUTATION_SERIALIZE</td><td class="px-4 py-3 font-sans text-slate-400">Serialize writes in-process (default on; SQLite-safe)</td></tr>
+              <tr><td class="px-4 py-3 text-gold-300">GRAMPS_MUTATION_MIN_INTERVAL_MS</td><td class="px-4 py-3 font-sans text-slate-400">Optional pause between writes; use 250 on SQLite if you see database is locked</td></tr>
             </tbody>
           </table>
           <style>

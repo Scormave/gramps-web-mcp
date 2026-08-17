@@ -37,6 +37,8 @@
         "GRAMPS_PASSWORD": "${user_config.gramps_password}",
         "GRAMPS_TREE_ID": "${user_config.gramps_tree_id}",
         "GRAMPS_READ_ONLY": "${user_config.gramps_read_only}",
+        "GRAMPS_MUTATION_SERIALIZE": "${user_config.gramps_mutation_serialize}",
+        "GRAMPS_MUTATION_MIN_INTERVAL_MS": "${user_config.gramps_mutation_min_interval_ms}",
         "GRAMPS_MEDIA_RESOURCES_ENABLED": "${user_config.gramps_media_resources_enabled}",
         "GRAMPS_MEDIA_MAX_BYTES": "${user_config.gramps_media_max_bytes}",
         "GRAMPS_MEDIA_ALLOWED_MIME_TYPES": "${user_config.gramps_media_allowed_mime_types}",
@@ -75,6 +77,22 @@
       "title": "Read-only mode",
       "description": "When enabled, blocks create, update, and delete tool calls. Recommended for first use.",
       "default": true,
+      "required": false
+    },
+    "gramps_mutation_serialize": {
+      "type": "boolean",
+      "title": "Serialize writes",
+      "description": "Run create/update/delete HTTP calls one at a time in this process. Leave on for SQLite. Does not coordinate with the Gramps Web UI or other API clients.",
+      "default": true,
+      "required": false
+    },
+    "gramps_mutation_min_interval_ms": {
+      "type": "number",
+      "title": "Minimum write interval (ms)",
+      "description": "Pause between mutation HTTP calls. Desktop/SQLite trees often need 250ms to avoid database is locked errors. Applies to each write, including steps inside composite tools.",
+      "default": 250,
+      "min": 0,
+      "max": 10000,
       "required": false
     },
     "gramps_media_resources_enabled": {

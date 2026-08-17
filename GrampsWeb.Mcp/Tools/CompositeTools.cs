@@ -96,6 +96,7 @@ public static class CompositeTools
         string? deathPlace = null,
         GrampsApiClient client = null!)
     {
+        var createdObjects = new List<string>();
         try
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -104,7 +105,6 @@ public static class CompositeTools
             var parsedName = FlexibleGrampsNameParsing.ParseSimpleLine(name);
             var genderCode = GrampsGenderParser.ParseRequired(gender);
             var summary = new StringBuilder();
-            var createdObjects = new List<string>();
 
             // Resolve or create places
             var birthPlaceResult = await ResolveOrCreatePlaceAsync(birthPlace, client);
@@ -201,7 +201,7 @@ public static class CompositeTools
         }
         catch (Exception ex)
         {
-            throw McpToolErrors.ToMcpException(ex);
+            throw McpToolErrors.ToMcpException(ex, createdObjects);
         }
     }
 
@@ -230,6 +230,7 @@ public static class CompositeTools
         string role = "Primary",
         GrampsApiClient client = null!)
     {
+        var createdObjects = new List<string>();
         try
         {
             if (string.IsNullOrWhiteSpace(eventType))
@@ -243,8 +244,6 @@ public static class CompositeTools
                 $"/api/people/{Uri.EscapeDataString(resolvedPersonHandle)}");
             if (person is null)
                 return NotFoundHelper.NotFoundMessage("Person", personHandle);
-
-            var createdObjects = new List<string>();
 
             // Resolve or create place
             PlaceResult? placeResult = null;
@@ -356,7 +355,7 @@ public static class CompositeTools
         }
         catch (Exception ex)
         {
-            throw McpToolErrors.ToMcpException(ex);
+            throw McpToolErrors.ToMcpException(ex, createdObjects);
         }
     }
 

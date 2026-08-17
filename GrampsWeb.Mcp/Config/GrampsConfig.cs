@@ -13,7 +13,9 @@ public record GrampsConfig(
     bool MediaResourcesEnabled = false,
     long MediaMaxBytes = GrampsConfig.DefaultMediaMaxBytes,
     string[]? MediaAllowedMimeTypes = null,
-    bool MediaAllowPrivate = false)
+    bool MediaAllowPrivate = false,
+    bool MutationSerialize = true,
+    int MutationMinIntervalMs = 0)
 {
     public const long DefaultMediaMaxBytes = 5 * 1024 * 1024;
 
@@ -53,6 +55,11 @@ public record GrampsConfig(
         var mediaAllowPrivate = ParseBoolOrDefault(
             Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE"),
             defaultValue: false);
+        var mutationSerialize = ParseBoolOrDefault(
+            Environment.GetEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE"),
+            defaultValue: true);
+        var rawMutationMinIntervalMs = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS");
+        var mutationMinIntervalMs = ParseIntOrDefault(rawMutationMinIntervalMs, 0);
 
         var errors = new List<string>();
 
@@ -68,6 +75,10 @@ public record GrampsConfig(
             errors.Add("GRAMPS_MEDIA_MAX_BYTES must be a valid integer");
         else if (mediaMaxBytes <= 0)
             errors.Add("GRAMPS_MEDIA_MAX_BYTES must be a positive integer");
+        if (!string.IsNullOrWhiteSpace(rawMutationMinIntervalMs) && !int.TryParse(rawMutationMinIntervalMs, out _))
+            errors.Add("GRAMPS_MUTATION_MIN_INTERVAL_MS must be a valid integer");
+        else if (mutationMinIntervalMs < 0)
+            errors.Add("GRAMPS_MUTATION_MIN_INTERVAL_MS must be a non-negative integer");
 
         if (errors.Count > 0)
         {
@@ -85,7 +96,9 @@ public record GrampsConfig(
             MediaResourcesEnabled: mediaResourcesEnabled,
             MediaMaxBytes: mediaMaxBytes,
             MediaAllowedMimeTypes: mediaAllowedMimeTypes,
-            MediaAllowPrivate: mediaAllowPrivate);
+            MediaAllowPrivate: mediaAllowPrivate,
+            MutationSerialize: mutationSerialize,
+            MutationMinIntervalMs: mutationMinIntervalMs);
     }
 
     private static bool ParseBoolOrDefault(string? value, bool defaultValue)
@@ -102,6 +115,16 @@ public record GrampsConfig(
             return defaultValue;
 
         return long.TryParse(value, out var parsed)
+            ? parsed
+            : defaultValue;
+    }
+
+    private static int ParseIntOrDefault(string? value, int defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return defaultValue;
+
+        return int.TryParse(value, out var parsed)
             ? parsed
             : defaultValue;
     }

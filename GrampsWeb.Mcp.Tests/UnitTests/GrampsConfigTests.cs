@@ -19,6 +19,8 @@ public class GrampsConfigTests
             new[] { "image/jpeg", "image/png", "image/webp", "image/avif", "application/pdf" },
             config.EffectiveMediaAllowedMimeTypes);
         Assert.False(config.MediaAllowPrivate);
+        Assert.True(config.MutationSerialize);
+        Assert.Equal(0, config.MutationMinIntervalMs);
     }
 
     [Theory]
@@ -65,12 +67,53 @@ public class GrampsConfigTests
         Assert.Contains("must be a valid integer", ex.Message);
     }
 
+    [Fact]
+    public void FromEnvironment_Parses_Mutation_Write_Policy()
+    {
+        var config = LoadConfig(
+            readOnlyEnv: null,
+            mutationSerialize: "false",
+            mutationMinIntervalMs: "250");
+
+        Assert.False(config.MutationSerialize);
+        Assert.Equal(250, config.MutationMinIntervalMs);
+    }
+
+    [Theory]
+    [InlineData("true")]
+    [InlineData("1")]
+    public void FromEnvironment_Enables_Mutation_Serialize_From_Environment(string value)
+    {
+        var config = LoadConfig(readOnlyEnv: null, mutationSerialize: value);
+        Assert.True(config.MutationSerialize);
+    }
+
+    [Fact]
+    public void FromEnvironment_Rejects_Negative_Mutation_Min_Interval()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, mutationMinIntervalMs: "-1"));
+
+        Assert.Contains("must be a non-negative integer", ex.Message);
+    }
+
+    [Fact]
+    public void FromEnvironment_Rejects_Unparseable_Mutation_Min_Interval()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, mutationMinIntervalMs: "fast"));
+
+        Assert.Contains("must be a valid integer", ex.Message);
+    }
+
     private static GrampsConfig LoadConfig(
         string? readOnlyEnv,
         string? mediaResourcesEnabled = null,
         string? mediaMaxBytes = null,
         string? mediaAllowedMimeTypes = null,
-        string? mediaAllowPrivate = null)
+        string? mediaAllowPrivate = null,
+        string? mutationSerialize = null,
+        string? mutationMinIntervalMs = null)
     {
         lock (EnvironmentLock)
         {
@@ -86,6 +129,8 @@ public class GrampsConfigTests
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_MAX_BYTES", mediaMaxBytes);
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES", mediaAllowedMimeTypes);
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE", mediaAllowPrivate);
+                Environment.SetEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE", mutationSerialize);
+                Environment.SetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS", mutationMinIntervalMs);
 
                 return GrampsConfig.FromEnvironment();
             }
@@ -108,7 +153,9 @@ public class GrampsConfigTests
             ["GRAMPS_MEDIA_RESOURCES_ENABLED"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_RESOURCES_ENABLED"),
             ["GRAMPS_MEDIA_MAX_BYTES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_MAX_BYTES"),
             ["GRAMPS_MEDIA_ALLOWED_MIME_TYPES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES"),
-            ["GRAMPS_MEDIA_ALLOW_PRIVATE"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE")
+            ["GRAMPS_MEDIA_ALLOW_PRIVATE"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE"),
+            ["GRAMPS_MUTATION_SERIALIZE"] = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE"),
+            ["GRAMPS_MUTATION_MIN_INTERVAL_MS"] = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS")
         };
     }
 

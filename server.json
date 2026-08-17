@@ -47,6 +47,16 @@
           "name": "GRAMPS_READ_ONLY",
           "description": "Set to true to block create, update, and delete tools",
           "default": "false"
+        },
+        {
+          "name": "GRAMPS_MUTATION_SERIALIZE",
+          "description": "Serialize create/update/delete HTTP calls in-process (set false to allow parallel writes)",
+          "default": "true"
+        },
+        {
+          "name": "GRAMPS_MUTATION_MIN_INTERVAL_MS",
+          "description": "Minimum milliseconds between mutation HTTP calls. Use 250 or 500 on SQLite if you see database is locked",
+          "default": "0"
         }
       ]
     }

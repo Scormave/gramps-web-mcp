@@ -23,6 +23,7 @@ public class GrampsApiClient
     private readonly GrampsConfig _config;
     private readonly ILogger<GrampsApiClient> _logger;
     private readonly GrampsAuthTokenProvider _tokenProvider;
+    private readonly MutationGate _mutationGate;
     private string? _accessToken;
 
     /// <summary>
@@ -34,12 +35,14 @@ public class GrampsApiClient
         HttpClient httpClient,
         GrampsConfig config,
         ILogger<GrampsApiClient> logger,
-        GrampsAuthTokenProvider tokenProvider)
+        GrampsAuthTokenProvider tokenProvider,
+        MutationGate? mutationGate = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _tokenProvider = tokenProvider ?? throw new ArgumentNullException(nameof(tokenProvider));
+        _mutationGate = mutationGate ?? MutationGate.Disabled;
 
         // Set base address without /api suffix; it's added per endpoint
         _httpClient.BaseAddress = new Uri(_config.ApiUrl);
@@ -99,42 +102,6 @@ public class GrampsApiClient
             }
 
             var result = JsonSerializer.Deserialize<T>(body, GrampsJson.Options)
-                ?? throw new InvalidOperationException($"Failed to deserialize response as {typeof(T).Name}");
-
-            return result;
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway, ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Performs a POST request with the given body and deserializes the response to T.
-    /// Adds Authorization header and executes request.
-    /// </summary>
-    public async Task<T> PostAsync<T>(string path, object body)
-    {
-        await EnsureAuthenticatedAsync();
-
-        var url = path;
-        var json = JsonSerializer.Serialize(body, GrampsJson.Options);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = content };
-        AddAuthorizationHeader(request);
-
-        try
-        {
-            var response = await SendWithLoggingAsync(request);
-            var responseBody = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new GrampsApiException(response.StatusCode, responseBody);
-            }
-
-            var result = JsonSerializer.Deserialize<T>(responseBody, GrampsJson.Options)
                 ?? throw new InvalidOperationException($"Failed to deserialize response as {typeof(T).Name}");
 
             return result;
@@ -223,42 +190,6 @@ public class GrampsApiClient
     }
 
     /// <summary>
-    /// Performs a PUT request with the given body and deserializes the response to T.
-    /// Adds Authorization header and executes request.
-    /// </summary>
-    public async Task<T> PutAsync<T>(string path, object body)
-    {
-        await EnsureAuthenticatedAsync();
-
-        var url = path;
-        var json = JsonSerializer.Serialize(body, GrampsJson.Options);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Put, url) { Content = content };
-        AddAuthorizationHeader(request);
-
-        try
-        {
-            var response = await SendWithLoggingAsync(request);
-            var responseBody = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new GrampsApiException(response.StatusCode, responseBody);
-            }
-
-            var result = JsonSerializer.Deserialize<T>(responseBody, GrampsJson.Options)
-                ?? throw new InvalidOperationException($"Failed to deserialize response as {typeof(T).Name}");
-
-            return result;
-        }
-        catch (HttpRequestException ex)
-        {
-            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway, ex.Message);
-        }
-    }
-
-    /// <summary>
     /// POST to create an object. Returns the <c>handle</c> and <c>gramps_id</c> extracted from the
     /// Gramps mutation-array response (<c>[{"_class":"X","new":{...}}]</c>) or bare entity JSON.
     /// Either value may be null if the API response format is unexpected — callers should treat that
@@ -278,11 +209,9 @@ public class GrampsApiClient
 
         try
         {
-            var response = await SendWithLoggingAsync(request);
+            var response = await SendMutationAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-                throw new GrampsApiException(response.StatusCode, responseBody);
+            ThrowIfMutationFailed(response, responseBody);
 
             return GrampsMutationParser.ExtractHandleAndId(responseBody, grampsClass);
         }
@@ -309,11 +238,9 @@ public class GrampsApiClient
 
         try
         {
-            var response = await SendWithLoggingAsync(request);
+            var response = await SendMutationAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-                throw new GrampsApiException(response.StatusCode, responseBody);
+            ThrowIfMutationFailed(response, responseBody);
         }
         catch (HttpRequestException ex)
         {
@@ -336,13 +263,9 @@ public class GrampsApiClient
 
         try
         {
-            var response = await SendWithLoggingAsync(request);
+            var response = await SendMutationAsync(request);
             var body = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new GrampsApiException(response.StatusCode, body);
-            }
+            ThrowIfMutationFailed(response, body);
         }
         catch (HttpRequestException ex)
         {
@@ -368,6 +291,15 @@ public class GrampsApiClient
         if (_config.ReadOnly)
             throw new InvalidOperationException(
                 "Read-only mode is enabled; create, update, and delete tools are disabled.");
+    }
+
+    private Task<HttpResponseMessage> SendMutationAsync(HttpRequestMessage request) =>
+        _mutationGate.RunAsync(() => SendWithLoggingAsync(request));
+
+    private static void ThrowIfMutationFailed(HttpResponseMessage response, string body)
+    {
+        if (!response.IsSuccessStatusCode)
+            throw GrampsApiException.FromMutationResponse(response, body);
     }
 
     private async Task<HttpResponseMessage> SendWithLoggingAsync(

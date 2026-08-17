@@ -105,6 +105,8 @@ Read-only mode can also be enabled with a server CLI argument.
 | Variable / argument | Description | Default |
 |---------------------|-------------|---------|
 | `GRAMPS_READ_ONLY=true` | Keep all MCP tools visible, but block create/update/delete mutation calls before they reach Gramps Web | read/write |
+| `GRAMPS_MUTATION_SERIALIZE` | Serialize mutation HTTP calls in-process (single-flight). Set `false` to allow parallel writes | `true` |
+| `GRAMPS_MUTATION_MIN_INTERVAL_MS` | Minimum milliseconds between mutation HTTP calls (per write, including composite-tool steps). SQLite users often want `250` | `0` |
 
 ### Optional (media resources)
 
@@ -175,11 +177,17 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 
 `GrampsApiClient` is the HTTP client with:
 - JWT authentication (automatic token acquisition and refresh)
-- typed GET/POST/PUT/DELETE with `System.Text.Json`
+- typed GET plus mutation POST/PUT/DELETE with `System.Text.Json`
 - mutation response parsing (`PostMutationAsync` / `PutMutationAsync`)
   that handles Gramps' change-array responses
 - read-only enforcement for mutation helpers (`PostMutationAsync`,
   `PutMutationAsync`, `DeleteAsync`) before authentication or request creation
+- in-process write policy via singleton `MutationGate`: optional single-flight
+  lock and minimum interval around the mutation HTTP send only (auth stays
+  outside the write mutex). The gate does not cover other Gramps Web clients
+  or MCP replicas.
+- retryable mapping of SQLite `database is locked` (HTTP 500/503) and upstream
+  429 onto clear mutation error messages
 - request/response logging with sensitive field redaction
 - paged list support (`GetPagedListAsync<T>`)
 - binary GET support (`GetBytesAsync`) for media resources, with payload-free
@@ -263,9 +271,14 @@ Convert models into human-readable text for MCP tool responses.  Strategy:
 ```
 GrampsApiException          →  McpToolErrors.ToMcpException()  →  McpException
 (HTTP errors from API)         (catch in each tool method)        (isError=true in MCP)
+SQLite lock / HTTP 429         rewritten retryable message         same isError path
+on mutations
 
 Validation errors           →  McpToolErrors.ValidationError() →  McpException
 (bad input from agent)
+
+Composite partial failure   →  McpToolErrors.ToMcpException(ex, createdObjects)
+(lock after some writes)       lists already-created IDs so the agent does not retry the whole tool
 ```
 
 All tool methods follow the same pattern: `try { ... } catch (Exception ex) { throw McpToolErrors.ToMcpException(ex); }`.

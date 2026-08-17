@@ -107,5 +107,12 @@ public sealed class GrampsStartupHostedService : IHostedService
         {
             _logger.LogInformation("Read-only mode is enabled; mutation tools will be rejected");
         }
+        else
+        {
+            _logger.LogInformation(
+                "Mutation write policy: serialize={Serialize}, minIntervalMs={IntervalMs} (in-process only; does not cover other Gramps Web clients)",
+                _config.MutationSerialize,
+                _config.MutationMinIntervalMs);
+        }
     }
 }

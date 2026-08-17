@@ -20,6 +20,15 @@ and write-capable composite tools visible, but calls to those tools return an
 MCP error before any mutation request is sent to Gramps Web.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
 
+Create/update/delete HTTP calls are serialized in-process by default
+(`GRAMPS_MUTATION_SERIALIZE=true`) and may wait
+`GRAMPS_MUTATION_MIN_INTERVAL_MS` between writes. That interval applies to
+**each** mutation, so composite tools such as `quick_add_person` and
+`add_event_to_person` can take several pauses in one call. The policy is
+in-process only; it does not coordinate with the Gramps Web UI or other
+API clients. SQLite lock and upstream 429 failures return a retryable MCP
+error instead of a generic 500.
+
 ## Resources
 
 Read-only reference/discovery data exposed as MCP resources:

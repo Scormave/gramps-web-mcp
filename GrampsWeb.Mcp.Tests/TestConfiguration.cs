@@ -26,6 +26,6 @@ public static class TestSetup
             config,
             loggerFactory.CreateLogger<GrampsAuthTokenProvider>());
 
-        return new GrampsApiClient(httpClient, config, logger, tokenProvider);
+        return new GrampsApiClient(httpClient, config, logger, tokenProvider, new MutationGate(config));
     }
 }

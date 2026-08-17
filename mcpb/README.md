@@ -45,12 +45,16 @@ Claude Desktop shows a settings form generated from `user_config` in the manifes
 | Password / token | `GRAMPS_PASSWORD` |
 | Tree ID | `GRAMPS_TREE_ID` |
 | Read-only mode | `GRAMPS_READ_ONLY` |
+| Serialize writes | `GRAMPS_MUTATION_SERIALIZE` |
+| Minimum write interval (ms) | `GRAMPS_MUTATION_MIN_INTERVAL_MS` |
 | Media file access | `GRAMPS_MEDIA_RESOURCES_ENABLED` |
 | Media max bytes | `GRAMPS_MEDIA_MAX_BYTES` |
 | Allowed MIME types | `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` |
 | Allow private media | `GRAMPS_MEDIA_ALLOW_PRIVATE` |
 
 **Read-only mode defaults to enabled** in the extension for safer first use.
+**Minimum write interval defaults to 250ms** (SQLite-friendly); the server-side
+env default remains `0` for Docker/registry installs.
 
 ## GitHub Releases
 

@@ -10,7 +10,9 @@ Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, and `G
 `PostMutationAsync`, `PutMutationAsync`, and `DeleteAsync` block tree mutations
 before sending HTTP requests. Authentication POSTs (`/api/token/` and
 `/api/token/refresh/`) and binary media GETs are still allowed because they do
-not mutate tree data.
+not mutate tree data. When writes are allowed, those three helpers also go
+through `MutationGate` (`GRAMPS_MUTATION_SERIALIZE`,
+`GRAMPS_MUTATION_MIN_INTERVAL_MS`) around the HTTP send only.
 
 | HTTP path pattern | Response / body type | Model / notes |
 |-------------------|----------------------|----------------|
