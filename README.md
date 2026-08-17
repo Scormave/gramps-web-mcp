@@ -104,10 +104,9 @@ Basic setup:
 
 1. In Unraid, open **Apps** / **Community Applications**.
 2. Search for `gramps-web-mcp` and install the template.
-3. Set the Gramps Web connection values:
-   `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and
-   `GRAMPS_TREE_ID`. Set `MCP_API_KEY` when the MCP port is reachable from
-   other machines on your network.
+3. Set `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and
+   `GRAMPS_TREE_ID` for your Gramps Web instance. Set `MCP_API_KEY` when the
+   MCP port is reachable from other machines on your network.
 4. Keep the default container port `8080`, or map it to another host port.
 5. Start the container and check `/health`; it returns HTTP 200 once the service
    can authenticate to Gramps Web, with a minimal JSON response by default.
@@ -153,7 +152,8 @@ bundle for your platform:
    want Claude to create or edit records.
 5. Complete installation and start a new chat.
 
-The extension runs locally over stdio and does not require the .NET SDK on your machine.
+The extension runs locally over stdio and does not require the .NET SDK on your
+machine.
 See [`mcpb/README.md`](mcpb/README.md) for packaging details and
 [`PRIVACY.md`](PRIVACY.md) for the privacy policy.
 
@@ -221,20 +221,34 @@ tool content or binary resource content to a capable model.
 
 ### Runtime mode
 
-| Variable | Behavior | Default |
-|---------------------|----------|---------|
-| `GRAMPS_READ_ONLY=true` | Blocks create, update, and delete mutation calls while keeping tools visible | read/write |
-| `GRAMPS_MUTATION_SERIALIZE` | Serialize create/update/delete HTTP calls in-process so one write runs at a time | `true` |
-| `GRAMPS_MUTATION_MIN_INTERVAL_MS` | Minimum pause between mutation HTTP calls (applied to each write, including steps inside composite tools) | `0` |
+| Variable | Default |
+|----------|---------|
+| `GRAMPS_READ_ONLY` | `false` |
+| `GRAMPS_MUTATION_SERIALIZE` | `true` |
+| `GRAMPS_MUTATION_MIN_INTERVAL_MS` | `0` |
 
-Write serialization and the optional interval protect a typical Gramps Web SQLite
-tree from agent write bursts. They are **in-process only**: they do not coordinate
-across multiple MCP replicas, the Gramps Web UI, or other API clients. SQLite
-deployments that still see `database is locked` on sequential edits should set
-`GRAMPS_MUTATION_MIN_INTERVAL_MS=250` (or `500`). On lock or upstream HTTP 429,
-mutation tools return a retryable MCP error with a short backoff hint instead of
-a generic 500. Disable serialization with `GRAMPS_MUTATION_SERIALIZE=false` if
-Gramps Web is on PostgreSQL and you want parallel writes.
+- `GRAMPS_READ_ONLY`: set to `true` to block create, update, and delete calls
+  while keeping tools visible.
+- `GRAMPS_MUTATION_SERIALIZE`: runs create/update/delete HTTP calls one at a
+  time in this process.
+- `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum pause between mutation HTTP calls,
+  including steps inside composite tools.
+
+Runtime notes:
+
+- `GRAMPS_READ_ONLY=false` means the server starts in read/write mode.
+- The Claude Desktop MCPB extension is the exception: its setup form defaults to
+  read-only for safer first use.
+- Write serialization and the optional interval protect typical Gramps Web
+  SQLite trees from agent write bursts.
+- The write gate is **in-process only**. It does not coordinate across multiple
+  MCP replicas, the Gramps Web UI, or other API clients.
+- SQLite deployments that still see `database is locked` on sequential edits
+  should set `GRAMPS_MUTATION_MIN_INTERVAL_MS=250` or `500`.
+- On SQLite lock errors or upstream HTTP 429, mutation tools return a retryable
+  MCP error with a short backoff hint instead of a generic 500.
+- Set `GRAMPS_MUTATION_SERIALIZE=false` when Gramps Web uses PostgreSQL and you
+  want parallel writes.
 
 ### Media file access
 
@@ -245,22 +259,31 @@ available for metadata without enabling file downloads.
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media tools/resources for thumbnails and full files | `false` |
 | `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource | `5242880` |
-| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Comma-separated allowlist; exact types and `type/*` wildcards are supported | `image/jpeg,image/png,image/webp,image/avif,application/pdf` |
+| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Allowed MIME types for media bytes | see below |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allows bytes for Gramps media records marked private | `false` |
 
 Prefer `GetMediaThumbnail` or `gramps://media/{handle}/thumbnail/{size}` for AI
 analysis. Full files can be large and sensitive, and are still subject to the
 same size, MIME, and private-record checks.
 
+Exact types and `type/*` wildcards are supported. The default media allowlist is
+`image/jpeg,image/png,image/webp,image/avif,application/pdf`.
+
 ### Transports
 
-Set `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and `GRAMPS_TREE_ID` as usual.
+Set `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and
+`GRAMPS_TREE_ID` as usual.
 
-| `MCP_TRANSPORT` | Behavior |
-|-----------------|----------|
+| Value | Behavior |
+|-------|----------|
 | *(unset or `stdio`)* | JSON-RPC over stdin/stdout (default; local clients). |
-| `http` | [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#streamable-http) at `MCP_PATH` (default `/mcp`). Responses stream over SSE. Set `ASPNETCORE_URLS` (e.g. `http://127.0.0.1:8080`). |
+| `http` | Streamable HTTP at `MCP_PATH` (default `/mcp`). |
 | `sse` | Legacy MCP SSE: `GET {MCP_PATH}/sse` + `POST {MCP_PATH}/message`. Stateful; use for older clients only. |
+
+For HTTP transport, responses stream over SSE. See the
+[Streamable HTTP spec](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#streamable-http)
+for protocol details. Set `ASPNETCORE_URLS` to choose the listen address, for
+example `http://127.0.0.1:8080`.
 
 ### Optional (MCP transport)
 

@@ -102,11 +102,24 @@ Read-only mode can also be enabled with a server CLI argument.
 
 ### Optional (runtime mode)
 
-| Variable / argument | Description | Default |
-|---------------------|-------------|---------|
-| `GRAMPS_READ_ONLY=true` | Keep all MCP tools visible, but block create/update/delete mutation calls before they reach Gramps Web | read/write |
-| `GRAMPS_MUTATION_SERIALIZE` | Serialize mutation HTTP calls in-process (single-flight). Set `false` to allow parallel writes | `true` |
-| `GRAMPS_MUTATION_MIN_INTERVAL_MS` | Minimum milliseconds between mutation HTTP calls (per write, including composite-tool steps). SQLite users often want `250` | `0` |
+| Variable | Default |
+|----------|---------|
+| `GRAMPS_READ_ONLY` | `false` |
+| `GRAMPS_MUTATION_SERIALIZE` | `true` |
+| `GRAMPS_MUTATION_MIN_INTERVAL_MS` | `0` |
+
+- `GRAMPS_READ_ONLY`: set to `true` to keep all MCP tools visible while
+  blocking create/update/delete mutation calls.
+- `GRAMPS_MUTATION_SERIALIZE`: serializes mutation HTTP calls in-process. Set
+  `false` to allow parallel writes.
+- `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum milliseconds between mutation HTTP
+  calls, including steps inside composite tools.
+
+Runtime notes:
+
+- `GRAMPS_READ_ONLY=false` starts the server in read/write mode.
+- SQLite users who still see `database is locked` on sequential edits often want
+  `GRAMPS_MUTATION_MIN_INTERVAL_MS=250`.
 
 ### Optional (media resources)
 
@@ -114,8 +127,11 @@ Read-only mode can also be enabled with a server CLI argument.
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP media resources and image-content media tools | `false` |
 | `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource/tool | `5242880` |
-| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Comma-separated allowlist; exact MIME types and `type/*` wildcards are supported | `image/jpeg,image/png,image/webp,image/avif,application/pdf` |
+| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Allowed MIME types for media bytes | see below |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allow bytes for Gramps media records marked private | `false` |
+
+Exact MIME types and `type/*` wildcards are supported. The default media
+allowlist is `image/jpeg,image/png,image/webp,image/avif,application/pdf`.
 
 ## Architectural layers
 
