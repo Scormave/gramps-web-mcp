@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 WORKDIR /src
 
 COPY gramps-web-mcp.sln ./
@@ -13,7 +13,7 @@ RUN dotnet publish GrampsWeb.Mcp/GrampsWeb.Mcp.csproj \
     -o /app/publish \
     --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-bookworm-slim AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 WORKDIR /app
 
 LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"

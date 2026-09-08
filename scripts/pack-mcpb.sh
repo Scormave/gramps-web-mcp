@@ -10,7 +10,7 @@
 #   ./scripts/pack-mcpb.sh linux-x64
 #   ./scripts/pack-mcpb.sh linux-arm64 1.0.1
 #
-# Requires: .NET 8 SDK. Optional: npm global @anthropic-ai/mcpb for validate/pack.
+# Requires: .NET 10 SDK. Optional: npm global @anthropic-ai/mcpb for validate/pack.
 
 set -euo pipefail
 

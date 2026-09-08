@@ -1,7 +1,7 @@
 # gramps-web-mcp
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
-[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/8.0)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 Companion MCP server for the [Gramps Web](https://www.grampsweb.org/)
 open-source genealogy platform. It gives AI agents structured, tool-based
@@ -29,7 +29,7 @@ See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) for the full list.
 
 ## Prerequisites
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (for local development)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (for local development)
 - A running [Gramps Web](https://www.grampsweb.org/) instance with API access
 - Docker (optional, for container deployment)
 

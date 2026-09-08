@@ -5,7 +5,7 @@ Practical guide for extending the gramps-web-mcp server with new features.
 ## Quick start
 
 ```bash
-# Prerequisites: .NET 8 SDK
+# Prerequisites: .NET 10 SDK
 
 # Run locally against the Gramps demo server
 ./run-local-server.sh
@@ -370,8 +370,8 @@ This is applied automatically in `GetPersonExtended` and `GetFamilyExtended`.
 ### Docker
 
 The `Dockerfile` uses multi-stage build:
-1. **Build stage**: SDK 8.0, restore + publish
-2. **Runtime stage**: ASP.NET 8.0, runs as non-root user
+1. **Build stage**: SDK 10.0 on Ubuntu 24.04 (Noble), restore + publish
+2. **Runtime stage**: ASP.NET Core 10.0 on Ubuntu 24.04 (Noble), runs as non-root user
 
 Default environment in the image:
 - `MCP_TRANSPORT=http`

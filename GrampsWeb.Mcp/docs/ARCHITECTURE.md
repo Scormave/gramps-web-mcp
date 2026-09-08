@@ -16,7 +16,7 @@ Web tree to MCP clients.
 ```
 ┌────────────┐   MCP (stdio / HTTP)   ┌──────────────────┐   REST / JSON   ┌────────────────┐
 │  AI Agent  │ ◄─────────────────────► │  gramps-web-mcp  │ ◄─────────────► │  Gramps Web API│
-│  (client)  │                         │  (.NET 8 server)  │                │  (remote)      │
+│  (client)  │                         │  (.NET 10 server) │                │  (remote)      │
 └────────────┘                         └──────────────────┘                 └────────────────┘
 ```
 

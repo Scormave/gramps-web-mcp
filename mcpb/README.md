@@ -12,7 +12,7 @@ extension (`.mcpb` / MCP Bundle).
 
 ## Local packaging
 
-Prerequisites: [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0). Optional:
+Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). Optional:
 [`@anthropic-ai/mcpb`](https://www.npmjs.com/package/@anthropic-ai/mcpb) for validation.
 
 ```bash
