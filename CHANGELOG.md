@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-09-18
+
 ### Fixed
 
 - Send an application name and build version in the `User-Agent` header on all Gramps Web requests, including authentication, media downloads, and health checks ([#2](https://github.com/Scormave/gramps-web-mcp/issues/2))
@@ -14,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Upgrade the server and tests to .NET 10 LTS, including SDK selection, CI, MCPB build instructions, and GitHub Pages documentation
 - Move Docker build and runtime images to .NET 10 on Ubuntu 24.04 (Noble)
+- Clarify runtime modes and configuration defaults in the README
 
 ## [1.0.7] - 2026-08-17
 
@@ -137,7 +140,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.7...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.8...HEAD
+[1.0.8]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.4...v1.0.5
