@@ -27,6 +27,11 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 
 See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) for the full list.
 
+All outgoing requests to Gramps Web, including authentication, media downloads,
+and health checks, automatically identify this application with
+`User-Agent: gramps-web-mcp/<version> (+https://github.com/Scormave/gramps-web-mcp)`.
+The version comes from the application build; no configuration is required.
+
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (for local development)

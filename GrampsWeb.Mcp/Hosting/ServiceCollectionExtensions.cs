@@ -12,13 +12,14 @@ internal static class ServiceCollectionExtensions
     {
         services.AddSingleton(config);
         services.AddSingleton(new MutationGate(config));
+        services.AddHttpClient(nameof(GrampsAuthTokenProvider), GrampsUserAgent.Configure);
         services.AddSingleton(sp =>
             new GrampsAuthTokenProvider(
                 sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(GrampsAuthTokenProvider)),
                 config,
                 sp.GetRequiredService<ILogger<GrampsAuthTokenProvider>>()));
-        services.AddHttpClient<GrampsApiClient>();
-        services.AddHttpClient<GrampsHealthService>();
+        services.AddHttpClient<GrampsApiClient>(GrampsUserAgent.Configure);
+        services.AddHttpClient<GrampsHealthService>(GrampsUserAgent.Configure);
         return services;
     }
 

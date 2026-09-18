@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Send an application name and build version in the `User-Agent` header on all Gramps Web requests, including authentication, media downloads, and health checks ([#2](https://github.com/Scormave/gramps-web-mcp/issues/2))
+
 ### Changed
 
 - Upgrade the server and tests to .NET 10 LTS, including SDK selection, CI, MCPB build instructions, and GitHub Pages documentation
