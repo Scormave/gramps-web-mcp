@@ -13,7 +13,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Person objects from the Gramps Web API.
-/// Covers get_person, get_person_extended, get_ancestors, get_descendants,
+/// Covers get_person, get_ancestors, get_descendants,
 /// get_person_timeline, and get_relations.
 /// </summary>
 [McpServerToolType]
@@ -87,7 +87,7 @@ public static class PersonTools
                 return
                     $"No ancestors found for {handle}. " +
                     "Only people linked through a parent family (where this person is the child) appear. " +
-                    "Spouse-only links do not count as ancestors. Use get_person_extended to inspect family links.";
+                    "Spouse-only links do not count as ancestors. Use get_person(handle, extended: true) to inspect family links.";
             return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", resolvedHandle, ancestors, kinshipLabels, client);
         }
         catch (Exception ex)

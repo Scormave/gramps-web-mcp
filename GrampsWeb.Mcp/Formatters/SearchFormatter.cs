@@ -44,17 +44,19 @@ public static class SearchFormatter
     public static async Task<string> FetchAndFormatObjects<T>(
         string queryString,
         GrampsApiClient client,
-        string objectType) where T : class
+        string objectType,
+        int pageSize) where T : class
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
         var result = await client.GetPagedListAsync<T>(queryString);
 
         if (result?.Objects == null || result.Objects.Length == 0)
             return $"No {objectType} found.";
 
         int totalPages = result.Total >= 0
-            ? (result.Total + result.Objects.Length - 1) / result.Objects.Length
+            ? (int)(((long)result.Total + pageSize - 1) / pageSize)
             : -1;
-        return await FormatObjectListResultsAsync(result.Objects, result.Page, totalPages, result.Total, objectType, client);
+        return await FormatObjectListResultsAsync(result.Objects, result.Page, totalPages, result.Total, objectType, client, pageSize);
     }
 
     public static async Task<string> FormatObjectListResultsAsync<T>(
@@ -63,11 +65,12 @@ public static class SearchFormatter
         int totalPages,
         int totalCount,
         string objectType,
-        GrampsApiClient client)
+        GrampsApiClient client,
+        int pageSize)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
         var sb = new StringBuilder();
 
-        int pagesize = objects.Length;
         if (totalCount >= 0 && totalPages > 0)
             sb.AppendLine($"{objectType.ToUpperInvariant()} (Page {page} of {totalPages}, Total: {totalCount})");
         else
@@ -84,7 +87,7 @@ public static class SearchFormatter
             if (item == null)
                 continue;
 
-            int itemNumber = (page - 1) * pagesize + i + 1;
+            long itemNumber = ((long)page - 1) * pageSize + i + 1;
             try
             {
                 var line = await FormatLineForListedObjectAsync(item, typeKey, client, tables);

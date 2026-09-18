@@ -128,16 +128,16 @@ public static class SearchTools
 
             return objectType.ToLower() switch
             {
-                "people" => await SearchFormatter.FetchAndFormatObjects<GrampsPerson>(queryString, client, objectType),
-                "families" => await SearchFormatter.FetchAndFormatObjects<GrampsFamilyExtended>(queryString, client, objectType),
-                "events" => await SearchFormatter.FetchAndFormatObjects<GrampsEventExtended>(queryString, client, objectType),
-                "places" => await SearchFormatter.FetchAndFormatObjects<GrampsPlace>(queryString, client, objectType),
-                "sources" => await SearchFormatter.FetchAndFormatObjects<GrampsSource>(queryString, client, objectType),
-                "citations" => await SearchFormatter.FetchAndFormatObjects<GrampsCitationExtended>(queryString, client, objectType),
-                "repositories" => await SearchFormatter.FetchAndFormatObjects<GrampsRepository>(queryString, client, objectType),
-                "notes" => await SearchFormatter.FetchAndFormatObjects<GrampsNote>(queryString, client, objectType),
-                "media" => await SearchFormatter.FetchAndFormatObjects<GrampsMedia>(queryString, client, objectType),
-                "tags" => await SearchFormatter.FetchAndFormatObjects<GrampsTag>(queryString, client, objectType),
+                "people" => await SearchFormatter.FetchAndFormatObjects<GrampsPerson>(queryString, client, objectType, pagesize),
+                "families" => await SearchFormatter.FetchAndFormatObjects<GrampsFamilyExtended>(queryString, client, objectType, pagesize),
+                "events" => await SearchFormatter.FetchAndFormatObjects<GrampsEventExtended>(queryString, client, objectType, pagesize),
+                "places" => await SearchFormatter.FetchAndFormatObjects<GrampsPlace>(queryString, client, objectType, pagesize),
+                "sources" => await SearchFormatter.FetchAndFormatObjects<GrampsSource>(queryString, client, objectType, pagesize),
+                "citations" => await SearchFormatter.FetchAndFormatObjects<GrampsCitationExtended>(queryString, client, objectType, pagesize),
+                "repositories" => await SearchFormatter.FetchAndFormatObjects<GrampsRepository>(queryString, client, objectType, pagesize),
+                "notes" => await SearchFormatter.FetchAndFormatObjects<GrampsNote>(queryString, client, objectType, pagesize),
+                "media" => await SearchFormatter.FetchAndFormatObjects<GrampsMedia>(queryString, client, objectType, pagesize),
+                "tags" => await SearchFormatter.FetchAndFormatObjects<GrampsTag>(queryString, client, objectType, pagesize),
                 _ => throw new McpException("Invalid object type")
             };
         }

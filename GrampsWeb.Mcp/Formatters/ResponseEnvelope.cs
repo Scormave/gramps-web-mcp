@@ -71,7 +71,8 @@ public static class ResponseEnvelope
 
     public static string[] EventCreateNextSteps(string handle) => new[]
     {
-        $"Attach to person: update_person(handle: \"<person>\", eventRefHandles: [\"...\", \"{handle}\"], eventRefRoles: [\"...\", \"Primary\"])",
+        "Read the person first and preserve existing eventRefs (including roles); update replaces the entire list. The example below shows only the new reference.",
+        $"Attach to person: update_person(handle: \"<person>\", eventRefs: [{{ref: \"{handle}\", role: \"Primary\"}}])",
         $"Or use: add_event_to_person(personHandle: \"<person>\", ...) for new events",
     };
 
@@ -104,8 +105,9 @@ public static class ResponseEnvelope
 
     public static string[] FamilyCreateNextSteps(string handle) => new[]
     {
-        $"Add child: update_family(handle: \"{handle}\", childHandles: [\"<person_handle>\"])",
-        $"Add events: update_family(handle: \"{handle}\", eventRefHandles: [\"<event_handle>\"])",
+        "Read the family first and preserve existing childRefs/eventRefs (including relationship and role metadata); update replaces the entire list. The examples below show only the new references.",
+        $"Add child: update_family(handle: \"{handle}\", childRefs: [{{ref: \"<person_handle>\", frel: \"Birth\", mrel: \"Birth\"}}])",
+        $"Add events: update_family(handle: \"{handle}\", eventRefs: [{{ref: \"<event_handle>\", role: \"Primary\"}}])",
         $"View family: get_family(handle: \"{handle}\", extended: true)",
     };
 
