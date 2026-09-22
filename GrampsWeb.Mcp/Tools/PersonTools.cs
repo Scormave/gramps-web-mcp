@@ -490,26 +490,4 @@ public static class PersonTools
         };
     }
 
-    [McpServerTool(Title = "Delete Person", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a person (destructive). Blocked when backlinks exist unless force=true. " +
-        "WARNING: force=true can leave dangling references in family and event records.")]
-    public static async Task<string> DeletePerson(
-        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete even when other objects still reference this person (dangerous; default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Person", "people", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
 }

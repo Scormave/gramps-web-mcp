@@ -75,25 +75,4 @@ public static class TagTools
         }
     }
 
-    [McpServerTool(Title = "Delete Tag", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a tag (destructive). Blocked when objects still carry the tag unless force=true.")]
-    public static async Task<string> DeleteTag(
-        [Description("Tag handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite objects referencing the tag (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "tags");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Tag", "tags", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
 }

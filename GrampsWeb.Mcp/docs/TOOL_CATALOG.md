@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 57 MCP tools exposed by the server.
+Complete catalog of the 48 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -82,7 +82,23 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 
 ---
 
-## Person (`PersonTools.cs`) — 8 tools
+## Object tools (`ObjectDeletionTools.cs`) — 1 tool
+
+### D — `DeleteObject`
+Delete a person, family, event, place, source, citation, note, media record,
+repository, or tag. The server checks backlinks and blocks deletion unless
+`force=true`; forcing may leave dangling references. Deleting a media record
+does not necessarily delete its file on disk.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `objectType` | `string` | yes | — | `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
+| `handle` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
+| `force` | `bool` | no | `false` | Delete despite backlinks |
+
+---
+
+## Person (`PersonTools.cs`) — 7 tools
 
 ### R — `GetPerson`
 Fetch one person by handle.  With `extended=true`, resolves linked objects
@@ -166,17 +182,9 @@ Empty list `[]` clears links; omit to keep unchanged.
 | `handle` | `string` | yes | Person handle |
 | All fields from `CreatePerson` | — | no | Same as create (all optional) |
 
-### D — `DeletePerson`
-Delete a person.  Blocked when backlinks exist unless `force=true`.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Person handle |
-| `force` | `bool` | no | `false` | Delete despite backlinks |
-
 ---
 
-## Family (`FamilyTools.cs`) — 5 tools
+## Family (`FamilyTools.cs`) — 4 tools
 
 ### R — `GetFamily`
 One family by handle: parents, children with frel/mrel, relationship type,
@@ -214,18 +222,9 @@ Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guid
 ### U — `UpdateFamily`
 Update an existing family.  Same field set as create (all optional).
 
-### D — `DeleteFamily`
-Delete a family.  Blocked when backlinks exist unless `force=true`.
-Does not remove the family from person records automatically.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Family handle |
-| `force` | `bool` | no | `false` | Delete despite backlinks |
-
 ---
 
-## Event (`EventTools.cs`) — 4 tools
+## Event (`EventTools.cs`) — 3 tools
 
 ### R — `GetEvent`
 One event: type, date/modifiers, place, description, citations, notes, tags, media.
@@ -247,12 +246,9 @@ Link to persons/families via their create/update tools' `eventRefs`.
 ### U — `UpdateEvent`
 Update an existing event (same field set, all optional).
 
-### D — `DeleteEvent`
-Delete an event.  Blocked when persons/families reference it unless `force=true`.
-
 ---
 
-## Place (`PlaceTools.cs`) — 5 tools
+## Place (`PlaceTools.cs`) — 4 tools
 
 ### R — `GetPlace`
 One place: name, type, coordinates, multi-level hierarchy (names, handles, types, enclosure dates), alternate names, enclosed-by parent refs.
@@ -285,12 +281,9 @@ Create a place.  **Prerequisites:** `gramps://types`.
 ### U — `UpdatePlace`
 Update a place. Same fields as create (all optional). `enclosedBy` and `alternateNames` follow omit-to-keep / empty-to-clear list semantics. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates.
 
-### D — `DeletePlace`
-Delete a place.  Blocked when events or child places reference it unless `force=true`.
-
 ---
 
-## Source (`SourceTools.cs`) — 4 tools
+## Source (`SourceTools.cs`) — 3 tools
 
 ### R — `GetSource`
 One source: title, author, publication info, abbreviation, repository refs.
@@ -311,12 +304,9 @@ Create a source.  Create sources **before** citations.
 ### U — `UpdateSource`
 Update a source (same field set, all optional).
 
-### D — `DeleteSource`
-Delete a source.  Citations pointing at it break or lose their link.
-
 ---
 
-## Citation (`CitationTools.cs`) — 4 tools
+## Citation (`CitationTools.cs`) — 3 tools
 
 ### R — `GetCitation`
 One citation: source title/handle, page, confidence, access date.
@@ -341,12 +331,9 @@ Attach to persons/events/places via their `citationHandles`.
 ### U — `UpdateCitation`
 Update a citation (same field set, all optional).
 
-### D — `DeleteCitation`
-Delete a citation.  Blocked when linked from other objects unless `force=true`.
-
 ---
 
-## Note (`NoteTools.cs`) — 4 tools
+## Note (`NoteTools.cs`) — 3 tools
 
 ### R — `GetNote`
 One note: text, type, format (Plain / Html).
@@ -366,12 +353,9 @@ Link via `noteHandles` on other objects.
 ### U — `UpdateNote`
 Update a note (same field set, all optional).
 
-### D — `DeleteNote`
-Delete a note.  Blocked when attached elsewhere unless `force=true`.
-
 ---
 
-## Media (`MediaTools.cs`) — 5 tools
+## Media (`MediaTools.cs`) — 4 tools
 
 ### R — `GetMedia`
 Media object metadata: path, MIME type, checksum, description.
@@ -414,12 +398,9 @@ Update media metadata (no binary upload).
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
 | `isPrivate` | `bool?` | no | — | Private flag |
 
-### D — `DeleteMedia`
-Delete a media record.  Removes the Gramps object, not necessarily the file on disk.
-
 ---
 
-## Repository (`RepositoryTools.cs`) — 4 tools
+## Repository (`RepositoryTools.cs`) — 3 tools
 
 ### R — `GetRepository`
 One repository: name, type, address, URLs.
@@ -439,12 +420,9 @@ Create a repository.  **Prerequisites:** `gramps://types`.
 ### U — `UpdateRepository`
 Update a repository (same field set, all optional).
 
-### D — `DeleteRepository`
-Delete a repository.  Blocked when sources reference it unless `force=true`.
-
 ---
 
-## Tag (`TagTools.cs`) — 3 tools
+## Tag (`TagTools.cs`) — 2 tools
 
 ### R — `GetTag`
 One tag: name, color (hex), priority.
@@ -457,9 +435,6 @@ Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
 | `name` | `string` | yes | — | Display name |
 | `color` | `string` | no | `"000000"` | RRGGBB (no `#`) |
 | `priority` | `int` | no | `0` | Sort priority |
-
-### D — `DeleteTag`
-Delete a tag.  Blocked when objects carry it unless `force=true`.
 
 ---
 
@@ -548,21 +523,22 @@ Handles event creation + person update automatically.
 
 | Domain | R | C | U | D | Total |
 |--------|---|---|---|---|-------|
-| Person | 5 | 1 | 1 | 1 | 8 |
-| Family | 2 | 1 | 1 | 1 | 5 |
-| Event | 1 | 1 | 1 | 1 | 4 |
-| Place | 2 | 1 | 1 | 1 | 5 |
-| Source | 1 | 1 | 1 | 1 | 4 |
-| Citation | 1 | 1 | 1 | 1 | 4 |
-| Note | 1 | 1 | 1 | 1 | 4 |
-| Media | 3 | 0 | 1 | 1 | 5 |
-| Repository | 1 | 1 | 1 | 1 | 4 |
-| Tag | 1 | 1 | 0 | 1 | 3 |
+| Person | 5 | 1 | 1 | 0 | 7 |
+| Family | 2 | 1 | 1 | 0 | 4 |
+| Event | 1 | 1 | 1 | 0 | 3 |
+| Place | 2 | 1 | 1 | 0 | 4 |
+| Source | 1 | 1 | 1 | 0 | 3 |
+| Citation | 1 | 1 | 1 | 0 | 3 |
+| Note | 1 | 1 | 1 | 0 | 3 |
+| Media | 3 | 0 | 1 | 0 | 4 |
+| Repository | 1 | 1 | 1 | 0 | 3 |
+| Tag | 1 | 1 | 0 | 0 | 2 |
+| Object | 0 | 0 | 0 | 1 | 1 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 1 | 2 | 0 | 0 | 3 |
 | Reference | 4 | 0 | 0 | 0 | 4 |
-| **Total** | **27** | **11** | **9** | **10** | **57** |
+| **Total** | **27** | **11** | **9** | **1** | **48** |
 
 ## Prerequisites for write tools
 
@@ -577,6 +553,6 @@ learn valid values.  Type strings are also validated server-side by
 
 ## Delete safety
 
-All delete tools check for backlinks before deleting.  If the object is
+`delete_object` checks for backlinks before deleting. If the object is
 referenced by other objects, deletion is **blocked** unless `force=true`.
 Using `force=true` can leave **dangling references** in the database.

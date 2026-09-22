@@ -187,25 +187,4 @@ public static class CitationTools
         }
     }
 
-    [McpServerTool(Title = "Delete Citation", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a citation (destructive). Blocked when still linked from other objects unless force=true.")]
-    public static async Task<string> DeleteCitation(
-        [Description("Citation handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite backlinks (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Citation", "citations", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
 }

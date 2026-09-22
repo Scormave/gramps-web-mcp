@@ -152,25 +152,4 @@ public static class NoteTools
         }
     }
 
-    [McpServerTool(Title = "Delete Note", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a note (destructive). Blocked when still attached elsewhere unless force=true.")]
-    public static async Task<string> DeleteNote(
-        [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite backlinks (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "notes");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Note", "notes", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
 }

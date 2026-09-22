@@ -139,7 +139,7 @@ allowlist is `image/jpeg,image/png,image/webp,image/avif,application/pdf`.
 
 Each file exposes a set of `[McpServerTool]` static methods grouped by Gramps
 entity type (Person, Family, Event, Place, Source, Citation, Note, Media, Tag,
-Repository) plus cross-cutting tools (Search, System, Reference) and
+Repository) plus cross-cutting tools (Search, System, Reference, ObjectDeletion) and
 multi-step convenience tools (Composite).
 
 Tools are the **public API surface** of the MCP server.  They:

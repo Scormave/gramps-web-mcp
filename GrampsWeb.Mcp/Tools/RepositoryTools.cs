@@ -158,28 +158,6 @@ public static class RepositoryTools
         }
     }
 
-    [McpServerTool(Title = "Delete Repository", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a repository (destructive). Blocked when sources still reference it unless force=true.")]
-    public static async Task<string> DeleteRepository(
-        [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite backlinks (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "repositories");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Repository", "repositories", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
     /// <summary>Single street line as Gramps address_list entry; null input omits the field on create.</summary>
     private static object[]? RepositoryAddressListFromStreet(string? street)
     {

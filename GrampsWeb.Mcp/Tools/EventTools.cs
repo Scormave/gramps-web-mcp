@@ -263,25 +263,4 @@ public static class EventTools
         }
     }
 
-    [McpServerTool(Title = "Delete Event", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete an event (destructive). Blocked when people/families still reference it unless force=true.")]
-    public static async Task<string> DeleteEvent(
-        [Description("Event handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite backlinks (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "events");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Event", "events", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
 }

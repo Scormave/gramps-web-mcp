@@ -74,7 +74,7 @@ Convenience tools:
 Full-control tools:
 - create_person, create_family, create_event, create_place, create_source, create_citation, create_note, create_repository, create_tag.
 - update_* tools for changing existing objects.
-- delete_* tools only after explicit confirmation.
+- delete_object only after explicit confirmation; set objectType to the record type.
 
 Important update rule: in update_* tools, omitting a list parameter leaves that list unchanged. Passing an empty list [] clears existing links of that type. Never pass [] unless the user specifically asked to remove those links.
 

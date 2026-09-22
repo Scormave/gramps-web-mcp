@@ -157,7 +157,7 @@ Full checklist for adding support for a completely new entity type
    - `Get{Entity}` (read)
    - `Create{Entity}` (write)
    - `Update{Entity}` (write)
-   - `Delete{Entity}` (write)
+   - add the entity to `ObjectDeletionTools.cs` when it supports deletion
 6. **Search support** → update `SearchFormatter.cs` and
    `SearchTools.ListObjects` if the new type should appear in listings.
 7. **Contract mapping** → update `swagger-dto-map.json`

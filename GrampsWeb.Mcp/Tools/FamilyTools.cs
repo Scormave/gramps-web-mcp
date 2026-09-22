@@ -256,27 +256,4 @@ public static class FamilyTools
         }
     }
 
-    [McpServerTool(Title = "Delete Family", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a family (destructive). Blocked when backlinks exist unless force=true. " +
-        "Does not remove this family from person records automatically; fix person links separately if needed.")]
-    public static async Task<string> DeleteFamily(
-        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite remaining references (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Family", "families", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
 }

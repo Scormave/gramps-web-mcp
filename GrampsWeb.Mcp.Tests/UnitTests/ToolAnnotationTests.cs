@@ -27,6 +27,8 @@ public class ToolAnnotationTests
                 Assert.False(attr.Destructive, $"Read-only tool {method.Name} must not be destructive");
         }
 
-        Assert.Equal(57, toolMethods.Count);
+        Assert.Equal(48, toolMethods.Count);
+        Assert.Single(toolMethods.Where(method => method.Name == "DeleteObject"));
+        Assert.DoesNotContain(toolMethods, method => method.Name.StartsWith("DeletePerson", StringComparison.Ordinal));
     }
 }

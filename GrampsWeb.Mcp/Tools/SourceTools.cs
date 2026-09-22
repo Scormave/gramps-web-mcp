@@ -173,27 +173,4 @@ public static class SourceTools
         }
     }
 
-    [McpServerTool(Title = "Delete Source", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a source (destructive). WARNING: citations pointing at this source break or lose the link. " +
-        "Blocked when backlinks exist unless force=true.")]
-    public static async Task<string> DeleteSource(
-        [Description("Source handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite citations still referencing it (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Source", "sources", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
 }

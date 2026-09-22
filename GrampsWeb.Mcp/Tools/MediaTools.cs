@@ -159,26 +159,4 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool(Title = "Delete Media", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a media record (destructive). Removes the Gramps object, not necessarily the file on disk. " +
-        "Blocked when other objects reference it unless force=true.")]
-    public static async Task<string> DeleteMedia(
-        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite backlinks (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Media", "media", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
 }

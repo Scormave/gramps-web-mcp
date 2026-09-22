@@ -251,29 +251,6 @@ public static class PlaceTools
         }
     }
 
-    [McpServerTool(Title = "Delete Place", ReadOnly = false, Destructive = true)]
-    [Description(
-        "Delete a place (destructive). Blocked when events or child places reference it unless force=true. " +
-        "Deleting a parent can orphan child places in the hierarchy.")]
-    public static async Task<string> DeletePlace(
-        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("If true, delete despite references (default false).")]
-        bool force = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, "Place", "places", resolvedHandle, force, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
     private static async Task<PlaceRefRequest[]?> ResolvePlaceRefListAsync(
         PlaceRefRequest[]? refs,
         GrampsApiClient client)
