@@ -106,8 +106,39 @@ public class GrampsConfigTests
         Assert.Contains("must be a valid integer", ex.Message);
     }
 
+    [Fact]
+    public void FromEnvironment_Accepts_RefreshToken_Without_Username_Or_Password()
+    {
+        var config = LoadConfig(readOnlyEnv: null, username: null, password: null, refreshToken: " refresh ");
+
+        Assert.True(config.UsesRefreshToken);
+        Assert.Equal("refresh", config.RefreshToken);
+        Assert.Equal(string.Empty, config.Password);
+    }
+
+    [Fact]
+    public void FromEnvironment_Requires_Password_Without_RefreshToken()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, password: null));
+
+        Assert.Contains("GRAMPS_PASSWORD is not set or empty", ex.Message);
+    }
+
+    [Fact]
+    public void FromEnvironment_Defaults_To_Password_Login()
+    {
+        var config = LoadConfig(readOnlyEnv: null);
+
+        Assert.False(config.UsesRefreshToken);
+        Assert.Null(config.RefreshToken);
+    }
+
     private static GrampsConfig LoadConfig(
         string? readOnlyEnv,
+        string? username = "user",
+        string? password = "pass",
+        string? refreshToken = null,
         string? mediaResourcesEnabled = null,
         string? mediaMaxBytes = null,
         string? mediaAllowedMimeTypes = null,
@@ -121,8 +152,9 @@ public class GrampsConfigTests
             try
             {
                 Environment.SetEnvironmentVariable("GRAMPS_API_URL", "https://gramps-web.test/");
-                Environment.SetEnvironmentVariable("GRAMPS_USERNAME", "user");
-                Environment.SetEnvironmentVariable("GRAMPS_PASSWORD", "pass");
+                Environment.SetEnvironmentVariable("GRAMPS_USERNAME", username);
+                Environment.SetEnvironmentVariable("GRAMPS_PASSWORD", password);
+                Environment.SetEnvironmentVariable("GRAMPS_REFRESH_TOKEN", refreshToken);
                 Environment.SetEnvironmentVariable("GRAMPS_TREE_ID", "tree");
                 Environment.SetEnvironmentVariable("GRAMPS_READ_ONLY", readOnlyEnv);
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_RESOURCES_ENABLED", mediaResourcesEnabled);
@@ -148,6 +180,7 @@ public class GrampsConfigTests
             ["GRAMPS_API_URL"] = Environment.GetEnvironmentVariable("GRAMPS_API_URL"),
             ["GRAMPS_USERNAME"] = Environment.GetEnvironmentVariable("GRAMPS_USERNAME"),
             ["GRAMPS_PASSWORD"] = Environment.GetEnvironmentVariable("GRAMPS_PASSWORD"),
+            ["GRAMPS_REFRESH_TOKEN"] = Environment.GetEnvironmentVariable("GRAMPS_REFRESH_TOKEN"),
             ["GRAMPS_TREE_ID"] = Environment.GetEnvironmentVariable("GRAMPS_TREE_ID"),
             ["GRAMPS_READ_ONLY"] = Environment.GetEnvironmentVariable("GRAMPS_READ_ONLY"),
             ["GRAMPS_MEDIA_RESOURCES_ENABLED"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_RESOURCES_ENABLED"),

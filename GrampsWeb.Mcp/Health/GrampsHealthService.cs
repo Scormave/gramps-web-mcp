@@ -60,10 +60,9 @@ public sealed class GrampsHealthService
 
     private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
     {
-        var tokenRequest = new { username = _config.Username, password = _config.Password };
-        var json = JsonSerializer.Serialize(tokenRequest, GrampsJson.Options);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        using var response = await _httpClient.PostAsync("/api/token/", content, cancellationToken);
+        using var response = _config.UsesRefreshToken
+            ? await ExchangeRefreshTokenAsync(cancellationToken)
+            : await PostCredentialsAsync(cancellationToken);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -77,6 +76,21 @@ public sealed class GrampsHealthService
             throw new InvalidOperationException("Token response does not contain access token");
 
         return accessToken;
+    }
+
+    private async Task<HttpResponseMessage> PostCredentialsAsync(CancellationToken cancellationToken)
+    {
+        var tokenRequest = new { username = _config.Username, password = _config.Password };
+        var json = JsonSerializer.Serialize(tokenRequest, GrampsJson.Options);
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        return await _httpClient.PostAsync("/api/token/", content, cancellationToken);
+    }
+
+    private async Task<HttpResponseMessage> ExchangeRefreshTokenAsync(CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/token/refresh/");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _config.RefreshToken);
+        return await _httpClient.SendAsync(request, cancellationToken);
     }
 
     private async Task<JsonElement> GetMetadataAsync(string accessToken, CancellationToken cancellationToken)

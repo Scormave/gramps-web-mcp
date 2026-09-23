@@ -87,6 +87,7 @@ Read-only mode can also be enabled with a server CLI argument.
 | `GRAMPS_API_URL` | Base URL of the Gramps Web instance |
 | `GRAMPS_USERNAME` | API user name |
 | `GRAMPS_PASSWORD` | API password |
+| `GRAMPS_REFRESH_TOKEN` | Refresh token; replaces username and password when set |
 | `GRAMPS_TREE_ID` | Tree UUID on that server |
 
 ### Optional (MCP transport)

@@ -21,7 +21,8 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # --- Gramps Web API (required at runtime; set with -e / secrets / compose) ---
 # GRAMPS_API_URL      Base URL of your Gramps Web instance (no trailing slash).
 # GRAMPS_USERNAME     API user name.
-# GRAMPS_PASSWORD     API password or token.
+# GRAMPS_PASSWORD     API password.
+# GRAMPS_REFRESH_TOKEN  Refresh token; replaces username and password when set.
 # GRAMPS_TREE_ID      Tree UUID on that server.
 # GRAMPS_READ_ONLY    true|false — when true, block create/update/delete tool calls.
 # GRAMPS_MUTATION_SERIALIZE  true|false — serialize mutation HTTP calls in-process (default true).

@@ -71,13 +71,55 @@ public class GrampsAuthTokenProviderTests
         Assert.Single(handler.Requests, r => r.Path == "/api/token/");
     }
 
-    private static GrampsAuthTokenProvider CreateProvider(AuthHandler handler)
+    [Fact]
+    public async Task GetAccessTokenAsync_SendsRefreshTokenInAuthorizationHeader()
+    {
+        var handler = new AuthHandler { InitialExpiresIn = 0 };
+        var provider = CreateProvider(handler);
+
+        await provider.GetTokenAsync();
+        var token = await provider.GetAccessTokenAsync();
+
+        Assert.Equal("refreshed-access", token);
+        var refresh = Assert.Single(handler.Requests, r => r.Path == "/api/token/refresh/");
+        Assert.Equal("Bearer stale-refresh", refresh.Authorization);
+        Assert.False(refresh.HasBody);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_UsesConfiguredRefreshToken_WithoutPasswordLogin()
+    {
+        var handler = new AuthHandler();
+        var provider = CreateProvider(handler, refreshToken: "configured-refresh");
+
+        var token = await provider.GetAccessTokenAsync();
+
+        Assert.Equal("refreshed-access", token);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/api/token/refresh/", request.Path);
+        Assert.Equal("Bearer configured-refresh", request.Authorization);
+    }
+
+    [Fact]
+    public async Task GetAccessTokenAsync_Throws_WhenConfiguredRefreshTokenIsRejected()
+    {
+        var handler = new AuthHandler { RefreshStatusCode = HttpStatusCode.Unauthorized };
+        var provider = CreateProvider(handler, refreshToken: "revoked-refresh");
+
+        var ex = await Assert.ThrowsAsync<GrampsApiException>(() => provider.GetAccessTokenAsync());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
+        Assert.DoesNotContain(handler.Requests, r => r.Path == "/api/token/");
+    }
+
+    private static GrampsAuthTokenProvider CreateProvider(AuthHandler handler, string? refreshToken = null)
     {
         var config = new GrampsConfig(
             ApiUrl: "https://gramps-web.test",
-            Username: "user",
-            Password: "pass",
-            TreeId: "tree");
+            Username: refreshToken is null ? "user" : string.Empty,
+            Password: refreshToken is null ? "pass" : string.Empty,
+            TreeId: "tree",
+            RefreshToken: refreshToken);
 
         return new GrampsAuthTokenProvider(
             new HttpClient(handler) { BaseAddress = new Uri("https://gramps-web.test") },
@@ -100,7 +142,10 @@ public class GrampsAuthTokenProviderTests
             CancellationToken cancellationToken)
         {
             var path = request.RequestUri?.AbsolutePath ?? string.Empty;
-            Requests.Add(new RecordedRequest(path));
+            Requests.Add(new RecordedRequest(
+                path,
+                request.Headers.Authorization?.ToString(),
+                request.Content is not null));
 
             if (request.Method == HttpMethod.Post && path == "/api/token/")
             {
@@ -148,5 +193,5 @@ public class GrampsAuthTokenProviderTests
         }
     }
 
-    private sealed record RecordedRequest(string Path);
+    private sealed record RecordedRequest(string Path, string? Authorization, bool HasBody);
 }
