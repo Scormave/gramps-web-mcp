@@ -12,7 +12,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Family objects from the Gramps Web API.
-/// Covers family timelines and family mutations.
+/// Covers family mutations.
 /// </summary>
 [McpServerToolType]
 public static class FamilyTools
@@ -52,39 +52,6 @@ public static class FamilyTools
                     ? NotFoundHelper.NotFoundMessage("Family", handle)
                     : await FamilyFormatter.FormatFamilyFullAsync(family, client);
             }
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool(Title = "Get Family Timeline", ReadOnly = true, Destructive = false)]
-    [Description(
-        "Read-only: chronological events for one family. " +
-        "events filters by category (vital, family, religious, vocational, academic, travel, legal, residence, other, custom). " +
-        "dates uses YYYY/M/D ranges; leading zeros stripped for API. Undated events included by default (same behavior as person timeline). " +
-        "Rows may include event handles for get_object.")]
-    public static async Task<string> GetFamilyTimeline(
-        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom")]
-        string[]? events = null,
-        [Description("Date range filter as 'YYYY/MM/DD-YYYY/MM/DD'")]
-        string? dates = null,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
-            var qs = PersonTools.BuildTimelineQueryString(events, null, null, dates);
-            var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
-                $"/api/families/{Uri.EscapeDataString(resolvedHandle)}/timeline{qs}");
-            if (timeline == null)
-                return NotFoundHelper.NotFoundMessage("Family", handle);
-            if (timeline.Length == 0)
-                return $"No timeline events found for family {handle}";
-            return TimelineFormatter.FormatTimelineChronological(timeline);
         }
         catch (Exception ex)
         {

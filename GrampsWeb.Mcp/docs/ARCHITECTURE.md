@@ -140,7 +140,7 @@ allowlist is `image/jpeg,image/png,image/webp,image/avif,application/pdf`.
 
 Each file exposes a set of `[McpServerTool]` static methods grouped by Gramps
 entity type (Person, Family, Event, Place, Source, Citation, Note, Media, Tag,
-Repository) plus cross-cutting tools (Search, System, Reference, Object) and
+Repository) plus cross-cutting tools (Search, System, Reference, Object, Timeline) and
 multi-step convenience tools (Composite).
 
 Tools are the **public API surface** of the MCP server.  They:
@@ -155,6 +155,10 @@ Tools are the **public API surface** of the MCP server.  They:
 `CompositeTools.cs` provides multi-step convenience tools (`QuickAddPerson`,
 `AddEventToPerson`) that combine multiple API calls into
 a single tool invocation.
+
+`TimelineTools.cs` provides `GetTimeline` for person, family, and place
+chronologies. It dispatches to the appropriate API route or place-backlink
+fallback while keeping the public catalog to one timeline tool.
 
 The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`.
 Read-only mode intentionally keeps this discovery unchanged: write tools remain

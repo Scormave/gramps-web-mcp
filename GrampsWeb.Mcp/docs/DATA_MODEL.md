@@ -77,7 +77,7 @@ polymorphic wire shapes.
 |-------|------|-------------|
 | `GrampsSearchHit` | `GrampsSearchHit.cs` | `Handle`, `ObjectType`, `GrampsId`, `Rank`, `Score`, `Object` (raw `JsonElement?`) |
 | `GrampsPagedResult<T>` | `GrampsPagedResult.cs` | `Objects`, `Total`, `Page` — generic wrapper for paged lists |
-| `GrampsTimelineEntry` | `GrampsTimeline.cs` | `Handle`, `GrampsId`, `Label`, `Type`, `Date`, `Place`, `Description`, `Role`, `Name`, `Category`, `Rating` |
+| `GrampsTimelineEntry` | `GrampsTimeline.cs` | `Handle`, `GrampsId`, `Label`, `Type`, `Date`, `Place`, `Description`, `Role`, `Name`, `Category`, `Rating` — returned by `get_timeline` for people, families, and places |
 | `PersonTreeRow` | `PersonTreeRow.cs` | `Person`, `Generation`, `AncestorPathFromRoot` — app-side model for tree traversal |
 
 ---

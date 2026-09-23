@@ -13,8 +13,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Person objects from the Gramps Web API.
-/// Covers person traversal, timelines, relations, and person mutations.
-/// get_person_timeline, and get_relations.
+/// Covers person traversal, relations, and person mutations.
 /// </summary>
 [McpServerToolType]
 public static class PersonTools
@@ -100,45 +99,6 @@ public static class PersonTools
 
             var title = normalizedDirection == "ancestors" ? "ANCESTOR TREE" : "DESCENDANT TREE";
             return await PersonFormatter.FormatPersonTreeRows(title, resolvedHandle, rows, kinshipLabels, client);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool(Title = "Get Person Timeline", ReadOnly = true, Destructive = false)]
-    [Description(
-        "Read-only: chronological timeline of events for one person (and optionally relatives' events). " +
-        "Filter with events (categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom), " +
-        "relatives (father, mother, brother, sister, wife, husband, son, daughter), and relative_events (same categories). " +
-        "dates: range YYYY/M/D-YYYY/M/D or open-ended; month/day leading zeros are stripped for the API. " +
-        "Output may include event handles for follow-up with get_object.")]
-    public static async Task<string> GetPersonTimeline(
-        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("Event categories to include: vital, family, religious, vocational, academic, travel, legal, residence, other, custom")]
-        string[]? events = null,
-        [Description("Include events of relatives: father, mother, brother, sister, wife, husband, son, daughter")]
-        string[]? relatives = null,
-        [Description("Event categories for the listed relatives (same options as events)")]
-        string[]? relativeEvents = null,
-        [Description("Date range filter; e.g. 1999/1/1-2010/12/31 or 1999/01/01-2010/01/01 (zeros stripped for API)")]
-        string? dates = null,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
-            var qs = BuildTimelineQueryString(events, relatives, relativeEvents, dates, true);
-            var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
-                $"/api/people/{Uri.EscapeDataString(resolvedHandle)}/timeline{qs}");
-            if (timeline == null)
-                return NotFoundHelper.NotFoundMessage("Person", handle);
-            if (timeline.Length == 0)
-                return $"No timeline events found for {handle}. " +
-                    "Only linked events (and relatives per filters) appear; a name date alone is not a timeline event.";
-            return TimelineFormatter.FormatTimelineChronological(timeline);
         }
         catch (Exception ex)
         {
@@ -360,81 +320,6 @@ public static class PersonTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
-    }
-
-    internal static string BuildTimelineQueryString(
-        string[]? events, string[]? relatives, string[]? relativeEvents,
-        string? dates, bool includeUndated = true)
-    {
-        var queryParams = new List<string>();
-        // Gramps Web API uses comma-delimited event_classes / relative_event_classes (not repeated events= for categories).
-        if (events?.Length > 0)
-            queryParams.Add($"event_classes={Uri.EscapeDataString(string.Join(",", events))}");
-        if (relatives?.Length > 0)
-            queryParams.Add($"relatives={Uri.EscapeDataString(string.Join(",", relatives))}");
-        if (relativeEvents?.Length > 0)
-            queryParams.Add($"relative_event_classes={Uri.EscapeDataString(string.Join(",", relativeEvents))}");
-        var normalizedDates = NormalizeTimelineDatesForGrampsApi(dates);
-        if (!string.IsNullOrEmpty(normalizedDates))
-            queryParams.Add($"dates={Uri.EscapeDataString(normalizedDates)}");
-        // Default true: Gramps timeline drops events when date.sortval==0 (API discard_empty default), even if a display date exists.
-        if (includeUndated)
-            queryParams.Add("discard_empty=false");
-        return queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-    }
-
-    /// <summary>
-    /// Gramps Web timeline <c>dates</c> query is validated with a regex that disallows leading zeros
-    /// in month and day (<c>1999/1/1</c> not <c>1999/01/01</c>).
-    /// </summary>
-    internal static string? NormalizeTimelineDatesForGrampsApi(string? dates)
-    {
-        if (string.IsNullOrWhiteSpace(dates))
-            return dates;
-
-        var s = dates.Trim();
-
-        if (s.StartsWith("-", StringComparison.Ordinal))
-        {
-            var rest = s[1..];
-            return "-" + NormalizeYmdSegment(rest);
-        }
-
-        if (s.EndsWith("-", StringComparison.Ordinal)
-            && !s[..^1].Contains('-', StringComparison.Ordinal))
-        {
-            var rest = s[..^1];
-            return NormalizeYmdSegment(rest) + "-";
-        }
-
-        var dash = s.IndexOf('-', StringComparison.Ordinal);
-        if (dash > 0 && dash < s.Length - 1)
-        {
-            var left = s[..dash];
-            var right = s[(dash + 1)..];
-            return $"{NormalizeYmdSegment(left)}-{NormalizeYmdSegment(right)}";
-        }
-
-        return NormalizeYmdSegment(s);
-    }
-
-    private static string NormalizeYmdSegment(string segment)
-    {
-        var parts = segment.Split('/');
-        if (parts.Length != 3)
-            return segment;
-
-        if (parts[0].Contains('*', StringComparison.Ordinal)
-            || parts[1].Contains('*', StringComparison.Ordinal)
-            || parts[2].Contains('*', StringComparison.Ordinal))
-            return segment;
-
-        if (!int.TryParse(parts[0], out var y)
-            || !int.TryParse(parts[1], out var m)
-            || !int.TryParse(parts[2], out var d))
-            return segment;
-
-        return $"{y}/{m}/{d}";
     }
 
     internal static GrampsNameRequest ConvertNameToRequest(GrampsName name)

@@ -154,9 +154,8 @@ Full checklist for adding support for a completely new entity type
 3. **Request DTO** → `Requests/Create{Entity}Request.cs`
 4. **Formatter** → `Formatters/{Entity}Formatter.cs`
 5. **Tools** → `Tools/{Entity}Tools.cs` with:
-   - `Get{Entity}` (read)
-   - `Create{Entity}` (write)
-   - `Update{Entity}` (write)
+   - `Read{Entity}Async` (internal read dispatcher)
+   - `Create{Entity}` and `Update{Entity}` where supported
    - add the entity to `ObjectTools.cs` when it supports generic reads or deletion
 6. **Search support** → update `SearchFormatter.cs` and
    `SearchTools.ListObjects` if the new type should appear in listings.

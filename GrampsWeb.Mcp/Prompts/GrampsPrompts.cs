@@ -56,7 +56,7 @@ public sealed class GrampsPrompts
             "\" looks like a Gramps ID (e.g. I0001), use get_object with that ID. " +
             "Otherwise, use search(\"" + person + "\") to locate them.\n" +
             "2. Get full details: call get_object with the person's ID or handle and extended=true.\n" +
-            "3. Get their timeline: call get_person_timeline for a chronological view of life events.\n" +
+            "3. Get their timeline: call get_timeline with objectType=person for a chronological view of life events.\n" +
             "4. Get ancestors: call get_person_tree with direction=ancestors and 3 generations.\n" +
             "5. Get descendants: call get_person_tree with direction=descendants and 3 generations.\n" +
             "Present the findings as a structured biographical summary including:\n" +

@@ -37,13 +37,7 @@ For discovery and browsing:
 For people and kinship:
 - get_person_tree: inspect ancestors or descendants; set direction to ancestors or descendants.
 - get_relations: find the relationship between two people.
-- get_person_timeline: build a chronological view of a person's life, optionally including relatives.
-
-For families:
-- get_family_timeline: build a family chronology.
-
-For places:
-- get_place_timeline: inspect events connected to a place.
+- get_timeline: build a chronological timeline for a person, family, or place; set objectType accordingly. relatives and relativeEvents work only for person timelines. Place timelines include direct event backlinks only, not child places.
 
 For sources and evidence:
 - Use get_object to inspect sources, citations, notes, media, repositories, and other records.

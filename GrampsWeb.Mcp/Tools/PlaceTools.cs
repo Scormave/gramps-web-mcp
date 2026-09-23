@@ -10,7 +10,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Place objects from the Gramps Web API.
-/// Covers place timelines and mutations (browse places via list_objects('places') or search).
+/// Covers place mutations (browse places via list_objects('places') or search).
 /// </summary>
 [McpServerToolType]
 public static class PlaceTools
@@ -31,52 +31,6 @@ public static class PlaceTools
             return place == null
                 ? NotFoundHelper.NotFoundMessage("Place", handle)
                 : await PlaceFormatter.FormatPlaceFull(place, client);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    [McpServerTool(Title = "Get Place Timeline", ReadOnly = true, Destructive = false)]
-    [Description(
-        "Read-only: chronological events whose place field equals this handle (computed via backlinks; not a single API route). " +
-        "Events on a child place (e.g. city) do not appear when querying the parent country handle. " +
-        "events filters by category (same set as person timeline). dates uses YYYY/M/D ranges with zero-stripping. " +
-        "Output may include event handles for get_object.")]
-    public static async Task<string> GetPlaceTimeline(
-        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom")]
-        string[]? events = null,
-        [Description("Date range filter; e.g. 1999/1/1-2010/12/31 (zeros normalized)")]
-        string? dates = null,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
-            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
-                $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");
-            if (place == null)
-                return NotFoundHelper.NotFoundMessage("Place", handle);
-
-            var datesNormalized = PersonTools.NormalizeTimelineDatesForGrampsApi(dates);
-            var outcome = await PlaceTimelineFallback.CollectAsync(
-                client, resolvedHandle, place, events, datesNormalized, true);
-
-            if (outcome.MatchedPlaceCount == 0)
-                return
-                    $"No events linked directly to place {handle}. " +
-                    "No events reference this exact place handle in backlinks " +
-                    "(events often use a city or address place, not the parent country or region).";
-
-            if (outcome.Entries.Length == 0)
-                return
-                    $"No events at place {handle} match the filters (event categories and/or date range). " +
-                    "Try broader categories or widen the date range.";
-
-            return TimelineFormatter.FormatTimelineChronological(outcome.Entries);
         }
         catch (Exception ex)
         {

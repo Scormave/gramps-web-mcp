@@ -4,7 +4,7 @@
   "display_name": "Gramps Web MCP",
   "version": "__VERSION__",
   "description": "Structured MCP access to your Gramps Web family tree",
-  "long_description": "Connect Claude Desktop to a self-hosted [Gramps Web](https://www.grampsweb.org/) instance. Browse, search, and optionally edit people, families, events, places, sources, citations, notes, media, and tags through 34 MCP tools.",
+  "long_description": "Connect Claude Desktop to a self-hosted [Gramps Web](https://www.grampsweb.org/) instance. Browse, search, and optionally edit people, families, events, places, sources, citations, notes, media, and tags through 32 MCP tools.",
   "author": {
     "name": "Scormave",
     "url": "https://github.com/Scormave"

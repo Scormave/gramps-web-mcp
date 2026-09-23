@@ -21,7 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   results to the needed data
 - Replace `get_ancestors` and `get_descendants` with `get_person_tree`, whose
   `direction` selects ancestors or descendants
-- Reduce the MCP catalog from 57 to 34 tools and update the GitHub Pages site,
+- Replace person, family, and place timeline tools with `get_timeline`, whose
+  `objectType` selects the timeline owner and limits relative-event filters to people
+- Reduce the MCP catalog from 57 to 32 tools and update the GitHub Pages site,
   MCP Bundle metadata, prompts, and tool documentation
 - Expose refresh-token authentication in Docker Compose, MCP Registry, MCPB,
   GitHub Pages, and the remaining setup documentation

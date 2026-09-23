@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 34 MCP tools exposed by the server.
+Complete catalog of the 32 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -99,7 +99,25 @@ does not necessarily delete its file on disk.
 
 ---
 
-## Person (`PersonTools.cs`) — 5 tools
+## Timeline (`TimelineTools.cs`) — 1 tool
+
+### R — `GetTimeline`
+Chronological events for a person, family, or place. Person timelines can also
+include relatives' events. Place timelines are computed from direct event
+backlinks; child places are not included.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `objectType` | `string` | yes | — | `person`, `family`, or `place` |
+| `identifier` | `string` | yes | — | Object handle or Gramps ID |
+| `events` | `string[]?` | no | all | Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom |
+| `relatives` | `string[]?` | no | none | Person only: father, mother, brother, sister, wife, husband, son, daughter |
+| `relativeEvents` | `string[]?` | no | none | Person only: event categories for relatives |
+| `dates` | `string?` | no | — | Date range `YYYY/M/D-YYYY/M/D` |
+
+---
+
+## Person (`PersonTools.cs`) — 4 tools
 
 ### R — `GetPersonTree`
 List either ancestors or descendants up to N generations with names, vital
@@ -112,17 +130,6 @@ descendants follow children on families where the person is a parent.
 | `direction` | `string` | yes | — | `ancestors` or `descendants` |
 | `generations` | `int` | no | 3 | Generations to include (max 10) |
 | `kinshipLabels` | `bool` | no | `true` | Add kinship text such as Father's mother or Granddaughter |
-
-### R — `GetPersonTimeline`
-Chronological timeline of events for one person, with optional relative events.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Person handle |
-| `events` | `string[]?` | no | all | Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom |
-| `relatives` | `string[]?` | no | none | Relatives: father, mother, brother, sister, wife, husband, son, daughter |
-| `relativeEvents` | `string[]?` | no | none | Event categories for relatives |
-| `dates` | `string?` | no | — | Date range `YYYY/M/D-YYYY/M/D` |
 
 ### R — `GetRelations`
 Genealogical relationship between two people (e.g. "3rd cousin twice removed"),
@@ -166,16 +173,7 @@ Empty list `[]` clears links; omit to keep unchanged.
 
 ---
 
-## Family (`FamilyTools.cs`) — 3 tools
-
-### R — `GetFamilyTimeline`
-Chronological events for one family.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Family handle |
-| `events` | `string[]?` | no | all | Event categories |
-| `dates` | `string?` | no | — | Date range filter |
+## Family (`FamilyTools.cs`) — 2 tools
 
 ### C — `CreateFamily`
 Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
@@ -217,16 +215,7 @@ Update an existing event (same field set, all optional).
 
 ---
 
-## Place (`PlaceTools.cs`) — 3 tools
-
-### R — `GetPlaceTimeline`
-Chronological events whose place equals this handle.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Place handle |
-| `events` | `string[]?` | no | all | Event categories |
-| `dates` | `string?` | no | — | Date range filter |
+## Place (`PlaceTools.cs`) — 2 tools
 
 ### C — `CreatePlace`
 Create a place.  **Prerequisites:** `gramps://types`.
@@ -460,10 +449,11 @@ Handles event creation + person update automatically.
 
 | Domain | R | C | U | D | Total |
 |--------|---|---|---|---|-------|
-| Person | 3 | 1 | 1 | 0 | 5 |
-| Family | 1 | 1 | 1 | 0 | 3 |
+| Timeline | 1 | 0 | 0 | 0 | 1 |
+| Person | 2 | 1 | 1 | 0 | 4 |
+| Family | 0 | 1 | 1 | 0 | 2 |
 | Event | 0 | 1 | 1 | 0 | 2 |
-| Place | 1 | 1 | 1 | 0 | 3 |
+| Place | 0 | 1 | 1 | 0 | 2 |
 | Source | 0 | 1 | 1 | 0 | 2 |
 | Citation | 0 | 1 | 1 | 0 | 2 |
 | Note | 0 | 1 | 1 | 0 | 2 |
@@ -475,7 +465,7 @@ Handles event creation + person update automatically.
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 0 | 2 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
-| **Total** | **13** | **11** | **9** | **1** | **34** |
+| **Total** | **11** | **11** | **9** | **1** | **32** |
 
 ## Prerequisites for write tools
 
