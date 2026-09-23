@@ -22,7 +22,7 @@ public static class AgentDateParser
     private const string UnrecognizedDateGuidance =
         "Use ISO (yyyy-MM-dd / yyyy-MM / yyyy), English months (1 Jul 1919 or July 1919), " +
         "ranges (1800-1850, from … to …, between … and …), or prefixes (before/after/about). " +
-        "See get_input_guide.";
+        "See get_reference(topic: \"input-guide\", section: \"dates\").";
 
     private static readonly Regex IsoFull = new(
         @"^(?<y>\d{4})-(?<m>\d{1,2})-(?<d>\d{1,2})$",

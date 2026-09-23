@@ -15,7 +15,7 @@ public sealed class FlexiblePlaceNameList
         "simple objects {value, lang?, date?}, or JSON array. " +
         "Dated example: [{value:\"New York\", date:\"1914-08-31-1924-01-26\"}] or date \"from 5 Jul 1944\". " +
         "Place dashes are spans (from…to); open \"1991-\" / \"from 1991\" are From. " +
-        "Unrecognized dates fail validation (see get_input_guide).";
+        "Unrecognized dates fail validation (see get_reference(topic: \"input-guide\", section: \"dates\")).";
 
     public required PlaceNameRequest[] Items { get; init; }
 

@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 38 MCP tools exposed by the server.
+Complete catalog of the 35 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -42,31 +42,21 @@ Read-only reference/discovery data exposed as MCP resources:
 | `gramps://media/{handle}/thumbnail/{size}` | Opt-in binary thumbnail bytes for a media record; recommended for vision agents |
 | `gramps://media/{handle}/file` | Opt-in full media file bytes, subject to size, MIME, and private-record safeguards |
 
-Compatibility note: reference payloads are also available as tools for clients
-without native MCP resource reading support:
-`get_input_guide`, `get_types`, `get_metadata`, `get_name_settings`.
+Compatibility note: reference payloads are also available through
+`get_reference` for clients without native MCP resource reading support.
 Media thumbnails/files are also available as image-content tools for clients
 such as Open WebUI that handle tool images better than MCP resources.
 
-## Reference (`ReferenceTools.cs`) — 4 tools
+## Reference (`ReferenceTools.cs`) — 1 tool
 
-### R — `GetInputGuide`
-Read-only compatibility mirror of `gramps://input-guide` resource.
-Returns complete write-input guide: date strings, structured fields, and full
-name schema.
+### R — `GetReference`
+Read-only compatibility access to one reference resource. `topic` selects the
+payload; `section` reduces the response when only one part is needed.
 
-### R — `GetTypes`
-Read-only compatibility mirror of `gramps://types` resource.
-Returns built-in and custom type vocabularies used for server-side validation.
-
-### R — `GetMetadata`
-Read-only compatibility mirror of `gramps://metadata` resource.
-Returns connection/tree metadata (API version, tree id/name, owner,
-default person).
-
-### R — `GetNameSettings`
-Read-only compatibility mirror of `gramps://name-settings` resource.
-Returns name display formats and surname grouping rules.
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `topic` | `string` | yes | `input-guide`, `types`, `metadata`, or `name-settings` |
+| `section` | `string?` | no | For `input-guide`: `dates`, `name_schema`, `structured_fields`, or `structured_fields.names`, `.attributes`, `.urls`, `.addresses`, `.person_associations`, `.repository_refs`. For `types`: one returned category key such as `event_types`. For `name-settings`: `formats` or `groups`. Unsupported for `metadata`. |
 
 ## Prompts
 
@@ -492,8 +482,8 @@ Handles event creation + person update automatically.
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 0 | 2 | 0 | 0 | 2 |
-| Reference | 4 | 0 | 0 | 0 | 4 |
-| **Total** | **17** | **11** | **9** | **1** | **38** |
+| Reference | 1 | 0 | 0 | 0 | 1 |
+| **Total** | **14** | **11** | **9** | **1** | **35** |
 
 ## Prerequisites for write tools
 
@@ -505,6 +495,11 @@ learn valid values.  Type strings are also validated server-side by
 |----------|-------------|
 | `gramps://types` | Before setting any type/role/origin string (server validates, but checking first avoids round-trip errors) |
 | `gramps://input-guide` | Before any `date`, `Flexible*`, or structured name parameter (covers dates, structured fields, and name schema) |
+
+Clients without MCP resource support can use `get_reference(topic: "types")` or
+`get_reference(topic: "input-guide", section: "dates")` instead.
+For structured write fields, request only the relevant subsection, such as
+`get_reference(topic: "input-guide", section: "structured_fields.addresses")`.
 
 ## Delete safety
 

@@ -153,7 +153,7 @@ public sealed class GrampsResources
         }
     }
 
-    internal static async Task<string> FetchTypesTextAsync(GrampsApiClient client)
+    internal static async Task<string> FetchTypesTextAsync(GrampsApiClient client, string? section = null)
     {
         var defaultRoot = await client.GetAsync<JsonElement>("/api/types/default/");
         var types = TypesPayloadParser.ParseCategories(defaultRoot);
@@ -175,7 +175,24 @@ public sealed class GrampsResources
             }
         }
 
-        return TypesFormatter.FormatTypesResponse(types);
+        if (string.IsNullOrWhiteSpace(section))
+            return TypesFormatter.FormatTypesResponse(types);
+
+        var normalizedSection = section.Trim();
+        var category = types.FirstOrDefault(pair =>
+            string.Equals(pair.Key, normalizedSection, StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrEmpty(category.Key))
+        {
+            var available = string.Join(", ", types.Keys.OrderBy(key => key, StringComparer.OrdinalIgnoreCase));
+            throw McpToolErrors.ValidationError(
+                $"Unknown types section '{section}'. Available sections: {available}.");
+        }
+
+        return TypesFormatter.FormatTypesResponse(
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                [category.Key] = category.Value
+            });
     }
 
     internal static async Task<string> FetchMetadataTextAsync(GrampsApiClient client)
@@ -205,10 +222,32 @@ public sealed class GrampsResources
         return SystemFormatter.FormatMetadata(metadata, defaultPersonFullName);
     }
 
-    internal static async Task<string> FetchNameSettingsTextAsync(GrampsApiClient client)
+    internal static async Task<string> FetchNameSettingsTextAsync(GrampsApiClient client, string? section = null)
     {
-        var formats = await client.GetAsync<dynamic>("/api/name-formats/");
-        var groups = await client.GetAsync<dynamic>("/api/name-groups/");
+        var normalizedSection = section?.Trim().ToLowerInvariant();
+        if (normalizedSection is not (null or "" or "formats" or "groups"))
+        {
+            throw McpToolErrors.ValidationError(
+                $"Unknown name-settings section '{section}'. Available sections: formats, groups.");
+        }
+
+        if (normalizedSection == "formats")
+        {
+            var formatsOnly = await client.GetAsync<dynamic>("/api/name-formats/");
+            return $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formatsOnly)}";
+        }
+
+        if (normalizedSection == "groups")
+        {
+            var groupsOnly = await client.GetAsync<dynamic>("/api/name-groups/");
+            return $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groupsOnly)}";
+        }
+
+        var formatsTask = client.GetAsync<dynamic>("/api/name-formats/");
+        var groupsTask = client.GetAsync<dynamic>("/api/name-groups/");
+        await Task.WhenAll(formatsTask, groupsTask);
+        var formats = await formatsTask;
+        var groups = await groupsTask;
         return $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
                $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}";
     }
@@ -376,15 +415,72 @@ public sealed class GrampsResources
         string MimeType,
         string ResourceUri);
 
-    internal static string BuildInputGuideText()
+    internal static string BuildInputGuideText(string? section = null)
     {
+        var dates = BuildDateInputGuidePayload();
+        var structuredFields = BuildStructuredFieldInputGuidePayload();
+        var nameSchema = BuildNameSchemaPayload();
         var guide = new
         {
-            dates = BuildDateInputGuidePayload(),
-            structured_fields = BuildStructuredFieldInputGuidePayload(),
-            name_schema = BuildNameSchemaPayload()
+            dates,
+            structured_fields = structuredFields,
+            name_schema = nameSchema
         };
-        return JsonSerializer.Serialize(guide, new JsonSerializerOptions { WriteIndented = true });
+        if (string.IsNullOrWhiteSpace(section))
+            return JsonSerializer.Serialize(guide, new JsonSerializerOptions { WriteIndented = true });
+
+        var normalizedSection = section.Trim().ToLowerInvariant();
+        object? selected = normalizedSection switch
+        {
+            "dates" => dates,
+            "structured_fields" => structuredFields,
+            "name_schema" => nameSchema,
+            "structured_fields.names" => new Dictionary<string, object>
+            {
+                ["structured_fields"] = new Dictionary<string, object>
+                {
+                    ["names"] = GetStructuredFieldsSection(structuredFields, "names")
+                }
+            },
+            "structured_fields.attributes" => BuildStructuredFieldsSection(structuredFields, "attributes"),
+            "structured_fields.urls" => BuildStructuredFieldsSection(structuredFields, "urls"),
+            "structured_fields.addresses" => BuildStructuredFieldsSection(structuredFields, "addresses"),
+            "structured_fields.person_associations" => BuildStructuredFieldsSection(structuredFields, "person_associations"),
+            "structured_fields.repository_refs" => BuildStructuredFieldsSection(structuredFields, "repository_refs"),
+            _ => null
+        };
+        if (selected is null)
+        {
+            throw McpToolErrors.ValidationError(
+                $"Unknown input-guide section '{section}'. Available sections: dates, name_schema, structured_fields, structured_fields.names, structured_fields.attributes, structured_fields.urls, structured_fields.addresses, structured_fields.person_associations, structured_fields.repository_refs.");
+        }
+
+        return JsonSerializer.Serialize(
+            new Dictionary<string, object> { [normalizedSection] = selected },
+            new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static object BuildStructuredFieldsSection(object structuredFields, string section) =>
+        new Dictionary<string, object>
+        {
+            ["structured_fields"] = new Dictionary<string, object>
+            {
+                [section] = GetStructuredFieldsSection(structuredFields, section)
+            }
+        };
+
+    private static object GetStructuredFieldsSection(object structuredFields, string section)
+    {
+        var root = JsonSerializer.SerializeToElement(structuredFields);
+        if (section == "names")
+        {
+            return new Dictionary<string, JsonElement>
+            {
+                ["primary_and_alternate_names"] = root.GetProperty("primary_and_alternate_names").Clone()
+            };
+        }
+
+        return root.GetProperty(section).Clone();
     }
 
     internal static object BuildStructuredFieldInputGuidePayload() => new

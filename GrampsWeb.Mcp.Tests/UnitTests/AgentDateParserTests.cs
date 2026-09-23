@@ -106,7 +106,7 @@ public class AgentDateParserTests
         var ex = Assert.Throws<McpException>(() =>
             AgentDateParser.ToDateRequestOrNull("early spring 1847"));
         Assert.Contains("Unrecognized date", ex.Message);
-        Assert.Contains("get_input_guide", ex.Message);
+        Assert.Contains("get_reference", ex.Message);
     }
 
     [Fact]

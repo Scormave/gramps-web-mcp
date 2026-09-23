@@ -13,11 +13,11 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 
 ## Features
 
-- **38 MCP tools** — read, create, update, and delete people, families, events, places,
+- **35 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
-- **Composite workflows** — quick-add person, add event to person, find by Gramps ID
+- **Composite workflows** — quick-add person and add event to person
 - **6 MCP resources** — type vocabularies, input guide, tree metadata, name
   settings, and opt-in media thumbnails/files for vision-capable agents
 - **Media safeguards** — size limits, MIME allowlists, and private-record defaults

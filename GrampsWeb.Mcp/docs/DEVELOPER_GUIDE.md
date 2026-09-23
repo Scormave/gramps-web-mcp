@@ -157,7 +157,7 @@ Full checklist for adding support for a completely new entity type
    - `Get{Entity}` (read)
    - `Create{Entity}` (write)
    - `Update{Entity}` (write)
-   - add the entity to `ObjectTools.cs` when it supports deletion
+   - add the entity to `ObjectTools.cs` when it supports generic reads or deletion
 6. **Search support** → update `SearchFormatter.cs` and
    `SearchTools.ListObjects` if the new type should appear in listings.
 7. **Contract mapping** → update `swagger-dto-map.json`
@@ -185,7 +185,7 @@ When you want agents to pass data in free-form text as well as structured JSON:
 3. Use `Flexible{Thing}` as the parameter type in tool methods.
 4. Add unit tests in `GrampsWeb.Mcp.Tests/UnitTests/Flexible{Thing}Tests.cs`.
 5. Update the structured field guidance payload in `Resources/GrampsResources.cs`
-   and keep `Tools/ReferenceTools.cs` compatibility output aligned.
+   and keep the `GetReference` compatibility tool in `Tools/ReferenceTools.cs` aligned.
 
 ---
 

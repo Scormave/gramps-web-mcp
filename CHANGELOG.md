@@ -16,7 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `objectType` only for opaque handles
 - Consolidate generic read and delete operations in `ObjectTools.cs`, including
   their unit tests
-- Reduce the MCP catalog from 57 to 38 tools and update the GitHub Pages site,
+- Replace four compatibility reference tools with `get_reference`, whose `topic`
+  selects the resource and whose optional `section` limits input-guide or type
+  results to the needed data
+- Reduce the MCP catalog from 57 to 35 tools and update the GitHub Pages site,
   MCP Bundle metadata, prompts, and tool documentation
 - Expose refresh-token authentication in Docker Compose, MCP Registry, MCPB,
   GitHub Pages, and the remaining setup documentation

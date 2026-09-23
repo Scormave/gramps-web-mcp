@@ -140,7 +140,7 @@ allowlist is `image/jpeg,image/png,image/webp,image/avif,application/pdf`.
 
 Each file exposes a set of `[McpServerTool]` static methods grouped by Gramps
 entity type (Person, Family, Event, Place, Source, Citation, Note, Media, Tag,
-Repository) plus cross-cutting tools (Search, System, Reference, ObjectDeletion) and
+Repository) plus cross-cutting tools (Search, System, Reference, Object) and
 multi-step convenience tools (Composite).
 
 Tools are the **public API surface** of the MCP server.  They:
@@ -173,7 +173,7 @@ media metadata first, and enforce enabled/private/MIME/size safeguards before
 returning bytes to the MCP client.
 
 For clients that cannot call MCP `resources/read`, the same payloads are also
-available through compatibility tools in `ReferenceTools.cs`.
+available through the `GetReference` compatibility tool in `ReferenceTools.cs`.
 Media bytes are mirrored through `GetMediaThumbnail` and `GetMediaFile` tools
 for clients that consume MCP tool content directly. `GetMediaThumbnail` returns
 image content; `GetMediaFile` returns image, audio, or embedded blob resource

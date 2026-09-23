@@ -25,16 +25,16 @@ public static class ToolDescriptionFragments
         "Omit to leave unchanged.";
 
     public const string CallGetTypes =
-        "Type values are validated by the server; see gramps://types resource or call get_types tool for available values.";
+        "Type values are validated by the server; see gramps://types resource or call get_reference(topic: \"types\") for available values.";
 
     public const string CallGetDateInputGuide =
         "Date format: use ISO dates (1990-03-15), year-only (1920), or modifiers (before 1920, about 1950). " +
-        "See gramps://input-guide resource or call get_input_guide tool for full syntax.";
+        "See gramps://input-guide resource or call get_reference(topic: \"input-guide\", section: \"dates\") for full syntax.";
 
     public const string CallGetNameSchema =
-        "Use shorthand 'Given Surname' or full JSON; see gramps://input-guide resource or call get_input_guide tool for the Name schema.";
+        "Use shorthand 'Given Surname' or full JSON; see gramps://input-guide resource or call get_reference(topic: \"input-guide\", section: \"name_schema\") for the Name schema.";
 
     public const string CallGetStructuredFieldInputGuide =
         "Accepts JSON arrays or shorthand strings (e.g. 'Type: Value' for attributes). " +
-        "See gramps://input-guide resource or call get_input_guide tool for all formats.";
+        "See gramps://input-guide resource or call get_reference(topic: \"input-guide\", section: \"structured_fields\") for all formats.";
 }

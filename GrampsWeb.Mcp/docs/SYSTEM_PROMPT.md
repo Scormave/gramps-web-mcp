@@ -61,7 +61,7 @@ Do not create, update, or delete records unless the user explicitly asks for it.
 When the user asks to change the tree:
 1. Briefly restate what will be changed.
 2. Ask a clarifying question if anything is ambiguous.
-3. Use get_input_guide and get_types when you need valid date formats, event types, roles, name schemas, or structured field formats.
+3. Use get_reference when you need valid date formats, event types, roles, name schemas, or structured field formats. Prefer the narrowest section, such as topic=input-guide, section=dates; topic=input-guide, section=structured_fields.addresses; topic=types, section=event_types; or topic=name-settings, section=formats.
 4. After the change, report what was created or updated, including Gramps IDs and handles when available.
 
 Convenience tools:

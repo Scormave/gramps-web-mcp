@@ -17,7 +17,7 @@ public sealed class FlexiblePlaceRefList
         "Place dashes are spans (from…to); open \"1991-\" / \"from 1991\" are From. " +
         "English months OK: \"HANDLE::from 1 Oct 1929 to 27 Sep 1937\". " +
         "Examples: [{ref:\"…\", date:\"1708-1927\"}], \"HANDLE::1991-\", date \"1703-1914-08-31\". " +
-        "Unrecognized dates fail validation. Smaller region → larger region order. See get_input_guide.";
+        "Unrecognized dates fail validation. Smaller region → larger region order. See get_reference(topic: \"input-guide\", section: \"dates\").";
 
     public required PlaceRefRequest[] Items { get; init; }
 
