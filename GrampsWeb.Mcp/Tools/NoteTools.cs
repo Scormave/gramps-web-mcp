@@ -17,10 +17,9 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class NoteTools
 {
-    [McpServerTool(Title = "Get Note", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one note (text, type, Plain vs Html format).")]
-    public static async Task<string> GetNote(
+    internal static async Task<string> ReadNoteAsync(
         [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)

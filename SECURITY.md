@@ -37,7 +37,8 @@ conservatively for the deployment.
 
 Media files can contain sensitive photos, scans, and documents. The server
 blocks bytes for Gramps media records marked private unless
-`GRAMPS_MEDIA_ALLOW_PRIVATE=true`; metadata access through `get_media` remains
+`GRAMPS_MEDIA_ALLOW_PRIVATE=true`; metadata access through `get_object` with
+`objectType: "media"` remains
 available. End-to-end exposure also depends on the MCP client and model that
 receive the typed tool content (image, audio, or embedded resource) or binary
 resource content.

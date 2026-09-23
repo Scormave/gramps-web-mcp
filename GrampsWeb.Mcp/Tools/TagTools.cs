@@ -15,10 +15,9 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class TagTools
 {
-    [McpServerTool(Title = "Get Tag", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one tag (name, color hex, priority). Tags label any object type.")]
-    public static async Task<string> GetTag(
+    internal static async Task<string> ReadTagAsync(
         [Description("Tag handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)

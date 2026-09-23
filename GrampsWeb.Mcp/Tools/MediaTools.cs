@@ -20,12 +20,11 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class MediaTools
 {
-    [McpServerTool(Title = "Get Media", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: media object metadata (path, MIME, checksum, description). " +
         "For Open WebUI vision access, use GetMediaThumbnail or GetMediaFile. " +
         "Full MCP clients may also read resources gramps://media/{handle}/thumbnail/{size} or gramps://media/{handle}/file.")]
-    public static async Task<string> GetMedia(
+    internal static async Task<string> ReadMediaAsync(
         [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)

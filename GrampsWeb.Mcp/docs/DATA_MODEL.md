@@ -218,7 +218,7 @@ updates (read-modify-write pattern):
 
 | Class | Location | Purpose |
 |-------|----------|---------|
-| `NotFoundHelper` | `Tools/NotFoundHelper.cs` | Builds not-found messages with contextual hints (e.g. suggests `find_by_gramps_id` when identifier looks like a Gramps ID) |
+| `NotFoundHelper` | `Tools/NotFoundHelper.cs` | Builds not-found messages with contextual hints (e.g. suggests `get_object` with the matching type when identifier looks like a Gramps ID) |
 | `ResponseEnvelope` | `Formatters/ResponseEnvelope.cs` | Adds machine-readable YAML-like headers (`type`, `handle`, `gramps_id`, `action`) to tool responses and provides next-step hints for create operations |
 
 ---

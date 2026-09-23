@@ -16,11 +16,10 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class SourceTools
 {
-    [McpServerTool(Title = "Get Source", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one source (title, author, publication, abbreviation, repository refs). " +
         "Sources are what citations point at.")]
-    public static async Task<string> GetSource(
+    internal static async Task<string> ReadSourceAsync(
         [Description("Source handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)

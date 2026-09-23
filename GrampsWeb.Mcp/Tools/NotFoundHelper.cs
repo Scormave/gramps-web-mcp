@@ -9,7 +9,7 @@ internal static class NotFoundHelper
 {
     /// <summary>
     /// Builds a not-found message. If the identifier looks like a Gramps ID, adds a hint
-    /// about using find_by_gramps_id or passing the opaque handle.
+    /// about using get_object with the matching type.
     /// </summary>
     public static string NotFoundMessage(string objectType, string identifier)
     {
@@ -17,7 +17,7 @@ internal static class NotFoundHelper
 
         if (HandleResolver.LooksLikeGrampsId(identifier))
         {
-            msg += $"\n\nHint: '{identifier}' looks like a Gramps ID. Try find_by_gramps_id(grampsId: \"{identifier}\") " +
+            msg += $"\n\nHint: '{identifier}' looks like a Gramps ID. Use get_object with this identifier " +
                    $"to look it up, or use search(\"{identifier}\") to find it. " +
                    $"Tool parameters accept both handles and Gramps IDs — auto-resolution should work, " +
                    $"so this ID may genuinely not exist in the database.";

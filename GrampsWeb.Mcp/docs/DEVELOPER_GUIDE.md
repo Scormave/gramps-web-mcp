@@ -21,8 +21,8 @@ to `demo.grampsweb.org`.
 
 ### Naming
 
-- **Tool methods**: PascalCase static methods (e.g. `GetPerson`, `CreateEvent`).
-  The MCP SDK derives the wire name from the method name (→ `get_person`,
+- **Tool methods**: PascalCase static methods (e.g. `GetObject`, `CreateEvent`).
+  The MCP SDK derives the wire name from the method name (→ `get_object`,
   `create_event`).
 - **Models**: `Gramps` prefix (e.g. `GrampsPerson`, `GrampsEvent`).
 - **Request DTOs**: `Create*Request` (used for both create and update).
@@ -157,7 +157,7 @@ Full checklist for adding support for a completely new entity type
    - `Get{Entity}` (read)
    - `Create{Entity}` (write)
    - `Update{Entity}` (write)
-   - add the entity to `ObjectDeletionTools.cs` when it supports deletion
+   - add the entity to `ObjectTools.cs` when it supports deletion
 6. **Search support** → update `SearchFormatter.cs` and
    `SearchTools.ListObjects` if the new type should appear in listings.
 7. **Contract mapping** → update `swagger-dto-map.json`
@@ -193,7 +193,7 @@ When you want agents to pass data in free-form text as well as structured JSON:
 
 Composite tools (`CompositeTools.cs`) combine multiple API calls into a single
 tool invocation, reducing the number of sequential tool calls an agent must
-make.  Examples: `FindByGrampsId`, `QuickAddPerson`, `AddEventToPerson`.
+make.  Examples: `GetObject`, `QuickAddPerson`, `AddEventToPerson`.
 
 Pattern:
 1. Add a new `[McpServerTool]` method in `CompositeTools.cs`.

@@ -16,10 +16,9 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class RepositoryTools
 {
-    [McpServerTool(Title = "Get Repository", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one repository (name, type, address, URLs). Repositories are where sources live.")]
-    public static async Task<string> GetRepository(
+    internal static async Task<string> ReadRepositoryAsync(
         [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)

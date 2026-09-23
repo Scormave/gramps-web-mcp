@@ -13,7 +13,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Person objects from the Gramps Web API.
-/// Covers get_person, get_ancestors, get_descendants,
+/// Covers person traversal, timelines, relations, and person mutations.
 /// get_person_timeline, and get_relations.
 /// </summary>
 [McpServerToolType]
@@ -23,12 +23,11 @@ public static class PersonTools
     // Tools
     // ─────────────────────────────────────────────────────────────────────────
 
-    [McpServerTool(Title = "Get Person", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: fetch one person by handle. With extended=true, resolves linked objects " +
         "(event dates/places, note text, tag names, citations, media) for a fuller picture in one call. " +
         "Default extended=false returns core fields with handles only (faster).")]
-    public static async Task<string> GetPerson(
+    internal static async Task<string> ReadPersonAsync(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("When true, resolve linked events/notes/tags/citations/media inline. Slower but more complete. Default: false.")]
@@ -87,7 +86,7 @@ public static class PersonTools
                 return
                     $"No ancestors found for {handle}. " +
                     "Only people linked through a parent family (where this person is the child) appear. " +
-                    "Spouse-only links do not count as ancestors. Use get_person(handle, extended: true) to inspect family links.";
+                    "Spouse-only links do not count as ancestors. Use get_object(objectType: \"person\", extended: true) to inspect family links.";
             return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", resolvedHandle, ancestors, kinshipLabels, client);
         }
         catch (Exception ex)
@@ -135,7 +134,7 @@ public static class PersonTools
         "Filter with events (categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom), " +
         "relatives (father, mother, brother, sister, wife, husband, son, daughter), and relative_events (same categories). " +
         "dates: range YYYY/M/D-YYYY/M/D or open-ended; month/day leading zeros are stripped for the API. " +
-        "Output may include event handles for follow-up with get_event.")]
+        "Output may include event handles for follow-up with get_object.")]
     public static async Task<string> GetPersonTimeline(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

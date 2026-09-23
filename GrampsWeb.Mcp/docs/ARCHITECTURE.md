@@ -151,8 +151,8 @@ Tools are the **public API surface** of the MCP server.  They:
 - return helpful context on not-found via `NotFoundHelper`
 - map errors to `McpException` via `McpToolErrors`
 
-`CompositeTools.cs` provides multi-step convenience tools (`FindByGrampsId`,
-`QuickAddPerson`, `AddEventToPerson`) that combine multiple API calls into
+`CompositeTools.cs` provides multi-step convenience tools (`QuickAddPerson`,
+`AddEventToPerson`) that combine multiple API calls into
 a single tool invocation.
 
 The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`.

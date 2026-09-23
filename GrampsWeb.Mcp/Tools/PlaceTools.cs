@@ -10,16 +10,15 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Place objects from the Gramps Web API.
-/// Covers get_place, get_place_timeline (browse places via list_objects('places') or search).
+/// Covers place timelines and mutations (browse places via list_objects('places') or search).
 /// </summary>
 [McpServerToolType]
 public static class PlaceTools
 {
-    [McpServerTool(Title = "Get Place", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one place by handle (name, type, coordinates, hierarchy by traversing parent places). " +
         "Use when resolving place handles from events or building geographic context.")]
-    public static async Task<string> GetPlace(
+    internal static async Task<string> ReadPlaceAsync(
         [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)
@@ -44,7 +43,7 @@ public static class PlaceTools
         "Read-only: chronological events whose place field equals this handle (computed via backlinks; not a single API route). " +
         "Events on a child place (e.g. city) do not appear when querying the parent country handle. " +
         "events filters by category (same set as person timeline). dates uses YYYY/M/D ranges with zero-stripping. " +
-        "Output may include event handles for get_event.")]
+        "Output may include event handles for get_object.")]
     public static async Task<string> GetPlaceTimeline(
         [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

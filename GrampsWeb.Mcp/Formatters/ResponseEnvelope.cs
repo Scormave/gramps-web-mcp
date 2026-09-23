@@ -108,12 +108,12 @@ public static class ResponseEnvelope
         "Read the family first and preserve existing childRefs/eventRefs (including relationship and role metadata); update replaces the entire list. The examples below show only the new references.",
         $"Add child: update_family(handle: \"{handle}\", childRefs: [{{ref: \"<person_handle>\", frel: \"Birth\", mrel: \"Birth\"}}])",
         $"Add events: update_family(handle: \"{handle}\", eventRefs: [{{ref: \"<event_handle>\", role: \"Primary\"}}])",
-        $"View family: get_family(handle: \"{handle}\", extended: true)",
+        $"View family: get_object(objectType: \"family\", identifier: \"{handle}\", extended: true)",
     };
 
     public static string[] RepositoryCreateNextSteps(string handle) => new[]
     {
         $"Create source referencing this repository",
-        $"View: get_repository(handle: \"{handle}\")",
+        $"View: get_object(objectType: \"repository\", identifier: \"{handle}\")",
     };
 }

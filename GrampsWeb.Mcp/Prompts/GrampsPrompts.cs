@@ -53,9 +53,9 @@ public sealed class GrampsPrompts
         var text =
             $"Research person \"{person}\" in the Gramps database. Follow these steps:\n" +
             "1. Find the person: if \"" + person +
-            "\" looks like a Gramps ID (e.g. I0001), use find_by_gramps_id. " +
+            "\" looks like a Gramps ID (e.g. I0001), use get_object with that ID. " +
             "Otherwise, use search(\"" + person + "\") to locate them.\n" +
-            "2. Get full details: call get_person with extended=true.\n" +
+            "2. Get full details: call get_object with the person's ID or handle and extended=true.\n" +
             "3. Get their timeline: call get_person_timeline for a chronological view of life events.\n" +
             "4. Get ancestors: call get_ancestors with 3 generations.\n" +
             "5. Get descendants: call get_descendants with 3 generations.\n" +
@@ -98,7 +98,7 @@ public sealed class GrampsPrompts
         sb.AppendLine("2. Create the family with create_family, passing the person handles.");
         sb.AppendLine("3. If a marriage date is provided, create a Marriage event with create_event,");
         sb.AppendLine("   then link it to the family using update_family with eventRefs.");
-        sb.AppendLine("4. Show the created family details with get_family.");
+        sb.AppendLine("4. Show the created family details with get_object(objectType: \"family\", ...).");
         return new ChatMessage(ChatRole.User, sb.ToString());
     }
 
@@ -112,7 +112,7 @@ public sealed class GrampsPrompts
             $"Find the genealogical relationship between \"{person1}\" and \"{person2}\".\n" +
             "Steps:\n" +
             "1. Resolve both people to handles. If given names, use search() to find them.\n" +
-            "   If given Gramps IDs (like I0001), use find_by_gramps_id().\n" +
+            "   If given Gramps IDs (like I0001), use get_object with the ID.\n" +
             "2. Call get_relations(handle1, handle2) to find their relationship.\n" +
             "3. If related, explain the connection in plain language (e.g. \"3rd cousin once removed\").\n" +
             "4. If no direct relationship found, try showing both their ancestor trees\n" +

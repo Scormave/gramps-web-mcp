@@ -14,15 +14,14 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Event objects from the Gramps Web API.
-/// Covers get_event (browse events via list_objects('events') or search).
+/// Covers event mutations (browse events via list_objects('events') or search).
 /// </summary>
 [McpServerToolType]
 public static class EventTools
 {
-    [McpServerTool(Title = "Get Event", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one event by handle (type, date/modifiers, place, description, citations, notes, tags, media).")]
-    public static async Task<string> GetEvent(
+    internal static async Task<string> ReadEventAsync(
         [Description("Event handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         GrampsApiClient client)

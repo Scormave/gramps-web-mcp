@@ -4,12 +4,50 @@ using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol;
 using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
-public class ObjectDeletionToolsTests
+public class ObjectToolsTests
 {
+    [Fact]
+    public async Task GetObject_RejectsUnknownObjectType()
+    {
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => ObjectTools.GetObject("handle", "unknown"));
+
+        Assert.Contains("Invalid objectType", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("event")]
+    [InlineData("media")]
+    [InlineData("tag")]
+    public async Task GetObject_RejectsExtendedForUnsupportedTypes(string objectType)
+    {
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => ObjectTools.GetObject("handle", objectType, extended: true));
+
+        Assert.Equal("extended is supported only for objectType person or family.", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetObject_RequiresTypeForOpaqueHandle()
+    {
+        var ex = await Assert.ThrowsAsync<McpException>(() => ObjectTools.GetObject("opaque-handle"));
+
+        Assert.Contains("objectType is required", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetObject_RejectsTypeThatConflictsWithGrampsIdPrefix()
+    {
+        var ex = await Assert.ThrowsAsync<McpException>(() => ObjectTools.GetObject("I0001", "event"));
+
+        Assert.Equal("objectType 'event' does not match Gramps ID 'I0001', which identifies a person.", ex.Message);
+    }
+
     [Theory]
     [InlineData("person", "I0001", "people")]
     [InlineData("family", "F0001", "families")]
@@ -30,7 +68,7 @@ public class ObjectDeletionToolsTests
         var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
         var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
 
-        var result = await ObjectDeletionTools.DeleteObject(objectType, grampsId, client: client);
+        var result = await ObjectTools.DeleteObject(objectType, grampsId, client: client);
 
         Assert.Contains("action: deleted", result);
         Assert.Equal($"/api/{collection}/resolved-handle", handler.DeletePath);
@@ -40,7 +78,7 @@ public class ObjectDeletionToolsTests
     public async Task DeleteObject_RejectsUnknownObjectType()
     {
         var error = await Assert.ThrowsAnyAsync<Exception>(
-            () => ObjectDeletionTools.DeleteObject("unknown", "handle", client: null!));
+            () => ObjectTools.DeleteObject("unknown", "handle", client: null!));
 
         Assert.Contains("Invalid objectType", error.Message);
     }

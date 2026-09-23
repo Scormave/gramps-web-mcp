@@ -18,11 +18,10 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class CitationTools
 {
-    [McpServerTool(Title = "Get Citation", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one citation (source title/handle, page, confidence, access date). " +
         "Citations connect sources to facts on people, events, places, etc.")]
-    public static async Task<string> GetCitation(
+    internal static async Task<string> ReadCitationAsync(
         [Description("Citation handle. " + ToolDescriptionFragments.HandleDiscovery + " For one source's citations use list_objects('citations', sourceHandle: ...).")]
         string handle,
         GrampsApiClient client)

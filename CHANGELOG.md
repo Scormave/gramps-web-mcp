@@ -11,8 +11,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Replace the ten entity-specific delete tools with `delete_object`, which selects
   the record type through `objectType` while retaining backlink protection and
   explicit `force` handling
-- Reduce the MCP catalog from 57 to 48 tools and update the GitHub Pages site,
-  MCP Bundle metadata, and tool documentation
+- Replace ten entity-specific read tools and `find_by_gramps_id` with
+  `get_object`; it infers the object type from a Gramps ID prefix and requires
+  `objectType` only for opaque handles
+- Consolidate generic read and delete operations in `ObjectTools.cs`, including
+  their unit tests
+- Reduce the MCP catalog from 57 to 38 tools and update the GitHub Pages site,
+  MCP Bundle metadata, prompts, and tool documentation
+
+### Fixed
+
+- Calculate paginated-list page totals and row numbers from the requested page
+  size, including a partial final page
+- Update create-response guidance to use current `eventRefs` and `childRefs`
+  parameters, and explain that updates replace full reference lists
 
 ## [1.0.8] - 2026-09-18
 

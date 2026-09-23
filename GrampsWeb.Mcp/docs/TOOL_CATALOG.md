@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 48 MCP tools exposed by the server.
+Complete catalog of the 38 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -75,14 +75,25 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 | Name | Parameters | Purpose |
 |------|------------|---------|
 | `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details; instructs use of `quick_add_person` and confirmation with handle and Gramps ID. |
-| `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Build a full dossier: resolve identity, `get_person` with extended=true, timeline, ancestors and descendants (3 generations each), then present a structured biographical summary. |
-| `add-family` | optional `father`, `mother`, `relationship` (default Married), optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_family`. |
+| `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Build a full dossier: resolve identity, `get_object` for the person with extended=true, timeline, ancestors and descendants (3 generations each), then present a structured biographical summary. |
+| `add-family` | optional `father`, `mother`, `relationship` (default Married), optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_object` for the family. |
 | `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_ancestors` if no direct link. |
 | `import-from-text` | `text` | Parse free-form genealogy text: search/create people with `quick_add_person`, `create_family`, `add_event_to_person`, sources/citations as needed, then report import summary and gaps. |
 
 ---
 
-## Object tools (`ObjectDeletionTools.cs`) — 1 tool
+## Object tools (`ObjectTools.cs`) — 2 tools
+
+### R — `GetObject`
+Fetch one record by handle or Gramps ID. A Gramps ID determines its type from
+its prefix; an opaque handle requires `objectType`. `extended=true` resolves
+linked details for people and families only.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `identifier` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
+| `objectType` | `string?` | no | — | Required for an opaque handle; inferred from a Gramps ID. `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
+| `extended` | `bool` | no | `false` | For people and families only, resolve linked details inline |
 
 ### D — `DeleteObject`
 Delete a person, family, event, place, source, citation, note, media record,
@@ -98,18 +109,7 @@ does not necessarily delete its file on disk.
 
 ---
 
-## Person (`PersonTools.cs`) — 7 tools
-
-### R — `GetPerson`
-Fetch one person by handle.  With `extended=true`, resolves linked objects
-(event dates/places, note text, tag names, citations, media) for a fuller
-picture in one call.  Default `extended=false` returns core fields with handles
-only (faster).
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Person handle |
-| `extended` | `bool` | no | `false` | Resolve linked events/notes/tags/citations/media inline |
+## Person (`PersonTools.cs`) — 6 tools
 
 ### R — `GetAncestors`
 List ancestors up to N generations with names, vital dates/places, and
@@ -184,17 +184,7 @@ Empty list `[]` clears links; omit to keep unchanged.
 
 ---
 
-## Family (`FamilyTools.cs`) — 4 tools
-
-### R — `GetFamily`
-One family by handle: parents, children with frel/mrel, relationship type,
-linked events/notes/tags.  With `extended=true`, resolves member names, event
-dates/places, citations, media.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Family handle |
-| `extended` | `bool` | no | `false` | Resolve linked names/events/places inline |
+## Family (`FamilyTools.cs`) — 3 tools
 
 ### R — `GetFamilyTimeline`
 Chronological events for one family.
@@ -224,10 +214,7 @@ Update an existing family.  Same field set as create (all optional).
 
 ---
 
-## Event (`EventTools.cs`) — 3 tools
-
-### R — `GetEvent`
-One event: type, date/modifiers, place, description, citations, notes, tags, media.
+## Event (`EventTools.cs`) — 2 tools
 
 ### C — `CreateEvent`
 Create an event.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
@@ -248,10 +235,7 @@ Update an existing event (same field set, all optional).
 
 ---
 
-## Place (`PlaceTools.cs`) — 4 tools
-
-### R — `GetPlace`
-One place: name, type, coordinates, multi-level hierarchy (names, handles, types, enclosure dates), alternate names, enclosed-by parent refs.
+## Place (`PlaceTools.cs`) — 3 tools
 
 ### R — `GetPlaceTimeline`
 Chronological events whose place equals this handle.
@@ -283,10 +267,7 @@ Update a place. Same fields as create (all optional). `enclosedBy` and `alternat
 
 ---
 
-## Source (`SourceTools.cs`) — 3 tools
-
-### R — `GetSource`
-One source: title, author, publication info, abbreviation, repository refs.
+## Source (`SourceTools.cs`) — 2 tools
 
 ### C — `CreateSource`
 Create a source.  Create sources **before** citations.
@@ -306,10 +287,7 @@ Update a source (same field set, all optional).
 
 ---
 
-## Citation (`CitationTools.cs`) — 3 tools
-
-### R — `GetCitation`
-One citation: source title/handle, page, confidence, access date.
+## Citation (`CitationTools.cs`) — 2 tools
 
 ### C — `CreateCitation`
 Create a citation.  `sourceHandle` must point to an existing source.
@@ -333,10 +311,7 @@ Update a citation (same field set, all optional).
 
 ---
 
-## Note (`NoteTools.cs`) — 3 tools
-
-### R — `GetNote`
-One note: text, type, format (Plain / Html).
+## Note (`NoteTools.cs`) — 2 tools
 
 ### C — `CreateNote`
 Create a note.  **Prerequisites:** `gramps://types`.
@@ -355,18 +330,13 @@ Update a note (same field set, all optional).
 
 ---
 
-## Media (`MediaTools.cs`) — 4 tools
+## Media (`MediaTools.cs`) — 3 tools
 
-### R — `GetMedia`
-Media object metadata: path, MIME type, checksum, description.
-Does **not** upload/download file bytes. For Open WebUI or other tool-only
-vision clients, prefer `GetMediaThumbnail`; use `GetMediaFile` only when full
-resolution is needed. Full MCP clients may also read
-`gramps://media/{handle}/thumbnail/{size}` or `gramps://media/{handle}/file`.
-
-Media byte tools/resources require `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect
-`GRAMPS_MEDIA_MAX_BYTES` and `GRAMPS_MEDIA_ALLOWED_MIME_TYPES`, and block
-private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
+Use `get_object(objectType: "media", ...)` for media metadata. It does not
+upload or download file bytes. Media byte tools/resources require
+`GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect `GRAMPS_MEDIA_MAX_BYTES` and
+`GRAMPS_MEDIA_ALLOWED_MIME_TYPES`, and block private media records unless
+`GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
 
 ### R — `GetMediaThumbnail`
 Download a media thumbnail as MCP image content for vision-capable tool clients
@@ -400,10 +370,7 @@ Update media metadata (no binary upload).
 
 ---
 
-## Repository (`RepositoryTools.cs`) — 3 tools
-
-### R — `GetRepository`
-One repository: name, type, address, URLs.
+## Repository (`RepositoryTools.cs`) — 2 tools
 
 ### C — `CreateRepository`
 Create a repository.  **Prerequisites:** `gramps://types`.
@@ -422,10 +389,7 @@ Update a repository (same field set, all optional).
 
 ---
 
-## Tag (`TagTools.cs`) — 2 tools
-
-### R — `GetTag`
-One tag: name, color (hex), priority.
+## Tag (`TagTools.cs`) — 1 tool
 
 ### C — `CreateTag`
 Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
@@ -478,18 +442,9 @@ Gramps Web user bookmarks (saved shortcuts).
 
 ---
 
-## Composite Tools (`CompositeTools.cs`) — 3 tools
+## Composite Tools (`CompositeTools.cs`) — 2 tools
 
 Multi-step convenience tools that combine several API calls into one.
-
-### R — `FindByGrampsId`
-Find any Gramps object by its Gramps ID (e.g. `I0001`, `F0023`, `E0005`).
-Automatically detects the object type from the ID prefix, resolves the handle,
-and returns full details.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `grampsId` | `string` | yes | Gramps ID (e.g. I0001, F0023) |
 
 ### C — `QuickAddPerson`
 Create a person with optional birth and death events in a single call.
@@ -523,22 +478,22 @@ Handles event creation + person update automatically.
 
 | Domain | R | C | U | D | Total |
 |--------|---|---|---|---|-------|
-| Person | 5 | 1 | 1 | 0 | 7 |
-| Family | 2 | 1 | 1 | 0 | 4 |
-| Event | 1 | 1 | 1 | 0 | 3 |
-| Place | 2 | 1 | 1 | 0 | 4 |
-| Source | 1 | 1 | 1 | 0 | 3 |
-| Citation | 1 | 1 | 1 | 0 | 3 |
-| Note | 1 | 1 | 1 | 0 | 3 |
-| Media | 3 | 0 | 1 | 0 | 4 |
-| Repository | 1 | 1 | 1 | 0 | 3 |
-| Tag | 1 | 1 | 0 | 0 | 2 |
-| Object | 0 | 0 | 0 | 1 | 1 |
+| Person | 4 | 1 | 1 | 0 | 6 |
+| Family | 1 | 1 | 1 | 0 | 3 |
+| Event | 0 | 1 | 1 | 0 | 2 |
+| Place | 1 | 1 | 1 | 0 | 3 |
+| Source | 0 | 1 | 1 | 0 | 2 |
+| Citation | 0 | 1 | 1 | 0 | 2 |
+| Note | 0 | 1 | 1 | 0 | 2 |
+| Media | 2 | 0 | 1 | 0 | 3 |
+| Repository | 0 | 1 | 1 | 0 | 2 |
+| Tag | 0 | 1 | 0 | 0 | 1 |
+| Object | 1 | 0 | 0 | 1 | 2 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
-| Composite | 1 | 2 | 0 | 0 | 3 |
+| Composite | 0 | 2 | 0 | 0 | 2 |
 | Reference | 4 | 0 | 0 | 0 | 4 |
-| **Total** | **27** | **11** | **9** | **1** | **48** |
+| **Total** | **17** | **11** | **9** | **1** | **38** |
 
 ## Prerequisites for write tools
 

@@ -13,7 +13,7 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 
 ## Features
 
-- **48 MCP tools** — read, create, update, and delete people, families, events, places,
+- **38 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
@@ -257,7 +257,8 @@ Runtime notes:
 
 ### Media file access
 
-Media byte tools/resources are disabled by default. `get_media` remains
+Media byte tools/resources are disabled by default. `get_object` with
+`objectType: "media"` remains
 available for metadata without enabling file downloads.
 
 | Variable | Description | Default |

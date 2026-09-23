@@ -12,7 +12,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Family objects from the Gramps Web API.
-/// Covers get_family, get_family_extended, and get_family_timeline.
+/// Covers family timelines and family mutations.
 /// </summary>
 [McpServerToolType]
 public static class FamilyTools
@@ -21,12 +21,11 @@ public static class FamilyTools
     // Tools
     // ─────────────────────────────────────────────────────────────────────────
 
-    [McpServerTool(Title = "Get Family", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: one family by handle (parents, children, relationship type, events). " +
         "With extended=true, resolves member names, event dates/places, citations, media. " +
         "Default extended=false returns handles only (faster).")]
-    public static async Task<string> GetFamily(
+    internal static async Task<string> ReadFamilyAsync(
         [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Resolve linked names/events/places inline. Default: false.")]
@@ -65,7 +64,7 @@ public static class FamilyTools
         "Read-only: chronological events for one family. " +
         "events filters by category (vital, family, religious, vocational, academic, travel, legal, residence, other, custom). " +
         "dates uses YYYY/M/D ranges; leading zeros stripped for API. Undated events included by default (same behavior as person timeline). " +
-        "Rows may include event handles for get_event.")]
+        "Rows may include event handles for get_object.")]
     public static async Task<string> GetFamilyTimeline(
         [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
