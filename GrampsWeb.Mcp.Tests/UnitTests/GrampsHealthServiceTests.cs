@@ -41,13 +41,27 @@ public class GrampsHealthServiceTests
         Assert.Contains("Failed to obtain token", status.Error);
     }
 
-    private static GrampsHealthService CreateService(RecordingHandler handler)
+    [Fact]
+    public async Task CheckAsync_UsesRefreshToken_WhenConfigured()
+    {
+        var handler = new RecordingHandler();
+        var service = CreateService(handler, refreshToken: "configured-refresh");
+
+        var status = await service.CheckAsync();
+
+        Assert.True(status.IsHealthy);
+        Assert.Equal("Bearer configured-refresh", handler.RefreshAuthorization);
+        Assert.False(handler.CredentialsPosted);
+    }
+
+    private static GrampsHealthService CreateService(RecordingHandler handler, string? refreshToken = null)
     {
         var config = new GrampsConfig(
             ApiUrl: "https://gramps.example",
             Username: "owner",
             Password: "secret",
-            TreeId: "configured-tree");
+            TreeId: "configured-tree",
+            RefreshToken: refreshToken);
 
         return new GrampsHealthService(
             new HttpClient(handler) { BaseAddress = new Uri(config.ApiUrl) },
@@ -57,12 +71,28 @@ public class GrampsHealthServiceTests
 
     private sealed class RecordingHandler(bool failToken = false) : HttpMessageHandler
     {
+        public bool CredentialsPosted { get; private set; }
+
+        public string? RefreshAuthorization { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            if (request.Method == HttpMethod.Post && request.RequestUri?.AbsolutePath == "/api/token/refresh/")
+            {
+                RefreshAuthorization = request.Headers.Authorization?.ToString();
+                return Task.FromResult(JsonResponse("""
+                    {
+                      "access_token": "token",
+                      "expires_in": 900
+                    }
+                    """));
+            }
+
             if (request.Method == HttpMethod.Post && request.RequestUri?.AbsolutePath == "/api/token/")
             {
+                CredentialsPosted = true;
                 if (failToken)
                 {
                     return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)

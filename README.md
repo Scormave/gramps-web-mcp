@@ -221,8 +221,25 @@ tool content or binary resource content to a capable model.
 |----------|-------------|
 | `GRAMPS_API_URL` | Base URL of your Gramps Web instance (no trailing slash) |
 | `GRAMPS_USERNAME` | API user name |
-| `GRAMPS_PASSWORD` | API password or token |
+| `GRAMPS_PASSWORD` | API password |
 | `GRAMPS_TREE_ID` | Tree UUID on that server |
+
+### Refresh token instead of a password
+
+If Gramps Web has password login turned off (`OIDC_DISABLE_LOCAL_AUTH=true`),
+set `GRAMPS_REFRESH_TOKEN` and leave `GRAMPS_USERNAME` and `GRAMPS_PASSWORD`
+unset. The server exchanges it for access tokens at `/api/token/refresh/`.
+
+Get one while password login is still on:
+
+```bash
+curl -s -X POST https://gramps.example.com/api/token/ \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"mcp","password":"..."}' | jq -r .refresh_token
+```
+
+Gramps Web refresh tokens do not expire. Treat it like a password. Deleting
+the user or rotating the Gramps Web secret key invalidates it.
 
 ### Runtime mode
 

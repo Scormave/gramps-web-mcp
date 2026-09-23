@@ -15,7 +15,8 @@ public record GrampsConfig(
     string[]? MediaAllowedMimeTypes = null,
     bool MediaAllowPrivate = false,
     bool MutationSerialize = true,
-    int MutationMinIntervalMs = 0)
+    int MutationMinIntervalMs = 0,
+    string? RefreshToken = null)
 {
     public const long DefaultMediaMaxBytes = 5 * 1024 * 1024;
 
@@ -27,6 +28,12 @@ public record GrampsConfig(
         "image/avif",
         "application/pdf"
     ];
+
+    /// <summary>
+    /// True when the server authenticates with a long-lived refresh token instead of
+    /// a username and password, for Gramps Web instances with local login disabled.
+    /// </summary>
+    public bool UsesRefreshToken => !string.IsNullOrWhiteSpace(RefreshToken);
 
     public string[] EffectiveMediaAllowedMimeTypes =>
         MediaAllowedMimeTypes is { Length: > 0 }
@@ -42,6 +49,7 @@ public record GrampsConfig(
         var apiUrl = Environment.GetEnvironmentVariable("GRAMPS_API_URL");
         var username = Environment.GetEnvironmentVariable("GRAMPS_USERNAME");
         var password = Environment.GetEnvironmentVariable("GRAMPS_PASSWORD");
+        var refreshToken = Environment.GetEnvironmentVariable("GRAMPS_REFRESH_TOKEN");
         var treeId = Environment.GetEnvironmentVariable("GRAMPS_TREE_ID");
         var readOnly = ParseBoolOrDefault(Environment.GetEnvironmentVariable("GRAMPS_READ_ONLY"), defaultValue: false);
         var mediaResourcesEnabled = ParseBoolOrDefault(
@@ -65,10 +73,14 @@ public record GrampsConfig(
 
         if (string.IsNullOrWhiteSpace(apiUrl))
             errors.Add("GRAMPS_API_URL is not set or empty");
-        if (string.IsNullOrWhiteSpace(username))
-            errors.Add("GRAMPS_USERNAME is not set or empty");
-        if (string.IsNullOrWhiteSpace(password))
-            errors.Add("GRAMPS_PASSWORD is not set or empty");
+        // A refresh token replaces the username and password entirely.
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                errors.Add("GRAMPS_USERNAME is not set or empty (or set GRAMPS_REFRESH_TOKEN)");
+            if (string.IsNullOrWhiteSpace(password))
+                errors.Add("GRAMPS_PASSWORD is not set or empty (or set GRAMPS_REFRESH_TOKEN)");
+        }
         if (string.IsNullOrWhiteSpace(treeId))
             errors.Add("GRAMPS_TREE_ID is not set or empty");
         if (!string.IsNullOrWhiteSpace(rawMediaMaxBytes) && !long.TryParse(rawMediaMaxBytes, out _))
@@ -89,8 +101,8 @@ public record GrampsConfig(
 
         return new GrampsConfig(
             ApiUrl: apiUrl!.TrimEnd('/'),
-            Username: username!,
-            Password: password!,
+            Username: username ?? string.Empty,
+            Password: password ?? string.Empty,
             TreeId: treeId!,
             ReadOnly: readOnly,
             MediaResourcesEnabled: mediaResourcesEnabled,
@@ -98,7 +110,8 @@ public record GrampsConfig(
             MediaAllowedMimeTypes: mediaAllowedMimeTypes,
             MediaAllowPrivate: mediaAllowPrivate,
             MutationSerialize: mutationSerialize,
-            MutationMinIntervalMs: mutationMinIntervalMs);
+            MutationMinIntervalMs: mutationMinIntervalMs,
+            RefreshToken: string.IsNullOrWhiteSpace(refreshToken) ? null : refreshToken.Trim());
     }
 
     private static bool ParseBoolOrDefault(string? value, bool defaultValue)

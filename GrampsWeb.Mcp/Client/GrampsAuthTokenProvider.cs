@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Config;
@@ -126,6 +127,14 @@ public sealed class GrampsAuthTokenProvider
 
     private async Task RequestNewTokenAsync()
     {
+        if (_config.UsesRefreshToken)
+        {
+            // No password login: exchange the configured refresh token for an access token.
+            _logger.LogDebug("Exchanging configured refresh token at {Url}", _config.ApiUrl);
+            await ExchangeRefreshTokenAsync(_config.RefreshToken!);
+            return;
+        }
+
         _logger.LogDebug("Requesting new JWT token from {Url}", _config.ApiUrl);
 
         var tokenRequest = new { username = _config.Username, password = _config.Password };
@@ -155,17 +164,26 @@ public sealed class GrampsAuthTokenProvider
 
     private async Task RefreshCurrentTokenAsync()
     {
+        if (string.IsNullOrEmpty(_refreshToken))
+        {
+            await RequestNewTokenAsync();
+            return;
+        }
+
         _logger.LogDebug("Refreshing JWT token");
+        await ExchangeRefreshTokenAsync(_refreshToken);
+    }
 
-        var refreshRequest = !string.IsNullOrEmpty(_refreshToken)
-            ? new Dictionary<string, string> { ["refresh_token"] = _refreshToken }
-            : new Dictionary<string, string> { ["access"] = _accessToken! };
-        var json = JsonSerializer.Serialize(refreshRequest, GrampsJson.Options);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
+    /// <summary>
+    /// Gramps Web reads JWTs from the Authorization header only, so the refresh
+    /// token is sent as a Bearer token rather than in the request body.
+    /// </summary>
+    private async Task ExchangeRefreshTokenAsync(string refreshToken)
+    {
         try
         {
-            using var response = await SendTokenRequestAsync(HttpMethod.Post, "/api/token/refresh/", content);
+            using var response = await SendTokenRequestAsync(
+                HttpMethod.Post, "/api/token/refresh/", content: null, bearerToken: refreshToken);
             var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -175,6 +193,7 @@ public sealed class GrampsAuthTokenProvider
             }
 
             StoreToken(ParseTokenResponse(body), keepExistingRefreshToken: true);
+            _refreshToken ??= refreshToken;
             _logger.LogDebug("Token refreshed, expires at {Expiration}", _tokenExpiration);
         }
         catch (HttpRequestException ex)
@@ -187,12 +206,17 @@ public sealed class GrampsAuthTokenProvider
     private async Task<HttpResponseMessage> SendTokenRequestAsync(
         HttpMethod method,
         string path,
-        HttpContent content)
+        HttpContent? content,
+        string? bearerToken = null)
     {
         _logger.LogInformation("Gramps API auth request: {Method} {Path}", method.Method, path);
 
+        using var request = new HttpRequestMessage(method, path) { Content = content };
+        if (bearerToken is not null)
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+
         var startedAt = DateTime.UtcNow;
-        var response = await _httpClient.SendAsync(new HttpRequestMessage(method, path) { Content = content });
+        var response = await _httpClient.SendAsync(request);
         var elapsedMs = (DateTime.UtcNow - startedAt).TotalMilliseconds;
 
         _logger.LogInformation(
