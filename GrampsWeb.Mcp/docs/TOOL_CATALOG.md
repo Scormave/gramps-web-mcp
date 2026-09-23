@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 35 MCP tools exposed by the server.
+Complete catalog of the 34 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -65,9 +65,9 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 | Name | Parameters | Purpose |
 |------|------------|---------|
 | `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details; instructs use of `quick_add_person` and confirmation with handle and Gramps ID. |
-| `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Build a full dossier: resolve identity, `get_object` for the person with extended=true, timeline, ancestors and descendants (3 generations each), then present a structured biographical summary. |
+| `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Build a full dossier: resolve identity, `get_object` for the person with extended=true, timeline, and ancestor/descendant trees (3 generations each), then present a structured biographical summary. |
 | `add-family` | optional `father`, `mother`, `relationship` (default Married), optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_object` for the family. |
-| `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_ancestors` if no direct link. |
+| `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_person_tree` if no direct link. |
 | `import-from-text` | `text` | Parse free-form genealogy text: search/create people with `quick_add_person`, `create_family`, `add_event_to_person`, sources/citations as needed, then report import summary and gaps. |
 
 ---
@@ -99,27 +99,19 @@ does not necessarily delete its file on disk.
 
 ---
 
-## Person (`PersonTools.cs`) — 6 tools
+## Person (`PersonTools.cs`) — 5 tools
 
-### R — `GetAncestors`
-List ancestors up to N generations with names, vital dates/places, and
-optional kinship labels (Father, Mother's father, …).
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Root person handle |
-| `generations` | `int` | no | 3 | Generations to include (max 10) |
-| `kinship_labels` | `bool` | no | `true` | Add kinship text |
-
-### R — `GetDescendants`
-List descendants up to N generations with names, vital dates/places, and
-optional kinship (Son, Granddaughter, …).
+### R — `GetPersonTree`
+List either ancestors or descendants up to N generations with names, vital
+dates/places, and optional kinship labels. Ancestors follow parent-family links;
+descendants follow children on families where the person is a parent.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Root person handle |
+| `person` | `string` | yes | — | Root person handle or Gramps ID |
+| `direction` | `string` | yes | — | `ancestors` or `descendants` |
 | `generations` | `int` | no | 3 | Generations to include (max 10) |
-| `kinship_labels` | `bool` | no | `true` | Add kinship text |
+| `kinshipLabels` | `bool` | no | `true` | Add kinship text such as Father's mother or Granddaughter |
 
 ### R — `GetPersonTimeline`
 Chronological timeline of events for one person, with optional relative events.
@@ -468,7 +460,7 @@ Handles event creation + person update automatically.
 
 | Domain | R | C | U | D | Total |
 |--------|---|---|---|---|-------|
-| Person | 4 | 1 | 1 | 0 | 6 |
+| Person | 3 | 1 | 1 | 0 | 5 |
 | Family | 1 | 1 | 1 | 0 | 3 |
 | Event | 0 | 1 | 1 | 0 | 2 |
 | Place | 1 | 1 | 1 | 0 | 3 |
@@ -483,7 +475,7 @@ Handles event creation + person update automatically.
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 0 | 2 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
-| **Total** | **14** | **11** | **9** | **1** | **35** |
+| **Total** | **13** | **11** | **9** | **1** | **34** |
 
 ## Prerequisites for write tools
 

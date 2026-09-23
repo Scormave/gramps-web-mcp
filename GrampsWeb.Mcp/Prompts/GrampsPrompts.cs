@@ -57,8 +57,8 @@ public sealed class GrampsPrompts
             "Otherwise, use search(\"" + person + "\") to locate them.\n" +
             "2. Get full details: call get_object with the person's ID or handle and extended=true.\n" +
             "3. Get their timeline: call get_person_timeline for a chronological view of life events.\n" +
-            "4. Get ancestors: call get_ancestors with 3 generations.\n" +
-            "5. Get descendants: call get_descendants with 3 generations.\n" +
+            "4. Get ancestors: call get_person_tree with direction=ancestors and 3 generations.\n" +
+            "5. Get descendants: call get_person_tree with direction=descendants and 3 generations.\n" +
             "Present the findings as a structured biographical summary including:\n" +
             "- Full name(s) and vital dates\n" +
             "- Family connections (parents, spouses, children)\n" +
@@ -116,7 +116,7 @@ public sealed class GrampsPrompts
             "2. Call get_relations(handle1, handle2) to find their relationship.\n" +
             "3. If related, explain the connection in plain language (e.g. \"3rd cousin once removed\").\n" +
             "4. If no direct relationship found, try showing both their ancestor trees\n" +
-            "   with get_ancestors (3 generations each) to see if there's a common ancestor.";
+            "   with get_person_tree(direction=ancestors, 3 generations each) to see if there's a common ancestor.";
         return new ChatMessage(ChatRole.User, text);
     }
 

@@ -16,17 +16,26 @@ public class PersonToolsHandleResolutionTests
     }
 
     [Fact]
-    public async Task GetAncestors_ResolvesGrampsIdBeforeTraversal()
+    public async Task GetPersonTree_ResolvesGrampsIdBeforeTraversal()
     {
         var handler = new RecordingHandler();
         var client = CreateClient(handler);
 
-        var result = await PersonTools.GetAncestors("I0002", generations: 10, client: client);
+        var result = await PersonTools.GetPersonTree("I0002", "ancestors", generations: 10, client: client);
 
         Assert.Contains("No ancestors found for I0002", result);
         Assert.Equal(1, handler.RequestCount("/api/people/?gramps_id=I0002&pagesize=1"));
         Assert.Equal(1, handler.RequestCount("/api/people/person-handle-2"));
         Assert.Equal(0, handler.RequestCount("/api/people/I0002"));
+    }
+
+    [Fact]
+    public async Task GetPersonTree_RejectsUnknownDirectionBeforeCallingApi()
+    {
+        var error = await Assert.ThrowsAsync<ModelContextProtocol.McpException>(
+            () => PersonTools.GetPersonTree("I0002", "sideways"));
+
+        Assert.Equal("Invalid direction. Must be either ancestors or descendants.", error.Message);
     }
 
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)

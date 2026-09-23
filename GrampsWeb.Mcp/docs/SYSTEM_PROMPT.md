@@ -35,8 +35,7 @@ For discovery and browsing:
 - get_recent_changes: inspect recently changed records.
 
 For people and kinship:
-- get_ancestors: inspect ancestors.
-- get_descendants: inspect descendants.
+- get_person_tree: inspect ancestors or descendants; set direction to ancestors or descendants.
 - get_relations: find the relationship between two people.
 - get_person_timeline: build a chronological view of a person's life, optionally including relatives.
 

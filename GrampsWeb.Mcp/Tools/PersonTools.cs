@@ -61,66 +61,45 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool(Title = "Get Ancestors", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Get Person Tree", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: list ancestors up to N generations with names and vital dates/places. " +
-        "Each row includes generation and optional kinship labels (Father, Mother's father, …). " +
-        "Only ancestors via parent families appear; spouse-only links do not.")]
-    public static async Task<string> GetAncestors(
-        [Description("Root person handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("Number of ancestor generations to include (default: 3, max: 10)")]
+        "Read-only: list a person's ancestors or descendants up to N generations, with names and vital dates/places. " +
+        "Set direction to ancestors or descendants. Each row includes a generation and optional kinship labels. " +
+        "Ancestors follow parent-family links; descendants follow children on families where the person is a parent.")]
+    public static async Task<string> GetPersonTree(
+        [Description("Root person handle or Gramps ID. " + ToolDescriptionFragments.HandleDiscovery)]
+        string person,
+        [Description("Tree direction: ancestors | descendants.")]
+        string direction,
+        [Description("Number of generations to include (default: 3, max: 10)")]
         int generations = 3,
-        [Description("When true (default), add kinship text from the father/mother chain (e.g. Father's mother). When false, only Gen N.")]
+        [Description("When true (default), add kinship text such as Father's mother or Granddaughter. When false, show only generation numbers.")]
         bool kinshipLabels = true,
         GrampsApiClient client = null!)
     {
         try
         {
             generations = Math.Clamp(generations, 1, 10);
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
-            var ancestors = await PersonTreeTraversal.CollectAncestorsAsync(client, resolvedHandle, generations);
-            if (ancestors == null)
-                return NotFoundHelper.NotFoundMessage("Person", handle);
-            if (ancestors.Length == 0)
-                return
-                    $"No ancestors found for {handle}. " +
-                    "Only people linked through a parent family (where this person is the child) appear. " +
-                    "Spouse-only links do not count as ancestors. Use get_object(objectType: \"person\", extended: true) to inspect family links.";
-            return await PersonFormatter.FormatPersonTreeRows("ANCESTOR TREE", resolvedHandle, ancestors, kinshipLabels, client);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
+            var normalizedDirection = direction.Trim().ToLowerInvariant();
+            if (normalizedDirection is not ("ancestors" or "descendants"))
+                throw McpToolErrors.ValidationError("Invalid direction. Must be either ancestors or descendants.");
 
-    [McpServerTool(Title = "Get Descendants", ReadOnly = true, Destructive = false)]
-    [Description(
-        "Read-only: list descendants up to N generations with names and vital dates/places. " +
-        "Each row includes generation and optional kinship (Son, Granddaughter, …) from recorded gender. " +
-        "Only children on families where this person is a parent are included.")]
-    public static async Task<string> GetDescendants(
-        [Description("Root person handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("Number of descendant generations to include (default: 3, max: 10)")]
-        int generations = 3,
-        [Description("When true (default), add kinship (Son/Daughter/Grandson/…). When false, only Gen N.")]
-        bool kinshipLabels = true,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            generations = Math.Clamp(generations, 1, 10);
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
-            var descendants = await PersonTreeTraversal.CollectDescendantsAsync(client, resolvedHandle, generations);
-            if (descendants == null)
-                return NotFoundHelper.NotFoundMessage("Person", handle);
-            if (descendants.Length == 0)
-                return
-                    $"No descendants found for {handle}. " +
-                    "Only children linked on families where this person is a parent are included; if none are recorded, the list is empty.";
-            return await PersonFormatter.FormatPersonTreeRows("DESCENDANT TREE", resolvedHandle, descendants, kinshipLabels, client);
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(person, client, "people");
+            var rows = normalizedDirection == "ancestors"
+                ? await PersonTreeTraversal.CollectAncestorsAsync(client, resolvedHandle, generations)
+                : await PersonTreeTraversal.CollectDescendantsAsync(client, resolvedHandle, generations);
+            if (rows == null)
+                return NotFoundHelper.NotFoundMessage("Person", person);
+            if (rows.Length == 0)
+            {
+                return normalizedDirection == "ancestors"
+                    ? $"No ancestors found for {person}. Only people linked through a parent family (where this person is the child) appear. " +
+                      "Spouse-only links do not count as ancestors. Use get_object(objectType: \"person\", extended: true) to inspect family links."
+                    : $"No descendants found for {person}. Only children linked on families where this person is a parent are included; if none are recorded, the list is empty.";
+            }
+
+            var title = normalizedDirection == "ancestors" ? "ANCESTOR TREE" : "DESCENDANT TREE";
+            return await PersonFormatter.FormatPersonTreeRows(title, resolvedHandle, rows, kinshipLabels, client);
         }
         catch (Exception ex)
         {
