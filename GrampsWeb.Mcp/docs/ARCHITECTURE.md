@@ -109,8 +109,9 @@ Read-only mode can also be enabled with a server CLI argument.
 | `GRAMPS_MUTATION_SERIALIZE` | `true` |
 | `GRAMPS_MUTATION_MIN_INTERVAL_MS` | `0` |
 
-- `GRAMPS_READ_ONLY`: set to `true` to keep all MCP tools visible while
-  blocking create/update/delete mutation calls.
+- `GRAMPS_READ_ONLY`: set to `true` to publish only read-only MCP tools and
+  block create/update/delete mutation calls, including direct calls to a
+  previously known write-tool name.
 - `GRAMPS_MUTATION_SERIALIZE`: serializes mutation HTTP calls in-process. Set
   `false` to allow parallel writes.
 - `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum milliseconds between mutation HTTP
@@ -160,9 +161,10 @@ a single tool invocation.
 chronologies. It dispatches to the appropriate API route or place-backlink
 fallback while keeping the public catalog to one timeline tool.
 
-The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`.
-Read-only mode intentionally keeps this discovery unchanged: write tools remain
-visible to clients, but mutation calls fail with a clear MCP error.
+The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`. In
+read-only mode, a `tools/list` filter publishes only tools annotated
+`ReadOnly = true`; write tools remain registered so direct calls still receive
+the normal read-only MCP error.
 
 ### 1b. Resources (`Resources/`)
 

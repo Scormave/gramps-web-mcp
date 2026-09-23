@@ -49,7 +49,7 @@ static async Task RunStdioAsync(GrampsConfig config, McpAuthConfig auth)
     builder.Services
         .AddMcpServer()
         .WithStdioServerTransport()
-        .WithToolsFromAssembly()
+        .WithGrampsToolProfile(config)
         .WithResources<GrampsResources>()
         .WithPrompts<GrampsPrompts>();
 
@@ -86,7 +86,7 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
 #pragma warning restore MCP9004
             }
         })
-        .WithToolsFromAssembly()
+        .WithGrampsToolProfile(config)
         .WithResources<GrampsResources>()
         .WithPrompts<GrampsPrompts>();
 
