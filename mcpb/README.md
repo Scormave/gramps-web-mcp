@@ -42,7 +42,8 @@ Claude Desktop shows a settings form generated from `user_config` in the manifes
 |---------|---------|
 | Gramps Web URL | `GRAMPS_API_URL` |
 | Username | `GRAMPS_USERNAME` |
-| Password / token | `GRAMPS_PASSWORD` |
+| Password | `GRAMPS_PASSWORD` |
+| Refresh token | `GRAMPS_REFRESH_TOKEN` |
 | Tree ID | `GRAMPS_TREE_ID` |
 | Read-only mode | `GRAMPS_READ_ONLY` |
 | Serialize writes | `GRAMPS_MUTATION_SERIALIZE` |
@@ -51,6 +52,10 @@ Claude Desktop shows a settings form generated from `user_config` in the manifes
 | Media max bytes | `GRAMPS_MEDIA_MAX_BYTES` |
 | Allowed MIME types | `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` |
 | Allow private media | `GRAMPS_MEDIA_ALLOW_PRIVATE` |
+
+Authenticate with either a username and password, or a refresh token. The
+refresh-token option supports Gramps Web instances with local password login
+disabled; leave the username and password fields blank when using it.
 
 **Read-only mode defaults to enabled** in the extension for safer first use.
 **Minimum write interval defaults to 250ms** (SQLite-friendly); the server-side

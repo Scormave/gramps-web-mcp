@@ -35,6 +35,7 @@
         "GRAMPS_API_URL": "${user_config.gramps_api_url}",
         "GRAMPS_USERNAME": "${user_config.gramps_username}",
         "GRAMPS_PASSWORD": "${user_config.gramps_password}",
+        "GRAMPS_REFRESH_TOKEN": "${user_config.gramps_refresh_token}",
         "GRAMPS_TREE_ID": "${user_config.gramps_tree_id}",
         "GRAMPS_READ_ONLY": "${user_config.gramps_read_only}",
         "GRAMPS_MUTATION_SERIALIZE": "${user_config.gramps_mutation_serialize}",
@@ -56,15 +57,22 @@
     "gramps_username": {
       "type": "string",
       "title": "Username",
-      "description": "Gramps Web API username",
-      "required": true
+      "description": "Gramps Web API username; leave blank when using a refresh token",
+      "required": false
     },
     "gramps_password": {
       "type": "string",
-      "title": "Password or token",
-      "description": "Gramps Web API password or token",
+      "title": "Password",
+      "description": "Gramps Web API password; leave blank when using a refresh token",
       "sensitive": true,
-      "required": true
+      "required": false
+    },
+    "gramps_refresh_token": {
+      "type": "string",
+      "title": "Refresh token",
+      "description": "Refresh token for instances with password login disabled; replaces username and password",
+      "sensitive": true,
+      "required": false
     },
     "gramps_tree_id": {
       "type": "string",

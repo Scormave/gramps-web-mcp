@@ -29,13 +29,19 @@
         },
         {
           "name": "GRAMPS_USERNAME",
-          "description": "Gramps Web API username",
-          "isRequired": true
+          "description": "Gramps Web API username; required with GRAMPS_PASSWORD unless GRAMPS_REFRESH_TOKEN is set",
+          "isRequired": false
         },
         {
           "name": "GRAMPS_PASSWORD",
-          "description": "Gramps Web API password or token",
-          "isRequired": true,
+          "description": "Gramps Web API password; required with GRAMPS_USERNAME unless GRAMPS_REFRESH_TOKEN is set",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GRAMPS_REFRESH_TOKEN",
+          "description": "Refresh token for instances with password login disabled; replaces GRAMPS_USERNAME and GRAMPS_PASSWORD",
+          "isRequired": false,
           "isSecret": true
         },
         {

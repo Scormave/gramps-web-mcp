@@ -71,6 +71,9 @@ docker run -p 8080:8080 \
   ghcr.io/scormave/gramps-web-mcp:latest
 ```
 
+For refresh-token authentication, replace the `GRAMPS_USERNAME` and
+`GRAMPS_PASSWORD` lines with `-e GRAMPS_REFRESH_TOKEN=your-refresh-token`.
+
 The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
 container health, and other uptime monitors. It returns HTTP 200 when the MCP
 server can authenticate against Gramps Web, or HTTP 503 otherwise. The public
@@ -109,9 +112,10 @@ Basic setup:
 
 1. In Unraid, open **Apps** / **Community Applications**.
 2. Search for `gramps-web-mcp` and install the template.
-3. Set `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and
-   `GRAMPS_TREE_ID` for your Gramps Web instance. Set `MCP_API_KEY` when the
-   MCP port is reachable from other machines on your network.
+3. Set `GRAMPS_API_URL`, `GRAMPS_TREE_ID`, and either `GRAMPS_USERNAME` plus
+   `GRAMPS_PASSWORD` or `GRAMPS_REFRESH_TOKEN` for your Gramps Web instance.
+   Set `MCP_API_KEY` when the MCP port is reachable from other machines on your
+   network.
 4. Keep the default container port `8080`, or map it to another host port.
 5. Start the container and check `/health`; it returns HTTP 200 once the service
    can authenticate to Gramps Web, with a minimal JSON response by default.
@@ -128,7 +132,7 @@ To run Gramps Web and the MCP server on the same host and Docker network, use
 ```bash
 cp docker-compose.example.yml docker-compose.yml
 cp .env.example .env
-# Complete the Gramps Web setup wizard, then set credentials in .env
+# Complete the Gramps Web setup wizard, then set an authentication method in .env
 docker compose up -d
 ```
 
@@ -190,6 +194,10 @@ To build a bundle locally:
 }
 ```
 
+To authenticate with a refresh token, omit `GRAMPS_USERNAME` and
+`GRAMPS_PASSWORD` from `env` and add
+`"GRAMPS_REFRESH_TOKEN": "your-refresh-token"` instead.
+
 To run a stdio server in read-only mode, add `"GRAMPS_READ_ONLY": "true"` to `env`.
 
 **HTTP** (remote / Docker):
@@ -215,7 +223,7 @@ tool content or binary resource content to a capable model.
 
 ## Configuration
 
-### Required (Gramps connection)
+### Gramps connection
 
 | Variable | Description |
 |----------|-------------|
@@ -294,8 +302,8 @@ Exact types and `type/*` wildcards are supported. The default media allowlist is
 
 ### Transports
 
-Set `GRAMPS_API_URL`, `GRAMPS_USERNAME`, `GRAMPS_PASSWORD`, and
-`GRAMPS_TREE_ID` as usual.
+Set `GRAMPS_API_URL`, `GRAMPS_TREE_ID`, and either the username/password pair or
+`GRAMPS_REFRESH_TOKEN` as described above.
 
 | Value | Behavior |
 |-------|----------|

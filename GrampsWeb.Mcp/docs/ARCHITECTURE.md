@@ -321,6 +321,9 @@ docker run -p 8080:8080 \
   gramps-web-mcp
 ```
 
+For instances with password login disabled, replace `GRAMPS_USERNAME` and
+`GRAMPS_PASSWORD` with `GRAMPS_REFRESH_TOKEN`.
+
 Enable read-only mode with the `GRAMPS_READ_ONLY` environment variable:
 
 ```bash

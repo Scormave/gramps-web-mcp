@@ -18,6 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   their unit tests
 - Reduce the MCP catalog from 57 to 38 tools and update the GitHub Pages site,
   MCP Bundle metadata, prompts, and tool documentation
+- Expose refresh-token authentication in Docker Compose, MCP Registry, MCPB,
+  GitHub Pages, and the remaining setup documentation
 
 ### Fixed
 
