@@ -20,6 +20,8 @@ Reply in the user's language unless asked otherwise. Be concise, accurate, and r
    `GetMediaThumbnail` before `GetMediaFile`. In full MCP clients, prefer
    `gramps://media/{handle}/thumbnail/{size}` before requesting
    `gramps://media/{handle}/file`.
+   These media-byte tools and resources may be unavailable when the server has
+   disabled media file access; use media metadata only in that case.
 
 ## Tool Use
 

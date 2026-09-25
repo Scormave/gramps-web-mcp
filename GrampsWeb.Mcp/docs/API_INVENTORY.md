@@ -14,6 +14,10 @@ not mutate tree data. When writes are allowed, those three helpers also go
 through `MutationGate` (`GRAMPS_MUTATION_SERIALIZE`,
 `GRAMPS_MUTATION_MIN_INTERVAL_MS`) around the HTTP send only.
 
+**Media catalog:** when `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, the two
+media-byte MCP tools are omitted from `tools/list`. Their binary API routes and
+MCP resources remain disabled by the same setting; metadata remains readable.
+
 | HTTP path pattern | Response / body type | Model / notes |
 |-------------------|----------------------|----------------|
 | `GET /api/search/` | `JsonElement` → parsed hits | `GrampsSearchHit[]` via `SearchTools.ParseSearchHits` (response root is typically a JSON array) |

@@ -6,14 +6,14 @@ using ModelContextProtocol.Server;
 namespace GrampsWeb.Mcp.Hosting;
 
 /// <summary>
-/// Configures the MCP tool catalog for the server's access mode.
+/// Configures the MCP tool catalog for the server's enabled capabilities.
 /// </summary>
 internal static class McpToolProfileExtensions
 {
     /// <summary>
-    /// Registers every tool in read/write mode. In read-only mode, retains the complete
-    /// server registration for compatibility while publishing only read-only tools to clients.
-    /// Direct calls to hidden write tools remain protected by <see cref="Client.GrampsApiClient"/>.
+    /// Registers every tool while publishing only tools enabled by the current configuration.
+    /// Tools remain registered for compatibility, so direct calls to a hidden write or media-byte
+    /// tool still return its normal safety or configuration error.
     /// </summary>
     public static IMcpServerBuilder WithGrampsToolProfile(
         this IMcpServerBuilder builder,
@@ -21,29 +21,34 @@ internal static class McpToolProfileExtensions
     {
         builder.WithToolsFromAssembly();
 
-        if (config.ReadOnly)
+        if (config.ReadOnly || !config.MediaResourcesEnabled)
         {
             builder.WithRequestFilters(filters => filters.AddListToolsFilter(next =>
-                (request, cancellationToken) => FilterReadOnlyToolsAsync(next, request, cancellationToken)));
+                (request, cancellationToken) => FilterAvailableToolsAsync(next, request, cancellationToken, config)));
         }
 
         return builder;
     }
 
-    internal static ListToolsResult KeepReadOnlyTools(ListToolsResult result)
+    internal static ListToolsResult KeepAvailableTools(ListToolsResult result, GrampsConfig config)
     {
         result.Tools = result.Tools
-            .Where(tool => tool.Annotations?.ReadOnlyHint == true)
+            .Where(tool => (!config.ReadOnly || tool.Annotations?.ReadOnlyHint == true)
+                           && (config.MediaResourcesEnabled || !IsMediaByteTool(tool)))
             .ToList();
         return result;
     }
 
-    private static async ValueTask<ListToolsResult> FilterReadOnlyToolsAsync(
+    private static bool IsMediaByteTool(Tool tool) =>
+        tool.Name is "get_media_thumbnail" or "get_media_file";
+
+    private static async ValueTask<ListToolsResult> FilterAvailableToolsAsync(
         McpRequestHandler<ListToolsRequestParams, ListToolsResult> next,
         RequestContext<ListToolsRequestParams> request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        GrampsConfig config)
     {
         var result = await next(request, cancellationToken);
-        return KeepReadOnlyTools(result);
+        return KeepAvailableTools(result, config);
     }
 }

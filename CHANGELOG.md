@@ -25,6 +25,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `objectType` selects the timeline owner and limits relative-event filters to people
 - Reduce the MCP catalog from 57 to 32 tools and update the GitHub Pages site,
   MCP Bundle metadata, prompts, and tool documentation
+- Hide `get_media_thumbnail` and `get_media_file` from `tools/list` when
+  `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, while retaining their direct-call
+  configuration checks and media metadata access through `get_object`
 - Expose refresh-token authentication in Docker Compose, MCP Registry, MCPB,
   GitHub Pages, and the remaining setup documentation
 

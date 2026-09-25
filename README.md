@@ -13,7 +13,7 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 
 ## Features
 
-- **32 MCP tools** — read, create, update, and delete people, families, events, places,
+- **Up to 32 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
@@ -257,8 +257,8 @@ the user or rotating the Gramps Web secret key invalidates it.
 | `GRAMPS_MUTATION_SERIALIZE` | `true` |
 | `GRAMPS_MUTATION_MIN_INTERVAL_MS` | `0` |
 
-- `GRAMPS_READ_ONLY`: set to `true` to block create, update, and delete calls
-  while keeping tools visible.
+- `GRAMPS_READ_ONLY`: set to `true` to publish only read tools and block direct
+  create, update, and delete calls.
 - `GRAMPS_MUTATION_SERIALIZE`: runs create/update/delete HTTP calls one at a
   time in this process.
 - `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum pause between mutation HTTP calls,
@@ -285,6 +285,9 @@ Runtime notes:
 Media byte tools/resources are disabled by default. `get_object` with
 `objectType: "media"` remains
 available for metadata without enabling file downloads.
+When disabled, `get_media_thumbnail` and `get_media_file` are omitted from
+`tools/list`; direct calls by a client that already knows their names return a
+configuration error without downloading bytes.
 
 | Variable | Description | Default |
 |----------|-------------|---------|

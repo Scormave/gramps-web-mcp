@@ -134,6 +134,8 @@ Runtime notes:
 
 Exact MIME types and `type/*` wildcards are supported. The default media
 allowlist is `image/jpeg,image/png,image/webp,image/avif,application/pdf`.
+When media access is disabled, `tools/list` omits `get_media_thumbnail` and
+`get_media_file`; media metadata remains available through `get_object`.
 
 ## Architectural layers
 
@@ -161,10 +163,11 @@ a single tool invocation.
 chronologies. It dispatches to the appropriate API route or place-backlink
 fallback while keeping the public catalog to one timeline tool.
 
-The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`. In
-read-only mode, a `tools/list` filter publishes only tools annotated
-`ReadOnly = true`; write tools remain registered so direct calls still receive
-the normal read-only MCP error.
+The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`. A
+`tools/list` filter publishes only tools enabled by the current configuration:
+read-only mode removes write tools, and disabled media access removes the two
+media-byte tools. Hidden tools remain registered so direct calls still receive
+the normal read-only or configuration error.
 
 ### 1b. Resources (`Resources/`)
 

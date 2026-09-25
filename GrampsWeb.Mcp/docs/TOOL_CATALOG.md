@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of the 32 MCP tools exposed by the server.
+Complete catalog of up to 32 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -18,6 +18,9 @@ decorated with `[McpServerTool]`.
 Read-only mode (`GRAMPS_READ_ONLY=true`) publishes only the read-only tools.
 Direct calls to a previously known write-tool name still return an MCP error
 before any mutation request is sent to Gramps Web.
+When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `get_media_thumbnail` and
+`get_media_file` are also omitted from the catalog; `get_object` still reads
+media metadata.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
 
 Create/update/delete HTTP calls are serialized in-process by default
@@ -465,7 +468,11 @@ Handles event creation + person update automatically.
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 0 | 2 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
-| **Total** | **11** | **11** | **9** | **1** | **32** |
+| **Total when media access is enabled** | **11** | **11** | **9** | **1** | **32** |
+
+With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, the two media-byte
+tools are hidden and the catalog contains 30 tools in read/write mode. In
+read-only mode, only enabled read tools are published.
 
 ## Prerequisites for write tools
 

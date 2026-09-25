@@ -4,7 +4,7 @@
   "display_name": "Gramps Web MCP",
   "version": "__VERSION__",
   "description": "Structured MCP access to your Gramps Web family tree",
-  "long_description": "Connect Claude Desktop to a self-hosted [Gramps Web](https://www.grampsweb.org/) instance. Browse, search, and optionally edit people, families, events, places, sources, citations, notes, media, and tags through 32 MCP tools.",
+  "long_description": "Connect Claude Desktop to a self-hosted [Gramps Web](https://www.grampsweb.org/) instance. Browse, search, and optionally edit people, families, events, places, sources, citations, notes, media, and tags through up to 32 MCP tools.",
   "author": {
     "name": "Scormave",
     "url": "https://github.com/Scormave"
@@ -106,7 +106,7 @@
     "gramps_media_resources_enabled": {
       "type": "boolean",
       "title": "Enable media file access",
-      "description": "Allow thumbnail and full-file media tools (image, audio, or embedded blob resource depending on MIME). Disabled by default for privacy.",
+      "description": "Allow thumbnail and full-file media tools (image, audio, or embedded blob resource depending on MIME). Disabled by default for privacy; when disabled, those tools are hidden from the catalog.",
       "default": false,
       "required": false
     },
