@@ -16,7 +16,8 @@ public static class SearchFormatter
         if (hits == null || hits.Length == 0)
             return "No results found";
 
-        var tables = await GrampsDefaultTypeLabels.PrefetchAllAsync(client);
+        var tables = await GrampsDefaultTypeLabels.PrefetchForSearchAsync(
+            hits.Select(hit => hit.ObjectType), client);
         var sb = new StringBuilder();
         sb.AppendLine($"Search Results ({hits.Length}):");
         sb.AppendLine(new string('=', ResultSeparatorWidth));

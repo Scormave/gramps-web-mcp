@@ -10,6 +10,25 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class GrampsDefaultTypeLabels
 {
+    /// <summary>Search summaries only need vocabularies for the types actually returned.</summary>
+    public static async Task<GrampsTypeLabelTables> PrefetchForSearchAsync(
+        IEnumerable<string?> objectTypes, GrampsApiClient client)
+    {
+        var types = objectTypes.Select(t => t?.ToLowerInvariant()).ToHashSet();
+        Task<IReadOnlyList<string>?> Load(string singular, string plural, string category, string alias) =>
+            types.Contains(singular) || types.Contains(plural)
+                ? FetchLabelsAsync(client, category, category, alias)
+                : Task.FromResult<IReadOnlyList<string>?>(null);
+
+        var repo = Load("repository", "repositories", "repository_types", "repositoryTypes");
+        var place = Load("place", "places", "place_types", "placeTypes");
+        var evt = Load("event", "events", "event_types", "eventTypes");
+        var note = Load("note", "notes", "note_types", "noteTypes");
+        var family = Load("family", "families", "family_relation_types", "familyRelationTypes");
+        await Task.WhenAll(repo, place, evt, note, family).ConfigureAwait(false);
+        return new(await repo, await place, await evt, await note, await family, null, null);
+    }
+
     /// <summary>All common vocabularies in one round-trip (parallel) for search result lines.</summary>
     public static async Task<GrampsTypeLabelTables> PrefetchAllAsync(GrampsApiClient client)
     {

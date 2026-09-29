@@ -232,6 +232,20 @@ vocabularies (default + custom). Write tools use `TypeCache.ValidateTypeAsync`
 to check type strings before sending requests to the API, providing helpful
 error messages with suggestions on typos.
 
+Read-only MCP tool calls also open a `GrampsReadScope`. Within that call,
+identical `GetAsync` requests (same client instance and exact path, including
+query parameters) share one HTTP fetch, including concurrent requests. The
+cache stores JSON text and deserializes a fresh DTO for each consumer, so
+enrichment cannot mutate another consumer's data. Failed requests are removed
+to allow retries. The scope is disposed at the end of the call; write tools,
+binary downloads, paginated-list requests, and direct client calls outside an
+MCP read scope retain their existing behavior. No entity data is shared across
+calls or client instances.
+
+Search formatting loads type-label categories only for the entity types in
+the results. Shared bulk/default/custom vocabulary requests benefit from the
+same per-call cache, without changing vocabulary order or adding a new TTL.
+
 ### 3. Models (`Models/`)
 
 C# record/class DTOs matching the Gramps Web JSON schema.  Key aspects:

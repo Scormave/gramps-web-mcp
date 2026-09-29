@@ -1,4 +1,5 @@
 using GrampsWeb.Mcp.Config;
+using GrampsWeb.Mcp.Client;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -20,6 +21,14 @@ internal static class McpToolProfileExtensions
         GrampsConfig config)
     {
         builder.WithToolsFromAssembly();
+        builder.WithRequestFilters(filters => filters.AddCallToolFilter(next =>
+            async (request, cancellationToken) =>
+            {
+                using var scope = request.MatchedPrimitive is McpServerTool tool
+                    && tool.ProtocolTool.Annotations?.ReadOnlyHint == true
+                        ? GrampsReadScope.Begin() : null;
+                return await next(request, cancellationToken);
+            }));
 
         if (config.ReadOnly || !config.MediaResourcesEnabled)
         {

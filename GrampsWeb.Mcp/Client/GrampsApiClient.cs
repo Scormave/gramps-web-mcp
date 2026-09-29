@@ -85,15 +85,23 @@ public class GrampsApiClient
     /// </summary>
     public async Task<T> GetAsync<T>(string path)
     {
+        var body = await GrampsReadScope.ReadAsync(this, path, () => GetJsonBodyAsync(path));
+        // Cache wire JSON, not mutable DTOs: each caller receives its own object graph.
+        return JsonSerializer.Deserialize<T>(body, GrampsJson.Options)
+            ?? throw new InvalidOperationException($"Failed to deserialize response as {typeof(T).Name}");
+    }
+
+    private async Task<string> GetJsonBodyAsync(string path)
+    {
         await EnsureAuthenticatedAsync();
 
         var url = path;
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         AddAuthorizationHeader(request);
 
         try
         {
-            var response = await SendWithLoggingAsync(request);
+            using var response = await SendWithLoggingAsync(request);
             var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -101,10 +109,7 @@ public class GrampsApiClient
                 throw new GrampsApiException(response.StatusCode, body);
             }
 
-            var result = JsonSerializer.Deserialize<T>(body, GrampsJson.Options)
-                ?? throw new InvalidOperationException($"Failed to deserialize response as {typeof(T).Name}");
-
-            return result;
+            return body;
         }
         catch (HttpRequestException ex)
         {
