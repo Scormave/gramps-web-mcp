@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Support `GRAMPS_REFRESH_TOKEN` authentication without a username or password,
+  including instances with local password authentication disabled
+
 ### Changed
 
 - Replace the ten entity-specific delete tools with `delete_object`, which selects
@@ -25,11 +30,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `objectType` selects the timeline owner and limits relative-event filters to people
 - Reduce the MCP catalog from 57 to 32 tools and update the GitHub Pages site,
   MCP Bundle metadata, prompts, and tool documentation
+- Publish only read-only tools when `GRAMPS_READ_ONLY=true`, while retaining
+  server-side protection against direct calls to write tools
 - Hide `get_media_thumbnail` and `get_media_file` from `tools/list` when
   `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, while retaining their direct-call
   configuration checks and media metadata access through `get_object`
 - Expose refresh-token authentication in Docker Compose, MCP Registry, MCPB,
   GitHub Pages, and the remaining setup documentation
+- Deduplicate identical JSON reads within each read-only MCP tool call,
+  including concurrent requests; discard the cache after the call and allow
+  retries after failed requests without caching write-tool reads
+- Load only the type-label categories needed by search results
+- Reuse embedded search objects when their handles and required summary fields
+  are valid, falling back to detail endpoints for missing or incompatible data;
+  preserve sequential processing and result order
 
 ### Fixed
 
@@ -37,6 +51,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   size, including a partial final page
 - Update create-response guidance to use current `eventRefs` and `childRefs`
   parameters, and explain that updates replace full reference lists
+- Send refresh tokens in the Bearer authorization header instead of the JSON
+  body, avoiding failed token refreshes and unnecessary password logins
+- Replace raw HTML from search HTTP 500 errors with guidance to simplify the
+  query, use `list_objects`, or check the Gramps Web logs and search index
 
 ## [1.0.8] - 2026-09-18
 
