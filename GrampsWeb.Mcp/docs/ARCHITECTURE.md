@@ -246,6 +246,13 @@ Search formatting loads type-label categories only for the entity types in
 the results. Shared bulk/default/custom vocabulary requests benefit from the
 same per-call cache, without changing vocabulary order or adding a new TTL.
 
+Search summaries reuse the search hit's embedded `object` when its handle
+matches and it contains the fields needed for that entity's summary. Missing,
+partial, or incompatible objects fall back to the detail endpoint. Related
+event/place/source data is still resolved as needed. Families without embedded
+parent names retain the single extended family fetch, avoiding two separate
+parent reads. Result order and sequential processing are unchanged.
+
 ### 3. Models (`Models/`)
 
 C# record/class DTOs matching the Gramps Web JSON schema.  Key aspects:

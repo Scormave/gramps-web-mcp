@@ -1,6 +1,8 @@
 using System.Text;
+using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Models;
+using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Formatters;
 
@@ -167,6 +169,18 @@ public static class SearchFormatter
         GrampsTypeLabelTables tables)
     {
         var t = hit.ObjectType?.ToLowerInvariant();
+        var embedded = TryReadSearchObject(hit, t);
+        if (embedded != null)
+        {
+            var collection = t switch
+            {
+                "person" => "people", "family" => "families", "repository" => "repositories",
+                "event" => "events", "place" => "places", "source" => "sources",
+                "citation" => "citations", "note" => "notes", "tag" => "tags",
+                _ => t!
+            };
+            return await FormatLineForListedObjectAsync(embedded, collection, client, tables);
+        }
         return t switch
         {
             "person" or "people" => await FetchAndBuildPersonLineAsync(hit.Handle, client),
@@ -181,6 +195,52 @@ public static class SearchFormatter
             "repository" or "repositories" => await FetchAndBuildRepositoryLineAsync(hit.Handle, client, tables.RepositoryTypes),
             _ => $"{hit.ObjectType}: {hit.GrampsId}"
         };
+    }
+
+    private static object? TryReadSearchObject(GrampsSearchHit hit, string? type)
+    {
+        if (hit.Object is not { ValueKind: JsonValueKind.Object } obj
+            || !obj.TryGetProperty("handle", out var handle)
+            || handle.ValueKind != JsonValueKind.String
+            || string.IsNullOrWhiteSpace(hit.Handle)
+            || handle.GetString() != hit.Handle)
+            return null;
+
+        // A deserializable partial object is not necessarily enough for the summary.
+        // Require all fields used by that summary, even when their values are null/empty.
+        (Type? Model, string[] Fields) schema = type switch
+        {
+            "person" or "people" => (typeof(GrampsPerson), ["primary_name", "event_ref_list", "birth_ref_index"]),
+            "family" or "families" => (typeof(GrampsFamilyExtended), ["father_handle", "mother_handle", "type"]),
+            "event" or "events" => (typeof(GrampsEventExtended), ["type", "date", "place"]),
+            "place" or "places" => (typeof(GrampsPlace), ["name", "place_type"]),
+            "source" or "sources" => (typeof(GrampsSource), ["title"]),
+            "citation" or "citations" => (typeof(GrampsCitationExtended), ["source_handle", "page", "confidence"]),
+            "note" or "notes" => (typeof(GrampsNote), ["text", "type"]),
+            "media" => (typeof(GrampsMedia), ["path", "mime", "desc"]),
+            "tag" or "tags" => (typeof(GrampsTag), ["name"]),
+            "repository" or "repositories" => (typeof(GrampsRepository), ["name", "type"]),
+            _ => (null, [])
+        };
+        var (model, fields) = schema;
+        if (model == null || fields.Any(field => !obj.TryGetProperty(field, out _)))
+            return null;
+
+        try
+        {
+            var value = obj.Deserialize(model, GrampsJson.Options);
+            // A family fetch already embeds both partners in one request. Keep that
+            // path if their names are absent, rather than introducing two person GETs.
+            if (value is GrampsFamilyExtended family
+                && ((!string.IsNullOrEmpty(family.FatherHandle) && family.Extended?.Father?.PrimaryName == null)
+                    || (!string.IsNullOrEmpty(family.MotherHandle) && family.Extended?.Mother?.PrimaryName == null)))
+                return null;
+            return value;
+        }
+        catch (JsonException)
+        {
+            return null; // Older/incompatible search payload: use the normal detail endpoint.
+        }
     }
 
     private static async Task<string?> FormatLineForListedObjectAsync(

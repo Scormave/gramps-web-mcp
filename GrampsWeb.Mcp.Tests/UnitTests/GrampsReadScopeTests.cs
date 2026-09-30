@@ -91,6 +91,19 @@ public class GrampsReadScopeTests
         Assert.Equal(41, handler.ReadCount);
         Assert.Equal(1, handler.Count("/api/places/shared"));
         Assert.DoesNotContain(handler.Paths.Keys, p => p.StartsWith("/api/types/"));
+
+        handler.Paths.Clear();
+        foreach (var hit in hits)
+            hit.Object = JsonSerializer.SerializeToElement(new
+            {
+                handle = hit.Handle, primary_name = new { first_name = hit.Handle },
+                birth_ref_index = 0, event_ref_list = new[] { new { @ref = "e" + hit.Handle } }
+            });
+        using (GrampsReadScope.Begin())
+            cached = await SearchFormatter.FormatSearchResults(hits, client);
+        Assert.Equal(baseline, cached);
+        Assert.Equal(21, handler.ReadCount);
+        Assert.DoesNotContain(handler.Paths.Keys, p => p.StartsWith("/api/people/"));
     }
 
     [Fact]
