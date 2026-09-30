@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Serialization;
@@ -38,7 +39,18 @@ public static class SearchTools
 
             var queryString = $"/api/search/?query={Uri.EscapeDataString(query)}&page={page}&pagesize={pagesize}";
 
-            var raw = await client.GetAsync<JsonElement>(queryString);
+            JsonElement raw;
+            try
+            {
+                raw = await client.GetAsync<JsonElement>(queryString);
+            }
+            catch (GrampsApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+            {
+                throw new McpException(
+                    "Gramps Web search returned HTTP 500 for this query. " +
+                    "Try a shorter term (for example, one archive number or file number) or search the relevant object list. " +
+                    "If short queries also fail, check the Gramps Web server logs and search index.", ex);
+            }
             var hits = ParseSearchHits(raw);
 
             if (hits.Length == 0)

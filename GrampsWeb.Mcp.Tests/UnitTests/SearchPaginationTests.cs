@@ -5,12 +5,31 @@ using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol;
 using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 public class SearchPaginationTests
 {
+    [Fact]
+    public async Task Search_ServerError_ProvidesRecoveryWithoutHtml()
+    {
+        using var handler = new SearchErrorHandler();
+        using var http = new HttpClient(handler);
+        var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");
+        var provider = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
+        var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, provider);
+
+        var error = await Assert.ThrowsAsync<McpException>(() =>
+            SearchTools.Search("Р-6143 Оп. 2 Д. 839", 1, 30, client));
+
+        Assert.Contains("HTTP 500", error.Message);
+        Assert.Contains("shorter term", error.Message);
+        Assert.DoesNotContain("<html>", error.Message);
+        Assert.Equal(1, handler.SearchRequests);
+    }
+
     [Theory]
     [InlineData(false, true, 3, 20, 5, 45, 3, 41)]
     [InlineData(true, true, 3, 20, 5, 45, 3, 41)]
@@ -69,5 +88,26 @@ public class SearchPaginationTests
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
+    }
+
+    private sealed class SearchErrorHandler : HttpMessageHandler
+    {
+        public int SearchRequests { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (request.RequestUri!.AbsolutePath.StartsWith("/api/token/", StringComparison.Ordinal))
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("""{"access_token":"token","refresh_token":"refresh","expires_in":900}""")
+                });
+
+            Assert.Equal("/api/search/", request.RequestUri.AbsolutePath);
+            SearchRequests++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            {
+                Content = new StringContent("<html>Internal Server Error</html>")
+            });
+        }
     }
 }
