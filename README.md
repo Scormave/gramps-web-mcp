@@ -21,7 +21,8 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 - **6 MCP resources** — type vocabularies, input guide, tree metadata, name
   settings, and opt-in media thumbnails/files for vision-capable agents
 - **Media safeguards** — size limits, MIME allowlists, and private-record defaults
-- **MCP prompts** — guided workflows for research, adding people/families, and imports
+- **MCP prompts** — guided workflows for research, adding people/families,
+  imports, changing links, and citing facts
 - **Multiple transports** — stdio (local clients), Streamable HTTP, legacy SSE
 - **Read-only mode** — publish only read tools and block direct mutation calls
 

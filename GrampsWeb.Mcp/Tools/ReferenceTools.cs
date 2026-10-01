@@ -14,11 +14,11 @@ public static class ReferenceTools
     [McpServerTool(Title = "Get Reference", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: compatibility access to one MCP reference resource. Choose input-guide, types, metadata, or name-settings. " +
-        "Use section to return one input-guide subsection, one type category such as event_types, or formats/groups from name-settings.")]
+        "Use section to return one input-guide subsection (including link_updates), one type category such as event_types, or formats/groups from name-settings.")]
     public static async Task<string> GetReference(
         [Description("Reference topic: input-guide | types | metadata | name-settings.")]
         string topic,
-        [Description("Optional section. input-guide: dates | name_schema | structured_fields | structured_fields.names | structured_fields.attributes | structured_fields.urls | structured_fields.addresses | structured_fields.person_associations | structured_fields.repository_refs. types: a category key such as event_types. name-settings: formats | groups. Not supported for metadata.")]
+        [Description("Optional section. input-guide: dates | name_schema | link_updates | structured_fields | structured_fields.names | structured_fields.attributes | structured_fields.urls | structured_fields.addresses | structured_fields.person_associations | structured_fields.repository_refs. types: a category key such as event_types. name-settings: formats | groups. Not supported for metadata.")]
         string? section = null,
         GrampsApiClient client = null!)
     {

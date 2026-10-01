@@ -16,6 +16,7 @@ public class ReferenceToolsTests
     [InlineData("dates", "\"dates\"", "structured_fields")]
     [InlineData("structured_fields", "\"structured_fields\"", "\"name_schema\"")]
     [InlineData("name_schema", "\"name_schema\"", "\"dates\"")]
+    [InlineData("link_updates", "\"link_updates\"", "\"structured_fields\"")]
     public async Task GetReference_InputGuideSection_ReturnsOnlyRequestedSection(
         string section,
         string expected,
@@ -71,6 +72,20 @@ public class ReferenceToolsTests
         Assert.Contains("\"dates\"", result);
         Assert.Contains("\"structured_fields\"", result);
         Assert.Contains("\"name_schema\"", result);
+        Assert.Contains("\"link_updates\"", result);
+    }
+
+    [Fact]
+    public async Task LinkUpdatesGuide_ExplainsSafeSingleLinkChanges()
+    {
+        var result = await ReferenceTools.GetReference("input-guide", "link_updates");
+
+        Assert.Contains("update_person(handle:", result);
+        Assert.Contains("linkMode:", result);
+        Assert.Contains("add", result);
+        Assert.Contains("Existing references and their role", result);
+        Assert.Contains("[] clears it", result);
+        Assert.DoesNotContain("\"dates\"", result);
     }
 
     [Fact]

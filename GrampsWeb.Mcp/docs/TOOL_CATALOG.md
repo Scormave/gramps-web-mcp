@@ -63,7 +63,7 @@ Read-only reference/discovery data exposed as MCP resources:
 
 | URI | Description |
 |-----|-------------|
-| `gramps://input-guide` | Complete write-input guide: date strings, structured fields, and full name schema |
+| `gramps://input-guide` | Complete write-input guide: date strings, structured fields, full name schema, and incremental link updates |
 | `gramps://types` | Built-in and custom type vocabularies (event/place/note/etc.) |
 | `gramps://metadata` | Connection/tree metadata (API version, tree id/name, owner, default person) |
 | `gramps://name-settings` | Name display formats and surname grouping rules |
@@ -84,7 +84,7 @@ payload; `section` reduces the response when only one part is needed.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `topic` | `string` | yes | `input-guide`, `types`, `metadata`, or `name-settings` |
-| `section` | `string?` | no | For `input-guide`: `dates`, `name_schema`, `structured_fields`, or `structured_fields.names`, `.attributes`, `.urls`, `.addresses`, `.person_associations`, `.repository_refs`. For `types`: one returned category key such as `event_types`. For `name-settings`: `formats` or `groups`. Unsupported for `metadata`. |
+| `section` | `string?` | no | For `input-guide`: `dates`, `name_schema`, `link_updates`, `structured_fields`, or `structured_fields.names`, `.attributes`, `.urls`, `.addresses`, `.person_associations`, `.repository_refs`. For `types`: one returned category key such as `event_types`. For `name-settings`: `formats` or `groups`. Unsupported for `metadata`. |
 
 ## Prompts
 
@@ -93,10 +93,12 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 | Name | Parameters | Purpose |
 |------|------------|---------|
 | `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details; instructs use of `quick_add_person` and confirmation with handle and Gramps ID. |
-| `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Build a full dossier: resolve identity, `get_object` for the person with extended=true, timeline, and ancestor/descendant trees (3 generations each), then present a structured biographical summary. |
+| `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Start with the person record; retrieve extended details, a timeline, or the requested tree branch only when relevant. |
 | `add-family` | optional `father`, `mother`, `relationship` (default Married), optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_object` for the family. |
 | `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_person_tree` if no direct link. |
 | `import-from-text` | `text` | Parse free-form genealogy text: search/create people with `quick_add_person`, `create_family`, `add_event_to_person`, sources/citations as needed, then report import summary and gaps. |
+| `change-link` | `ownerType`, `owner`, `linkField`, `target`, optional `action` (`add` by default) | Resolve existing records, add or remove one link with `linkMode`, then verify the owner. |
+| `cite-fact` | `recordType`, `record`, `source`, optional `page` | Reuse or create a source and citation, attach it with `linkMode: "add"`, and verify the target. |
 
 ---
 

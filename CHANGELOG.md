@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Document `linkMode` in the existing input-guide resource and expose it as
+  `get_reference(topic: "input-guide", section: "link_updates")`; add
+  `change-link` and `cite-fact` MCP prompts
 - Add `linkMode` (`replace`, `add`, `remove`) to the nine update tools with
   link lists, preserving existing metadata when adding references; update tool
   descriptions, MCP guidance, README, and catalog examples
@@ -16,6 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Include place-only birth/death details in `add-person` and make
+  `research-person` request timelines and tree branches only when relevant
 - Make person and family creation hints context-aware, including birth/death
   events created by `quick_add_person`, without additional API reads; avoid
   suggesting duplicate events and preserve full-list update warnings

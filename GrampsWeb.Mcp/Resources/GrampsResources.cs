@@ -21,7 +21,7 @@ public sealed class GrampsResources
         Name = "input-guide",
         UriTemplate = "gramps://input-guide",
         MimeType = "application/json")]
-    [Description("Complete write-input reference: date formats, structured fields, and full Name schema.")]
+    [Description("Complete write-input reference: date formats, structured fields, link updates, and full Name schema.")]
     public static Task<TextResourceContents> GetInputGuide()
     {
         return Task.FromResult(new TextResourceContents
@@ -420,11 +420,13 @@ public sealed class GrampsResources
         var dates = BuildDateInputGuidePayload();
         var structuredFields = BuildStructuredFieldInputGuidePayload();
         var nameSchema = BuildNameSchemaPayload();
+        var linkUpdates = BuildLinkUpdatesGuidePayload();
         var guide = new
         {
             dates,
             structured_fields = structuredFields,
-            name_schema = nameSchema
+            name_schema = nameSchema,
+            link_updates = linkUpdates
         };
         if (string.IsNullOrWhiteSpace(section))
             return JsonSerializer.Serialize(guide, new JsonSerializerOptions { WriteIndented = true });
@@ -435,6 +437,7 @@ public sealed class GrampsResources
             "dates" => dates,
             "structured_fields" => structuredFields,
             "name_schema" => nameSchema,
+            "link_updates" => linkUpdates,
             "structured_fields.names" => new Dictionary<string, object>
             {
                 ["structured_fields"] = new Dictionary<string, object>
@@ -452,13 +455,38 @@ public sealed class GrampsResources
         if (selected is null)
         {
             throw McpToolErrors.ValidationError(
-                $"Unknown input-guide section '{section}'. Available sections: dates, name_schema, structured_fields, structured_fields.names, structured_fields.attributes, structured_fields.urls, structured_fields.addresses, structured_fields.person_associations, structured_fields.repository_refs.");
+                $"Unknown input-guide section '{section}'. Available sections: dates, name_schema, link_updates, structured_fields, structured_fields.names, structured_fields.attributes, structured_fields.urls, structured_fields.addresses, structured_fields.person_associations, structured_fields.repository_refs.");
         }
 
         return JsonSerializer.Serialize(
             new Dictionary<string, object> { [normalizedSection] = selected },
             new JsonSerializerOptions { WriteIndented = true });
     }
+
+    private static object BuildLinkUpdatesGuidePayload() => new
+    {
+        applies_to = "Link-list parameters on update_person, update_family, update_event, update_place, update_source, update_citation, update_note, update_media, and update_repository. Names, attributes, addresses, and URLs always use replacement semantics.",
+        link_mode = new
+        {
+            replace = "Default. Each supplied link list replaces the entire existing list; [] clears it. Preserve all existing references and their metadata if replacing only one entry.",
+            add = "Append only missing handles. Existing references and their role, relationship, crop, and other metadata stay unchanged. [] does nothing.",
+            remove = "Remove every reference matching each supplied handle; other references and metadata stay unchanged. [] does nothing."
+        },
+        rules = new[]
+        {
+            "Omit a link-list parameter to leave that list unchanged. One linkMode applies to every supplied link list in the call.",
+            "Use the handle of an existing record. Resolve a Gramps ID or ambiguous name before changing links.",
+            "For an event, child, repository, or place reference, include role or relationship metadata when adding if it is known. To change metadata on an existing link, read and replace the full list.",
+            "Add and remove in one workflow require separate calls. Concurrent edits by other Gramps Web clients or server processes are not locked by this MCP server."
+        },
+        examples = new[]
+        {
+            "update_person(handle: \"PERSON_HANDLE\", noteHandles: [\"NOTE_HANDLE\"], linkMode: \"add\")",
+            "update_person(handle: \"PERSON_HANDLE\", eventRefs: [{ref: \"EVENT_HANDLE\", role: \"Primary\"}], linkMode: \"add\")",
+            "update_family(handle: \"FAMILY_HANDLE\", childRefs: [\"CHILD_HANDLE\"], linkMode: \"remove\")",
+            "update_event(handle: \"EVENT_HANDLE\", citationHandles: [\"CITATION_HANDLE\"], linkMode: \"add\")"
+        }
+    };
 
     private static object BuildStructuredFieldsSection(object structuredFields, string section) =>
         new Dictionary<string, object>

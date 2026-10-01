@@ -23,19 +23,23 @@ public sealed class GrampsPrompts
         sb.AppendLine();
         sb.AppendLine($"Name: {name}");
         sb.AppendLine($"Gender: {gender}");
-        if (birthDate != null)
+        if (birthDate != null || birthPlace != null)
         {
-            sb.Append($"Birth: {birthDate}");
+            sb.Append("Birth:");
+            if (birthDate != null)
+                sb.Append($" {birthDate}");
             if (birthPlace != null)
-                sb.Append($" at {birthPlace}");
+                sb.Append(birthDate != null ? $" at {birthPlace}" : $" place: {birthPlace}");
             sb.AppendLine();
         }
 
-        if (deathDate != null)
+        if (deathDate != null || deathPlace != null)
         {
-            sb.Append($"Death: {deathDate}");
+            sb.Append("Death:");
+            if (deathDate != null)
+                sb.Append($" {deathDate}");
             if (deathPlace != null)
-                sb.Append($" at {deathPlace}");
+                sb.Append(deathDate != null ? $" at {deathPlace}" : $" place: {deathPlace}");
             sb.AppendLine();
         }
 
@@ -46,24 +50,16 @@ public sealed class GrampsPrompts
     }
 
     [McpServerPrompt(Name = "research-person")]
-    [Description("Gather comprehensive information about a person")]
+    [Description("Research a person, expanding to timelines or trees only when relevant")]
     public static ChatMessage ResearchPerson(
         [Description("Person handle, Gramps ID (e.g. I0001), or name to search")] string person)
     {
         var text =
-            $"Research person \"{person}\" in the Gramps database. Follow these steps:\n" +
-            "1. Find the person: if \"" + person +
-            "\" looks like a Gramps ID (e.g. I0001), use get_object with that ID. " +
-            "Otherwise, use search(\"" + person + "\") to locate them.\n" +
-            "2. Get full details: call get_object with the person's ID or handle and extended=true.\n" +
-            "3. Get their timeline: call get_timeline with objectType=person for a chronological view of life events.\n" +
-            "4. Get ancestors: call get_person_tree with direction=ancestors and 3 generations.\n" +
-            "5. Get descendants: call get_person_tree with direction=descendants and 3 generations.\n" +
-            "Present the findings as a structured biographical summary including:\n" +
-            "- Full name(s) and vital dates\n" +
-            "- Family connections (parents, spouses, children)\n" +
-            "- Key life events in chronological order\n" +
-            "- Ancestor and descendant overview";
+            $"Research person \"{person}\" in the Gramps database.\n" +
+            "1. If the input is a Gramps ID, call get_object(identifier: ID). If it is an opaque handle, call get_object(objectType: \"person\", identifier: HANDLE). Otherwise search by name, confirm the match, then get_object.\n" +
+            "2. Start with the person's record. Set extended=true only when linked family or event details are needed.\n" +
+            "3. Call get_timeline(objectType: \"person\", ...) only for chronological questions. Call get_person_tree(direction: \"ancestors\" or \"descendants\", ...) only for the requested branch; use a small generation count first.\n" +
+            "4. Report only facts supported by the retrieved records, distinguish uncertainty, and mention missing citations when relevant.";
         return new ChatMessage(ChatRole.User, text);
     }
 
@@ -143,6 +139,52 @@ public sealed class GrampsPrompts
         sb.AppendLine("- Families created");
         sb.AppendLine("- Events added");
         sb.AppendLine("- Any information that could not be imported and why");
+        return new ChatMessage(ChatRole.User, sb.ToString());
+    }
+
+    [McpServerPrompt(Name = "change-link")]
+    [Description("Add or remove one link between existing Gramps records")]
+    public static ChatMessage ChangeLink(
+        [Description("Owner record type: person, family, event, place, source, citation, note, media, or repository")]
+        string ownerType,
+        [Description("Owner handle, Gramps ID, or unambiguous name")]
+        string owner,
+        [Description("Owner's exact update parameter, e.g. eventRefs, childRefs, noteHandles, citationHandles, repositoryHandles")]
+        string linkField,
+        [Description("Existing target handle, Gramps ID, or unambiguous name")]
+        string target,
+        [Description("Action: add or remove")]
+        string action = "add")
+    {
+        var text =
+            $"{action} one existing link on {ownerType} \"{owner}\" using {linkField} and target \"{target}\".\n" +
+            "1. Resolve both records to handles with get_object or search; confirm ambiguous names. Inspect the owner to confirm it owns this link field. Events do not own person-event links: update_person(eventRefs) or update_family(eventRefs).\n" +
+            "2. Use the matching update_* tool with handle: OWNER_HANDLE, the chosen link field containing TARGET_HANDLE, and linkMode: \"add\" or \"remove\". For childRefs, eventRefs, repositoryHandles, or enclosedBy, include known relationship/role metadata on add; do not guess unknown relationship facts.\n" +
+            "3. Read the owner again to verify the link changed. Do not create a new record to satisfy this request. For metadata changes to an existing reference, read and replace the full list instead.\n" +
+            "See get_reference(topic: \"input-guide\", section: \"link_updates\") if the list semantics are unclear.";
+        return new ChatMessage(ChatRole.User, text);
+    }
+
+    [McpServerPrompt(Name = "cite-fact")]
+    [Description("Attach a source citation to an existing person, family, event, place, or media record")]
+    public static ChatMessage CiteFact(
+        [Description("Record type: person, family, event, place, or media")]
+        string recordType,
+        [Description("Record handle, Gramps ID, or unambiguous name")]
+        string record,
+        [Description("Source title or existing source handle/Gramps ID")]
+        string source,
+        [Description("Page or location within the source, if known")]
+        string? page = null)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"Attach a citation from source \"{source}\" to {recordType} \"{record}\".");
+        if (!string.IsNullOrWhiteSpace(page))
+            sb.AppendLine($"Page/location: {page}");
+        sb.AppendLine("1. Resolve and inspect the target with get_object; confirm an ambiguous name before editing. Check its existing citations for the same source and page to avoid duplicates.");
+        sb.AppendLine("2. Find the source by handle/Gramps ID or search by title. Reuse a matching source; create_source only if no matching source exists and the supplied information is sufficient.");
+        sb.AppendLine("3. Reuse an existing matching citation if available; otherwise create_citation(sourceHandle: SOURCE_HANDLE, page: PAGE_IF_KNOWN). Do not invent page, confidence, or other evidence details.");
+        sb.AppendLine("4. Attach with the target's update_* tool: handle: TARGET_HANDLE, citationHandles: [CITATION_HANDLE], linkMode: \"add\". Read the target again to verify it is linked.");
         return new ChatMessage(ChatRole.User, sb.ToString());
     }
 }
