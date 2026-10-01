@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Vendor the generated Gramps Web API 3.22.1 OpenAPI 3 schema and use it for
+  DTO contract checks, retaining the older Swagger 2 schema only for four
+  omitted extended definitions
+- Add a migration guide from 1.x with all removed tool mappings, changed
+  arguments, link-update semantics, and tool availability checks
 - Document `linkMode` in the existing input-guide resource and expose it as
   `get_reference(topic: "input-guide", section: "link_updates")`; add
   `change-link` and `cite-fact` MCP prompts

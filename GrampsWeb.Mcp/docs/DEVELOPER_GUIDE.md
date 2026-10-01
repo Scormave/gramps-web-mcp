@@ -95,8 +95,9 @@ Key rules:
 
 ### Step 1: Identify the API endpoint
 
-Check the Gramps Web API spec (`apispec.yaml`, vendored upstream — do not edit
-in place) and update `API_INVENTORY.md` with the new endpoint.
+Check the current Gramps Web API schema (`openapi.json`) and update
+`API_INVENTORY.md` with the new endpoint. Refresh the schema wholesale from
+the generated upstream endpoint when needed.
 
 ### Step 2: Create/update model
 
@@ -257,7 +258,9 @@ dotnet test --filter "Category=Contract"
 
 Contract tests ensure C# DTOs stay in sync with the OpenAPI spec:
 
-1. `apispec.yaml` (repo root) is the Gramps Web OpenAPI spec.
+1. `openapi.json` (repo root) is the current generated Gramps Web OpenAPI 3
+   snapshot. The older `apispec.yaml` is used only for four missing
+   `*Extended` schemas.
 2. `swagger-dto-map.json` maps API schema definitions → C# model types
    and their `[JsonPropertyName]` fields.
 3. `DtoSwaggerSyncTests` loads both and verifies every mapped property

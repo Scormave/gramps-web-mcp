@@ -1,80 +1,92 @@
+using System.Text.Json;
 using YamlDotNet.RepresentationModel;
 
 namespace GrampsWeb.Mcp.Tests.Contract;
 
-/// <summary>
-/// Loads Swagger 2 <c>definitions</c> from <c>apispec.yaml</c> for structural DTO checks.
-/// </summary>
+/// <summary>Indexes the current OpenAPI 3 schemas, with four legacy extended schemas from Swagger 2.</summary>
 public sealed class SwaggerDefinitionsIndex
 {
-    private const string DefinitionsRefPrefix = "#/definitions/";
+    private readonly JsonDocument _openApi;
+    private readonly Dictionary<string, YamlMappingNode> _legacyDefinitions;
 
-    private readonly Dictionary<string, YamlMappingNode> _definitions;
-
-    public SwaggerDefinitionsIndex(string yamlPath)
+    public SwaggerDefinitionsIndex(string openApiPath, string legacyYamlPath)
     {
-        using var reader = new StreamReader(yamlPath);
+        _openApi = JsonDocument.Parse(File.ReadAllText(openApiPath));
+        using var reader = new StreamReader(legacyYamlPath);
         var yaml = new YamlStream();
         yaml.Load(reader);
         var root = (YamlMappingNode)yaml.Documents[0].RootNode!;
-        if (!root.Children.TryGetValue(new YamlScalarNode("definitions"), out var defsRoot))
-            throw new InvalidOperationException("YAML root has no 'definitions' mapping (expected Swagger 2).");
-        var defs = (YamlMappingNode)defsRoot;
-        _definitions = new Dictionary<string, YamlMappingNode>(StringComparer.Ordinal);
-        foreach (var (k, v) in defs.Children)
-        {
-            if (k is YamlScalarNode sk && v is YamlMappingNode mv && sk.Value is { } name)
-                _definitions[name] = mv;
-        }
+        var definitions = (YamlMappingNode)root.Children[new YamlScalarNode("definitions")];
+        _legacyDefinitions = definitions.Children
+            .Where(pair => pair.Key is YamlScalarNode && pair.Value is YamlMappingNode)
+            .ToDictionary(pair => ((YamlScalarNode)pair.Key).Value!, pair => (YamlMappingNode)pair.Value, StringComparer.Ordinal);
+    }
+
+    private bool TryGetCurrentSchema(string name, out JsonElement schema) =>
+        _openApi.RootElement.GetProperty("components").GetProperty("schemas").TryGetProperty(name, out schema);
+
+    private YamlMappingNode GetLegacySchema(string name)
+    {
+        if (!name.EndsWith("Extended", StringComparison.Ordinal) || !_legacyDefinitions.TryGetValue(name, out var schema))
+            throw new ArgumentException($"Unknown OpenAPI schema '{name}'.", nameof(name));
+        return schema;
     }
 
     public IReadOnlySet<string> GetPropertyKeys(string definitionName)
     {
-        if (!_definitions.TryGetValue(definitionName, out var schema))
-            throw new ArgumentException($"Unknown Swagger definition '{definitionName}'.", nameof(definitionName));
-        if (!schema.Children.TryGetValue(new YamlScalarNode("properties"), out var propsNode))
-            return new HashSet<string>(StringComparer.Ordinal);
-        var props = (YamlMappingNode)propsNode;
-        return props.Children.Keys
-            .OfType<YamlScalarNode>()
-            .Where(s => s.Value is not null)
-            .Select(s => s.Value!)
-            .ToHashSet(StringComparer.Ordinal);
+        if (TryGetCurrentSchema(definitionName, out var schema))
+            return schema.TryGetProperty("properties", out var properties)
+                ? properties.EnumerateObject().Select(property => property.Name).ToHashSet(StringComparer.Ordinal)
+                : new HashSet<string>(StringComparer.Ordinal);
+        var legacy = GetLegacySchema(definitionName);
+        return legacy.Children.TryGetValue(new YamlScalarNode("properties"), out var node)
+            ? ((YamlMappingNode)node).Children.Keys.OfType<YamlScalarNode>().Select(key => key.Value!).ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
     }
 
-    /// <summary>
-    /// If the schema for <paramref name="jsonPropertyName"/> eventually contains <c>$ref: #/definitions/X</c>
-    /// (including under <c>items</c>), returns <c>X</c>; otherwise <c>null</c>.
-    /// </summary>
     public string? TryGetReferencedDefinitionForProperty(string definitionName, string jsonPropertyName)
     {
-        if (!_definitions.TryGetValue(definitionName, out var schema))
+        if (TryGetCurrentSchema(definitionName, out var schema))
+        {
+            if (!schema.TryGetProperty("properties", out var properties) || !properties.TryGetProperty(jsonPropertyName, out var property))
+                return null;
+            return FindCurrentRef(property);
+        }
+        var legacy = GetLegacySchema(definitionName);
+        if (!legacy.Children.TryGetValue(new YamlScalarNode("properties"), out var propertiesNode) ||
+            !((YamlMappingNode)propertiesNode).Children.TryGetValue(new YamlScalarNode(jsonPropertyName), out var propertyNode))
             return null;
-        if (!schema.Children.TryGetValue(new YamlScalarNode("properties"), out var propsNode))
-            return null;
-        var props = (YamlMappingNode)propsNode;
-        if (!props.Children.TryGetValue(new YamlScalarNode(jsonPropertyName), out var propSchema))
-            return null;
-        return ExtractRefDefinitionName(propSchema);
+        return FindLegacyRef(propertyNode);
     }
 
-    private static string? ExtractRefDefinitionName(YamlNode? node)
+    private static string? FindCurrentRef(JsonElement node)
     {
-        if (node is not YamlMappingNode map)
+        if (node.ValueKind != JsonValueKind.Object)
             return null;
-        if (map.Children.TryGetValue(new YamlScalarNode("$ref"), out var refN) && refN is YamlScalarNode rs)
-            return ParseDefinitionsRef(rs.Value);
-        if (map.Children.TryGetValue(new YamlScalarNode("items"), out var items))
-            return ExtractRefDefinitionName(items);
+        if (node.TryGetProperty("$ref", out var reference))
+        {
+            const string prefix = "#/components/schemas/";
+            var value = reference.GetString();
+            if (value?.StartsWith(prefix, StringComparison.Ordinal) == true)
+                return value[prefix.Length..];
+        }
+        if (node.TryGetProperty("items", out var items))
+            return FindCurrentRef(items);
+        if (node.TryGetProperty("allOf", out var allOf))
+            foreach (var child in allOf.EnumerateArray())
+                if (FindCurrentRef(child) is { } result)
+                    return result;
         return null;
     }
 
-    private static string? ParseDefinitionsRef(string? refValue)
+    private static string? FindLegacyRef(YamlNode node)
     {
-        if (string.IsNullOrEmpty(refValue))
+        if (node is not YamlMappingNode map)
             return null;
-        return refValue.StartsWith(DefinitionsRefPrefix, StringComparison.Ordinal)
-            ? refValue[DefinitionsRefPrefix.Length..]
-            : null;
+        const string prefix = "#/definitions/";
+        if (map.Children.TryGetValue(new YamlScalarNode("$ref"), out var reference) &&
+            reference is YamlScalarNode scalar && scalar.Value?.StartsWith(prefix, StringComparison.Ordinal) == true)
+            return scalar.Value[prefix.Length..];
+        return map.Children.TryGetValue(new YamlScalarNode("items"), out var items) ? FindLegacyRef(items) : null;
     }
 }

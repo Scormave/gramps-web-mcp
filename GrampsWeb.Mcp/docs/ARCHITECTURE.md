@@ -386,7 +386,8 @@ HTTP transport on port 8080.
 ## Testing strategy
 
 - **Contract tests** (`Contract/`): verify that C# DTOs match the OpenAPI spec
-  (`apispec.yaml`).  `swagger-dto-map.json` defines the mapping; run with
+  (`openapi.json`; four legacy extended schemas use `apispec.yaml`).
+  `swagger-dto-map.json` defines the mapping; run with
   `[Trait("Category","Contract")]`.
 - **Unit tests** (`UnitTests/`): cover serialization, date parsing, formatters,
   flexible input types, mutation parsing.

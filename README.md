@@ -2,6 +2,9 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/download/dotnet/10.0)
+[![MCP server version](https://img.shields.io/github/v/release/Scormave/gramps-web-mcp?label=MCP%20server&color=14b8a6)](https://github.com/Scormave/gramps-web-mcp/releases)
+[![CI](https://github.com/Scormave/gramps-web-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Scormave/gramps-web-mcp/actions/workflows/ci.yml)
+[![Docker on GHCR](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/Scormave/gramps-web-mcp/pkgs/container/gramps-web-mcp)
 
 Companion MCP server for the [Gramps Web](https://www.grampsweb.org/)
 open-source genealogy platform. It gives AI agents structured, tool-based
@@ -27,6 +30,8 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 - **Read-only mode** — publish only read tools and block direct mutation calls
 
 See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) for the full list.
+Upgrading from 1.x? Follow the [2.0 migration guide](GrampsWeb.Mcp/docs/MIGRATING_TO_2.md)
+to update saved tool calls and client settings.
 
 All outgoing requests to Gramps Web, including authentication, media downloads,
 and health checks, automatically identify this application with

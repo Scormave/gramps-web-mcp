@@ -2,9 +2,21 @@
 
 Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, and `GrampsWeb.Mcp/Client/GrampsApiClient.cs`. Paginated browsing of each `GET /api/{type}/` list is exposed only via MCP `list_objects` (and `search`), which formats rows through `SearchFormatter` (shared with search results).
 
-**Vendored OpenAPI spec:** repo-root `apispec.yaml` is the upstream Gramps Web OpenAPI spec. **Do not edit it in place** — when the upstream spec changes, replace the file wholesale from Gramps Web.
+**Current OpenAPI spec:** repo-root `openapi.json` is a verbatim snapshot of
+the generated [Gramps Web demo schema](https://demo.grampsweb.org/api/openapi.json),
+API 3.22.1 (OpenAPI 3.0.3), retrieved 2026-10-01. Refresh it wholesale from
+the live endpoint after verifying the reported API version. The upstream
+[static Swagger UI](https://gramps-project.github.io/gramps-web-api/) still
+serves the older Swagger 2.0 API 3.7.2 schema, retained here as `apispec.yaml`
+for four legacy `*Extended` definitions omitted by the generated schema.
 
-**Contract checks:** `dotnet test` runs `[Trait("Category","Contract")]` tests that compare `[JsonPropertyName]` on mapped DTOs to `definitions` in repo-root `apispec.yaml`. The enforced mapping is `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` (update it when adding typed API surfaces). The test project copies `apispec.yaml` into the build output next to `swagger-dto-map.json`.
+**Contract checks:** `dotnet test` compares mapped DTO JSON names against
+`components.schemas` in `openapi.json`. Only `PersonExtended`,
+`FamilyExtended`, `EventExtended`, and `CitationExtended` fall back to
+`apispec.yaml`. The enforced mapping is
+`GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json`; update it when adding
+typed API surfaces. Structural checks do not prove runtime response shapes or
+endpoint behavior.
 
 **Read-only mode:** when `GRAMPS_READ_ONLY=true` is set,
 `PostMutationAsync`, `PutMutationAsync`, and `DeleteAsync` block tree mutations
@@ -14,8 +26,8 @@ not mutate tree data. When writes are allowed, those three helpers also go
 through `MutationGate` (`GRAMPS_MUTATION_SERIALIZE`,
 `GRAMPS_MUTATION_MIN_INTERVAL_MS`) around the HTTP send only.
 
-**Media catalog:** when `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, the two
-media-byte MCP tools are omitted from `tools/list`. Their binary API routes and
+**Media catalog:** when `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, the
+`read_media` MCP tool is omitted from `tools/list`. Its binary API routes and
 MCP resources remain disabled by the same setting; metadata remains readable.
 
 | HTTP path pattern | Response / body type | Model / notes |
@@ -30,7 +42,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/families/{handle}` | Family | `GrampsFamily` |
 | `GET /api/families/{handle}?extend=all` | Family extended | `GrampsFamilyExtended` |
 | `GET /api/families/{h}/timeline` | Array | `GrampsTimelineEntry[]` |
-| `GET /api/places/{h}?backlinks=true` + `GET /api/events/{eh}` | Derived | `GrampsTimelineEntry[]` (MCP synthesizes; no `/places/{h}/timeline` in apispec) |
+| `GET /api/places/{h}?backlinks=true` + `GET /api/events/{eh}` | Derived | `GrampsTimelineEntry[]` (MCP synthesizes; no `/places/{h}/timeline` in OpenAPI) |
 | `GET /api/events/{handle}` | Event | `GrampsEvent` |
 | `GET /api/places/{handle}` | Place | `GrampsPlace` |
 | `GET /api/sources/{handle}` | Source | `GrampsSource` |
@@ -42,11 +54,11 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/media/{handle}/file` | Binary | MCP resource `gramps://media/{handle}/file` via `GetBytesAsync`; opt-in safeguards apply |
 | `GET /api/tags/{handle}` | Tag | `GrampsTag` |
 | `GET ...?backlinks=true` | Backlinks | `JsonElement` |
-| `GET /api/types/default/` | Types | `JsonElement` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in apispec) |
-| `GET /api/types/custom/` | Nested lists | `JsonElement` → `TypesPayloadParser.ParseCategories` (same shape as default; see `CustomTypes` in apispec) |
+| `GET /api/types/default/` | Types | `JsonElement` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in OpenAPI) |
+| `GET /api/types/custom/` | Nested lists | `JsonElement` → `TypesPayloadParser.ParseCategories` (same shape as default; see `CustomTypes` in OpenAPI) |
 | `GET /api/metadata/`, `/api/transactions/history/`, `/api/bookmarks/` | Various | `JsonElement` |
 | `GET /api/name-formats/`, `/api/name-groups/` | Various | `dynamic` |
-| `POST/PUT /api/{type}/` (create/update) | Often JSON array of changes `{ _class, type, old, new }` (not in apispec); may be bare entity | `PostMutationAsync` / `PutMutationAsync` unwrap `new` via `GrampsMutationParser` into `Gramps*` |
+| `POST/PUT /api/{type}/` (create/update) | Often JSON array of changes `{ _class, type, old, new }` (not in OpenAPI); may be bare entity | `PostMutationAsync` / `PutMutationAsync` unwrap `new` via `GrampsMutationParser` into `Gramps*` |
 
 High-risk JSON fields (polymorphic or spec vs runtime): `parent_family_list`, `family_list` / `media_list` (handle strings vs `{ref}` / `{handle}` objects), `child_ref_list` (object vs string), `reporef_list` (object vs string), search root (array vs wrapped), list endpoints (array vs `{ objects, total, page }`).
 

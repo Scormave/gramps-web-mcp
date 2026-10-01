@@ -9,14 +9,14 @@ public static class DtoSwaggerVerifier
 {
     private const int MaxNestedDepth = 16;
 
-    public static IReadOnlyList<string> VerifyAll(string apispecPath, string mapPath)
+    public static IReadOnlyList<string> VerifyAll(string apispecPath, string legacyApispecPath, string mapPath)
     {
         var json = File.ReadAllText(mapPath);
         var map = System.Text.Json.JsonSerializer.Deserialize<SwaggerDtoMapFile>(json);
         if (map?.Entries is not { Count: > 0 })
             return ["swagger-dto-map.json has no entries."];
 
-        var index = new SwaggerDefinitionsIndex(apispecPath);
+        var index = new SwaggerDefinitionsIndex(apispecPath, legacyApispecPath);
         var errors = new List<string>();
         var mcpAssembly = typeof(GrampsWeb.Mcp.Models.GrampsPerson).Assembly;
 
