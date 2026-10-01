@@ -358,7 +358,7 @@ public sealed class GrampsResources
     {
         if (!mimeType.StartsWith("image/", StringComparison.Ordinal))
             throw McpToolErrors.ValidationError(
-                $"Media MIME type '{mimeType}' cannot be returned as an image tool result. Use GetMediaFile for audio and other allowlisted media.");
+                $"Media MIME type '{mimeType}' cannot be returned as an image tool result. Use read_media with mode file for audio and other allowlisted media.");
     }
 
     internal static ContentBlock ToMediaFileContentBlock(MediaBinaryDownload mediaFile)

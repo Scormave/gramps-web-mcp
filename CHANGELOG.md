@@ -28,12 +28,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `direction` selects ancestors or descendants
 - Replace person, family, and place timeline tools with `get_timeline`, whose
   `objectType` selects the timeline owner and limits relative-event filters to people
-- Reduce the MCP catalog from 57 to 32 tools and update the GitHub Pages site,
+- Replace `get_media_thumbnail` and `get_media_file` with `read_media`, defaulting
+  to thumbnail mode (256 pixels); file mode returns typed image, audio, or blob
+  content and rejects the thumbnail-only `size` parameter. Media resource URIs
+  and size, MIME, and private-record safeguards are unchanged
+- Reduce the MCP catalog from 57 to 31 tools and update the GitHub Pages site,
   MCP Bundle metadata, prompts, and tool documentation
 - Publish only read-only tools when `GRAMPS_READ_ONLY=true`, while retaining
   server-side protection against direct calls to write tools
-- Hide `get_media_thumbnail` and `get_media_file` from `tools/list` when
-  `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, while retaining their direct-call
+- Hide `read_media` from `tools/list` when
+  `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, while retaining its direct-call
   configuration checks and media metadata access through `get_object`
 - Expose refresh-token authentication in Docker Compose, MCP Registry, MCPB,
   GitHub Pages, and the remaining setup documentation

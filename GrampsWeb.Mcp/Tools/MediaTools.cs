@@ -22,7 +22,7 @@ public static class MediaTools
 {
     [Description(
         "Read-only: media object metadata (path, MIME, checksum, description). " +
-        "For Open WebUI vision access, use GetMediaThumbnail or GetMediaFile. " +
+        "For Open WebUI vision access, use read_media with mode thumbnail or file. " +
         "Full MCP clients may also read resources gramps://media/{handle}/thumbnail/{size} or gramps://media/{handle}/file.")]
     internal static async Task<string> ReadMediaAsync(
         [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -45,48 +45,43 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool(Title = "Get Media Thumbnail", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Read Media", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: download a media thumbnail as MCP image content for vision-capable tool clients such as Open WebUI. " +
-        "Preferred before requesting the full media file. Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects media size, MIME, and private-record safeguards.")]
-    public static async Task<ImageContentBlock> GetMediaThumbnail(
+        "Read-only: download media bytes. Default mode thumbnail returns MCP image content; prefer it for previews. " +
+        "Use mode file when the original is needed: returns image, audio, or embedded blob resource content according to MIME type. " +
+        "Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects size, MIME, and private-record safeguards. " +
+        "Use get_object with objectType media for metadata.")]
+    public static async Task<CallToolResult> ReadMedia(
         [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Thumbnail size in pixels. Must be positive. Default 256.")]
-        int size = 256,
+        [Description("Download mode: thumbnail | file. Default thumbnail. Use file only when a preview is insufficient.")]
+        string mode = "thumbnail",
+        [Description("Thumbnail size in pixels; positive integer, defaults to 256 when omitted. Only valid for mode thumbnail; omit for mode file.")]
+        int? size = null,
         GrampsApiClient client = null!,
         GrampsConfig config = null!)
     {
         try
         {
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
-            var thumbnail = await GrampsResources.DownloadMediaThumbnailAsync(resolvedHandle, size, client, config);
-            GrampsResources.EnsureImageMime(thumbnail.MimeType);
-            return ImageContentBlock.FromBytes(thumbnail.Binary.Bytes, thumbnail.MimeType);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
+            GrampsResources.EnsureMediaResourcesEnabled(config);
+            GrampsResources.EnsureMediaHandle(handle);
+            var normalizedMode = mode?.Trim().ToLowerInvariant();
+            if (normalizedMode is not ("thumbnail" or "file"))
+                throw McpToolErrors.ValidationError("Invalid mode. Must be thumbnail or file.");
+            if (normalizedMode == "file" && size.HasValue)
+                throw McpToolErrors.ValidationError("size is only supported for mode thumbnail; omit it for mode file.");
+            if (normalizedMode == "thumbnail" && size is <= 0)
+                throw McpToolErrors.ValidationError("Thumbnail size must be a positive integer.");
 
-    [McpServerTool(Title = "Get Media File", ReadOnly = true, Destructive = false)]
-    [Description(
-        "Read-only: download a full media file as typed MCP tool content. " +
-        "Returns image content for images, audio content for audio MIME types, and embedded blob resources for other allowlisted types such as PDF. " +
-        "Use only when a thumbnail is insufficient. Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects media size, MIME, and private-record safeguards. " +
-        "Full MCP clients may also read gramps://media/{handle}/file.")]
-    public static async Task<CallToolResult> GetMediaFile(
-        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        GrampsApiClient client,
-        GrampsConfig config)
-    {
-        try
-        {
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
-            var mediaFile = await GrampsResources.DownloadMediaFileAsync(resolvedHandle, client, config);
-            return GrampsResources.ToMediaFileCallToolResult(mediaFile);
+            if (normalizedMode == "file")
+            {
+                var mediaFile = await GrampsResources.DownloadMediaFileAsync(resolvedHandle, client, config);
+                return GrampsResources.ToMediaFileCallToolResult(mediaFile);
+            }
+            var thumbnail = await GrampsResources.DownloadMediaThumbnailAsync(resolvedHandle, size ?? 256, client, config);
+            GrampsResources.EnsureImageMime(thumbnail.MimeType);
+            return new CallToolResult { Content = [ImageContentBlock.FromBytes(thumbnail.Binary.Bytes, thumbnail.MimeType)] };
         }
         catch (Exception ex)
         {

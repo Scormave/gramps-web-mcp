@@ -49,7 +49,7 @@ internal static class McpToolProfileExtensions
     }
 
     private static bool IsMediaByteTool(Tool tool) =>
-        tool.Name is "get_media_thumbnail" or "get_media_file";
+        tool.Name == "read_media";
 
     private static async ValueTask<ListToolsResult> FilterAvailableToolsAsync(
         McpRequestHandler<ListToolsRequestParams, ListToolsResult> next,

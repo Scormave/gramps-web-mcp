@@ -59,8 +59,8 @@ Key rules:
 - Tools return `Task<string>` — always formatted text, never raw JSON.
 - Binary payloads belong in MCP resources, not tools. Media files use
   `BlobResourceContents` from `Resources/GrampsResources.cs`.
-- Exception: `GetMediaThumbnail` returns `ImageContentBlock`. `GetMediaFile`
-  returns `CallToolResult` with typed content: image for images, audio for
+- Exception: `ReadMedia` returns `CallToolResult` with typed content:
+  image for thumbnails and image files, audio for
   audio MIME types, and `EmbeddedResourceBlock` with `BlobResourceContents` for
   other allowlisted types.
 - `GrampsApiClient client` is the **last** parameter, injected by the MCP host.

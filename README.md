@@ -13,7 +13,7 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 
 ## Features
 
-- **Up to 32 MCP tools** — read, create, update, and delete people, families, events, places,
+- **Up to 31 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
@@ -214,10 +214,11 @@ curl -X POST http://host:8080/mcp \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}},"id":1}'
 ```
 
-Vision-capable agents can read opt-in media through tools (`GetMediaThumbnail`,
-`GetMediaFile`) or through binary MCP resources such as
+Vision-capable agents can read opt-in media through `read_media`
+or through binary MCP resources such as
 `gramps://media/{handle}/thumbnail/{size}` and `gramps://media/{handle}/file`.
-`GetMediaFile` returns image, audio, or embedded blob resource content depending
+`read_media` defaults to a 256-pixel thumbnail; use `mode: "file"` for an original
+file and omit `size`. File mode returns image, audio, or embedded blob resource content depending
 on MIME type. End-to-end analysis depends on the MCP client forwarding the typed
 tool content or binary resource content to a capable model.
 
@@ -285,8 +286,8 @@ Runtime notes:
 Media byte tools/resources are disabled by default. `get_object` with
 `objectType: "media"` remains
 available for metadata without enabling file downloads.
-When disabled, `get_media_thumbnail` and `get_media_file` are omitted from
-`tools/list`; direct calls by a client that already knows their names return a
+When disabled, `read_media` is omitted from
+`tools/list`; direct calls by a client that already knows its name return a
 configuration error without downloading bytes.
 
 | Variable | Description | Default |
@@ -296,7 +297,7 @@ configuration error without downloading bytes.
 | `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Allowed MIME types for media bytes | see below |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allows bytes for Gramps media records marked private | `false` |
 
-Prefer `GetMediaThumbnail` or `gramps://media/{handle}/thumbnail/{size}` for AI
+Prefer `read_media(mode: "thumbnail")` or `gramps://media/{handle}/thumbnail/{size}` for AI
 analysis. Full files can be large and sensitive, and are still subject to the
 same size, MIME, and private-record checks.
 

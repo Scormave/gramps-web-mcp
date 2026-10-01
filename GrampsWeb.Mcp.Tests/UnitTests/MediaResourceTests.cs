@@ -28,12 +28,13 @@ public class MediaResourceTests
     }
 
     [Fact]
-    public async Task GetMediaThumbnail_Tool_Returns_ImageContentBlock_When_Enabled()
+    public async Task ReadMedia_Thumbnail_Returns_ImageContentBlock_When_Enabled()
     {
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
 
-        var image = await MediaTools.GetMediaThumbnail("handle1", 256, client, config);
+        var result = await MediaTools.ReadMedia("handle1", client: client, config: config);
+        var image = Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
 
         Assert.Equal("image", image.Type);
         Assert.Equal("image/jpeg", image.MimeType);
@@ -41,13 +42,11 @@ public class MediaResourceTests
     }
 
     [Fact]
-    public async Task GetMediaThumbnail_Tool_Result_Serializes_As_Image_Content()
+    public async Task ReadMedia_Thumbnail_Result_Serializes_As_Image_Content()
     {
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
-        var image = await MediaTools.GetMediaThumbnail("handle1", 256, client, config);
-
-        var result = new CallToolResult { Content = [image] };
+        var result = await MediaTools.ReadMedia("handle1", size: 256, client: client, config: config);
         var json = JsonSerializer.Serialize(result, McpJsonUtilities.DefaultOptions);
         using var doc = JsonDocument.Parse(json);
 
@@ -71,12 +70,12 @@ public class MediaResourceTests
     }
 
     [Fact]
-    public async Task GetMediaFile_Tool_Returns_ImageContentBlock_For_Image_File()
+    public async Task ReadMedia_File_Returns_ImageContentBlock_For_Image_File()
     {
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
 
-        var result = await MediaTools.GetMediaFile("handle1", client, config);
+        var result = await MediaTools.ReadMedia("handle1", mode: "file", client: client, config: config);
 
         Assert.Single(result.Content);
         var image = Assert.IsType<ImageContentBlock>(result.Content[0]);
@@ -86,14 +85,14 @@ public class MediaResourceTests
     }
 
     [Fact]
-    public async Task GetMediaFile_Tool_Returns_AudioContentBlock_For_Audio_File()
+    public async Task ReadMedia_File_Returns_AudioContentBlock_For_Audio_File()
     {
         var client = CreateClient();
         var config = CreateConfig(
             mediaResourcesEnabled: true,
             mediaAllowedMimeTypes: ["image/jpeg", "audio/aac"]);
 
-        var result = await MediaTools.GetMediaFile("audio1", client, config);
+        var result = await MediaTools.ReadMedia("audio1", mode: "file", client: client, config: config);
 
         Assert.Single(result.Content);
         var audio = Assert.IsType<AudioContentBlock>(result.Content[0]);
@@ -103,14 +102,14 @@ public class MediaResourceTests
     }
 
     [Fact]
-    public async Task GetMediaFile_Tool_Returns_EmbeddedResourceBlock_For_Pdf_File()
+    public async Task ReadMedia_File_Returns_EmbeddedResourceBlock_For_Pdf_File()
     {
         var client = CreateClient();
         var config = CreateConfig(
             mediaResourcesEnabled: true,
             mediaAllowedMimeTypes: ["image/jpeg", "application/pdf"]);
 
-        var result = await MediaTools.GetMediaFile("pdf1", client, config);
+        var result = await MediaTools.ReadMedia("pdf1", mode: "file", client: client, config: config);
 
         Assert.Single(result.Content);
         var embedded = Assert.IsType<EmbeddedResourceBlock>(result.Content[0]);
@@ -137,11 +136,11 @@ public class MediaResourceTests
     }
 
     [Fact]
-    public async Task GetMediaFile_Tool_Result_Serializes_As_Typed_Content()
+    public async Task ReadMedia_File_Result_Serializes_As_Typed_Content()
     {
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
-        var result = await MediaTools.GetMediaFile("handle1", client, config);
+        var result = await MediaTools.ReadMedia("handle1", mode: "file", client: client, config: config);
 
         var json = JsonSerializer.Serialize(result, McpJsonUtilities.DefaultOptions);
         using var doc = JsonDocument.Parse(json);
@@ -167,14 +166,14 @@ public class MediaResourceTests
     }
 
     [Fact]
-    public async Task GetMediaThumbnail_Tool_Fails_When_Media_Resources_Disabled_Before_Http()
+    public async Task ReadMedia_Thumbnail_Fails_When_Media_Resources_Disabled_Before_Http()
     {
         var handler = new MediaHandler();
         var client = CreateClient(handler);
         var config = CreateConfig(mediaResourcesEnabled: false);
 
         var ex = await Assert.ThrowsAsync<McpException>(
-            () => MediaTools.GetMediaThumbnail("handle1", 256, client, config));
+            () => MediaTools.ReadMedia("handle1", size: 256, client: client, config: config));
 
         Assert.Contains("Media file resources are disabled", ex.Message);
         Assert.Empty(handler.RequestPaths);
@@ -197,14 +196,14 @@ public class MediaResourceTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task GetMediaFile_Tool_Fails_When_Handle_Is_Empty(string handle)
+    public async Task ReadMedia_File_Fails_When_Handle_Is_Empty(string handle)
     {
         var handler = new MediaHandler();
         var client = CreateClient(handler);
         var config = CreateConfig(mediaResourcesEnabled: true);
 
         var ex = await Assert.ThrowsAsync<McpException>(
-            () => MediaTools.GetMediaFile(handle, client, config));
+            () => MediaTools.ReadMedia(handle, mode: "file", client: client, config: config));
 
         Assert.Contains("Media handle must not be empty", ex.Message);
         Assert.Empty(handler.RequestPaths);
@@ -292,13 +291,13 @@ public class MediaResourceTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task GetMediaThumbnail_Tool_Fails_When_Size_Is_Not_Positive(int size)
+    public async Task ReadMedia_Thumbnail_Fails_When_Size_Is_Not_Positive(int size)
     {
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
 
         var ex = await Assert.ThrowsAsync<McpException>(
-            () => MediaTools.GetMediaThumbnail("handle1", size, client, config));
+            () => MediaTools.ReadMedia("handle1", size: size, client: client, config: config));
 
         Assert.Contains("Thumbnail size must be a positive integer", ex.Message);
     }
@@ -313,6 +312,67 @@ public class MediaResourceTests
             () => GrampsResources.GetMediaFile("missing1", client, config));
 
         Assert.Contains("Media not found", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("bad", null)]
+    [InlineData("", null)]
+    [InlineData("file", 256)]
+    [InlineData("thumbnail", 0)]
+    [InlineData("thumbnail", -1)]
+    public async Task ReadMedia_InvalidOptionsFailBeforeIdResolution(string mode, int? size)
+    {
+        var handler = new MediaHandler();
+        await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
+            "M1234567", mode, size, CreateClient(handler), CreateConfig(mediaResourcesEnabled: true)));
+        Assert.Empty(handler.RequestPaths);
+    }
+
+    [Theory]
+    [InlineData("thumbnail")]
+    [InlineData("file")]
+    public async Task ReadMedia_DisabledFailsBeforeIdResolution(string mode)
+    {
+        var handler = new MediaHandler();
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
+            "M1234567", mode, client: CreateClient(handler), config: CreateConfig(mediaResourcesEnabled: false)));
+        Assert.Contains("disabled", ex.Message);
+        Assert.Empty(handler.RequestPaths);
+    }
+
+    [Theory]
+    [InlineData("thumbnail")]
+    [InlineData("file")]
+    public async Task ReadMedia_PrivateRecordsRemainBlocked(string mode)
+    {
+        var handler = new MediaHandler();
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
+            "private1", mode, client: CreateClient(handler), config: CreateConfig(mediaResourcesEnabled: true)));
+        Assert.Contains("private media records", ex.Message);
+        Assert.DoesNotContain(handler.RequestPaths, path => path.Contains("/file") || path.Contains("/thumbnail/"));
+    }
+
+    [Theory]
+    [InlineData("thumbnail")]
+    [InlineData("file")]
+    public async Task ReadMedia_RespectsByteLimit(string mode)
+    {
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
+            "handle1", mode, client: CreateClient(), config: CreateConfig(mediaResourcesEnabled: true, mediaMaxBytes: 2)));
+        Assert.Contains("limit", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ReadMedia_ResolvesGrampsIdAndSupportsCustomThumbnailSizeInReadOnlyMode()
+    {
+        HandleCache.Invalidate();
+        var handler = new MediaHandler();
+        var result = await MediaTools.ReadMedia("M7654321", " Thumbnail ", 512,
+            CreateClient(handler, readOnly: true), CreateConfig(mediaResourcesEnabled: true, readOnly: true));
+        Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("/api/media/", handler.RequestPaths);
+        Assert.Contains("/api/media/handle1/thumbnail/512", handler.RequestPaths);
+        Assert.DoesNotContain("/api/media/handle1/file", handler.RequestPaths);
     }
 
     private static GrampsApiClient CreateClient(bool readOnly = false)
@@ -384,9 +444,11 @@ public class MediaResourceTests
         {
             return path switch
             {
+                "/api/media/" => JsonResponse("""[{"handle":"handle1","gramps_id":"M7654321"}]"""),
                 "/api/media/handle1" => JsonResponse(MediaJson("handle1", "image/jpeg", isPrivate: false)),
                 "/api/media/handle1/file" => BinaryResponse([4, 5, 6], "image/jpeg"),
                 "/api/media/handle1/thumbnail/256" => BinaryResponse([1, 2, 3], "image/jpeg"),
+                "/api/media/handle1/thumbnail/512" => BinaryResponse([1, 2, 3], "image/jpeg"),
                 "/api/media/private1" => JsonResponse(MediaJson("private1", "image/jpeg", isPrivate: true)),
                 "/api/media/private1/file" => BinaryResponse([7, 8, 9], "image/jpeg"),
                 "/api/media/tiff1" => JsonResponse(MediaJson("tiff1", "image/tiff", isPrivate: false)),

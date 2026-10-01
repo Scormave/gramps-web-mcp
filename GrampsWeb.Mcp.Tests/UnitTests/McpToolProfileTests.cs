@@ -34,8 +34,7 @@ public class McpToolProfileTests
             Tools =
             [
                 Tool("get_object", readOnly: true),
-                Tool("get_media_thumbnail", readOnly: true),
-                Tool("get_media_file", readOnly: true),
+                Tool("read_media", readOnly: true),
                 Tool("update_media", readOnly: false)
             ]
         };
@@ -53,7 +52,7 @@ public class McpToolProfileTests
             Tools =
             [
                 Tool("get_object", readOnly: true),
-                Tool("get_media_thumbnail", readOnly: true),
+                Tool("read_media", readOnly: true),
                 Tool("create_person", readOnly: false)
             ]
         };

@@ -134,8 +134,8 @@ Runtime notes:
 
 Exact MIME types and `type/*` wildcards are supported. The default media
 allowlist is `image/jpeg,image/png,image/webp,image/avif,application/pdf`.
-When media access is disabled, `tools/list` omits `get_media_thumbnail` and
-`get_media_file`; media metadata remains available through `get_object`.
+When media access is disabled, `tools/list` omits `read_media`;
+media metadata remains available through `get_object`.
 
 ## Architectural layers
 
@@ -183,10 +183,12 @@ returning bytes to the MCP client.
 
 For clients that cannot call MCP `resources/read`, the same payloads are also
 available through the `GetReference` compatibility tool in `ReferenceTools.cs`.
-Media bytes are mirrored through `GetMediaThumbnail` and `GetMediaFile` tools
-for clients that consume MCP tool content directly. `GetMediaThumbnail` returns
-image content; `GetMediaFile` returns image, audio, or embedded blob resource
-content depending on MIME type. Full MCP clients may also use `resources/read`.
+Media bytes are mirrored through `read_media` for clients that consume MCP
+tool content directly. It always returns `CallToolResult`: mode `thumbnail`
+(default) contains image content, while mode `file` contains image, audio, or
+embedded blob resource content depending on MIME type. Thumbnail size defaults
+to 256; an explicit size is rejected in file mode. Full MCP clients may also
+use the unchanged `resources/read` URIs.
 
 The MCP SDK discovers resources at startup via `WithResources<GrampsResources>()`.
 

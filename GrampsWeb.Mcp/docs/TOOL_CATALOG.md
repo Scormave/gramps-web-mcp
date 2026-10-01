@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 32 MCP tools exposed by the server.
+Complete catalog of up to 31 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -18,8 +18,8 @@ decorated with `[McpServerTool]`.
 Read-only mode (`GRAMPS_READ_ONLY=true`) publishes only the read-only tools.
 Direct calls to a previously known write-tool name still return an MCP error
 before any mutation request is sent to Gramps Web.
-When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `get_media_thumbnail` and
-`get_media_file` are also omitted from the catalog; `get_object` still reads
+When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media`
+is also omitted from the catalog; `get_object` still reads
 media metadata.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
 
@@ -304,7 +304,7 @@ Update a note (same field set, all optional).
 
 ---
 
-## Media (`MediaTools.cs`) — 3 tools
+## Media (`MediaTools.cs`) — 2 tools
 
 Use `get_object(objectType: "media", ...)` for media metadata. It does not
 upload or download file bytes. Media byte tools/resources require
@@ -312,23 +312,21 @@ upload or download file bytes. Media byte tools/resources require
 `GRAMPS_MEDIA_ALLOWED_MIME_TYPES`, and block private media records unless
 `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
 
-### R — `GetMediaThumbnail`
-Download a media thumbnail as MCP image content for vision-capable tool clients
-such as Open WebUI. Preferred before requesting a full media file.
+### R — `ReadMedia`
+Download media bytes as typed MCP content. Default mode `thumbnail` returns an
+image preview; mode `file` returns the original as image, audio, or embedded
+blob resource content according to MIME type. Prefer thumbnails before full files.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Media handle |
-| `size` | `int` | no | `256` | Thumbnail size in pixels; must be positive |
+| `handle` | `string` | yes | — | Media handle or Gramps ID |
+| `mode` | `string` | no | `thumbnail` | `thumbnail` or `file` |
+| `size` | `int?` | no | — | Positive thumbnail size in pixels; omitted means 256. Must be omitted in file mode |
 
-### R — `GetMediaFile`
-Download the full media file as typed MCP tool content: image for images, audio
-for audio MIME types, and embedded blob resources for other allowlisted types
-such as PDF. Requires `GRAMPS_MEDIA_RESOURCES_ENABLED=true` and an allowlisted MIME.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Media handle |
+Migration: replace `get_media_thumbnail(handle, size)` with
+`read_media(handle, mode: "thumbnail", size: size)` and replace
+`get_media_file(handle)` with `read_media(handle, mode: "file")`.
+The old tool names are no longer registered. Media resource URIs are unchanged.
 
 ### U — `UpdateMedia`
 Update media metadata (no binary upload).
@@ -460,7 +458,7 @@ Handles event creation + person update automatically.
 | Source | 0 | 1 | 1 | 0 | 2 |
 | Citation | 0 | 1 | 1 | 0 | 2 |
 | Note | 0 | 1 | 1 | 0 | 2 |
-| Media | 2 | 0 | 1 | 0 | 3 |
+| Media | 1 | 0 | 1 | 0 | 2 |
 | Repository | 0 | 1 | 1 | 0 | 2 |
 | Tag | 0 | 1 | 0 | 0 | 1 |
 | Object | 1 | 0 | 0 | 1 | 2 |
@@ -468,11 +466,11 @@ Handles event creation + person update automatically.
 | System | 2 | 0 | 0 | 0 | 2 |
 | Composite | 0 | 2 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
-| **Total when media access is enabled** | **11** | **11** | **9** | **1** | **32** |
+| **Total when media access is enabled** | **10** | **11** | **9** | **1** | **31** |
 
-With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, the two media-byte
-tools are hidden and the catalog contains 30 tools in read/write mode. In
-read-only mode, only enabled read tools are published.
+With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` is hidden
+and the catalog contains 30 tools in read/write mode. Read-only mode publishes
+10 tools with media access enabled, or 9 with it disabled.
 
 ## Prerequisites for write tools
 

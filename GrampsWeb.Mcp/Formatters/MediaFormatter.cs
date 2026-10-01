@@ -59,7 +59,7 @@ public static class MediaFormatter
             sb.AppendLine("Binary access (requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and MIME allowlist):");
             sb.AppendLine($"  file resource: gramps://media/{escapedHandle}/file");
             sb.AppendLine($"  thumbnail resource: gramps://media/{escapedHandle}/thumbnail/256");
-            sb.AppendLine("  get_media_file returns image, audio, or embedded-resource content depending on MIME type");
+            sb.AppendLine("  read_media defaults to mode thumbnail; mode file returns image, audio, or embedded-resource content depending on MIME type");
         }
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList);
