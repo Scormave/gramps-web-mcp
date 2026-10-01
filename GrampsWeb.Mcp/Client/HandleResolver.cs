@@ -1,5 +1,6 @@
+using System.Net;
 using System.Text.Json;
-using GrampsWeb.Mcp.Serialization;
+using GrampsWeb.Mcp.Exceptions;
 
 namespace GrampsWeb.Mcp.Client;
 
@@ -34,6 +35,7 @@ public static class HandleResolver
 
     /// <summary>
     /// Maps a single-letter Gramps ID prefix to the API object type used in list endpoints.
+    /// Prefixes follow the Gramps defaults; media objects use <c>'O'</c>, not <c>'M'</c>.
     /// </summary>
     /// <returns>
     /// The API path segment (e.g. <c>"people"</c> for <c>'I'</c>), or <c>null</c> if the
@@ -49,7 +51,7 @@ public static class HandleResolver
         'C' => "citations",
         'R' => "repositories",
         'N' => "notes",
-        'M' => "media",
+        'O' => "media",
         'T' => "tags",
         _ => null,
     };
@@ -57,8 +59,10 @@ public static class HandleResolver
     /// <summary>
     /// Tries to resolve a possible Gramps ID to an opaque handle by querying the API.
     /// If the value doesn't look like a Gramps ID, returns it as-is (it's probably already a handle).
-    /// If resolution fails (not found or API error), returns the original value so the caller
-    /// gets a meaningful 404 rather than a cryptic error.
+    /// If no object has that Gramps ID, or the API rejects the lookup as a bad request (400, 404, 422),
+    /// returns the original value so the caller gets a meaningful 404 from its own request.
+    /// Other failures (server errors, network errors, timeouts) propagate, so they are not
+    /// misreported as a missing object.
     /// </summary>
     public static async Task<string> ResolveToHandleAsync(
         string handleOrGrampsId,
@@ -114,9 +118,10 @@ public static class HandleResolver
                     }
                 }
             }
-            catch
+            catch (GrampsApiException ex) when (ex.StatusCode is
+                HttpStatusCode.BadRequest or HttpStatusCode.NotFound or HttpStatusCode.UnprocessableEntity)
             {
-                // Graceful degradation: return the original value and let the caller surface the error.
+                // The lookup itself was rejected: return the original value and let the caller surface the error.
             }
 
             return handleOrGrampsId;

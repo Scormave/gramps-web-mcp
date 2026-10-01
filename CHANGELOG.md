@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Resolve media Gramps IDs by the Gramps default `O` prefix instead of `M`, so
+  `get_object`, `read_media`, `update_media`, and `delete_object` accept IDs
+  like `O0001`
+- Filter `list_objects` citations by `sourceHandle` through a Gramps QL
+  `source_handle` condition, combined with any `gql`; Gramps Web has no
+  `source_handle` query parameter and returned HTTP 422
+- Show birth and death from fallback events only where the person has the
+  Primary role, so a parent no longer shows a child's birth as their own
+- Report server errors, network errors, and timeouts during Gramps ID
+  resolution instead of treating them as a missing object; only HTTP 400, 404,
+  and 422 still fall back to the original value
+
 ## [2.0.1] - 2026-10-01
 
 ### Added

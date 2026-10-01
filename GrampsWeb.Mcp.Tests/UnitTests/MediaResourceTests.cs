@@ -368,7 +368,7 @@ public class MediaResourceTests
     {
         HandleCache.Invalidate();
         var handler = new MediaHandler();
-        var result = await MediaTools.ReadMedia("M7654321", " Thumbnail ", 512,
+        var result = await MediaTools.ReadMedia("O7654321", " Thumbnail ", 512,
             CreateClient(handler, readOnly: true), CreateConfig(mediaResourcesEnabled: true, readOnly: true));
         Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
         Assert.Contains("/api/media/", handler.RequestPaths);
@@ -445,7 +445,7 @@ public class MediaResourceTests
         {
             return path switch
             {
-                "/api/media/" => JsonResponse("""[{"handle":"handle1","gramps_id":"M7654321"}]"""),
+                "/api/media/" => JsonResponse("""[{"handle":"handle1","gramps_id":"O7654321"}]"""),
                 "/api/media/handle1" => JsonResponse(MediaJson("handle1", "image/jpeg", isPrivate: false)),
                 "/api/media/handle1/file" => BinaryResponse([4, 5, 6], "image/jpeg"),
                 "/api/media/handle1/thumbnail/256" => BinaryResponse([1, 2, 3], "image/jpeg"),

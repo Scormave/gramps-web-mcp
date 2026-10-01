@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
+using GrampsWeb.Mcp.Exceptions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -49,7 +50,8 @@ public class HandleResolverTests
     [InlineData('C', "citations")]
     [InlineData('R', "repositories")]
     [InlineData('N', "notes")]
-    [InlineData('M', "media")]
+    [InlineData('O', "media")]
+    [InlineData('M', null)]
     [InlineData('T', "tags")]
     [InlineData('Z', null)]
     [InlineData('X', null)]
@@ -134,14 +136,17 @@ public class HandleResolverTests
         Assert.Equal(2, handler.ListRequestCount("/api/people/"));
     }
 
-    [Fact]
-    public async Task ResolveToHandleAsync_ReturnsOriginalId_OnApiError_AndDoesNotCache()
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest)]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.UnprocessableEntity)]
+    public async Task ResolveToHandleAsync_ReturnsOriginalId_WhenLookupIsRejected_AndDoesNotCache(HttpStatusCode statusCode)
     {
         var handler = new ResolverRecordingHandler
         {
             ListStatusCodes =
             {
-                ["/api/events/"] = HttpStatusCode.InternalServerError
+                ["/api/events/"] = statusCode
             }
         };
         var client = CreateClient(handler);
@@ -152,6 +157,81 @@ public class HandleResolverTests
         Assert.Equal("E0005", first);
         Assert.Equal("E0005", second);
         Assert.Equal(2, handler.ListRequestCount("/api/events/"));
+    }
+
+    [Fact]
+    public async Task ResolveToHandleAsync_PropagatesServerError_AndDoesNotCache()
+    {
+        var handler = new ResolverRecordingHandler
+        {
+            ListStatusCodes =
+            {
+                ["/api/events/"] = HttpStatusCode.InternalServerError
+            }
+        };
+        var client = CreateClient(handler);
+
+        var first = await Assert.ThrowsAsync<GrampsApiException>(
+            () => HandleResolver.ResolveToHandleAsync("E0005", client));
+        await Assert.ThrowsAsync<GrampsApiException>(
+            () => HandleResolver.ResolveToHandleAsync("E0005", client));
+
+        Assert.Equal(HttpStatusCode.InternalServerError, first.StatusCode);
+        Assert.Equal(2, handler.ListRequestCount("/api/events/"));
+    }
+
+    [Fact]
+    public async Task ResolveToHandleAsync_PropagatesNetworkError()
+    {
+        var handler = new ResolverRecordingHandler
+        {
+            ListExceptions =
+            {
+                ["/api/people/"] = new HttpRequestException("Connection refused")
+            }
+        };
+        var client = CreateClient(handler);
+
+        var ex = await Assert.ThrowsAsync<GrampsApiException>(
+            () => HandleResolver.ResolveToHandleAsync("I0001", client));
+
+        Assert.Equal(HttpStatusCode.BadGateway, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task ResolveToHandleAsync_PropagatesTimeout()
+    {
+        var handler = new ResolverRecordingHandler
+        {
+            ListExceptions =
+            {
+                ["/api/people/"] = new TaskCanceledException("The request timed out.")
+            }
+        };
+        var client = CreateClient(handler);
+
+        await Assert.ThrowsAsync<TaskCanceledException>(
+            () => HandleResolver.ResolveToHandleAsync("I0001", client));
+    }
+
+    [Fact]
+    public async Task ResolveToHandleAsync_ResolvesMediaIdWithOPrefix()
+    {
+        var handler = new ResolverRecordingHandler
+        {
+            ListResponses =
+            {
+                ["/api/media/"] = """
+                    [{"handle": "media-handle-abc", "gramps_id": "O0001"}]
+                    """
+            }
+        };
+        var client = CreateClient(handler);
+
+        var result = await HandleResolver.ResolveToHandleAsync("O0001", client, "media");
+
+        Assert.Equal("media-handle-abc", result);
+        Assert.Equal(1, handler.ListRequestCount("/api/media/"));
     }
 
     [Fact]
@@ -255,6 +335,8 @@ public class HandleResolverTests
 
         public Dictionary<string, HttpStatusCode> ListStatusCodes { get; } = new(StringComparer.Ordinal);
 
+        public Dictionary<string, Exception> ListExceptions { get; } = new(StringComparer.Ordinal);
+
         public IReadOnlyList<RecordedRequest> ListRequests
         {
             get
@@ -306,6 +388,9 @@ public class HandleResolverTests
             if (request.Method == HttpMethod.Get && path.Contains("gramps_id=", StringComparison.Ordinal))
             {
                 var listPath = path.Split('?')[0];
+                if (ListExceptions.TryGetValue(listPath, out var exception))
+                    throw exception;
+
                 if (ListStatusCodes.TryGetValue(listPath, out var statusCode))
                 {
                     return new HttpResponseMessage(statusCode)

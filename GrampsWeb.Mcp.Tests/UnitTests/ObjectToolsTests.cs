@@ -57,7 +57,7 @@ public class ObjectToolsTests
     [InlineData("source", "S0001", "sources")]
     [InlineData("citation", "C0001", "citations")]
     [InlineData("note", "N0001", "notes")]
-    [InlineData("media", "M0001", "media")]
+    [InlineData("media", "O0001", "media")]
     [InlineData("repository", "R0001", "repositories")]
     [InlineData("tag", "T0001", "tags")]
     public async Task DeleteObject_ResolvesGrampsIdAndUsesCorrectCollection(

@@ -375,7 +375,8 @@ public static class PersonFormatter
 
     /// <summary>
     /// Resolves birth or death using <see cref="GrampsPerson.BirthRefIndex"/> / <see cref="GrampsPerson.DeathRefIndex"/> first,
-    /// then the first matching event in <paramref name="preloadedExtendedEvents"/> or <see cref="GrampsPerson.EventRefList"/>.
+    /// then the first matching event in <paramref name="preloadedExtendedEvents"/> or <see cref="GrampsPerson.EventRefList"/>
+    /// where the person has the Primary role (as in Gramps): a parent's link to a child's birth is not their own birth.
     /// </summary>
     private static async Task<BirthDeathHeaderParts> ResolveBirthOrDeathAsync(
         GrampsPerson person,
@@ -413,7 +414,7 @@ public static class PersonFormatter
         {
             foreach (var evt in preloadedExtendedEvents)
             {
-                if (evt.Type != type)
+                if (evt.Type != type || !HasPrimaryRole(refs, evt.Handle))
                     continue;
                 var summary = await FormatEventDatePlaceLineAsync(evt, client).ConfigureAwait(false);
                 var h = evt.Handle?.Trim();
@@ -423,7 +424,7 @@ public static class PersonFormatter
 
         if (refs != null)
         {
-            foreach (var eventRef in refs.Where(e => e.Ref != null))
+            foreach (var eventRef in refs.Where(e => e.Ref != null && IsPrimaryRole(e.Role)))
             {
                 try
                 {
@@ -443,6 +444,25 @@ public static class PersonFormatter
 
         return default;
     }
+
+    /// <summary>
+    /// <c>true</c> when <paramref name="eventHandle"/> has a Primary-role ref in <paramref name="refs"/>,
+    /// or when there are no refs to check it against.
+    /// </summary>
+    private static bool HasPrimaryRole(GrampsEventRef[]? refs, string? eventHandle)
+    {
+        if (refs is not { Length: > 0 })
+            return true;
+        var handle = eventHandle?.Trim();
+        return refs.Any(r =>
+            string.Equals(r.Ref?.Trim(), handle, StringComparison.Ordinal) && IsPrimaryRole(r.Role));
+    }
+
+    /// <summary>Empty roles default to Primary; <c>1</c> is the numeric value of EventRoleType.PRIMARY.</summary>
+    private static bool IsPrimaryRole(string? role) =>
+        string.IsNullOrWhiteSpace(role) ||
+        string.Equals(role.Trim(), "Primary", StringComparison.OrdinalIgnoreCase) ||
+        role.Trim() == "1";
 
     private static GrampsEventExtended? FindEmbeddedExtendedEvent(
         IReadOnlyList<GrampsEventExtended>? events,

@@ -68,7 +68,7 @@ public static class SearchTools
     [Description(
         "Read-only: paginated list of one object type. Primary way to browse the tree when you know the type. " +
         "objectType must be exactly: people, families, events, places, sources, citations, repositories, notes, media, or tags (lowercase). " +
-        "For citations only, optional sourceHandle limits rows to one source. " +
+        "For citations only, optional sourceHandle limits rows to one source (combined with gql using and). " +
         "Advanced: gql is Gramps Query Language (e.g. media_list.length >= 1, gender == 1). sort is a field name; prefix with - for descending (gramps_id, -change). " +
         "Maximum pagesize 100—advance page for more.")]
     public static async Task<string> ListObjects(
@@ -113,6 +113,19 @@ public static class SearchTools
             if (!string.IsNullOrEmpty(grampsId))
                 queryParams.Add($"gramps_id={Uri.EscapeDataString(grampsId)}");
 
+            var isCitations = objectType.Equals("citations", StringComparison.OrdinalIgnoreCase);
+            if (isCitations && !string.IsNullOrEmpty(sourceHandle))
+            {
+                // /api/citations/ has no source_handle query parameter; filter through Gramps QL instead.
+                var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
+                if (!resolvedSourceHandle.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
+                    throw McpToolErrors.ValidationError(
+                        "sourceHandle must be a source handle or Gramps ID (letters, digits, '-' or '_').");
+
+                var sourceFilter = $"source_handle = \"{resolvedSourceHandle}\"";
+                gql = string.IsNullOrEmpty(gql) ? sourceFilter : $"{sourceFilter} and ({gql})";
+            }
+
             if (!string.IsNullOrEmpty(gql))
                 queryParams.Add($"gql={Uri.EscapeDataString(gql)}");
 
@@ -126,15 +139,8 @@ public static class SearchTools
             if (objectType.Equals("events", StringComparison.OrdinalIgnoreCase))
                 queryParams.Add("extend=place");
 
-            if (objectType.Equals("citations", StringComparison.OrdinalIgnoreCase))
-            {
+            if (isCitations)
                 queryParams.Add("extend=source_handle");
-                if (!string.IsNullOrEmpty(sourceHandle))
-                {
-                    var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
-                    queryParams.Add($"source_handle={Uri.EscapeDataString(resolvedSourceHandle)}");
-                }
-            }
 
             var queryString = $"/api/{objectType.ToLower()}/?{string.Join("&", queryParams)}";
 
