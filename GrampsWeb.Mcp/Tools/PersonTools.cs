@@ -218,7 +218,10 @@ public static class PersonTools
             return ResponseEnvelope.CreateSuccess(
                 "Person", handle, grampsId,
                 GrampsValueFormatter.FormatName(primary),
-                ResponseEnvelope.PersonCreateNextSteps(handle!));
+                ResponseEnvelope.PersonCreateNextSteps(handle,
+                    hasEvents: eventRefArr.Length > 0,
+                    hasFamily: request.FamilyList is { Length: > 0 } || request.ParentFamilyList is { Length: > 0 },
+                    hasNotes: request.NoteList is { Length: > 0 }));
         }
         catch (Exception ex)
         {

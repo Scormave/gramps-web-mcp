@@ -127,7 +127,8 @@ public static class FamilyTools
                 : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, relationshipType);
             return ResponseEnvelope.CreateSuccess(
                 "Family", handle, grampsId,
-                relLabel, ResponseEnvelope.FamilyCreateNextSteps(handle!));
+                relLabel, ResponseEnvelope.FamilyCreateNextSteps(handle,
+                    hasChildren: childRefArr is { Length: > 0 }, hasEvents: eventRefArr.Length > 0));
         }
         catch (Exception ex)
         {

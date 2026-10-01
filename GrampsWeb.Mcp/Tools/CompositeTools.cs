@@ -138,7 +138,8 @@ public static class CompositeTools
                     summary.AppendLine($"  • {obj}");
             }
 
-            var nextSteps = ResponseEnvelope.PersonCreateNextSteps(personHandle!);
+            var nextSteps = ResponseEnvelope.PersonCreateNextSteps(personHandle,
+                hasBirth: birthEvent != null, hasDeath: deathEvent != null);
             summary.AppendLine();
             summary.AppendLine("Next steps:");
             foreach (var step in nextSteps)

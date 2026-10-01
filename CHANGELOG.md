@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Make person and family creation hints context-aware, including birth/death
+  events created by `quick_add_person`, without additional API reads; avoid
+  suggesting duplicate events and preserve full-list update warnings
 - Replace the ten entity-specific delete tools with `delete_object`, which selects
   the record type through `objectType` while retaining backlink protection and
   explicit `force` handling

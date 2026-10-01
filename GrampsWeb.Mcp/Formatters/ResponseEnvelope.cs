@@ -61,19 +61,34 @@ public static class ResponseEnvelope
         return $"---\ntype: {objectType}\naction: deleted\nhandle: {handle}\n---";
     }
 
-    public static string[] PersonCreateNextSteps(string handle) => new[]
+    public static string[] PersonCreateNextSteps(string? handle, bool hasBirth = false,
+        bool hasDeath = false, bool hasEvents = false, bool hasFamily = false, bool hasNotes = false)
     {
-        $"Add birth event: add_event_to_person(personHandle: \"{handle}\", eventType: \"Birth\", date: \"...\", place: \"...\")",
-        $"Add death event: add_event_to_person(personHandle: \"{handle}\", eventType: \"Death\", date: \"...\")",
-        $"Link to family: create_family(fatherHandle: \"{handle}\", ...) or create_family(motherHandle: \"{handle}\", ...)",
-        $"Add a note: create_note(text: \"...\") then update_person(handle: \"{handle}\", noteHandles: [\"<note_handle>\"])",
-    };
+        if (string.IsNullOrWhiteSpace(handle))
+            return ["The person was created, but no handle was returned. Find the existing record with search before adding links; do not create it again."];
+
+        var steps = new List<string>();
+        // Existing references do not tell us their event types. Do not suggest duplicates.
+        if (hasEvents && (!hasBirth || !hasDeath))
+            steps.Add($"Check linked events before adding birth/death: get_object(objectType: \"person\", identifier: \"{handle}\", extended: true)");
+        else
+        {
+            if (!hasBirth)
+                steps.Add($"If birth information is known: add_event_to_person(personHandle: \"{handle}\", eventType: \"Birth\", date: \"...\", place: \"...\")");
+            if (!hasDeath)
+                steps.Add($"If death information is known: add_event_to_person(personHandle: \"{handle}\", eventType: \"Death\", date: \"...\")");
+        }
+        if (!hasFamily)
+            steps.Add($"If a parent/spouse family is needed, check for an existing family first; create_family(fatherHandle: \"{handle}\", ...) or create_family(motherHandle: \"{handle}\", ...) creates a new one.");
+        if (!hasNotes)
+            steps.Add($"If a note is needed: create_note(text: \"...\") then update_person(handle: \"{handle}\", noteHandles: [\"<note_handle>\"]). Read the person first and preserve existing noteHandles; update replaces the entire list.");
+        return steps.ToArray();
+    }
 
     public static string[] EventCreateNextSteps(string handle) => new[]
     {
         "Read the person first and preserve existing eventRefs (including roles); update replaces the entire list. The example below shows only the new reference.",
         $"Attach to person: update_person(handle: \"<person>\", eventRefs: [{{ref: \"{handle}\", role: \"Primary\"}}])",
-        $"Or use: add_event_to_person(personHandle: \"<person>\", ...) for new events",
     };
 
     public static string[] SourceCreateNextSteps(string handle) => new[]
@@ -83,6 +98,7 @@ public static class ResponseEnvelope
 
     public static string[] NoteCreateNextSteps(string handle) => new[]
     {
+        "Read the target first and preserve existing noteHandles; update replaces the entire list. The examples below show only the new reference.",
         $"Attach to person: update_person(handle: \"<person>\", noteHandles: [\"{handle}\"])",
         $"Attach to event: update_event(handle: \"<event>\", noteHandles: [\"{handle}\"])",
     };
@@ -103,13 +119,19 @@ public static class ResponseEnvelope
         $"Attach to person/event/place via citationHandles on create/update",
     };
 
-    public static string[] FamilyCreateNextSteps(string handle) => new[]
+    public static string[] FamilyCreateNextSteps(string? handle, bool hasChildren = false, bool hasEvents = false)
     {
-        "Read the family first and preserve existing childRefs/eventRefs (including relationship and role metadata); update replaces the entire list. The examples below show only the new references.",
-        $"Add child: update_family(handle: \"{handle}\", childRefs: [{{ref: \"<person_handle>\", frel: \"Birth\", mrel: \"Birth\"}}])",
-        $"Add events: update_family(handle: \"{handle}\", eventRefs: [{{ref: \"<event_handle>\", role: \"Primary\"}}])",
-        $"View family: get_object(objectType: \"family\", identifier: \"{handle}\", extended: true)",
-    };
+        if (string.IsNullOrWhiteSpace(handle))
+            return ["The family was created, but no handle was returned. Find the existing record with search before adding links; do not create it again."];
+        var steps = new List<string>();
+        if (!hasChildren || !hasEvents)
+            steps.Add("Read the family first and preserve existing childRefs/eventRefs (including relationship and role metadata); update replaces the entire list. The examples below show only the new references.");
+        if (!hasChildren)
+            steps.Add($"If children are known: update_family(handle: \"{handle}\", childRefs: [{{ref: \"<person_handle>\", frel: \"Birth\", mrel: \"Birth\"}}])");
+        if (!hasEvents)
+            steps.Add($"If family events are known: update_family(handle: \"{handle}\", eventRefs: [{{ref: \"<event_handle>\", role: \"Primary\"}}])");
+        return steps.ToArray();
+    }
 
     public static string[] RepositoryCreateNextSteps(string handle) => new[]
     {
