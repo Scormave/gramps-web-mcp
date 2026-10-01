@@ -109,10 +109,14 @@ public sealed class GrampsAuthTokenProvider
         {
             await RefreshCurrentTokenAsync();
         }
-        catch (GrampsApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+        // Gramps Web (flask-jwt-extended) answers 401 for an expired refresh token and 422 for
+        // one it cannot verify, e.g. after the server's SECRET_KEY changed.
+        catch (GrampsApiException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized
+                                                or HttpStatusCode.UnprocessableEntity)
         {
             _logger.LogWarning(
-                "Token refresh rejected with 401; clearing cached tokens and re-authenticating");
+                "Token refresh rejected with {StatusCode}; clearing cached tokens and re-authenticating",
+                (int)ex.StatusCode);
             ClearCachedTokens();
             await RequestNewTokenAsync();
         }

@@ -46,27 +46,27 @@ public record GrampsConfig(
     /// </summary>
     public static GrampsConfig FromEnvironment()
     {
-        var apiUrl = Environment.GetEnvironmentVariable("GRAMPS_API_URL");
-        var username = Environment.GetEnvironmentVariable("GRAMPS_USERNAME");
-        var password = Environment.GetEnvironmentVariable("GRAMPS_PASSWORD");
-        var refreshToken = Environment.GetEnvironmentVariable("GRAMPS_REFRESH_TOKEN");
-        var treeId = Environment.GetEnvironmentVariable("GRAMPS_TREE_ID");
-        var readOnly = ParseBoolOrDefault(Environment.GetEnvironmentVariable("GRAMPS_READ_ONLY"), defaultValue: false);
+        var apiUrl = ReadEnvironmentVariable("GRAMPS_API_URL");
+        var username = ReadEnvironmentVariable("GRAMPS_USERNAME");
+        var password = ReadEnvironmentVariable("GRAMPS_PASSWORD");
+        var refreshToken = ReadEnvironmentVariable("GRAMPS_REFRESH_TOKEN");
+        var treeId = ReadEnvironmentVariable("GRAMPS_TREE_ID");
+        var readOnly = ParseBoolOrDefault(ReadEnvironmentVariable("GRAMPS_READ_ONLY"), defaultValue: false);
         var mediaResourcesEnabled = ParseBoolOrDefault(
-            Environment.GetEnvironmentVariable("GRAMPS_MEDIA_RESOURCES_ENABLED"),
+            ReadEnvironmentVariable("GRAMPS_MEDIA_RESOURCES_ENABLED"),
             defaultValue: false);
-        var rawMediaMaxBytes = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_MAX_BYTES");
+        var rawMediaMaxBytes = ReadEnvironmentVariable("GRAMPS_MEDIA_MAX_BYTES");
         var mediaMaxBytes = ParseLongOrDefault(rawMediaMaxBytes, DefaultMediaMaxBytes);
         var mediaAllowedMimeTypes = ParseCsvOrDefault(
-            Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES"),
+            ReadEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES"),
             DefaultMediaAllowedMimeTypes);
         var mediaAllowPrivate = ParseBoolOrDefault(
-            Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE"),
+            ReadEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE"),
             defaultValue: false);
         var mutationSerialize = ParseBoolOrDefault(
-            Environment.GetEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE"),
+            ReadEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE"),
             defaultValue: true);
-        var rawMutationMinIntervalMs = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS");
+        var rawMutationMinIntervalMs = ReadEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS");
         var mutationMinIntervalMs = ParseIntOrDefault(rawMutationMinIntervalMs, 0);
 
         var errors = new List<string>();
@@ -112,6 +112,23 @@ public record GrampsConfig(
             MutationSerialize: mutationSerialize,
             MutationMinIntervalMs: mutationMinIntervalMs,
             RefreshToken: string.IsNullOrWhiteSpace(refreshToken) ? null : refreshToken.Trim());
+    }
+
+    /// <summary>
+    /// Reads an environment variable, treating an unresolved <c>${...}</c> placeholder as unset.
+    /// Claude Desktop passes optional MCPB <c>user_config</c> fields the user left blank
+    /// through literally (e.g. <c>${user_config.gramps_refresh_token}</c>).
+    /// </summary>
+    private static string? ReadEnvironmentVariable(string name)
+    {
+        var value = Environment.GetEnvironmentVariable(name);
+        if (value is null)
+            return null;
+
+        var trimmed = value.Trim();
+        return trimmed.StartsWith("${", StringComparison.Ordinal) && trimmed.EndsWith('}')
+            ? null
+            : value;
     }
 
     private static bool ParseBoolOrDefault(string? value, bool defaultValue)

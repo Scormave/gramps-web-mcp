@@ -1,6 +1,6 @@
 # Privacy Policy — Gramps Web MCP (Claude Desktop Extension)
 
-**Last updated:** 2026-06-26
+**Last updated:** 2026-10-01
 
 ## Summary
 
@@ -29,7 +29,9 @@ The extension does **not** phone home, run analytics, or log conversations to ex
 
 ## Data retention
 
-- The extension does not maintain its own database or persistent logs of your tree data.
+- The extension does not maintain its own database.
+- The extension writes diagnostic logs to stderr, which Claude Desktop saves to a local log file on your computer. By default these logs contain only request metadata (method, path without query string, status, duration, body size), not your tree data.
+- Request and response bodies, which contain tree data, are logged only if you set `GRAMPS_LOG_LEVEL=Debug` or `Trace`. Fields that look like credentials are redacted even then.
 - Gramps Web retains data according to your Gramps Web deployment.
 - Claude conversation retention follows your Anthropic/Claude account settings.
 

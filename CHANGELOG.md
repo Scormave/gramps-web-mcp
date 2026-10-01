@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add `GRAMPS_LOG_LEVEL` to set the log level for server messages; blank,
+  unknown, or unresolved values fall back to `Information`
+
+### Changed
+
+- Log only method, path without query string, status, duration, and body
+  length for Gramps API calls at `Information`; log request and response
+  bodies and full URLs, which contain genealogy data, only at `Debug` or `Trace`
+- Document logging in README and correct the data retention section of the
+  privacy policy
+
+### Fixed
+
+- Treat unresolved `${...}` placeholders from blank optional MCPB fields as
+  unset, so a blank refresh token no longer makes every request fail with
+  HTTP 422
+- Fall back to password login when Gramps Web rejects a refresh token with
+  HTTP 422 as well as 401
+- Request the first page in `get_recent_changes` so `pagesize` applies instead
+  of returning the entire history
+
 ## [2.0.0] - 2026-10-01
 
 ### Added

@@ -101,7 +101,7 @@ static void ConfigureLogging(ILoggingBuilder logging)
     logging
         .ClearProviders()
         .SetMinimumLevel(LogLevel.Information)
-        .AddFilter("GrampsWeb.Mcp", LogLevel.Information)
+        .AddFilter("GrampsWeb.Mcp", GrampsLogLevel.FromEnvironment())
         .AddFilter("Microsoft", LogLevel.Warning)
         .AddFilter("System", LogLevel.Warning)
         .AddFilter("System.Net.Http.HttpClient.GrampsHealthService", LogLevel.Warning)

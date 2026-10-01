@@ -126,6 +126,28 @@ public class GrampsConfigTests
     }
 
     [Fact]
+    public void FromEnvironment_Ignores_Unresolved_RefreshToken_Placeholder()
+    {
+        var config = LoadConfig(readOnlyEnv: null, refreshToken: "${user_config.gramps_refresh_token}");
+
+        Assert.False(config.UsesRefreshToken);
+        Assert.Null(config.RefreshToken);
+        Assert.Equal("user", config.Username);
+    }
+
+    [Fact]
+    public void FromEnvironment_Requires_Password_When_Placeholders_Are_Unresolved()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(
+                readOnlyEnv: null,
+                password: "${user_config.gramps_password}",
+                refreshToken: "${user_config.gramps_refresh_token}"));
+
+        Assert.Contains("GRAMPS_PASSWORD is not set or empty", ex.Message);
+    }
+
+    [Fact]
     public void FromEnvironment_Defaults_To_Password_Login()
     {
         var config = LoadConfig(readOnlyEnv: null);

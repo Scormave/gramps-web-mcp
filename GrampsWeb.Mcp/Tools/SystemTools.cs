@@ -25,7 +25,8 @@ public static class SystemTools
         {
             limit = Math.Clamp(limit, 1, 100);
             // Transaction history is read via /transactions/history; /transactions only accepts POST.
-            var changes = await client.GetAsync<JsonElement>($"/api/transactions/history/?pagesize={limit}&sort=-id");
+            // Without page the endpoint ignores pagesize and returns the entire history.
+            var changes = await client.GetAsync<JsonElement>($"/api/transactions/history/?page=1&pagesize={limit}&sort=-id");
             return SystemFormatter.FormatRecentChanges(changes);
         }
         catch (Exception ex)

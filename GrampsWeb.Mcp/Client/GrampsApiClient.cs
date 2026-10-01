@@ -319,6 +319,10 @@ public class GrampsApiClient
         return await SendWithLoggingAsync(request, skipRequestBodyLogging);
     }
 
+    /// <summary>
+    /// Information logs carry only method, path, status, timing and body length: bodies and
+    /// query strings hold genealogy data (names, dates, search terms). Debug adds them.
+    /// </summary>
     private async Task<HttpResponseMessage> SendWithLoggingAsync(
         HttpRequestMessage request,
         bool skipRequestBodyLogging = false)
@@ -326,29 +330,43 @@ public class GrampsApiClient
         var requestBody = request.Content is null
             ? null
             : await request.Content.ReadAsStringAsync();
-        var requestBodyForLog = skipRequestBodyLogging
-            ? "<redacted>"
-            : SanitizeAndLimitForLog(requestBody);
 
         _logger.LogInformation(
-            "Gramps API request: {Method} {Path} Body={RequestBody}",
+            "Gramps API request: {Method} {Path} BodyLength={BodyLength}",
             request.Method.Method,
-            request.RequestUri?.ToString() ?? string.Empty,
-            requestBodyForLog ?? "<empty>");
+            PathForLog(request.RequestUri),
+            requestBody?.Length ?? 0);
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Gramps API request body: {Method} {Url} Body={RequestBody}",
+                request.Method.Method,
+                request.RequestUri?.ToString() ?? string.Empty,
+                skipRequestBodyLogging ? "<redacted>" : SanitizeAndLimitForLog(requestBody) ?? "<empty>");
+        }
 
         var startedAt = DateTime.UtcNow;
         var response = await _httpClient.SendAsync(request);
         var elapsedMs = (DateTime.UtcNow - startedAt).TotalMilliseconds;
         var responseBody = await response.Content.ReadAsStringAsync();
-        var responseBodyForLog = SanitizeAndLimitForLog(responseBody);
 
         _logger.LogInformation(
-            "Gramps API response: {Method} {Path} Status={StatusCode} DurationMs={DurationMs} Body={ResponseBody}",
+            "Gramps API response: {Method} {Path} Status={StatusCode} DurationMs={DurationMs} BodyLength={BodyLength}",
             request.Method.Method,
-            request.RequestUri?.ToString() ?? string.Empty,
+            PathForLog(request.RequestUri),
             (int)response.StatusCode,
             elapsedMs,
-            responseBodyForLog ?? "<empty>");
+            responseBody.Length);
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Gramps API response body: {Method} {Url} Body={ResponseBody}",
+                request.Method.Method,
+                request.RequestUri?.ToString() ?? string.Empty,
+                SanitizeAndLimitForLog(responseBody) ?? "<empty>");
+        }
 
         // Rebuild content so callers can read response body.
         var restoredContent = new StringContent(responseBody, Encoding.UTF8);
@@ -371,7 +389,7 @@ public class GrampsApiClient
         _logger.LogInformation(
             "Gramps API binary request: {Method} {Path}",
             request.Method.Method,
-            request.RequestUri?.ToString() ?? string.Empty);
+            PathForLog(request.RequestUri));
 
         var startedAt = DateTime.UtcNow;
         var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
@@ -380,7 +398,7 @@ public class GrampsApiClient
         _logger.LogInformation(
             "Gramps API binary response: {Method} {Path} Status={StatusCode} DurationMs={DurationMs} ContentType={ContentType} ContentLength={ContentLength}",
             request.Method.Method,
-            request.RequestUri?.ToString() ?? string.Empty,
+            PathForLog(request.RequestUri),
             (int)response.StatusCode,
             elapsedMs,
             response.Content.Headers.ContentType?.ToString() ?? "<unknown>",
@@ -416,6 +434,19 @@ public class GrampsApiClient
     {
         return new InvalidOperationException(
             $"Media response is {actualBytes} bytes, exceeding the configured limit of {maxBytes} bytes.");
+    }
+
+    /// <summary>
+    /// Path without host or query string; queries carry search terms and filters.
+    /// </summary>
+    private static string PathForLog(Uri? uri)
+    {
+        if (uri is null)
+            return string.Empty;
+
+        return uri.IsAbsoluteUri
+            ? uri.AbsolutePath
+            : uri.OriginalString.Split('?', 2)[0];
     }
 
     private static string? SanitizeAndLimitForLog(string? value)

@@ -10,12 +10,14 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 public class GrampsAuthTokenProviderTests
 {
-    [Fact]
-    public async Task GetAccessTokenAsync_FallsBackToNewToken_WhenRefreshReturns401()
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.UnprocessableEntity)]
+    public async Task GetAccessTokenAsync_FallsBackToNewToken_WhenRefreshIsRejected(HttpStatusCode refreshStatusCode)
     {
         var handler = new AuthHandler
         {
-            RefreshStatusCode = HttpStatusCode.Unauthorized,
+            RefreshStatusCode = refreshStatusCode,
             InitialExpiresIn = 0
         };
         var provider = CreateProvider(handler);
@@ -31,12 +33,14 @@ public class GrampsAuthTokenProviderTests
             request => Assert.Equal("/api/token/", request.Path));
     }
 
-    [Fact]
-    public async Task RefreshTokenAsync_FallsBackToNewToken_WhenRefreshReturns401()
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.UnprocessableEntity)]
+    public async Task RefreshTokenAsync_FallsBackToNewToken_WhenRefreshIsRejected(HttpStatusCode refreshStatusCode)
     {
         var handler = new AuthHandler
         {
-            RefreshStatusCode = HttpStatusCode.Unauthorized,
+            RefreshStatusCode = refreshStatusCode,
             InitialExpiresIn = 0
         };
         var provider = CreateProvider(handler);

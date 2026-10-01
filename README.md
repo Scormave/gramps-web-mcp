@@ -369,6 +369,22 @@ Inside Docker, `ASPNETCORE_URLS` is typically `http://0.0.0.0:8080`, so the
 warning appears even when the host publishes the port on `127.0.0.1` only.
 That is expected when external access is already restricted.
 
+### Logging
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GRAMPS_LOG_LEVEL` | Log level for the server's own messages: `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`, `None` | `Information` |
+
+Logs go to stderr. Claude Desktop saves them to a local file
+(`~/Library/Logs/Claude/mcp-server-Gramps Web MCP.log` on macOS).
+
+At `Information`, each Gramps API call is logged as its method, path (without
+the query string), status, duration, and body length. Request and response
+bodies and full URLs hold genealogy data (names, dates, search terms), so they
+are logged only at `Debug` or `Trace`. Fields that look like credentials are
+redacted even then. Use `Debug` only while troubleshooting, and delete the log
+file afterwards.
+
 ## Development
 
 ```bash
