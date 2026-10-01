@@ -3,7 +3,7 @@
   "name": "io.github.Scormave/gramps-web-mcp",
   "title": "Gramps Web MCP",
   "description": "MCP server for structured access to Gramps Web genealogy data",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "repository": {
     "url": "https://github.com/Scormave/gramps-web-mcp",
     "source": "github"
@@ -11,7 +11,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/scormave/gramps-web-mcp:2.0.0",
+      "identifier": "ghcr.io/scormave/gramps-web-mcp:2.0.1",
       "runtimeHint": "docker",
       "transport": {
         "type": "stdio"
@@ -63,6 +63,11 @@
           "name": "GRAMPS_MUTATION_MIN_INTERVAL_MS",
           "description": "Minimum milliseconds between mutation HTTP calls. Use 250 or 500 on SQLite if you see database is locked",
           "default": "0"
+        },
+        {
+          "name": "GRAMPS_LOG_LEVEL",
+          "description": "Server log level: Trace, Debug, Information, Warning, Error, Critical, or None. Debug and Trace also log request and response bodies, which contain genealogy data",
+          "default": "Information"
         }
       ]
     }

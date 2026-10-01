@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-01
+
 ### Added
 
 - Add `GRAMPS_LOG_LEVEL` to set the log level for server messages; blank,
@@ -16,8 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Log only method, path without query string, status, duration, and body
   length for Gramps API calls at `Information`; log request and response
   bodies and full URLs, which contain genealogy data, only at `Debug` or `Trace`
-- Document logging in README and correct the data retention section of the
-  privacy policy
+- Document `GRAMPS_LOG_LEVEL` in README, Docker Compose, the Dockerfile, MCP
+  Registry metadata, MCPB docs, and GitHub Pages; correct the data retention
+  section of the privacy policy
 
 ### Fixed
 
@@ -239,7 +242,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.8...v2.0.0
 [1.0.8]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.6...v1.0.7

@@ -27,6 +27,7 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # GRAMPS_READ_ONLY    true|false — when true, block create/update/delete tool calls.
 # GRAMPS_MUTATION_SERIALIZE  true|false — serialize mutation HTTP calls in-process (default true).
 # GRAMPS_MUTATION_MIN_INTERVAL_MS  Minimum ms between mutation HTTP calls (default 0; SQLite often 250).
+# GRAMPS_LOG_LEVEL    Server log level (default Information); Debug/Trace also log API bodies.
 
 # --- MCP transport (optional; these defaults suit a networked container) ---
 # MCP_TRANSPORT       stdio | http | sse — default in image is http for Docker.

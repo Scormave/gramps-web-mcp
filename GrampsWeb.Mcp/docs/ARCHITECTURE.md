@@ -140,6 +140,18 @@ allowlist is `image/jpeg,image/png,image/webp,image/avif,application/pdf`.
 When media access is disabled, `tools/list` omits `read_media`;
 media metadata remains available through `get_object`.
 
+### Optional (logging)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GRAMPS_LOG_LEVEL` | Log level for `GrampsWeb.Mcp` categories | `Information` |
+
+At `Information`, Gramps API calls are logged as method, path without query
+string, status, duration, and body length. Request and response bodies and full
+URLs contain genealogy data, so `GrampsApiClient` logs them only at `Debug` or
+`Trace`, after redacting credential-like fields. Blank, unknown, or unresolved
+`${...}` values fall back to `Information`.
+
 ## Architectural layers
 
 ### 1. Tools (`Tools/`)

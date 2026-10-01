@@ -23,7 +23,7 @@ Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 ./scripts/pack-mcpb.sh osx-x64
 
 # Windows x64 (run on Windows or cross-publish from CI)
-./scripts/pack-mcpb.sh win-x64 2.0.0
+./scripts/pack-mcpb.sh win-x64 2.0.1
 
 # Linux x64 / ARM64
 ./scripts/pack-mcpb.sh linux-x64
@@ -58,6 +58,8 @@ refresh-token option supports Gramps Web instances with local password login
 disabled; leave the username and password fields blank when using it.
 
 **Read-only mode defaults to enabled** in the extension for safer first use.
+The settings form does not expose `GRAMPS_LOG_LEVEL`, so the extension logs at
+`Information`: request metadata only, without genealogy data from API bodies.
 **Minimum write interval defaults to 250ms** (SQLite-friendly); the server-side
 env default remains `0` for Docker/registry installs.
 
