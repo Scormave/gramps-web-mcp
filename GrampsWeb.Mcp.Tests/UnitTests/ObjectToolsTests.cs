@@ -9,6 +9,7 @@ using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
+[Collection("HandleCache")]
 public class ObjectToolsTests
 {
     [Fact]

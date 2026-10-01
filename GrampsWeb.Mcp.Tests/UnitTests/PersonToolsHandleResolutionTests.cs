@@ -8,6 +8,7 @@ using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
+[Collection("HandleCache")]
 public class PersonToolsHandleResolutionTests
 {
     public PersonToolsHandleResolutionTests()

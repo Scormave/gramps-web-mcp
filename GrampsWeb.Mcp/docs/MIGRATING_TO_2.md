@@ -1,6 +1,6 @@
 # Migrating from 1.x to 2.0
 
-This guide compares the 1.0.8 tool catalog with the upcoming 2.0 catalog.
+This guide compares the 1.0.8 tool catalog with the 2.0 catalog.
 The MCP tool catalog shrinks from 57 tools to at most 31. Existing Gramps Web
 trees and records need no migration: update your MCP server and then update
 saved tool calls, agent instructions, and client configurations that use the
