@@ -103,8 +103,8 @@ public sealed class GrampsResources
         UriTemplate = "gramps://media/{handle}/file",
         MimeType = "application/octet-stream")]
     [Description(
-        "Opt-in binary media file bytes for vision-capable clients. " +
-        "Prefer thumbnails for AI analysis when full resolution is not required.")]
+        "Opt-in original media file bytes, limited by GRAMPS_MEDIA_MAX_BYTES. " +
+        "Prefer the thumbnail resource for AI analysis when the original is not required.")]
     public static async Task<BlobResourceContents> GetMediaFile(
         string handle,
         GrampsApiClient client,
@@ -130,7 +130,8 @@ public sealed class GrampsResources
         UriTemplate = "gramps://media/{handle}/thumbnail/{size}",
         MimeType = "image/*")]
     [Description(
-        "Opt-in binary media thumbnail bytes for vision-capable clients. " +
+        "Opt-in JPEG preview (PNG when transparent) rendered from an image original, at most {size} pixels on the long edge " +
+        "(1 to 4096; 1568 keeps document scans legible). Metadata such as EXIF GPS is stripped. " +
         "Recommended before requesting full-resolution genealogy media.")]
     public static async Task<BlobResourceContents> GetMediaThumbnail(
         string handle,
@@ -140,7 +141,7 @@ public sealed class GrampsResources
     {
         try
         {
-            var thumbnail = await DownloadMediaThumbnailAsync(handle, size, client, config);
+            var thumbnail = await RenderMediaThumbnailAsync(handle, size, client, config);
 
             return BlobResourceContents.FromBytes(
                 thumbnail.Binary.Bytes,
@@ -272,14 +273,12 @@ public sealed class GrampsResources
         EnsureMediaHandle(handle);
         var media = await GetMediaMetadataOrThrowAsync(handle, client);
         EnsurePrivateAllowed(media, config);
-        EnsureMimeAllowed(media.Mime, config);
 
         var escapedHandle = Uri.EscapeDataString(handle);
         var binary = await client.GetBytesAsync(
             $"/api/media/{escapedHandle}/file",
             config.MediaMaxBytes);
         var mimeType = EffectiveMimeType(binary.MimeType, media.Mime);
-        EnsureMimeAllowed(mimeType, config);
 
         return new MediaBinaryDownload(
             media,
@@ -288,7 +287,11 @@ public sealed class GrampsResources
             $"gramps://media/{escapedHandle}/file");
     }
 
-    internal static async Task<MediaBinaryDownload> DownloadMediaThumbnailAsync(
+    /// <summary>
+    /// Renders a preview from the original file. The Gramps Web thumbnail endpoint is not used
+    /// because it always returns AVIF, which MCP vision clients cannot read.
+    /// </summary>
+    internal static async Task<MediaBinaryDownload> RenderMediaThumbnailAsync(
         string handle,
         int size,
         GrampsApiClient client,
@@ -296,23 +299,25 @@ public sealed class GrampsResources
     {
         EnsureMediaResourcesEnabled(config);
         EnsureMediaHandle(handle);
-        if (size <= 0)
-            throw McpToolErrors.ValidationError("Thumbnail size must be a positive integer.");
+        MediaPreviewRenderer.EnsureValidSize(size);
 
         var media = await GetMediaMetadataOrThrowAsync(handle, client);
         EnsurePrivateAllowed(media, config);
+        MediaPreviewRenderer.EnsurePreviewableMime(NormalizeMimeType(media.Mime));
 
         var escapedHandle = Uri.EscapeDataString(handle);
-        var binary = await client.GetBytesAsync(
-            $"/api/media/{escapedHandle}/thumbnail/{size}",
-            config.MediaMaxBytes);
-        var mimeType = EffectiveMimeType(binary.MimeType, "image/jpeg");
-        EnsureMimeAllowed(mimeType, config);
+        var original = await client.GetBytesAsync(
+            $"/api/media/{escapedHandle}/file",
+            Math.Max(config.MediaMaxBytes, MediaPreviewRenderer.SourceMaxBytes));
+        var preview = MediaPreviewRenderer.Render(original.Bytes.Span, size);
+        if (preview.Bytes.Length > config.MediaMaxBytes)
+            throw McpToolErrors.ValidationError(
+                $"Thumbnail is {preview.Bytes.Length} bytes, exceeding the configured limit of {config.MediaMaxBytes} bytes (GRAMPS_MEDIA_MAX_BYTES). Request a smaller size.");
 
         return new MediaBinaryDownload(
             media,
-            binary,
-            mimeType,
+            new GrampsBinaryResponse(preview.Bytes, preview.MimeType),
+            preview.MimeType,
             $"gramps://media/{escapedHandle}/thumbnail/{size}");
     }
 
@@ -336,17 +341,6 @@ public sealed class GrampsResources
                 "Media file resources are blocked for private media records. Set GRAMPS_MEDIA_ALLOW_PRIVATE=true to allow them.");
     }
 
-    internal static void EnsureMimeAllowed(string? mimeType, GrampsConfig config)
-    {
-        var normalized = NormalizeMimeType(mimeType);
-        if (normalized == null)
-            throw McpToolErrors.ValidationError("Media MIME type is missing and cannot be checked against the allowlist.");
-
-        if (!config.EffectiveMediaAllowedMimeTypes.Any(allowed => MimeMatches(normalized, allowed)))
-            throw McpToolErrors.ValidationError(
-                $"Media MIME type '{normalized}' is not allowed by GRAMPS_MEDIA_ALLOWED_MIME_TYPES.");
-    }
-
     internal static string EffectiveMimeType(string? responseMimeType, string? fallbackMimeType)
     {
         return NormalizeMimeType(responseMimeType)
@@ -354,35 +348,46 @@ public sealed class GrampsResources
                ?? "application/octet-stream";
     }
 
-    internal static void EnsureImageMime(string mimeType)
+    /// <summary>
+    /// Image types MCP vision clients accept as image content; other images are returned as blobs.
+    /// </summary>
+    private static readonly HashSet<string> ClientImageMimeTypes = new(StringComparer.Ordinal)
     {
-        if (!mimeType.StartsWith("image/", StringComparison.Ordinal))
-            throw McpToolErrors.ValidationError(
-                $"Media MIME type '{mimeType}' cannot be returned as an image tool result. Use read_media with mode file for audio and other allowlisted media.");
-    }
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp"
+    };
 
-    internal static ContentBlock ToMediaFileContentBlock(MediaBinaryDownload mediaFile)
+    internal static IReadOnlyList<ContentBlock> ToMediaFileContentBlocks(MediaBinaryDownload mediaFile)
     {
         var bytes = mediaFile.Binary.Bytes;
         var mimeType = mediaFile.MimeType;
 
-        if (mimeType.StartsWith("image/", StringComparison.Ordinal))
-            return ImageContentBlock.FromBytes(bytes, mimeType);
+        if (ClientImageMimeTypes.Contains(mimeType))
+            return [ImageContentBlock.FromBytes(bytes, mimeType)];
 
         if (mimeType.StartsWith("audio/", StringComparison.Ordinal))
-            return AudioContentBlock.FromBytes(bytes, mimeType);
+            return [AudioContentBlock.FromBytes(bytes, mimeType)];
 
-        return new EmbeddedResourceBlock
+        var blob = new EmbeddedResourceBlock
         {
             Resource = BlobResourceContents.FromBytes(bytes, mediaFile.ResourceUri, mimeType)
         };
+        if (!mimeType.StartsWith("image/", StringComparison.Ordinal))
+            return [blob];
+
+        var hint = $"'{mimeType}' is returned as an embedded resource because MCP clients cannot display it as an image.";
+        if (MediaPreviewRenderer.CanRenderMime(mimeType))
+            hint += " Use read_media with mode thumbnail for a viewable JPEG or PNG preview.";
+        return [blob, new TextContentBlock { Text = hint }];
     }
 
     internal static CallToolResult ToMediaFileCallToolResult(MediaBinaryDownload mediaFile)
     {
         return new CallToolResult
         {
-            Content = [ToMediaFileContentBlock(mediaFile)]
+            Content = [.. ToMediaFileContentBlocks(mediaFile)]
         };
     }
 
@@ -392,21 +397,6 @@ public sealed class GrampsResources
         return string.IsNullOrWhiteSpace(normalized)
             ? null
             : normalized;
-    }
-
-    private static bool MimeMatches(string actual, string allowed)
-    {
-        var normalizedAllowed = NormalizeMimeType(allowed);
-        if (normalizedAllowed == null)
-            return false;
-
-        if (normalizedAllowed.EndsWith("/*", StringComparison.Ordinal))
-        {
-            var prefix = normalizedAllowed[..^1];
-            return actual.StartsWith(prefix, StringComparison.Ordinal);
-        }
-
-        return actual.Equals(normalizedAllowed, StringComparison.Ordinal);
     }
 
     internal sealed record MediaBinaryDownload(

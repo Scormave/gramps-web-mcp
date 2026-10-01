@@ -67,8 +67,8 @@ Read-only reference/discovery data exposed as MCP resources:
 | `gramps://types` | Built-in and custom type vocabularies (event/place/note/etc.) |
 | `gramps://metadata` | Connection/tree metadata (API version, tree id/name, owner, default person) |
 | `gramps://name-settings` | Name display formats and surname grouping rules |
-| `gramps://media/{handle}/thumbnail/{size}` | Opt-in binary thumbnail bytes for a media record; recommended for vision agents |
-| `gramps://media/{handle}/file` | Opt-in full media file bytes, subject to size, MIME, and private-record safeguards |
+| `gramps://media/{handle}/thumbnail/{size}` | Opt-in JPEG preview (PNG when transparent) rendered from an image original, at most `{size}` (1–4096) pixels on the long edge, metadata stripped; recommended for vision agents |
+| `gramps://media/{handle}/file` | Opt-in full media file bytes, subject to size and private-record safeguards |
 
 Compatibility note: reference payloads are also available through
 `get_reference` for clients without native MCP resource reading support.
@@ -349,20 +349,25 @@ Update a note (same field set, all optional).
 
 Use `get_object(objectType: "media", ...)` for media metadata. It does not
 upload or download file bytes. Media byte tools/resources require
-`GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect `GRAMPS_MEDIA_MAX_BYTES` and
-`GRAMPS_MEDIA_ALLOWED_MIME_TYPES`, and block private media records unless
-`GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
+`GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect `GRAMPS_MEDIA_MAX_BYTES`, and
+block private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
 
 ### R — `ReadMedia`
-Download media bytes as typed MCP content. Default mode `thumbnail` returns an
-image preview; mode `file` returns the original as image, audio, or embedded
-blob resource content according to MIME type. Prefer thumbnails before full files.
+Download media bytes as typed MCP content. Default mode `thumbnail` returns a
+JPEG preview (PNG when the image has transparency) rendered by the server from
+the original, with EXIF, GPS, and other metadata stripped. Previews can be
+rendered from JPEG, PNG, GIF, WebP, BMP, TIFF, TGA, PBM, and QOI originals;
+multi-page files use the first page. PDF, AVIF, HEIC, and SVG media are
+rejected before download. Mode `file` returns the original as image, audio, or
+embedded blob resource content according to MIME type; images other than JPEG,
+PNG, GIF, and WebP come back as an embedded blob with a text hint. Prefer
+thumbnails before full files.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `handle` | `string` | yes | — | Media handle or Gramps ID |
 | `mode` | `string` | no | `thumbnail` | `thumbnail` or `file` |
-| `size` | `int?` | no | — | Positive thumbnail size in pixels; omitted means 256. Must be omitted in file mode |
+| `size` | `int?` | no | — | Thumbnail long edge in pixels, 1 to 4096; omitted means 1568, which keeps document scans legible. Images are never upscaled. Must be omitted in file mode |
 
 Migration: replace `get_media_thumbnail(handle, size)` with
 `read_media(handle, mode: "thumbnail", size: size)` and replace

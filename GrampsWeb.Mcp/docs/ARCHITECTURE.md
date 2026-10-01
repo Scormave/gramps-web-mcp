@@ -36,7 +36,7 @@ gramps-web-mcp.sln
 │   ├── Models/             — Gramps entity DTOs
 │   ├── Requests/           — create/update request DTOs
 │   ├── Prompts/            — MCP workflow prompts (add-person, research-person, …)
-│   ├── Resources/          — MCP resources (gramps://* reference data)
+│   ├── Resources/          — MCP resources (gramps://* reference data, media previews)
 │   ├── Serialization/      — JSON converters, wire-format adapters
 │   ├── Tools/              — MCP tool implementations (one file per domain)
 │   │   └── Parsing/        — small parsers (gender, confidence, note format)
@@ -52,13 +52,18 @@ gramps-web-mcp.sln
 
 | Component | Version |
 |-----------|---------|
-| .NET SDK / Runtime | 8.0 |
+| .NET SDK / Runtime | 10.0 |
 | `ModelContextProtocol` | 1.3.0 |
 | `ModelContextProtocol.AspNetCore` | 1.3.0 |
 | `Microsoft.Extensions.Hosting` | 10.0.5 |
 | `Microsoft.Extensions.Http` | 10.0.5 |
+| `SixLabors.ImageSharp` | 3.1.12 (media thumbnails; Six Labors Split License, Apache 2.0 terms for open-source use) |
 
 Test-only: xUnit 2.7, Moq 4.20, YamlDotNet 16.3 (for OpenAPI spec parsing).
+
+[`THIRD-PARTY-NOTICES.txt`](../../THIRD-PARTY-NOTICES.txt) lists every package the
+server restores, including transitive ones, with its license.
+`ThirdPartyNoticesTests` fails when that list and `obj/project.assets.json` differ.
 
 ## Transport modes
 
@@ -132,13 +137,12 @@ Runtime notes:
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP media resources and image-content media tools | `false` |
 | `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource/tool | `5242880` |
-| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Allowed MIME types for media bytes | see below |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allow bytes for Gramps media records marked private | `false` |
 
-Exact MIME types and `type/*` wildcards are supported. The default media
-allowlist is `image/jpeg,image/png,image/webp,image/avif,application/pdf`.
 When media access is disabled, `tools/list` omits `read_media`;
 media metadata remains available through `get_object`.
+`GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig` lists it as
+retired, and startup logs a warning when it is still set.
 
 ### Optional (logging)
 
@@ -180,8 +184,8 @@ fallback while keeping the public catalog to one timeline tool.
 
 The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`. A
 `tools/list` filter publishes only tools enabled by the current configuration:
-read-only mode removes write tools, and disabled media access removes the two
-media-byte tools. Hidden tools remain registered so direct calls still receive
+read-only mode removes write tools, and disabled media access removes
+`read_media`. Hidden tools remain registered so direct calls still receive
 the normal read-only or configuration error.
 
 ### 1b. Resources (`Resources/`)
@@ -193,8 +197,29 @@ the normal read-only or configuration error.
 It also exposes opt-in binary media resources:
 `gramps://media/{handle}/thumbnail/{size}` and
 `gramps://media/{handle}/file`. These return `BlobResourceContents`, fetch
-media metadata first, and enforce enabled/private/MIME/size safeguards before
+media metadata first, and enforce enabled/private/size safeguards before
 returning bytes to the MCP client.
+
+Gramps Web's own `/api/media/{handle}/thumbnail/{size}` endpoint always returns
+AVIF, which MCP clients cannot display, so the server does not use it.
+`MediaPreviewRenderer` builds thumbnails from `/api/media/{handle}/file`
+with ImageSharp instead:
+
+1. Reject non-image MIME types and image types ImageSharp cannot decode (AVIF,
+   HEIC/HEIF, JPEG XL, SVG) before downloading the original.
+2. Download the original up to 50 MiB, or `GRAMPS_MEDIA_MAX_BYTES` if larger,
+   and identify it; images over 100 megapixels are rejected.
+3. Decode only the first frame, scaling during decode when the long edge
+   exceeds the requested size, then apply EXIF orientation and downscale to
+   the size with Lanczos3. Images are never upscaled.
+4. Copy the pixels into a new image so no EXIF, GPS, XMP, IPTC, ICC, or comment
+   metadata reaches the encoder, then encode JPEG (quality 85), or PNG when any
+   pixel is transparent.
+5. Reject the result if it exceeds `GRAMPS_MEDIA_MAX_BYTES`.
+
+Mode `file` returns the original unchanged. Images other than JPEG, PNG, GIF,
+and WebP are returned as an embedded blob with a text hint, since clients only
+display those four as image content.
 
 For clients that cannot call MCP `resources/read`, the same payloads are also
 available through the `GetReference` compatibility tool in `ReferenceTools.cs`.
@@ -202,7 +227,8 @@ Media bytes are mirrored through `read_media` for clients that consume MCP
 tool content directly. It always returns `CallToolResult`: mode `thumbnail`
 (default) contains image content, while mode `file` contains image, audio, or
 embedded blob resource content depending on MIME type. Thumbnail size defaults
-to 256; an explicit size is rejected in file mode. Full MCP clients may also
+to 1568 pixels on the long edge, which keeps document scans legible for vision
+models, and accepts 1 to 4096; an explicit size is rejected in file mode. Full MCP clients may also
 use the unchanged `resources/read` URIs.
 
 The MCP SDK discovers resources at startup via `WithResources<GrampsResources>()`.

@@ -47,16 +47,19 @@ public static class MediaTools
 
     [McpServerTool(Title = "Read Media", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: download media bytes. Default mode thumbnail returns MCP image content; prefer it for previews. " +
-        "Use mode file when the original is needed: returns image, audio, or embedded blob resource content according to MIME type. " +
-        "Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects size, MIME, and private-record safeguards. " +
+        "Read-only: download media bytes. Default mode thumbnail renders a JPEG preview (PNG when transparent) from an image original " +
+        "as MCP image content, 1568 pixels on the long edge unless size is given; EXIF and other metadata are stripped. " +
+        "Prefer it for reading photos and document scans. Use mode file only when the original is needed: returns image, audio, " +
+        "or embedded blob resource content according to MIME type. " +
+        "Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects size and private-record safeguards. " +
         "Use get_object with objectType media for metadata.")]
     public static async Task<CallToolResult> ReadMedia(
         [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Download mode: thumbnail | file. Default thumbnail. Use file only when a preview is insufficient.")]
         string mode = "thumbnail",
-        [Description("Thumbnail size in pixels; positive integer, defaults to 256 when omitted. Only valid for mode thumbnail; omit for mode file.")]
+        [Description("Thumbnail long edge in pixels, 1 to 4096; default 1568, which keeps handwriting and small print legible. " +
+                     "Use 512 or less for a quick look at photos. Images are never upscaled. Only valid for mode thumbnail; omit for mode file.")]
         int? size = null,
         GrampsApiClient client = null!,
         GrampsConfig config = null!)
@@ -70,8 +73,8 @@ public static class MediaTools
                 throw McpToolErrors.ValidationError("Invalid mode. Must be thumbnail or file.");
             if (normalizedMode == "file" && size.HasValue)
                 throw McpToolErrors.ValidationError("size is only supported for mode thumbnail; omit it for mode file.");
-            if (normalizedMode == "thumbnail" && size is <= 0)
-                throw McpToolErrors.ValidationError("Thumbnail size must be a positive integer.");
+            if (normalizedMode == "thumbnail" && size.HasValue)
+                MediaPreviewRenderer.EnsureValidSize(size.Value);
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             if (normalizedMode == "file")
@@ -79,8 +82,8 @@ public static class MediaTools
                 var mediaFile = await GrampsResources.DownloadMediaFileAsync(resolvedHandle, client, config);
                 return GrampsResources.ToMediaFileCallToolResult(mediaFile);
             }
-            var thumbnail = await GrampsResources.DownloadMediaThumbnailAsync(resolvedHandle, size ?? 256, client, config);
-            GrampsResources.EnsureImageMime(thumbnail.MimeType);
+            var thumbnail = await GrampsResources.RenderMediaThumbnailAsync(
+                resolvedHandle, size ?? MediaPreviewRenderer.DefaultSize, client, config);
             return new CallToolResult { Content = [ImageContentBlock.FromBytes(thumbnail.Binary.Bytes, thumbnail.MimeType)] };
         }
         catch (Exception ex)

@@ -22,8 +22,9 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
 - **Composite workflows** — quick-add person and add event to person
 - **6 MCP resources** — type vocabularies, input guide, tree metadata, name
-  settings, and opt-in media thumbnails/files for vision-capable agents
-- **Media safeguards** — size limits, MIME allowlists, and private-record defaults
+  settings, and opt-in media previews/files for vision-capable agents
+- **Media safeguards** — size limits, private-record defaults, and previews with
+  EXIF/GPS metadata stripped
 - **MCP prompts** — guided workflows for research, adding people/families,
   imports, changing links, and citing facts
 - **Multiple transports** — stdio (local clients), Streamable HTTP, legacy SSE
@@ -223,10 +224,19 @@ curl -X POST http://host:8080/mcp \
 Vision-capable agents can read opt-in media through `read_media`
 or through binary MCP resources such as
 `gramps://media/{handle}/thumbnail/{size}` and `gramps://media/{handle}/file`.
-`read_media` defaults to a 256-pixel thumbnail; use `mode: "file"` for an original
-file and omit `size`. File mode returns image, audio, or embedded blob resource content depending
-on MIME type. End-to-end analysis depends on the MCP client forwarding the typed
-tool content or binary resource content to a capable model.
+`read_media` defaults to a thumbnail: a JPEG preview (PNG when the image has
+transparency) rendered by the server from the original, 1568 pixels on the long
+edge so handwriting and small print in document scans stay legible. Pass `size`
+(1–4096) for a smaller or larger preview; images are never upscaled. Previews are
+re-encoded from pixels, so EXIF (including GPS), XMP, IPTC, and ICC metadata are
+not sent. They can be rendered from JPEG, PNG, GIF, WebP, BMP, TIFF, TGA, PBM, and
+QOI originals; multi-page files use the first page. PDF, AVIF, HEIC, and SVG
+media have no preview. Use `mode: "file"` for an original file and omit `size`.
+File mode returns image, audio, or embedded blob resource content depending on
+MIME type; images that MCP clients cannot display, such as TIFF, come back as
+an embedded blob with a hint to use the thumbnail. End-to-end analysis depends
+on the MCP client forwarding the typed tool content or binary resource content
+to a capable model.
 
 ## Configuration
 
@@ -313,15 +323,19 @@ configuration error without downloading bytes.
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media tools/resources for thumbnails and full files | `false` |
 | `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource | `5242880` |
-| `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` | Allowed MIME types for media bytes | see below |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allows bytes for Gramps media records marked private | `false` |
 
 Prefer `read_media(mode: "thumbnail")` or `gramps://media/{handle}/thumbnail/{size}` for AI
-analysis. Full files can be large and sensitive, and are still subject to the
-same size, MIME, and private-record checks.
+analysis. Full files can be large and sensitive, carry their original metadata,
+and are still subject to the size and private-record checks.
 
-Exact types and `type/*` wildcards are supported. The default media allowlist is
-`image/jpeg,image/png,image/webp,image/avif,application/pdf`.
+`GRAMPS_MEDIA_MAX_BYTES` limits what is returned to the client. To render a
+thumbnail, the server downloads the original from Gramps Web into memory, up to
+50 MiB or `GRAMPS_MEDIA_MAX_BYTES`, whichever is larger, and up to 100
+megapixels; only the preview is returned.
+
+`GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer used. Remove it from your
+configuration; the server ignores it and logs a warning at startup if it is set.
 
 ### Transports
 
@@ -426,3 +440,8 @@ This project is licensed under the [GNU Affero General Public License v3.0](LICE
 (AGPL-3.0-or-later). Because this is network server software, hosting a modified
 version requires making the corresponding source available to users interacting
 with it over a network.
+
+Bundled third-party components, such as ImageSharp, the MCP C# SDK, and the .NET
+runtime, keep their own Apache 2.0 or MIT licenses; see
+[THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). The MCP Bundles and the
+Docker image ship that file next to `LICENSE`.

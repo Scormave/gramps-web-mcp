@@ -48,7 +48,10 @@ Additional reference:
 2. Make focused changes with tests where appropriate.
 3. Run `dotnet test` and ensure all tests pass.
 4. Update documentation if you change tool behavior, API usage, or configuration.
-5. Open a pull request with a clear description of the change and why it is needed.
+5. If you add, remove, or replace a NuGet package in `GrampsWeb.Mcp`, update
+   `THIRD-PARTY-NOTICES.txt` with the package and its license; the test suite
+   checks the package names.
+6. Open a pull request with a clear description of the change and why it is needed.
 
 ## Vendored API spec
 

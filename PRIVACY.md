@@ -25,6 +25,7 @@ The extension does **not** phone home, run analytics, or log conversations to ex
 
 - Media file downloads are **disabled by default**. Enable them only if you understand photos and documents may be sent to Claude as tool output.
 - Private media records remain blocked unless you explicitly enable `Allow private media`.
+- Thumbnails are rendered by the extension from the original file with EXIF (including GPS location) and other embedded metadata removed. Mode `file` sends the original file unchanged, metadata included.
 - Genealogy data may include names, dates, places, and family relationships of living or deceased persons. You are responsible for compliance with applicable privacy laws when exposing this data to AI tools.
 
 ## Data retention

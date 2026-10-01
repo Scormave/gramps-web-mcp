@@ -33,6 +33,10 @@ Registry publishing, so keep the version metadata aligned before tagging.
     compatibility, privacy policy links, or descriptions.
   - Update `mcpb/README.md` and `README.md` if install or configuration steps
     changed.
+- Check whether server dependencies changed:
+  - Confirm `THIRD-PARTY-NOTICES.txt` lists each new package with its license
+    and copyright, and that its upstream notice links point at the versions in
+    use; the test suite checks only the package names.
 - Check whether MCP Registry metadata changed:
   - Confirm `server.json` still matches the current schema and package layout.
   - Confirm the Docker image name in `server.json` matches the tag that will be

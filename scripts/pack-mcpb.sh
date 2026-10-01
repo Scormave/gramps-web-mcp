@@ -73,6 +73,7 @@ find "$STAGING/server" -mindepth 1 ! -name "$BINARY_NAME" -delete 2>/dev/null ||
 
 cp "$ROOT/mcpb/icon.png" "$STAGING/icon.png"
 cp "$ROOT/LICENSE" "$STAGING/LICENSE"
+cp "$ROOT/THIRD-PARTY-NOTICES.txt" "$STAGING/THIRD-PARTY-NOTICES.txt"
 
 sed \
   -e "s/__VERSION__/$VERSION/g" \

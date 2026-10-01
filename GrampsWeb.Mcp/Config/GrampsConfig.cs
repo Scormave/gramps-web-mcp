@@ -12,7 +12,6 @@ public record GrampsConfig(
     bool ReadOnly = false,
     bool MediaResourcesEnabled = false,
     long MediaMaxBytes = GrampsConfig.DefaultMediaMaxBytes,
-    string[]? MediaAllowedMimeTypes = null,
     bool MediaAllowPrivate = false,
     bool MutationSerialize = true,
     int MutationMinIntervalMs = 0,
@@ -20,13 +19,12 @@ public record GrampsConfig(
 {
     public const long DefaultMediaMaxBytes = 5 * 1024 * 1024;
 
-    public static readonly string[] DefaultMediaAllowedMimeTypes =
+    /// <summary>
+    /// Variables that earlier versions read. They are ignored now; startup warns when one is still set.
+    /// </summary>
+    private static readonly string[] RetiredEnvironmentVariables =
     [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-        "image/avif",
-        "application/pdf"
+        "GRAMPS_MEDIA_ALLOWED_MIME_TYPES"
     ];
 
     /// <summary>
@@ -34,11 +32,6 @@ public record GrampsConfig(
     /// a username and password, for Gramps Web instances with local login disabled.
     /// </summary>
     public bool UsesRefreshToken => !string.IsNullOrWhiteSpace(RefreshToken);
-
-    public string[] EffectiveMediaAllowedMimeTypes =>
-        MediaAllowedMimeTypes is { Length: > 0 }
-            ? MediaAllowedMimeTypes
-            : DefaultMediaAllowedMimeTypes;
 
     /// <summary>
     /// Loads configuration from environment variables.
@@ -57,9 +50,6 @@ public record GrampsConfig(
             defaultValue: false);
         var rawMediaMaxBytes = ReadEnvironmentVariable("GRAMPS_MEDIA_MAX_BYTES");
         var mediaMaxBytes = ParseLongOrDefault(rawMediaMaxBytes, DefaultMediaMaxBytes);
-        var mediaAllowedMimeTypes = ParseCsvOrDefault(
-            ReadEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES"),
-            DefaultMediaAllowedMimeTypes);
         var mediaAllowPrivate = ParseBoolOrDefault(
             ReadEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE"),
             defaultValue: false);
@@ -107,12 +97,19 @@ public record GrampsConfig(
             ReadOnly: readOnly,
             MediaResourcesEnabled: mediaResourcesEnabled,
             MediaMaxBytes: mediaMaxBytes,
-            MediaAllowedMimeTypes: mediaAllowedMimeTypes,
             MediaAllowPrivate: mediaAllowPrivate,
             MutationSerialize: mutationSerialize,
             MutationMinIntervalMs: mutationMinIntervalMs,
             RefreshToken: string.IsNullOrWhiteSpace(refreshToken) ? null : refreshToken.Trim());
     }
+
+    /// <summary>
+    /// Returns the retired variables that are still set, so startup can tell the user to remove them.
+    /// </summary>
+    public static IReadOnlyList<string> FindRetiredEnvironmentVariables() =>
+        RetiredEnvironmentVariables
+            .Where(name => !string.IsNullOrWhiteSpace(ReadEnvironmentVariable(name)))
+            .ToArray();
 
     /// <summary>
     /// Reads an environment variable, treating an unresolved <c>${...}</c> placeholder as unset.
@@ -157,21 +154,5 @@ public record GrampsConfig(
         return int.TryParse(value, out var parsed)
             ? parsed
             : defaultValue;
-    }
-
-    private static string[] ParseCsvOrDefault(string? value, string[] defaultValue)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return defaultValue;
-
-        var items = value
-            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Select(v => v.ToLowerInvariant())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        return items.Length == 0
-            ? defaultValue
-            : items;
     }
 }

@@ -15,9 +15,6 @@ public class GrampsConfigTests
         Assert.False(config.ReadOnly);
         Assert.False(config.MediaResourcesEnabled);
         Assert.Equal(5 * 1024 * 1024, config.MediaMaxBytes);
-        Assert.Equal(
-            new[] { "image/jpeg", "image/png", "image/webp", "image/avif", "application/pdf" },
-            config.EffectiveMediaAllowedMimeTypes);
         Assert.False(config.MediaAllowPrivate);
         Assert.True(config.MutationSerialize);
         Assert.Equal(0, config.MutationMinIntervalMs);
@@ -40,13 +37,33 @@ public class GrampsConfigTests
             readOnlyEnv: null,
             mediaResourcesEnabled: "true",
             mediaMaxBytes: "12345",
-            mediaAllowedMimeTypes: " Image/JPEG,application/pdf,image/jpeg ",
             mediaAllowPrivate: "1");
 
         Assert.True(config.MediaResourcesEnabled);
         Assert.Equal(12345, config.MediaMaxBytes);
-        Assert.Equal(new[] { "image/jpeg", "application/pdf" }, config.EffectiveMediaAllowedMimeTypes);
         Assert.True(config.MediaAllowPrivate);
+    }
+
+    [Fact]
+    public void FromEnvironment_Ignores_Retired_Media_Mime_Allowlist()
+    {
+        var config = LoadConfig(readOnlyEnv: null, mediaAllowedMimeTypes: "image/jpeg");
+
+        Assert.Equal(GrampsConfig.DefaultMediaMaxBytes, config.MediaMaxBytes);
+    }
+
+    [Theory]
+    [InlineData("image/jpeg,application/pdf", true)]
+    [InlineData("${user_config.gramps_media_allowed_mime_types}", false)]
+    [InlineData(" ", false)]
+    [InlineData(null, false)]
+    public void FindRetiredEnvironmentVariables_Reports_Media_Mime_Allowlist_When_Set(string? value, bool expected)
+    {
+        var retired = WithEnvironment(
+            () => GrampsConfig.FindRetiredEnvironmentVariables(),
+            mediaAllowedMimeTypes: value);
+
+        Assert.Equal(expected, retired.Contains("GRAMPS_MEDIA_ALLOWED_MIME_TYPES"));
     }
 
     [Fact]
@@ -166,6 +183,31 @@ public class GrampsConfigTests
         string? mediaAllowedMimeTypes = null,
         string? mediaAllowPrivate = null,
         string? mutationSerialize = null,
+        string? mutationMinIntervalMs = null) =>
+        WithEnvironment(
+            GrampsConfig.FromEnvironment,
+            readOnlyEnv,
+            username,
+            password,
+            refreshToken,
+            mediaResourcesEnabled,
+            mediaMaxBytes,
+            mediaAllowedMimeTypes,
+            mediaAllowPrivate,
+            mutationSerialize,
+            mutationMinIntervalMs);
+
+    private static T WithEnvironment<T>(
+        Func<T> action,
+        string? readOnlyEnv = null,
+        string? username = "user",
+        string? password = "pass",
+        string? refreshToken = null,
+        string? mediaResourcesEnabled = null,
+        string? mediaMaxBytes = null,
+        string? mediaAllowedMimeTypes = null,
+        string? mediaAllowPrivate = null,
+        string? mutationSerialize = null,
         string? mutationMinIntervalMs = null)
     {
         lock (EnvironmentLock)
@@ -186,7 +228,7 @@ public class GrampsConfigTests
                 Environment.SetEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE", mutationSerialize);
                 Environment.SetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS", mutationMinIntervalMs);
 
-                return GrampsConfig.FromEnvironment();
+                return action();
             }
             finally
             {

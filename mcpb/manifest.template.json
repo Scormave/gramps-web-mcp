@@ -42,7 +42,6 @@
         "GRAMPS_MUTATION_MIN_INTERVAL_MS": "${user_config.gramps_mutation_min_interval_ms}",
         "GRAMPS_MEDIA_RESOURCES_ENABLED": "${user_config.gramps_media_resources_enabled}",
         "GRAMPS_MEDIA_MAX_BYTES": "${user_config.gramps_media_max_bytes}",
-        "GRAMPS_MEDIA_ALLOWED_MIME_TYPES": "${user_config.gramps_media_allowed_mime_types}",
         "GRAMPS_MEDIA_ALLOW_PRIVATE": "${user_config.gramps_media_allow_private}"
       }
     }
@@ -106,7 +105,7 @@
     "gramps_media_resources_enabled": {
       "type": "boolean",
       "title": "Enable media file access",
-      "description": "Allow read_media for thumbnails and full files (image, audio, or embedded blob resource depending on MIME). Disabled by default for privacy; when disabled, the tool is hidden from the catalog.",
+      "description": "Allow read_media for image previews (rendered locally, location and other metadata removed) and original files. Disabled by default for privacy; when disabled, the tool is hidden from the catalog.",
       "default": false,
       "required": false
     },
@@ -117,13 +116,6 @@
       "default": 5242880,
       "min": 1,
       "max": 52428800,
-      "required": false
-    },
-    "gramps_media_allowed_mime_types": {
-      "type": "string",
-      "title": "Allowed MIME types",
-      "description": "Comma-separated allowlist for media downloads",
-      "default": "image/jpeg,image/png,image/webp,image/avif,application/pdf",
       "required": false
     },
     "gramps_media_allow_private": {

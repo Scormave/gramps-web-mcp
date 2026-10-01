@@ -31,9 +31,14 @@ Issues in Gramps Web itself should be reported to the [Gramps Web project](https
 
 Binary media tools and resources are disabled by default. Operators must set
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true` before MCP clients can read thumbnails or
-full media files through either surface. Keep `GRAMPS_MEDIA_MAX_BYTES`,
-`GRAMPS_MEDIA_ALLOWED_MIME_TYPES`, and `GRAMPS_MEDIA_ALLOW_PRIVATE` set
-conservatively for the deployment.
+full media files through either surface. Keep `GRAMPS_MEDIA_MAX_BYTES` and
+`GRAMPS_MEDIA_ALLOW_PRIVATE` set conservatively for the deployment.
+
+Thumbnails are rendered by the server from the original file and re-encoded
+from pixels, so EXIF (including GPS location), XMP, IPTC, and ICC metadata are
+not passed to the client. Mode `file` returns the original bytes unchanged,
+metadata included. Originals are decoded with the managed ImageSharp library,
+limited to 50 MiB (or `GRAMPS_MEDIA_MAX_BYTES` if larger) and 100 megapixels.
 
 Media files can contain sensitive photos, scans, and documents. The server
 blocks bytes for Gramps media records marked private unless

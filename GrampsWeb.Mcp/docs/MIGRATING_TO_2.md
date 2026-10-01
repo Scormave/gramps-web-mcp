@@ -64,8 +64,10 @@ blocked by default when another record references the target.
 
 Omit optional arguments shown as `...` when you did not pass them before.
 `get_person_tree` still defaults to three generations. `read_media` defaults
-to a 256-pixel thumbnail, so `mode: "thumbnail"` and `size: 256` may both be
-omitted. **Do not pass `size` in file mode**; it is now rejected. Timeline
+to thumbnail mode, so `mode: "thumbnail"` may be omitted. In 2.0 the default
+thumbnail was 256 pixels; later releases render a 1568-pixel JPEG or PNG
+preview from the original, so pass `size: 256` to keep the smaller one.
+**Do not pass `size` in file mode**; it is now rejected. Timeline
 relative filters are valid only for `objectType: "person"`.
 
 All nine `create_*` tools, nine `update_*` tools, `quick_add_person`,
@@ -121,8 +123,9 @@ the server's `GRAMPS_READ_ONLY` default is `false`.
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true`. Media metadata through `get_object`
 is available when file access is disabled. Media resource URIs remain
 `gramps://media/{handle}/thumbnail/{size}` and
-`gramps://media/{handle}/file`; size, MIME, and private-record safeguards
-continue to apply.
+`gramps://media/{handle}/file`; size and private-record safeguards continue
+to apply. Releases after 2.0.1 no longer read `GRAMPS_MEDIA_ALLOWED_MIME_TYPES`
+and log a startup warning while it is set; remove it from your configuration.
 
 The stdio and HTTP transport setup is unchanged. Existing username/password
 configuration still works; `GRAMPS_REFRESH_TOKEN` is now an alternative for

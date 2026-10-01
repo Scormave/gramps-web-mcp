@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Add SixLabors.ImageSharp 3.1.12 to render media thumbnails; it is fully
+  managed, so the Docker image and MCP Bundle need no native libraries
+- Add `THIRD-PARTY-NOTICES.txt` with the licenses of the bundled NuGet packages
+  and the .NET runtime. MCP Bundles and the Docker image now include it and
+  `LICENSE`, and a test fails when the restored packages and the list differ
+
+### Changed
+
+- Render `read_media` thumbnails and `gramps://media/{handle}/thumbnail/{size}`
+  on the server from the original file instead of the Gramps Web thumbnail
+  endpoint, which always returns AVIF that MCP clients cannot display. Previews
+  are JPEG, or PNG when the image has transparency, follow EXIF orientation,
+  are never upscaled, and are re-encoded from pixels so EXIF, GPS, XMP, IPTC,
+  and ICC metadata are not sent
+- Default the thumbnail size to 1568 pixels on the long edge, up from 256, so
+  handwriting and small print in document scans stay legible; `size` accepts
+  1 to 4096
+- Render thumbnails from JPEG, PNG, GIF, WebP, BMP, TIFF, TGA, PBM, and QOI
+  originals, using the first page of multi-page files; reject PDF, audio,
+  AVIF, HEIC, and SVG media before downloading the original
+- Download originals for thumbnails up to 50 MiB, or `GRAMPS_MEDIA_MAX_BYTES`
+  if larger, and up to 100 megapixels; `GRAMPS_MEDIA_MAX_BYTES` still limits
+  the preview returned to the client
+- Return media files of any MIME type in `read_media` file mode and the file
+  resource; images other than JPEG, PNG, GIF, and WebP are returned as an
+  embedded blob with a hint to use thumbnail mode
+- Update the README, security and privacy policies, architecture, developer,
+  migration, and tool documentation, the system prompt, Docker Compose, MCPB
+  metadata, and GitHub Pages for the new media behavior
+
+### Removed
+
+- Remove `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` and the MCPB "Allowed MIME types"
+  setting; access is controlled by `GRAMPS_MEDIA_RESOURCES_ENABLED`,
+  `GRAMPS_MEDIA_ALLOW_PRIVATE`, and `GRAMPS_MEDIA_MAX_BYTES`. The server
+  ignores the variable and logs a startup warning while it is set
+
 ### Fixed
 
 - Resolve media Gramps IDs by the Gramps default `O` prefix instead of `M`, so

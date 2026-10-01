@@ -32,6 +32,9 @@ Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 Output: `dist/gramps-web-mcp-claude-desktop-<rid>-v<version>.mcpb`
 
+The bundle holds the self-contained single-file server, `manifest.json`,
+`icon.png`, `LICENSE`, and `THIRD-PARTY-NOTICES.txt`.
+
 Install by double-clicking the `.mcpb` file or dragging it into Claude Desktop.
 
 ## Configuration
@@ -50,7 +53,6 @@ Claude Desktop shows a settings form generated from `user_config` in the manifes
 | Minimum write interval (ms) | `GRAMPS_MUTATION_MIN_INTERVAL_MS` |
 | Media file access | `GRAMPS_MEDIA_RESOURCES_ENABLED` |
 | Media max bytes | `GRAMPS_MEDIA_MAX_BYTES` |
-| Allowed MIME types | `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` |
 | Allow private media | `GRAMPS_MEDIA_ALLOW_PRIVATE` |
 
 Authenticate with either a username and password, or a refresh token. The

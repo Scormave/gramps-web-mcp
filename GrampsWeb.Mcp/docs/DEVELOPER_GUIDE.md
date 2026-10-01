@@ -60,9 +60,12 @@ Key rules:
 - Binary payloads belong in MCP resources, not tools. Media files use
   `BlobResourceContents` from `Resources/GrampsResources.cs`.
 - Exception: `ReadMedia` returns `CallToolResult` with typed content:
-  image for thumbnails and image files, audio for
-  audio MIME types, and `EmbeddedResourceBlock` with `BlobResourceContents` for
-  other allowlisted types.
+  image for thumbnails (rendered by `Resources/MediaPreviewRenderer.cs`) and
+  JPEG, PNG, GIF, or WebP files, audio for audio MIME types, and
+  `EmbeddedResourceBlock` with `BlobResourceContents` for other types. Other
+  image types, such as TIFF, add a text hint pointing to thumbnail mode.
+- Media preview tests generate images with ImageSharp (`UnitTests/TestImages.cs`)
+  instead of committing binary fixtures.
 - `GrampsApiClient client` is the **last** parameter, injected by the MCP host.
 - Every tool wraps its body in `try/catch` and rethrows via `McpToolErrors`.
 - `[Description]` must clearly state read-only vs write and prerequisites.
@@ -373,7 +376,8 @@ This is applied automatically in `GetPersonExtended` and `GetFamilyExtended`.
 
 The `Dockerfile` uses multi-stage build:
 1. **Build stage**: SDK 10.0 on Ubuntu 24.04 (Noble), restore + publish
-2. **Runtime stage**: ASP.NET Core 10.0 on Ubuntu 24.04 (Noble), runs as non-root user
+2. **Runtime stage**: ASP.NET Core 10.0 on Ubuntu 24.04 (Noble), runs as non-root user;
+   `LICENSE` and `THIRD-PARTY-NOTICES.txt` are copied next to the server
 
 Default environment in the image:
 - `MCP_TRANSPORT=http`
@@ -425,6 +429,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Configure media resource safeguards | `Config/GrampsConfig.cs` (`GRAMPS_MEDIA_*`) |
 | Configure transport | `Config/McpTransportConfig.cs` (env vars) |
 | Configure HTTP auth | `Config/McpAuthConfig.cs` + `Auth/` |
+| Add or replace a NuGet package | `GrampsWeb.Mcp.csproj` + `THIRD-PARTY-NOTICES.txt` |
 | Add a test fixture | `GrampsWeb.Mcp.Tests/Fixtures/{name}.json` |
 | Update contract mapping | `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` |
 | Parse dates from agent input | `Dates/AgentDateParser.cs` |

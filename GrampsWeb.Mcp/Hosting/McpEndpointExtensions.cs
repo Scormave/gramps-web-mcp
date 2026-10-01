@@ -71,4 +71,22 @@ internal static class McpEndpointExtensions
         logger.LogWarning(
             "MCP_API_KEY is set but ignored in stdio transport; API key auth applies only to HTTP/SSE mode.");
     }
+
+    public static void LogRetiredEnvironmentVariables(this IHost host)
+    {
+        var retired = GrampsConfig.FindRetiredEnvironmentVariables();
+        if (retired.Count == 0)
+            return;
+
+        var logger = host.Services
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("GrampsWeb.Mcp.Config");
+
+        foreach (var name in retired)
+        {
+            logger.LogWarning(
+                "{Variable} is set but no longer used; remove it. Media access is controlled by GRAMPS_MEDIA_RESOURCES_ENABLED, GRAMPS_MEDIA_ALLOW_PRIVATE, and GRAMPS_MEDIA_MAX_BYTES.",
+                name);
+        }
+    }
 }

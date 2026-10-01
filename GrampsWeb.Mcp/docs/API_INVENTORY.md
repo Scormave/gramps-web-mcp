@@ -50,8 +50,8 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/repositories/{handle}` | Repository | `GrampsRepository` |
 | `GET /api/notes/{handle}` | Note | `GrampsNote` |
 | `GET /api/media/{handle}` | Media | `GrampsMedia` |
-| `GET /api/media/{handle}/thumbnail/{size}` | Binary | MCP resource `gramps://media/{handle}/thumbnail/{size}` via `GetBytesAsync`; opt-in safeguards apply |
-| `GET /api/media/{handle}/file` | Binary | MCP resource `gramps://media/{handle}/file` via `GetBytesAsync`; opt-in safeguards apply |
+| `GET /api/media/{handle}/file` | Binary | MCP resources `gramps://media/{handle}/file` and `gramps://media/{handle}/thumbnail/{size}` via `GetBytesAsync`; thumbnails are rendered locally by `MediaPreviewRenderer`; opt-in safeguards apply |
+| `GET /api/media/{handle}/thumbnail/{size}` | Binary | Not used: Gramps Web always returns AVIF, which MCP clients cannot display |
 | `GET /api/tags/{handle}` | Tag | `GrampsTag` |
 | `GET ...?backlinks=true` | Backlinks | `JsonElement` |
 | `GET /api/types/default/` | Types | `JsonElement` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in OpenAPI) |

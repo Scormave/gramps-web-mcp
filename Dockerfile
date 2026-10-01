@@ -50,6 +50,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
+COPY LICENSE THIRD-PARTY-NOTICES.txt ./
 USER $APP_UID
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \

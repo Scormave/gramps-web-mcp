@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using GrampsWeb.Mcp.Resources;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
@@ -56,10 +57,10 @@ public static class MediaFormatter
         {
             var escapedHandle = Uri.EscapeDataString(media.Handle.Trim());
             sb.AppendLine();
-            sb.AppendLine("Binary access (requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and MIME allowlist):");
+            sb.AppendLine("Binary access (requires GRAMPS_MEDIA_RESOURCES_ENABLED=true):");
             sb.AppendLine($"  file resource: gramps://media/{escapedHandle}/file");
-            sb.AppendLine($"  thumbnail resource: gramps://media/{escapedHandle}/thumbnail/256");
-            sb.AppendLine("  read_media defaults to mode thumbnail; mode file returns image, audio, or embedded-resource content depending on MIME type");
+            sb.AppendLine($"  thumbnail resource: gramps://media/{escapedHandle}/thumbnail/{MediaPreviewRenderer.DefaultSize}");
+            sb.AppendLine($"  read_media defaults to mode thumbnail (JPEG/PNG preview, {MediaPreviewRenderer.DefaultSize} px long edge); mode file returns image, audio, or embedded-resource content depending on MIME type");
         }
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList);

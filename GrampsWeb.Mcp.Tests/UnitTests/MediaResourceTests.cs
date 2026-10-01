@@ -15,21 +15,45 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 [Collection("HandleCache")]
 public class MediaResourceTests
 {
+    private static readonly byte[] SmallJpeg = TestImages.Jpeg(64, 48);
+    private static readonly byte[] LargeJpeg = TestImages.Jpeg(3000, 2000);
+    private static readonly byte[] SmallTiff = TestImages.Tiff(120, 80);
+    private static readonly byte[] NoisyJpeg = TestImages.NoisyJpeg(600, 600);
+
     [Fact]
-    public async Task GetMediaThumbnail_Returns_Blob_When_Enabled()
+    public async Task GetMediaThumbnail_Renders_Preview_From_Original()
+    {
+        var handler = new MediaHandler();
+        var client = CreateClient(handler);
+        var config = CreateConfig(mediaResourcesEnabled: true);
+
+        var resource = await GrampsResources.GetMediaThumbnail("large1", 256, client, config);
+
+        Assert.Equal("gramps://media/large1/thumbnail/256", resource.Uri);
+        Assert.Equal("image/jpeg", resource.MimeType);
+        var info = TestImages.Identify(resource.DecodedData);
+        Assert.Equal(256, info.Width);
+        Assert.Contains("/api/media/large1/file", handler.RequestPaths);
+        Assert.DoesNotContain(handler.RequestPaths, path => path.Contains("/thumbnail/"));
+    }
+
+    [Fact]
+    public async Task ReadMedia_Thumbnail_Defaults_To_1568_Pixel_Long_Edge()
     {
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
 
-        var resource = await GrampsResources.GetMediaThumbnail("handle1", 256, client, config);
+        var result = await MediaTools.ReadMedia("large1", client: client, config: config);
+        var image = Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
 
-        Assert.Equal("gramps://media/handle1/thumbnail/256", resource.Uri);
-        Assert.Equal("image/jpeg", resource.MimeType);
-        Assert.Equal([1, 2, 3], resource.DecodedData.ToArray());
+        Assert.Equal("image/jpeg", image.MimeType);
+        var info = TestImages.Identify(image.DecodedData);
+        Assert.Equal(MediaPreviewRenderer.DefaultSize, info.Width);
+        Assert.InRange(info.Height, 1044, 1046);
     }
 
     [Fact]
-    public async Task ReadMedia_Thumbnail_Returns_ImageContentBlock_When_Enabled()
+    public async Task ReadMedia_Thumbnail_Does_Not_Upscale_Small_Images()
     {
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
@@ -37,9 +61,21 @@ public class MediaResourceTests
         var result = await MediaTools.ReadMedia("handle1", client: client, config: config);
         var image = Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
 
-        Assert.Equal("image", image.Type);
+        var info = TestImages.Identify(image.DecodedData);
+        Assert.Equal((64, 48), (info.Width, info.Height));
+    }
+
+    [Fact]
+    public async Task ReadMedia_Thumbnail_Converts_Tiff_To_Jpeg()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(mediaResourcesEnabled: true);
+
+        var result = await MediaTools.ReadMedia("tiff1", client: client, config: config);
+        var image = Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
+
         Assert.Equal("image/jpeg", image.MimeType);
-        Assert.Equal([1, 2, 3], image.DecodedData.ToArray());
+        Assert.Equal(120, TestImages.Identify(image.DecodedData).Width);
     }
 
     [Fact]
@@ -57,6 +93,46 @@ public class MediaResourceTests
         Assert.False(string.IsNullOrWhiteSpace(content.GetProperty("data").GetString()));
     }
 
+    [Theory]
+    [InlineData("pdf1", "only available for image media")]
+    [InlineData("audio1", "only available for image media")]
+    [InlineData("avif1", "cannot be rendered from 'image/avif'")]
+    public async Task ReadMedia_Thumbnail_Rejects_Unpreviewable_Mime_Before_Download(string handle, string expected)
+    {
+        var handler = new MediaHandler();
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
+            handle, client: CreateClient(handler), config: CreateConfig(mediaResourcesEnabled: true)));
+
+        Assert.Contains(expected, ex.Message);
+        Assert.Contains("mode file", ex.Message);
+        Assert.DoesNotContain(handler.RequestPaths, path => path.EndsWith("/file", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ReadMedia_Thumbnail_Rejects_Undecodable_File()
+    {
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
+            "garbage1", client: CreateClient(), config: CreateConfig(mediaResourcesEnabled: true)));
+
+        Assert.Contains("not an image the server can render", ex.Message);
+    }
+
+    [Fact]
+    public async Task ReadMedia_Thumbnail_Previews_Originals_Larger_Than_Media_Max_Bytes()
+    {
+        const long maxBytes = 100_000;
+        Assert.True(NoisyJpeg.Length > maxBytes);
+        var config = CreateConfig(mediaResourcesEnabled: true, mediaMaxBytes: maxBytes);
+
+        var result = await MediaTools.ReadMedia("noisy1", size: 64, client: CreateClient(), config: config);
+        var image = Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
+        Assert.Equal(64, TestImages.Identify(image.DecodedData).Width);
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
+            "noisy1", mode: "file", client: CreateClient(), config: config));
+        Assert.Contains("limit", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task GetMediaFile_Returns_Blob_In_ReadOnly_Mode()
     {
@@ -67,7 +143,7 @@ public class MediaResourceTests
 
         Assert.Equal("gramps://media/handle1/file", resource.Uri);
         Assert.Equal("image/jpeg", resource.MimeType);
-        Assert.Equal([4, 5, 6], resource.DecodedData.ToArray());
+        Assert.Equal(SmallJpeg, resource.DecodedData.ToArray());
     }
 
     [Fact]
@@ -82,16 +158,14 @@ public class MediaResourceTests
         var image = Assert.IsType<ImageContentBlock>(result.Content[0]);
         Assert.Equal("image", image.Type);
         Assert.Equal("image/jpeg", image.MimeType);
-        Assert.Equal([4, 5, 6], image.DecodedData.ToArray());
+        Assert.Equal(SmallJpeg, image.DecodedData.ToArray());
     }
 
     [Fact]
     public async Task ReadMedia_File_Returns_AudioContentBlock_For_Audio_File()
     {
         var client = CreateClient();
-        var config = CreateConfig(
-            mediaResourcesEnabled: true,
-            mediaAllowedMimeTypes: ["image/jpeg", "audio/aac"]);
+        var config = CreateConfig(mediaResourcesEnabled: true);
 
         var result = await MediaTools.ReadMedia("audio1", mode: "file", client: client, config: config);
 
@@ -106,9 +180,7 @@ public class MediaResourceTests
     public async Task ReadMedia_File_Returns_EmbeddedResourceBlock_For_Pdf_File()
     {
         var client = CreateClient();
-        var config = CreateConfig(
-            mediaResourcesEnabled: true,
-            mediaAllowedMimeTypes: ["image/jpeg", "application/pdf"]);
+        var config = CreateConfig(mediaResourcesEnabled: true);
 
         var result = await MediaTools.ReadMedia("pdf1", mode: "file", client: client, config: config);
 
@@ -121,13 +193,30 @@ public class MediaResourceTests
         Assert.Equal([16, 17, 18], blob.DecodedData.ToArray());
     }
 
-    [Fact]
-    public async Task GetMediaFile_Returns_Blob_For_Audio_When_Allowlisted()
+    [Theory]
+    [InlineData("tiff1", "image/tiff", true)]
+    [InlineData("avif1", "image/avif", false)]
+    public async Task ReadMedia_File_Returns_Blob_And_Hint_For_Images_Clients_Cannot_Display(
+        string handle, string mimeType, bool suggestsThumbnail)
     {
         var client = CreateClient();
-        var config = CreateConfig(
-            mediaResourcesEnabled: true,
-            mediaAllowedMimeTypes: ["audio/aac"]);
+        var config = CreateConfig(mediaResourcesEnabled: true);
+
+        var result = await MediaTools.ReadMedia(handle, mode: "file", client: client, config: config);
+
+        Assert.Equal(2, result.Content.Count);
+        var blob = Assert.IsType<BlobResourceContents>(Assert.IsType<EmbeddedResourceBlock>(result.Content[0]).Resource);
+        Assert.Equal(mimeType, blob.MimeType);
+        var hint = Assert.IsType<TextContentBlock>(result.Content[1]);
+        Assert.Contains($"'{mimeType}' is returned as an embedded resource", hint.Text);
+        Assert.Equal(suggestsThumbnail, hint.Text.Contains("mode thumbnail"));
+    }
+
+    [Fact]
+    public async Task GetMediaFile_Returns_Blob_For_Audio()
+    {
+        var client = CreateClient();
+        var config = CreateConfig(mediaResourcesEnabled: true);
 
         var resource = await GrampsResources.GetMediaFile("audio1", client, config);
 
@@ -230,69 +319,42 @@ public class MediaResourceTests
 
         var resource = await GrampsResources.GetMediaFile("private1", client, config);
 
-        Assert.Equal([7, 8, 9], resource.DecodedData.ToArray());
+        Assert.Equal(SmallJpeg, resource.DecodedData.ToArray());
     }
 
     [Fact]
-    public async Task GetMediaFile_Fails_When_Metadata_Mime_Is_Not_Allowed()
+    public async Task GetMediaThumbnail_Allows_Private_Media_When_Configured()
     {
         var client = CreateClient();
-        var config = CreateConfig(
-            mediaResourcesEnabled: true,
-            mediaAllowedMimeTypes: ["image/jpeg"]);
+        var config = CreateConfig(mediaResourcesEnabled: true, mediaAllowPrivate: true);
 
-        var ex = await Assert.ThrowsAsync<McpException>(
-            () => GrampsResources.GetMediaFile("tiff1", client, config));
+        var resource = await GrampsResources.GetMediaThumbnail("private1", 32, client, config);
 
-        Assert.Contains("not allowed", ex.Message);
-    }
-
-    [Fact]
-    public async Task GetMediaThumbnail_Fails_When_Response_Mime_Is_Not_Allowed()
-    {
-        var client = CreateClient();
-        var config = CreateConfig(
-            mediaResourcesEnabled: true,
-            mediaAllowedMimeTypes: ["image/jpeg"]);
-
-        var ex = await Assert.ThrowsAsync<McpException>(
-            () => GrampsResources.GetMediaThumbnail("png1", 256, client, config));
-
-        Assert.Contains("not allowed", ex.Message);
-    }
-
-    [Fact]
-    public async Task GetMediaFile_Fails_When_Response_Mime_Is_Not_Allowed()
-    {
-        var client = CreateClient();
-        var config = CreateConfig(
-            mediaResourcesEnabled: true,
-            mediaAllowedMimeTypes: ["image/jpeg"]);
-
-        var ex = await Assert.ThrowsAsync<McpException>(
-            () => GrampsResources.GetMediaFile("mismatch1", client, config));
-
-        Assert.Contains("not allowed", ex.Message);
+        Assert.Equal(32, TestImages.Identify(resource.DecodedData).Width);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task GetMediaThumbnail_Fails_When_Size_Is_Not_Positive(int size)
+    [InlineData(4097)]
+    public async Task GetMediaThumbnail_Fails_When_Size_Is_Out_Of_Range(int size)
     {
-        var client = CreateClient();
+        var handler = new MediaHandler();
+        var client = CreateClient(handler);
         var config = CreateConfig(mediaResourcesEnabled: true);
 
         var ex = await Assert.ThrowsAsync<McpException>(
             () => GrampsResources.GetMediaThumbnail("handle1", size, client, config));
 
-        Assert.Contains("Thumbnail size must be a positive integer", ex.Message);
+        Assert.Contains("Thumbnail size must be an integer from 1 to 4096 pixels", ex.Message);
+        Assert.Empty(handler.RequestPaths);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task ReadMedia_Thumbnail_Fails_When_Size_Is_Not_Positive(int size)
+    [InlineData(4097)]
+    public async Task ReadMedia_Thumbnail_Fails_When_Size_Is_Out_Of_Range(int size)
     {
         var client = CreateClient();
         var config = CreateConfig(mediaResourcesEnabled: true);
@@ -300,7 +362,7 @@ public class MediaResourceTests
         var ex = await Assert.ThrowsAsync<McpException>(
             () => MediaTools.ReadMedia("handle1", size: size, client: client, config: config));
 
-        Assert.Contains("Thumbnail size must be a positive integer", ex.Message);
+        Assert.Contains("Thumbnail size must be an integer from 1 to 4096 pixels", ex.Message);
     }
 
     [Fact]
@@ -321,11 +383,12 @@ public class MediaResourceTests
     [InlineData("file", 256)]
     [InlineData("thumbnail", 0)]
     [InlineData("thumbnail", -1)]
+    [InlineData("thumbnail", 4097)]
     public async Task ReadMedia_InvalidOptionsFailBeforeIdResolution(string mode, int? size)
     {
         var handler = new MediaHandler();
         await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
-            "M1234567", mode, size, CreateClient(handler), CreateConfig(mediaResourcesEnabled: true)));
+            "O1234567", mode, size, CreateClient(handler), CreateConfig(mediaResourcesEnabled: true)));
         Assert.Empty(handler.RequestPaths);
     }
 
@@ -336,7 +399,7 @@ public class MediaResourceTests
     {
         var handler = new MediaHandler();
         var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
-            "M1234567", mode, client: CreateClient(handler), config: CreateConfig(mediaResourcesEnabled: false)));
+            "O1234567", mode, client: CreateClient(handler), config: CreateConfig(mediaResourcesEnabled: false)));
         Assert.Contains("disabled", ex.Message);
         Assert.Empty(handler.RequestPaths);
     }
@@ -364,16 +427,17 @@ public class MediaResourceTests
     }
 
     [Fact]
-    public async Task ReadMedia_ResolvesGrampsIdAndSupportsCustomThumbnailSizeInReadOnlyMode()
+    public async Task ReadMedia_ResolvesGrampsIdAndRendersCustomThumbnailSizeInReadOnlyMode()
     {
         HandleCache.Invalidate();
         var handler = new MediaHandler();
         var result = await MediaTools.ReadMedia("O7654321", " Thumbnail ", 512,
             CreateClient(handler, readOnly: true), CreateConfig(mediaResourcesEnabled: true, readOnly: true));
-        Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
+        var image = Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
+        Assert.Equal(512, TestImages.Identify(image.DecodedData).Width);
         Assert.Contains("/api/media/", handler.RequestPaths);
-        Assert.Contains("/api/media/handle1/thumbnail/512", handler.RequestPaths);
-        Assert.DoesNotContain("/api/media/handle1/file", handler.RequestPaths);
+        Assert.Contains("/api/media/large1/file", handler.RequestPaths);
+        Assert.DoesNotContain(handler.RequestPaths, path => path.Contains("/thumbnail/"));
     }
 
     private static GrampsApiClient CreateClient(bool readOnly = false)
@@ -402,8 +466,7 @@ public class MediaResourceTests
     private static GrampsConfig CreateConfig(
         bool mediaResourcesEnabled,
         bool readOnly = false,
-        long mediaMaxBytes = 1024,
-        string[]? mediaAllowedMimeTypes = null,
+        long mediaMaxBytes = GrampsConfig.DefaultMediaMaxBytes,
         bool mediaAllowPrivate = false)
     {
         return new GrampsConfig(
@@ -414,7 +477,6 @@ public class MediaResourceTests
             ReadOnly: readOnly,
             MediaResourcesEnabled: mediaResourcesEnabled,
             MediaMaxBytes: mediaMaxBytes,
-            MediaAllowedMimeTypes: mediaAllowedMimeTypes ?? ["image/jpeg", "image/png"],
             MediaAllowPrivate: mediaAllowPrivate);
     }
 
@@ -445,18 +507,21 @@ public class MediaResourceTests
         {
             return path switch
             {
-                "/api/media/" => JsonResponse("""[{"handle":"handle1","gramps_id":"O7654321"}]"""),
+                "/api/media/" => JsonResponse("""[{"handle":"large1","gramps_id":"O7654321"}]"""),
                 "/api/media/handle1" => JsonResponse(MediaJson("handle1", "image/jpeg", isPrivate: false)),
-                "/api/media/handle1/file" => BinaryResponse([4, 5, 6], "image/jpeg"),
-                "/api/media/handle1/thumbnail/256" => BinaryResponse([1, 2, 3], "image/jpeg"),
-                "/api/media/handle1/thumbnail/512" => BinaryResponse([1, 2, 3], "image/jpeg"),
+                "/api/media/handle1/file" => BinaryResponse(SmallJpeg, "image/jpeg"),
+                "/api/media/large1" => JsonResponse(MediaJson("large1", "image/jpeg", isPrivate: false)),
+                "/api/media/large1/file" => BinaryResponse(LargeJpeg, "image/jpeg"),
+                "/api/media/noisy1" => JsonResponse(MediaJson("noisy1", "image/jpeg", isPrivate: false)),
+                "/api/media/noisy1/file" => BinaryResponse(NoisyJpeg, "image/jpeg"),
                 "/api/media/private1" => JsonResponse(MediaJson("private1", "image/jpeg", isPrivate: true)),
-                "/api/media/private1/file" => BinaryResponse([7, 8, 9], "image/jpeg"),
+                "/api/media/private1/file" => BinaryResponse(SmallJpeg, "image/jpeg"),
                 "/api/media/tiff1" => JsonResponse(MediaJson("tiff1", "image/tiff", isPrivate: false)),
-                "/api/media/png1" => JsonResponse(MediaJson("png1", "image/png", isPrivate: false)),
-                "/api/media/png1/thumbnail/256" => BinaryResponse([10, 11, 12], "image/png"),
-                "/api/media/mismatch1" => JsonResponse(MediaJson("mismatch1", "image/jpeg", isPrivate: false)),
-                "/api/media/mismatch1/file" => BinaryResponse([13, 14, 15], "image/tiff"),
+                "/api/media/tiff1/file" => BinaryResponse(SmallTiff, "image/tiff"),
+                "/api/media/avif1" => JsonResponse(MediaJson("avif1", "image/avif", isPrivate: false)),
+                "/api/media/avif1/file" => BinaryResponse([13, 14, 15], "image/avif"),
+                "/api/media/garbage1" => JsonResponse(MediaJson("garbage1", "image/jpeg", isPrivate: false)),
+                "/api/media/garbage1/file" => BinaryResponse([1, 2, 3], "image/jpeg"),
                 "/api/media/pdf1" => JsonResponse(MediaJson("pdf1", "application/pdf", isPrivate: false)),
                 "/api/media/pdf1/file" => BinaryResponse([16, 17, 18], "application/pdf"),
                 "/api/media/audio1" => JsonResponse(MediaJson("audio1", "audio/aac", isPrivate: false)),
