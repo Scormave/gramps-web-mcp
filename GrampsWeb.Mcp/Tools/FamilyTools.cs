@@ -151,26 +151,30 @@ public static class FamilyTools
         string? motherHandle = null,
         [Description("Relationship type string. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? relationshipType = null,
-        [Description("Replace all children. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleChildRefList.DescriptionHint)]
+        [Description("Linked all children. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleChildRefList.DescriptionHint)]
         FlexibleChildRefList? childRefs = null,
-        [Description("Replace family–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleEventRefList.DescriptionHint)]
+        [Description("Linked family–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Replace media links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked media links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace citation links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked citation links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace note links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked note links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tag links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tag links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             if (relationshipType != null)
             {
                 var typeError = await TypeCache.ValidateTypeAsync(relationshipType, "family_relation_types", client);
@@ -197,19 +201,17 @@ public static class FamilyTools
                 Change = family.Change,
                 FatherHandle = resolvedFatherHandle ?? family.FatherHandle,
                 MotherHandle = resolvedMotherHandle ?? family.MotherHandle,
-                ChildRefList = childRefs != null ? (GrampsChildRef[]?)childRefs : family.ChildRefList,
-                EventRefList = eventRefs != null
-                    ? (EventRefRequest[]?)eventRefs
-                    : GrampsRequestMapping.ToEventRefRequests(family.EventRefList),
-                MediaList = mediaHandles != null
-                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, family.MediaList)
-                    : GrampsRequestMapping.ToMediaRefRequests(family.MediaList),
+                ChildRefList = LinkUpdates.Apply(family.ChildRefList, (GrampsChildRef[]?)childRefs, linkMode, x => x.Ref),
+                EventRefList = LinkUpdates.Apply(GrampsRequestMapping.ToEventRefRequests(family.EventRefList),
+                    (EventRefRequest[]?)eventRefs, linkMode, x => x.Ref),
+                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(family.MediaList),
+                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, family.MediaList) ?? []), linkMode, x => x.Ref),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(family.AttributeList),
-                CitationList = (string[]?)citationHandles ?? family.CitationList,
-                NoteList = (string[]?)noteHandles ?? family.NoteList,
-                TagList = (string[]?)tagHandles ?? family.TagList,
+                CitationList = LinkUpdates.Apply(family.CitationList, (string[]?)citationHandles, linkMode, x => x),
+                NoteList = LinkUpdates.Apply(family.NoteList, (string[]?)noteHandles, linkMode, x => x),
+                TagList = LinkUpdates.Apply(family.TagList, (string[]?)tagHandles, linkMode, x => x),
                 Private = isPrivate ?? family.Private,
                 Relationship = relationshipType ?? family.Relationship
             };

@@ -68,7 +68,7 @@ Full-control tools:
 - update_* tools for changing existing objects.
 - delete_object only after explicit confirmation; set objectType to the record type.
 
-Important update rule: in update_* tools, omitting a list parameter leaves that list unchanged. Passing an empty list [] clears existing links of that type. Never pass [] unless the user specifically asked to remove those links.
+Important update rule: in `update_*` tools, omitting a list parameter leaves that list unchanged. For link lists, `linkMode: "replace"` (default) replaces the complete list, `"add"` appends missing handles and preserves existing link metadata, and `"remove"` unlinks the supplied handles. Passing `[]` clears links only in replace mode; in add/remove mode it does nothing. Never clear a list unless the user asked to remove those links. Non-link lists such as names and attributes always use replacement.
 
 ## Ownership Model — Links Are One-Way
 
@@ -76,17 +76,17 @@ Gramps uses a one-way ownership model. Each link is stored on exactly one side �
 
 | Goal | Owner to update | Field |
 |------|----------------|-------|
-| Link a person to an event | Person | event_refs |
-| Remove a person from an event | Person | event_refs (omit that ref) |
-| Add a child to a family | Family | child_ref_list |
-| Add a citation to a person | Person | citation_handles |
-| Add a citation to an event | Event | citation_handles |
-| Add media to a person | Person | media_handles |
-| Link a source to a repository | Source | repository_handles |
+| Link a person to an event | Person | `update_person(eventRefs: [...], linkMode: "add")` |
+| Remove a person from an event | Person | `update_person(eventRefs: [...], linkMode: "remove")` |
+| Add a child to a family | Family | `update_family(childRefs: [...], linkMode: "add")` |
+| Add a citation to a person | Person | `update_person(citationHandles: [...], linkMode: "add")` |
+| Add a citation to an event | Event | `update_event(citationHandles: [...], linkMode: "add")` |
+| Add media to a person | Person | `update_person(mediaHandles: [...], linkMode: "add")` |
+| Link a source to a repository | Source | `update_source(repositoryHandles: [...], linkMode: "add")` |
 
 **Rule:** "Linked people", "Referenced by …", and any backlink section shown in a tool response are **read-only**. They tell you which other objects point to this one. You **cannot** change those links by updating the object you are currently viewing — you must update the object that owns the link.
 
-Example: to attach an event to a person, call update_person with the event handle in event_refs. Do NOT attempt to modify the event to add the person — events do not hold person references.
+Example: to attach an event to a person, call `update_person` with the event handle in `eventRefs` and `linkMode: "add"`. Events do not hold person references; the person owns this link. `linkMode: "replace"` is the default and replaces the complete supplied link list. To remove one reference, pass its handle with `linkMode: "remove"`.
 
 Be especially careful with deletion. If a delete tool reports backlinks or references, explain the risk and do not force deletion unless the user gives a separate explicit confirmation.
 

@@ -196,22 +196,26 @@ public static class EventTools
         string? placeHandle = null,
         [Description("Description text. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? description = null,
-        [Description("Replace citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
         [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             if (eventType != null)
             {
                 var typeError = await TypeCache.ValidateTypeAsync(eventType, "event_types", client);
@@ -241,15 +245,14 @@ public static class EventTools
                 Date = dateRequest,
                 Place = resolvedPlaceHandle ?? evt.Place,
                 Description = description ?? evt.Description,
-                MediaList = mediaHandles != null
-                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, evt.MediaList)
-                    : GrampsRequestMapping.ToMediaRefRequests(evt.MediaList),
+                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(evt.MediaList),
+                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, evt.MediaList) ?? []), linkMode, x => x.Ref),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),
-                CitationList = (string[]?)citationHandles ?? evt.CitationList,
-                NoteList = (string[]?)noteHandles ?? evt.NoteList,
-                TagList = (string[]?)tagHandles ?? evt.TagList,
+                CitationList = LinkUpdates.Apply(evt.CitationList, (string[]?)citationHandles, linkMode, x => x),
+                NoteList = LinkUpdates.Apply(evt.NoteList, (string[]?)noteHandles, linkMode, x => x),
+                TagList = LinkUpdates.Apply(evt.TagList, (string[]?)tagHandles, linkMode, x => x),
                 Private = isPrivate ?? evt.Private
             };
 

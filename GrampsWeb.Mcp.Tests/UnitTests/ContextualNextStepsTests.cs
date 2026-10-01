@@ -53,7 +53,7 @@ public class ContextualNextStepsTests
         var text = string.Join('\n', hints);
         Assert.Equal(!children, text.Contains("childRefs:"));
         Assert.Equal(!events, text.Contains("eventRefs:"));
-        Assert.Equal(!children || !events, text.Contains("update replaces the entire list"));
+        Assert.Equal(!children || !events, text.Contains("Use linkMode: \"add\""));
         if (children && events)
             Assert.DoesNotContain("Next steps:", ResponseEnvelope.CreateSuccess("Family", "family", null, null, hints));
     }
@@ -73,7 +73,7 @@ public class ContextualNextStepsTests
     {
         var text = string.Join('\n', ResponseEnvelope.EventCreateNextSteps("event"));
         Assert.Contains("ref: \"event\"", text);
-        Assert.Contains("preserve existing eventRefs", text);
+        Assert.Contains("Existing event references and roles are preserved", text);
         Assert.DoesNotContain("add_event_to_person", text);
     }
 

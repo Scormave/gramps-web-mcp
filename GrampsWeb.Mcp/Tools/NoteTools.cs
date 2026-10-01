@@ -105,14 +105,18 @@ public static class NoteTools
         string? noteType = null,
         [Description("Plain or Html. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? format = null,
-        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             if (noteType != null)
             {
                 var typeError = await TypeCache.ValidateTypeAsync(noteType, "note_types", client);
@@ -138,7 +142,7 @@ public static class NoteTools
                 },
                 Type = noteType ?? note.Type,
                 Format = NoteTextFormatParser.ParseOptional(format) ?? note.Format,
-                TagList = (string[]?)tagHandles ?? note.TagList,
+                TagList = LinkUpdates.Apply(note.TagList, (string[]?)tagHandles, linkMode, x => x),
                 Private = isPrivate ?? note.Private
             };
 

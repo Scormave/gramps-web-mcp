@@ -97,7 +97,7 @@ public sealed class GrampsPrompts
         sb.AppendLine("   search for them first. If not found, ask whether to create them.");
         sb.AppendLine("2. Create the family with create_family, passing the person handles.");
         sb.AppendLine("3. If a marriage date is provided, create a Marriage event with create_event,");
-        sb.AppendLine("   then link it to the family using update_family with eventRefs.");
+        sb.AppendLine("   then link it to the family using update_family with eventRefs and linkMode: \"add\".");
         sb.AppendLine("4. Show the created family details with get_object(objectType: \"family\", ...).");
         return new ChatMessage(ChatRole.User, sb.ToString());
     }

@@ -132,28 +132,32 @@ public static class PlaceTools
         string? lat = null,
         [Description("Longitude string. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? lon = null,
-        [Description("Replace parent place chain. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceRefList.DescriptionHint)]
+        [Description("Linked parent place chain. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceRefList.DescriptionHint)]
         FlexiblePlaceRefList? enclosedBy = null,
         [Description("Language code for primary name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? nameLang = null,
         [Description("Replace alternate place names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceNameList.DescriptionHint)]
         FlexiblePlaceNameList? alternateNames = null,
-        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Place code. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? code = null,
-        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             if (placeType != null)
             {
                 var typeError = await TypeCache.ValidateTypeAsync(placeType, "place_types", client);
@@ -181,13 +185,13 @@ public static class PlaceTools
                 Code = code ?? place.Code,
                 Latitude = lat ?? place.Latitude,
                 Longitude = lon ?? place.Longitude,
-                MediaList = mediaHandles != null
-                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, place.MediaList)
-                    : GrampsRequestMapping.ToMediaRefRequests(place.MediaList),
-                NoteList = (string[]?)noteHandles ?? place.NoteList,
-                CitationList = (string[]?)citationHandles ?? place.CitationList,
-                TagList = (string[]?)tagHandles ?? place.TagList,
-                PlaceRefList = placeRefList,
+                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(place.MediaList),
+                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, place.MediaList) ?? []), linkMode, x => x.Ref),
+                NoteList = LinkUpdates.Apply(place.NoteList, (string[]?)noteHandles, linkMode, x => x),
+                CitationList = LinkUpdates.Apply(place.CitationList, (string[]?)citationHandles, linkMode, x => x),
+                TagList = LinkUpdates.Apply(place.TagList, (string[]?)tagHandles, linkMode, x => x),
+                PlaceRefList = LinkUpdates.Apply(GrampsRequestMapping.ToPlaceRefRequests(place.PlaceRefList),
+                    enclosedBy is null ? null : (placeRefList ?? []), linkMode, x => x.Ref),
                 AltNames = alternateNames != null
                     ? (PlaceNameRequest[]?)alternateNames
                     : GrampsRequestMapping.ToPlaceNameRequests(place.AlternateNames),

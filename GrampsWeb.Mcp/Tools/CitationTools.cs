@@ -121,22 +121,26 @@ public static class CitationTools
         string? confidence = null,
         [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Transcript or citation text. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? text = null,
-        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
             var resolvedSourceHandle = sourceHandle is null
                 ? null
@@ -166,14 +170,13 @@ public static class CitationTools
                 Confidence = finalConfidence,
                 Date = dateRequest,
                 Text = text ?? citation.Text,
-                MediaList = mediaHandles != null
-                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, citation.MediaList)
-                    : GrampsRequestMapping.ToMediaRefRequests(citation.MediaList),
+                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(citation.MediaList),
+                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, citation.MediaList) ?? []), linkMode, x => x.Ref),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
-                NoteList = (string[]?)noteHandles ?? citation.NoteList,
-                TagList = (string[]?)tagHandles ?? citation.TagList,
+                NoteList = LinkUpdates.Apply(citation.NoteList, (string[]?)noteHandles, linkMode, x => x),
+                TagList = LinkUpdates.Apply(citation.TagList, (string[]?)tagHandles, linkMode, x => x),
                 Private = isPrivate ?? citation.Private
             };
 

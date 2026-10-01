@@ -32,6 +32,31 @@ in-process only; it does not coordinate with the Gramps Web UI or other
 API clients. SQLite lock and upstream 429 failures return a retryable MCP
 error instead of a generic 500.
 
+## Incremental link updates
+
+The nine `update_*` tools with link lists accept `linkMode`: `replace` (default),
+`add`, or `remove`. It applies to every supplied link list in that call:
+notes, citations, tags, media, events, children, families, parent families,
+person associations, repository references and enclosing places where supported.
+Names, attributes, addresses and URLs still use replacement semantics.
+
+```text
+update_person(handle: "PERSON_HANDLE", noteHandles: ["NOTE_HANDLE"], linkMode: "add")
+update_family(handle: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "remove")
+```
+
+Use actual handles in link lists. `add` appends missing handles in input order
+and leaves existing links and their metadata unchanged. `remove` removes all
+references matching a supplied handle, regardless of role or other metadata;
+missing handles are harmless. Omitted lists stay unchanged; `[]` clears only
+in `replace` mode. To change existing link metadata, use `replace`. Adding and
+removing in the same workflow requires separate calls or one full replacement.
+
+When the mutation gate is enabled, updates and `add_event_to_person` serialize
+their entire read/modify/write sequence against each other. HTTP write throttling
+still applies. This is not a transaction or a lock against external API clients,
+other server processes, creates, or deletes.
+
 ## Resources
 
 Read-only reference/discovery data exposed as MCP resources:
@@ -166,8 +191,10 @@ Create a new person.  Returns handle and Gramps ID.
 | `isPrivate` | `bool` | no | `false` | Mark record private |
 
 ### U — `UpdatePerson`
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
 Update an existing person.  Only include arguments to change.
-Empty list `[]` clears links; omit to keep unchanged.
+Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -193,6 +220,8 @@ Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guid
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateFamily`
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
 Update an existing family.  Same field set as create (all optional).
 
 ---
@@ -214,6 +243,8 @@ Link to persons/families via their create/update tools' `eventRefs`.
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateEvent`
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
 Update an existing event (same field set, all optional).
 
 ---
@@ -237,7 +268,9 @@ Create a place.  **Prerequisites:** `gramps://types`.
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdatePlace`
-Update a place. Same fields as create (all optional). `enclosedBy` and `alternateNames` follow omit-to-keep / empty-to-clear list semantics. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates.
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
+Update a place. Same fields as create (all optional). `enclosedBy` is a link list and follows `linkMode`; `alternateNames` always uses replacement. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates.
 
 ---
 
@@ -257,6 +290,8 @@ Create a source.  Create sources **before** citations.
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateSource`
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
 Update a source (same field set, all optional).
 
 ---
@@ -281,6 +316,8 @@ Attach to persons/events/places via their `citationHandles`.
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateCitation`
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
 Update a citation (same field set, all optional).
 
 ---
@@ -300,6 +337,8 @@ Link via `noteHandles` on other objects.
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateNote`
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
 Update a note (same field set, all optional).
 
 ---
@@ -329,6 +368,8 @@ Migration: replace `get_media_thumbnail(handle, size)` with
 The old tool names are no longer registered. Media resource URIs are unchanged.
 
 ### U — `UpdateMedia`
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
 Update media metadata (no binary upload).
 
 | Parameter | Type | Required | Default | Description |
@@ -357,6 +398,8 @@ Create a repository.  **Prerequisites:** `gramps://types`.
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateRepository`
+`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+
 Update a repository (same field set, all optional).
 
 ---

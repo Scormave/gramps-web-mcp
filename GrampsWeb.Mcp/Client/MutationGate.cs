@@ -17,6 +17,22 @@ public sealed class MutationGate
         acquireTimeout: DefaultAcquireTimeout);
 
     private readonly SemaphoreSlim _mutex = new(1, 1);
+    private readonly SemaphoreSlim _updateMutex = new(1, 1);
+
+    // Separate from the HTTP gate: updates still acquire that gate for each write.
+    public async Task<IDisposable> BeginUpdateAsync()
+    {
+        if (!_enabled) return new UpdateLease(null);
+        if (!await _updateMutex.WaitAsync(_acquireTimeout).ConfigureAwait(false))
+            throw new InvalidOperationException(GrampsRetryableWriteErrors.GateTimeout());
+        return new UpdateLease(_updateMutex);
+    }
+
+    private sealed class UpdateLease(SemaphoreSlim? mutex) : IDisposable
+    {
+        private SemaphoreSlim? _mutex = mutex;
+        public void Dispose() => Interlocked.Exchange(ref _mutex, null)?.Release();
+    }
     private readonly bool _enabled;
     private readonly TimeSpan _minInterval;
     private readonly TimeSpan _acquireTimeout;

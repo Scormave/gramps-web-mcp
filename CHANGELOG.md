@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Add `linkMode` (`replace`, `add`, `remove`) to the nine update tools with
+  link lists, preserving existing metadata when adding references; update tool
+  descriptions, MCP guidance, README, and catalog examples
 - Support `GRAMPS_REFRESH_TOKEN` authentication without a username or password,
   including instances with local password authentication disabled
 
@@ -54,6 +57,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Preserve explicit empty arrays in PUT bodies so removing the last link sends
+  an empty list to Gramps Web
+- Serialize update read/modify/write sequences and `add_event_to_person` within
+  the process when the mutation gate is enabled, retaining per-write throttling
 - Calculate paginated-list page totals and row numbers from the requested page
   size, including a partial final page
 - Update create-response guidance to use current `eventRefs` and `childRefs`

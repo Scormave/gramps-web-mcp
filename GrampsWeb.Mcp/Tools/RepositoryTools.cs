@@ -110,16 +110,20 @@ public static class RepositoryTools
         string? address = null,
         [Description("Website URL (replaces url list when set). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? url = null,
-        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             if (repoType != null)
             {
                 var typeError = await TypeCache.ValidateTypeAsync(repoType, "repository_types", client);
@@ -143,8 +147,8 @@ public static class RepositoryTools
                 EmailList = repo.EmailList,
                 AddressList = address != null ? RepositoryAddressListFromStreet(address) : repo.AddressList,
                 UrlList = url != null ? RepositoryUrlListFromPath(url) : repo.UrlList,
-                NoteList = (string[]?)noteHandles ?? repo.NoteList,
-                TagList = (string[]?)tagHandles ?? repo.TagList,
+                NoteList = LinkUpdates.Apply(repo.NoteList, (string[]?)noteHandles, linkMode, x => x),
+                TagList = LinkUpdates.Apply(repo.TagList, (string[]?)tagHandles, linkMode, x => x),
                 Private = isPrivate ?? repo.Private
             };
 

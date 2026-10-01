@@ -54,6 +54,8 @@ public class GrampsApiClient
     /// </summary>
     public string CacheScopeKey => HandleCache.BuildScopeKey(_config.ApiUrl, _config.TreeId);
 
+    public Task<IDisposable> BeginUpdateAsync() => _mutationGate.BeginUpdateAsync();
+
     /// <summary>
     /// Gets a new JWT access token via POST /api/token/{username}/{password}.
     /// </summary>
@@ -235,7 +237,7 @@ public class GrampsApiClient
         EnsureWritable();
         await EnsureAuthenticatedAsync();
 
-        var json = JsonSerializer.Serialize(body, GrampsJson.Options);
+        var json = JsonSerializer.Serialize(body, GrampsJson.UpdateOptions);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var request = new HttpRequestMessage(HttpMethod.Put, path) { Content = content };

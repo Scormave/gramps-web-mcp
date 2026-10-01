@@ -181,6 +181,7 @@ public static class CompositeTools
         var createdObjects = new List<string>();
         try
         {
+            using var updateLease = await client.BeginUpdateAsync();
             if (string.IsNullOrWhiteSpace(eventType))
                 throw McpToolErrors.ValidationError("Error: eventType is required. See gramps://types for valid values.");
 

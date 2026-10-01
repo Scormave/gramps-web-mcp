@@ -112,7 +112,10 @@ Read-only mode can also be enabled with a server CLI argument.
 - `GRAMPS_READ_ONLY`: set to `true` to publish only read-only MCP tools and
   block create/update/delete mutation calls, including direct calls to a
   previously known write-tool name.
-- `GRAMPS_MUTATION_SERIALIZE`: serializes mutation HTTP calls in-process. Set
+- `GRAMPS_MUTATION_SERIALIZE`: serializes mutation HTTP calls in-process, plus
+  read/modify/write sequences of update tools and `add_event_to_person` against
+  each other using a separate lock. It does not coordinate with external clients.
+  Set
   `false` to allow parallel writes.
 - `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum milliseconds between mutation HTTP
   calls, including steps inside composite tools.

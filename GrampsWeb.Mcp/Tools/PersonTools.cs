@@ -233,7 +233,7 @@ public static class PersonTools
     [Description(
         "Update an existing person (write). Only include arguments you want to change. " +
         ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        "Replacing eventRefs replaces the full event list. " +
+        "With linkMode=replace, eventRefs replaces the full event list. " +
         ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
     public static async Task<string> UpdatePerson(
         [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -244,19 +244,19 @@ public static class PersonTools
         string? gender = null,
         [Description("Replace all alternate names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Replace all person–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleEventRefList.DescriptionHint)]
+        [Description("Linked all person–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Replace families where this person is parent/spouse. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked families where this person is parent/spouse. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
-        [Description("Replace parent (child-of) families. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked parent (child-of) families. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? parentFamilyHandles = null,
-        [Description("Replace media links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked media links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace citation links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked citation links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace note links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked note links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tag links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tag links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
@@ -264,14 +264,18 @@ public static class PersonTools
         FlexibleAddressList? addresses = null,
         [Description("Replace URLs. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleUrlList.DescriptionHint)]
         FlexibleUrlList? urls = null,
-        [Description("Replace person associations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePersonRefList.DescriptionHint)]
+        [Description("Linked person associations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePersonRefList.DescriptionHint)]
         FlexiblePersonRefList? personAssociations = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             // Get current person first
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
             var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
@@ -295,24 +299,21 @@ public static class PersonTools
                 AlternateNames = alternateNames != null
                     ? ((GrampsName[]?)alternateNames)!.Select(ConvertNameToRequest).ToArray()
                     : person.AlternateNames?.Select(ConvertNameToRequest).ToArray(),
-                EventRefList = eventRefs != null
-                    ? (EventRefRequest[]?)eventRefs
-                    : GrampsRequestMapping.ToEventRefRequests(person.EventRefList),
-                FamilyList = (string[]?)familyHandles ?? person.FamilyList,
-                ParentFamilyList = (string[]?)parentFamilyHandles
-                    ?? GrampsRequestMapping.ToParentFamilyHandles(person.ParentFamilyList),
-                MediaList = mediaHandles != null
-                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, person.MediaList)
-                    : GrampsRequestMapping.ToMediaRefRequests(person.MediaList),
+                EventRefList = LinkUpdates.Apply(GrampsRequestMapping.ToEventRefRequests(person.EventRefList),
+                    (EventRefRequest[]?)eventRefs, linkMode, x => x.Ref),
+                FamilyList = LinkUpdates.Apply(person.FamilyList, (string[]?)familyHandles, linkMode, x => x),
+                ParentFamilyList = LinkUpdates.Apply(GrampsRequestMapping.ToParentFamilyHandles(person.ParentFamilyList), (string[]?)parentFamilyHandles, linkMode, x => x),
+                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(person.MediaList),
+                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, person.MediaList) ?? []), linkMode, x => x.Ref),
                 AddressList = addresses is null ? person.AddressList : (GrampsAddress[]?)addresses,
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(person.AttributeList),
-                CitationList = (string[]?)citationHandles ?? person.CitationList,
-                NoteList = (string[]?)noteHandles ?? person.NoteList,
-                TagList = (string[]?)tagHandles ?? person.TagList,
+                CitationList = LinkUpdates.Apply(person.CitationList, (string[]?)citationHandles, linkMode, x => x),
+                NoteList = LinkUpdates.Apply(person.NoteList, (string[]?)noteHandles, linkMode, x => x),
+                TagList = LinkUpdates.Apply(person.TagList, (string[]?)tagHandles, linkMode, x => x),
                 UrlList = urls is null ? person.UrlList : (GrampsUrl[]?)urls,
-                PersonRefList = personAssociations is null ? person.PersonRefList : (GrampsPersonRef[]?)personAssociations,
+                PersonRefList = LinkUpdates.Apply(person.PersonRefList, (GrampsPersonRef[]?)personAssociations, linkMode, x => x.Ref),
                 Private = isPrivate ?? person.Private
             };
 

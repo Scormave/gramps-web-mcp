@@ -12,11 +12,12 @@ public static class GrampsJson
 {
     /// <summary>Serializer settings aligned with <see cref="Client.GrampsApiClient"/>.</summary>
     internal static readonly JsonSerializerOptions Options = CreateOptions();
+    internal static readonly JsonSerializerOptions UpdateOptions = CreateOptions(includeEmptyLists: true);
 
-    internal static JsonSerializerOptions CreateOptions()
+    internal static JsonSerializerOptions CreateOptions(bool includeEmptyLists = false)
     {
         var resolver = new DefaultJsonTypeInfoResolver();
-        resolver.Modifiers.Add(static typeInfo =>
+        resolver.Modifiers.Add(typeInfo =>
         {
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
             {
@@ -35,7 +36,7 @@ public static class GrampsJson
                     continue;
                 }
 
-                property.ShouldSerialize = static (_, value) =>
+                property.ShouldSerialize = (_, value) =>
                 {
                     if (value is null)
                     {
@@ -44,8 +45,8 @@ public static class GrampsJson
 
                     return value switch
                     {
-                        Array array => array.Length > 0,
-                        System.Collections.ICollection collection => collection.Count > 0,
+                        Array array => includeEmptyLists || array.Length > 0,
+                        System.Collections.ICollection collection => includeEmptyLists || collection.Count > 0,
                         _ => true
                     };
                 };

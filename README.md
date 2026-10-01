@@ -261,7 +261,8 @@ the user or rotating the Gramps Web secret key invalidates it.
 - `GRAMPS_READ_ONLY`: set to `true` to publish only read tools and block direct
   create, update, and delete calls.
 - `GRAMPS_MUTATION_SERIALIZE`: runs create/update/delete HTTP calls one at a
-  time in this process.
+  time in this process. It also protects the complete read/modify/write sequence
+  of update tools and `add_event_to_person` against other such calls in this process.
 - `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum pause between mutation HTTP calls,
   including steps inside composite tools.
 
@@ -280,6 +281,18 @@ Runtime notes:
   MCP error with a short backoff hint instead of a generic 500.
 - Set `GRAMPS_MUTATION_SERIALIZE=false` when Gramps Web uses PostgreSQL and you
   want parallel writes.
+
+### Updating linked records
+
+The nine `update_*` tools that accept link lists have a `linkMode` argument:
+`replace` (default), `add`, or `remove`. For example,
+`update_person(handle: "PERSON_HANDLE", noteHandles: ["NOTE_HANDLE"], linkMode: "add")`
+adds a note without copying the person's existing note list. `remove` takes the
+handles to unlink. An omitted list remains unchanged; `[]` clears a list only in
+`replace` mode. The mode applies to every supplied link list in the call.
+Existing link metadata is preserved by `add`; use `replace` to change that
+metadata. See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md#incremental-link-updates)
+for supported lists and concurrency limits.
 
 ### Media file access
 

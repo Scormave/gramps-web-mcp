@@ -117,20 +117,24 @@ public static class SourceTools
         string? abbrev = null,
         [Description("Repository refs. Omit to keep. Non-empty replaces the list; empty array does not clear (omit to keep). " + FlexibleRepositoryRefList.DescriptionHint)]
         FlexibleRepositoryRefList? repositoryHandles = null,
-        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
             var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>(
                 $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}");
@@ -149,17 +153,15 @@ public static class SourceTools
                 Author = author ?? source.Author,
                 PubInfo = pubinfo ?? source.PubInfo,
                 Abbrev = abbrev ?? source.Abbrev,
-                MediaList = mediaHandles != null
-                    ? GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, source.MediaList)
-                    : GrampsRequestMapping.ToMediaRefRequests(source.MediaList),
-                RepositoryRefList = repositoryHandles != null
-                    ? GrampsRequestMapping.ToRepositoryRefRequests(repoHandlesUpdate, source.RepositoryRefList)
-                    : GrampsRequestMapping.ToRepositoryRefRequests(source.RepositoryRefList),
+                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(source.MediaList),
+                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, source.MediaList) ?? []), linkMode, x => x.Ref),
+                RepositoryRefList = LinkUpdates.Apply(GrampsRequestMapping.ToRepositoryRefRequests(source.RepositoryRefList),
+                    repositoryHandles is null ? null : (GrampsRequestMapping.ToRepositoryRefRequests(repoHandlesUpdate, source.RepositoryRefList) ?? []), linkMode, x => x.Ref),
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
-                NoteList = (string[]?)noteHandles ?? source.NoteList,
-                TagList = (string[]?)tagHandles ?? source.TagList,
+                NoteList = LinkUpdates.Apply(source.NoteList, (string[]?)noteHandles, linkMode, x => x),
+                TagList = LinkUpdates.Apply(source.TagList, (string[]?)tagHandles, linkMode, x => x),
                 Private = isPrivate ?? source.Private
             };
 

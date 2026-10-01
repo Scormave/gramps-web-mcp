@@ -13,12 +13,12 @@ public static class ToolDescriptionFragments
 
     /// <summary>Tool-level warning for update tools that replace linked-object lists.</summary>
     public const string UpdateEmptyListRemovesLinks =
-        "WARNING: On update, passing an empty list [] for a replaceable list REMOVES all links of that kind (e.g. empty tagHandles removes every tag). " +
+        "Link lists support linkMode: replace (default), add, remove. WARNING: In replace mode, an empty list [] REMOVES all links of that kind (e.g. empty tagHandles removes every tag). " +
         "To leave a list unchanged, omit that parameter entirely—do not pass [] to mean 'no change'.";
 
     /// <summary>Short clause for optional update list parameters.</summary>
     public const string OmitToKeepEmptyClears =
-        "Omit the parameter to leave unchanged; pass [] only to clear the list.";
+        "Omit to leave unchanged. For link lists, linkMode controls replace/add/remove; [] clears in replace mode and does nothing in add/remove. Other lists always use replacement.";
 
     /// <summary>For optional scalar/string fields on update.</summary>
     public const string OmitToKeepScalar =

@@ -101,20 +101,24 @@ public static class MediaTools
         string? description = null,
         [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
-        [Description("Replace notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Replace tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Linked citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
         [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
         [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        [Description(LinkUpdates.Description)]
+        string linkMode = "replace")
     {
         try
         {
+            LinkUpdates.Validate(linkMode);
+            using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(
                 $"/api/media/{Uri.EscapeDataString(resolvedHandle)}");
@@ -138,9 +142,9 @@ public static class MediaTools
                 AttributeList = attributes != null
                     ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
                     : GrampsRequestMapping.ToAttributeRequests(media.AttributeList),
-                CitationList = (string[]?)citationHandles ?? media.CitationList,
-                NoteList = (string[]?)noteHandles ?? media.NoteList,
-                TagList = (string[]?)tagHandles ?? media.TagList,
+                CitationList = LinkUpdates.Apply(media.CitationList, (string[]?)citationHandles, linkMode, x => x),
+                NoteList = LinkUpdates.Apply(media.NoteList, (string[]?)noteHandles, linkMode, x => x),
+                TagList = LinkUpdates.Apply(media.TagList, (string[]?)tagHandles, linkMode, x => x),
                 Private = isPrivate ?? media.Private
             };
 

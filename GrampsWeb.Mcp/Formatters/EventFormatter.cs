@@ -52,7 +52,7 @@ public static class EventFormatter
         if (linkedPeople is { Count: > 0 })
         {
             sb.AppendLine();
-            sb.AppendLine($"Linked people ({linkedPeople.Count}) [READ-ONLY backlinks — to add/remove this person-event link, update the person's event_refs, not the event]:");
+            sb.AppendLine($"Linked people ({linkedPeople.Count}) [READ-ONLY backlinks — to add/remove this person-event link, use update_person(eventRefs: [...], linkMode: \"add\"/\"remove\")]:");
             foreach (var p in linkedPeople)
             {
                 if (!string.IsNullOrWhiteSpace(p.DisplayName))
