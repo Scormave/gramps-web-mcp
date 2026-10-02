@@ -21,6 +21,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   as the child of a `Birth [Father]` row or the couple of a `Marriage
   [Witness]` row, on a `Participants:` line in `get_timeline` for people and
   in extended `get_object` for people; the rows did not say whose event it was
+- Stop offering a thumbnail resource on media cards that cannot have one, such
+  as PDFs, and say that `read_media` needs mode `file` for them instead; the
+  thumbnail was always rejected
+- Leave out empty dates on media and citation cards instead of printing
+  `Date:  Unknown date` and `Access Date: Unknown date`
 
 ## [2.1.0] - 2026-10-02
 

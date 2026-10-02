@@ -1,5 +1,6 @@
 using System.Text;
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
@@ -51,8 +52,8 @@ public static class CitationFormatter
         var confidenceLabel = ConfidenceLabels[Math.Clamp(citation.Confidence, 0, 4)];
         sb.AppendLine($"Confidence: {confidenceLabel} ({citation.Confidence})");
 
-        if (citation.Date != null)
-            sb.AppendLine($"Access Date: {GrampsValueFormatter.FormatDate(citation.Date)}");
+        if (!GrampsDateHelpers.IsEmpty(citation.Date))
+            sb.AppendLine($"Access Date: {GrampsValueFormatter.FormatDate(citation.Date!)}");
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", citation.NoteList);
         HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(citation.MediaList));

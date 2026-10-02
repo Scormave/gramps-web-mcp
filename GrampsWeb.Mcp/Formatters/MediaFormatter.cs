@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Resources;
 using GrampsWeb.Mcp.Models;
 
@@ -48,8 +49,8 @@ public static class MediaFormatter
             sb.AppendLine($"MIME: {media.Mime}");
         if (!string.IsNullOrEmpty(media.Checksum))
             sb.AppendLine($"Checksum: {media.Checksum}");
-        if (media.Date != null)
-            sb.AppendLine($"Date:  {GrampsValueFormatter.FormatDate(media.Date)}");
+        if (!GrampsDateHelpers.IsEmpty(media.Date))
+            sb.AppendLine($"Date: {GrampsValueFormatter.FormatDate(media.Date!)}");
         if (!string.IsNullOrEmpty(media.Description))
             sb.AppendLine($"\nDescription:\n{media.Description}");
 
@@ -59,8 +60,16 @@ public static class MediaFormatter
             sb.AppendLine();
             sb.AppendLine("Binary access (requires GRAMPS_MEDIA_RESOURCES_ENABLED=true):");
             sb.AppendLine($"  file resource: gramps://media/{escapedHandle}/file");
-            sb.AppendLine($"  thumbnail resource: gramps://media/{escapedHandle}/thumbnail/{MediaPreviewRenderer.DefaultSize}");
-            sb.AppendLine($"  read_media defaults to mode thumbnail (JPEG/PNG preview, {MediaPreviewRenderer.DefaultSize} px long edge); mode file returns image, audio, or embedded-resource content depending on MIME type");
+            // Thumbnails are rendered only from images; an unknown MIME type is left to the file content.
+            if (string.IsNullOrWhiteSpace(media.Mime) || MediaPreviewRenderer.CanRenderMime(media.Mime.Trim()))
+            {
+                sb.AppendLine($"  thumbnail resource: gramps://media/{escapedHandle}/thumbnail/{MediaPreviewRenderer.DefaultSize}");
+                sb.AppendLine($"  read_media defaults to mode thumbnail (JPEG/PNG preview, {MediaPreviewRenderer.DefaultSize} px long edge); mode file returns image, audio, or embedded-resource content depending on MIME type");
+            }
+            else
+            {
+                sb.AppendLine($"  read_media needs mode file: thumbnails are rendered only from images, and this record is {media.Mime.Trim()}");
+            }
         }
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList);
