@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-02
+
 ### Fixed
 
 - Show Gramps IDs in `search` results, as the tool description says; Gramps
@@ -454,7 +456,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.8...v2.0.0
