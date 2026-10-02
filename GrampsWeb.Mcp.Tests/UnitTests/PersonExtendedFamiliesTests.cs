@@ -101,7 +101,7 @@ public class PersonExtendedFamiliesTests
                 Spouse: —
                 Children: none
 
-            """, result);
+            """.Replace("\r\n", "\n"), result);
     }
 
     [Fact]
@@ -116,14 +116,14 @@ public class PersonExtendedFamiliesTests
               • F0001 [handle: parents-h]
                 Father: [handle: father-h]
                 Mother: —
-            """, result);
+            """.Replace("\r\n", "\n"), result);
         Assert.Contains("""
               • [Married] F0002 [handle: marr-h]
                 Spouse: [handle: husband-h]
                 Children (2):
                   • [handle: son-h]
                   • [handle: daughter-h]
-            """, result);
+            """.Replace("\r\n", "\n"), result);
         Assert.DoesNotContain("Marriage:", result);
     }
 
