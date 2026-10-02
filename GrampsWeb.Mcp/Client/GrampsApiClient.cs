@@ -120,15 +120,10 @@ public class GrampsApiClient
 
     private async Task<string> GetJsonBodyAsync(string path)
     {
-        await EnsureAuthenticatedAsync();
-
-        var url = path;
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        AddAuthorizationHeader(request);
-
         try
         {
-            using var response = await SendWithLoggingAsync(request);
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Get, path), request => SendWithLoggingAsync(request));
             var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -149,14 +144,10 @@ public class GrampsApiClient
     /// </summary>
     public async Task<GrampsPagedResult<T>> GetPagedListAsync<T>(string path) where T : class
     {
-        await EnsureAuthenticatedAsync();
-
-        var request = new HttpRequestMessage(HttpMethod.Get, path);
-        AddAuthorizationHeader(request);
-
         try
         {
-            var response = await SendWithLoggingAsync(request);
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Get, path), request => SendWithLoggingAsync(request));
             var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -192,14 +183,10 @@ public class GrampsApiClient
         if (maxBytes <= 0)
             throw new ArgumentOutOfRangeException(nameof(maxBytes), "Maximum byte count must be positive.");
 
-        await EnsureAuthenticatedAsync();
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, path);
-        AddAuthorizationHeader(request);
-
         try
         {
-            using var response = await SendBinaryWithLoggingAsync(request);
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Get, path), SendBinaryWithLoggingAsync);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -231,17 +218,13 @@ public class GrampsApiClient
         string path, object body, string grampsClass)
     {
         EnsureWritable();
-        await EnsureAuthenticatedAsync();
-
         var json = JsonSerializer.Serialize(body, GrampsJson.Options);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = content };
-        AddAuthorizationHeader(request);
 
         try
         {
-            var response = await SendMutationAsync(request);
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Post, path) { Content = JsonContent(json) },
+                SendMutationAsync);
             var responseBody = await response.Content.ReadAsStringAsync();
             ThrowIfMutationFailed(response, responseBody);
 
@@ -260,17 +243,13 @@ public class GrampsApiClient
     public async Task PutMutationAsync(string path, object body)
     {
         EnsureWritable();
-        await EnsureAuthenticatedAsync();
-
         var json = JsonSerializer.Serialize(body, GrampsJson.UpdateOptions);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var request = new HttpRequestMessage(HttpMethod.Put, path) { Content = content };
-        AddAuthorizationHeader(request);
 
         try
         {
-            var response = await SendMutationAsync(request);
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Put, path) { Content = JsonContent(json) },
+                SendMutationAsync);
             var responseBody = await response.Content.ReadAsStringAsync();
             ThrowIfMutationFailed(response, responseBody);
         }
@@ -287,15 +266,11 @@ public class GrampsApiClient
     public async Task DeleteAsync(string path)
     {
         EnsureWritable();
-        await EnsureAuthenticatedAsync();
-
-        var url = path;
-        var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        AddAuthorizationHeader(request);
 
         try
         {
-            var response = await SendMutationAsync(request);
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Delete, path), SendMutationAsync);
             var body = await response.Content.ReadAsStringAsync();
             ThrowIfMutationFailed(response, body);
         }
@@ -306,17 +281,36 @@ public class GrampsApiClient
     }
 
     /// <summary>
-    /// Adds the JWT Authorization header to the request.
+    /// Sends a request built by <paramref name="createRequest"/> with the cached access token. When the
+    /// API rejects the token, e.g. after the server's SECRET_KEY changed, replaces it and sends a new
+    /// request once; see <see cref="GrampsAuthTokenProvider.IsRejectedAccessTokenAsync"/>.
     /// </summary>
-    private void AddAuthorizationHeader(HttpRequestMessage request)
+    private async Task<HttpResponseMessage> SendAuthorizedAsync(
+        Func<HttpRequestMessage> createRequest,
+        Func<HttpRequestMessage, Task<HttpResponseMessage>> send)
     {
-        if (string.IsNullOrEmpty(_accessToken))
-        {
-            throw new InvalidOperationException("Not authenticated; call EnsureAuthenticatedAsync() first");
-        }
+        await EnsureAuthenticatedAsync();
+        var token = _accessToken!;
+        var response = await send(WithBearer(createRequest(), token));
+        if (!await GrampsAuthTokenProvider.IsRejectedAccessTokenAsync(response))
+            return response;
 
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
+        _logger.LogWarning(
+            "Gramps API rejected the access token with {StatusCode}; re-authenticating and retrying once",
+            (int)response.StatusCode);
+        response.Dispose();
+        token = await _tokenProvider.ReplaceRejectedAccessTokenAsync(token);
+        _accessToken = token;
+        return await send(WithBearer(createRequest(), token));
     }
+
+    private static HttpRequestMessage WithBearer(HttpRequestMessage request, string accessToken)
+    {
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+        return request;
+    }
+
+    private static StringContent JsonContent(string json) => new(json, Encoding.UTF8, "application/json");
 
     private void EnsureWritable()
     {

@@ -83,30 +83,49 @@ public class GrampsHealthServiceTests
         Assert.Equal(1, handler.CredentialPosts);
     }
 
-    [Fact]
-    public async Task CheckAsync_Logs_In_Again_When_The_Cached_Token_Is_Rejected()
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, """{"msg":"Token has expired"}""")]
+    [InlineData(HttpStatusCode.UnprocessableEntity, """{"msg":"Signature verification failed"}""")]
+    public async Task CheckAsync_Replaces_The_Cached_Token_When_It_Is_Rejected(HttpStatusCode status, string body)
     {
-        var handler = new RecordingHandler(rejectedTokens: ["token-1"]);
+        var handler = new RecordingHandler(rejectedTokens: ["token-1"], rejection: (status, body));
         var service = CreateService(handler);
 
-        var status = await service.CheckAsync();
+        var result = await service.CheckAsync();
 
-        Assert.True(status.IsHealthy);
-        Assert.Equal(2, handler.CredentialPosts);
+        Assert.True(result.IsHealthy);
+        Assert.Equal("Bearer refresh", handler.RefreshAuthorization);
+        Assert.Equal(1, handler.CredentialPosts);
         Assert.Equal(2, handler.MetadataReads);
     }
 
     [Fact]
-    public async Task CheckAsync_ReturnsUnhealthy_When_A_Fresh_Token_Is_Rejected_Too()
+    public async Task CheckAsync_ReturnsUnhealthy_When_The_Replaced_Token_Is_Rejected_Too()
     {
-        var handler = new RecordingHandler(rejectedTokens: ["token-1", "token-2"]);
+        var handler = new RecordingHandler(rejectedTokens: ["token-1", "token"]);
         var service = CreateService(handler);
 
         var status = await service.CheckAsync();
 
         Assert.False(status.IsHealthy);
-        Assert.Contains("Failed to read metadata: Unauthorized", status.Error);
-        Assert.Equal(2, handler.CredentialPosts);
+        Assert.Contains("Failed to read metadata: the access token was rejected", status.Error);
+        Assert.Equal(2, handler.MetadataReads);
+    }
+
+    [Fact]
+    public async Task CheckAsync_Does_Not_Replace_The_Token_On_Another_Error()
+    {
+        var handler = new RecordingHandler(
+            rejectedTokens: ["token-1"],
+            rejection: (HttpStatusCode.UnprocessableEntity, """{"error":{"code":422,"message":"Unprocessable"}}"""));
+        var service = CreateService(handler);
+
+        var status = await service.CheckAsync();
+
+        Assert.False(status.IsHealthy);
+        Assert.Contains("Failed to read metadata: UnprocessableEntity", status.Error);
+        Assert.Null(handler.RefreshAuthorization);
+        Assert.Equal(1, handler.MetadataReads);
     }
 
     private static GrampsConfig CreateConfig(string? refreshToken = null) => new(
@@ -138,8 +157,14 @@ public class GrampsHealthServiceTests
             NullLogger<GrampsHealthService>.Instance);
     }
 
-    /// <summary>Issues "token-1", "token-2", … per login; metadata answers 401 to <paramref name="rejectedTokens"/>.</summary>
-    private sealed class RecordingHandler(bool failToken = false, string[]? rejectedTokens = null) : HttpMessageHandler
+    /// <summary>
+    /// Issues "token-1", "token-2", … per login and "token" per refresh; metadata answers
+    /// <paramref name="rejection"/>, by default an expired-token 401, to <paramref name="rejectedTokens"/>.
+    /// </summary>
+    private sealed class RecordingHandler(
+        bool failToken = false,
+        string[]? rejectedTokens = null,
+        (HttpStatusCode Status, string Body)? rejection = null) : HttpMessageHandler
     {
         public int CredentialPosts { get; private set; }
 
@@ -186,7 +211,13 @@ public class GrampsHealthServiceTests
             {
                 MetadataReads++;
                 if (rejectedTokens?.Contains(request.Headers.Authorization?.Parameter) == true)
-                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+                {
+                    var (status, body) = rejection ?? (HttpStatusCode.Unauthorized, """{"msg":"Token has expired"}""");
+                    return Task.FromResult(new HttpResponseMessage(status)
+                    {
+                        Content = new StringContent(body, Encoding.UTF8, "application/json")
+                    });
+                }
 
                 return Task.FromResult(JsonResponse("""
                     {

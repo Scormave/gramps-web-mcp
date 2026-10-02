@@ -91,6 +91,52 @@ public sealed class GrampsAuthTokenProvider
         }
     }
 
+    /// <summary>
+    /// Replaces an access token the API rejected, e.g. after the server's SECRET_KEY changed: refreshes
+    /// it, or logs in again when the refresh token is rejected too. When another request has already
+    /// replaced <paramref name="rejectedToken"/>, returns the current token, so requests rejected
+    /// together re-authenticate once.
+    /// </summary>
+    public async Task<string> ReplaceRejectedAccessTokenAsync(string rejectedToken)
+    {
+        await _tokenLock.WaitAsync();
+        try
+        {
+            if (!string.IsNullOrEmpty(_accessToken) && _accessToken != rejectedToken)
+                return _accessToken;
+
+            await EnsureFreshTokenAsync();
+            return _accessToken!;
+        }
+        finally
+        {
+            _tokenLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Whether flask-jwt-extended rejected the request's access token: HTTP 401 for an expired or
+    /// missing token, 422 for one it cannot verify, both with a <c>{"msg": …}</c> body. It checks the
+    /// token before the endpoint runs, so a rejected write has not happened. Gramps Web's own errors,
+    /// including argument validation failures with HTTP 422, are <c>{"error": {…}}</c>.
+    /// </summary>
+    public static async Task<bool> IsRejectedAccessTokenAsync(HttpResponseMessage response)
+    {
+        if (response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.UnprocessableEntity))
+            return false;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            return doc.RootElement.ValueKind == JsonValueKind.Object
+                   && GetString(doc.RootElement, "msg") is not null;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
     private bool HasUsableAccessToken()
     {
         return !string.IsNullOrEmpty(_accessToken)

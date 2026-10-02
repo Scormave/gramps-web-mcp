@@ -246,7 +246,12 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 ### 2. Client (`Client/`)
 
 `GrampsApiClient` is the HTTP client with:
-- JWT authentication (automatic token acquisition and refresh)
+- JWT authentication (automatic token acquisition and refresh). When Gramps
+  Web rejects the access token (HTTP 401, or 422 after its `SECRET_KEY`
+  changed, both with a flask-jwt-extended `{"msg": …}` body), the client
+  replaces it through `GrampsAuthTokenProvider` and sends the request once
+  more. Gramps Web checks the token before the endpoint runs, so writes are
+  retried too; Gramps Web's own HTTP 422 validation errors are not
 - typed GET plus mutation POST/PUT/DELETE with `System.Text.Json`
 - mutation response parsing (`PostMutationAsync` / `PutMutationAsync`)
   that handles Gramps' change-array responses

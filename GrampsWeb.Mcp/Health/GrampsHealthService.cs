@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
@@ -67,23 +66,28 @@ public sealed class GrampsHealthService
 
     private async Task<JsonElement> GetMetadataAsync(CancellationToken cancellationToken)
     {
-        var body = await ReadMetadataAsync(await _tokenProvider.GetAccessTokenAsync(), cancellationToken);
-        // The server rejected the cached token, e.g. after its SECRET_KEY changed: log in again once.
-        body ??= await ReadMetadataAsync(await _tokenProvider.GetTokenAsync(), cancellationToken)
-                 ?? throw new InvalidOperationException($"Failed to read metadata: {HttpStatusCode.Unauthorized}");
+        var accessToken = await _tokenProvider.GetAccessTokenAsync();
+        var body = await ReadMetadataAsync(accessToken, cancellationToken);
+        // The server rejected the cached token, e.g. after its SECRET_KEY changed: replace it once.
+        body ??= await ReadMetadataAsync(
+                     await _tokenProvider.ReplaceRejectedAccessTokenAsync(accessToken), cancellationToken)
+                 ?? throw new InvalidOperationException("Failed to read metadata: the access token was rejected");
 
         using var doc = JsonDocument.Parse(body);
         return doc.RootElement.Clone();
     }
 
-    /// <summary>The metadata body, or null when the server answers HTTP 401 to the token.</summary>
+    /// <summary>
+    /// The metadata body, or null when the server rejects the token; see
+    /// <see cref="GrampsAuthTokenProvider.IsRejectedAccessTokenAsync"/>.
+    /// </summary>
     private async Task<string?> ReadMetadataAsync(string accessToken, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/metadata/");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        if (await GrampsAuthTokenProvider.IsRejectedAccessTokenAsync(response))
             return null;
         if (!response.IsSuccessStatusCode)
             throw new InvalidOperationException($"Failed to read metadata: {response.StatusCode}");

@@ -116,6 +116,62 @@ public class GrampsAuthTokenProviderTests
         Assert.DoesNotContain(handler.Requests, r => r.Path == "/api/token/");
     }
 
+    [Fact]
+    public async Task ReplaceRejectedAccessTokenAsync_Refreshes_The_Rejected_Token()
+    {
+        var handler = new AuthHandler();
+        var provider = CreateProvider(handler);
+
+        var rejected = await provider.GetAccessTokenAsync();
+        var token = await provider.ReplaceRejectedAccessTokenAsync(rejected);
+
+        Assert.Equal("refreshed-access", token);
+        Assert.Equal(["/api/token/", "/api/token/refresh/"], handler.Requests.Select(r => r.Path));
+    }
+
+    [Fact]
+    public async Task ReplaceRejectedAccessTokenAsync_Logs_In_When_The_Refresh_Token_Is_Rejected_Too()
+    {
+        var handler = new AuthHandler { RefreshStatusCode = HttpStatusCode.UnprocessableEntity };
+        var provider = CreateProvider(handler);
+
+        var rejected = await provider.GetAccessTokenAsync();
+        var token = await provider.ReplaceRejectedAccessTokenAsync(rejected);
+
+        Assert.Equal("new-access", token);
+        Assert.Equal(["/api/token/", "/api/token/refresh/", "/api/token/"], handler.Requests.Select(r => r.Path));
+    }
+
+    [Fact]
+    public async Task ReplaceRejectedAccessTokenAsync_Returns_The_Current_Token_When_Already_Replaced()
+    {
+        var handler = new AuthHandler();
+        var provider = CreateProvider(handler);
+
+        var current = await provider.GetAccessTokenAsync();
+        var token = await provider.ReplaceRejectedAccessTokenAsync("token-replaced-earlier");
+
+        Assert.Equal(current, token);
+        Assert.Single(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, """{"msg":"Token has expired"}""", true)]
+    [InlineData(HttpStatusCode.UnprocessableEntity, """{"msg":"Signature verification failed"}""", true)]
+    [InlineData(HttpStatusCode.UnprocessableEntity, """{"error":{"code":422,"message":"Unprocessable Content"}}""", false)]
+    [InlineData(HttpStatusCode.Unauthorized, "Unauthorized", false)]
+    [InlineData(HttpStatusCode.Forbidden, """{"msg":"Forbidden"}""", false)]
+    public async Task IsRejectedAccessTokenAsync_Recognizes_Jwt_Errors_Only(
+        HttpStatusCode statusCode, string body, bool expected)
+    {
+        using var response = new HttpResponseMessage(statusCode)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+
+        Assert.Equal(expected, await GrampsAuthTokenProvider.IsRejectedAccessTokenAsync(response));
+    }
+
     private static GrampsAuthTokenProvider CreateProvider(AuthHandler handler, string? refreshToken = null)
     {
         var config = new GrampsConfig(

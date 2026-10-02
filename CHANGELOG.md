@@ -131,13 +131,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   check and `GET /health` take their token from the token cache the tools use.
   The first tool call no longer logs in again and hits the rate limit on
   `/api/token/` (HTTP 429), and health probes no longer log in each time. A
-  check that gets HTTP 401 for a cached token logs in again once
+  check whose cached token is rejected replaces it once, as tool calls do
 - Accept a custom type added in Gramps after the server read the types: write
   tools read custom types again before rejecting a type, instead of rejecting
   it for up to 10 minutes
 - Name a missing required argument, or an argument whose value has the wrong
   type, and list the tool's parameters, instead of the bare "An error occurred
   invoking" error
+- Replace an access token that Gramps Web rejects and retry the request once.
+  After Gramps Web restarted with a new `SECRET_KEY`, every tool call failed
+  with HTTP 422 "Signature verification failed" until the cached token expired
+  up to 15 minutes later. The server now refreshes the token, or logs in again
+  when the refresh token is rejected too. Requests rejected together replace
+  the token once, and Gramps Web validation errors with HTTP 422 are not
+  retried
 
 ## [2.0.1] - 2026-10-01
 
