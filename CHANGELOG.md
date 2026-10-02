@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Show links that an edit adds or removes as `Reference from [handle: …] to
   [handle: …]` in `get_recent_changes` instead of `Added 7 [handle: …]`;
   Gramps Web sends Gramps' reference key as the class name
+- Name the root person in the `get_person_tree` header (`Root: Petrov, Ivan,
+  b. 1880 [I0012] [handle: …]`) instead of only its handle, and stop
+  repeating each row's Gramps ID as `(gramps_id: …)` next to the handle
 
 ## [2.1.0] - 2026-10-02
 

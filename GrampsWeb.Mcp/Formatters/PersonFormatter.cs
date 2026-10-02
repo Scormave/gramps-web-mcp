@@ -306,27 +306,26 @@ public static class PersonFormatter
     }
 
     /// <summary>
-    /// Formats ancestor or descendant tool output with generation index and optional kinship labels.
+    /// Formats ancestor or descendant tool output with the root person, generation index and optional kinship labels.
     /// </summary>
     public static async Task<string> FormatPersonTreeRows(
         string title,
-        string rootHandle,
-        IReadOnlyList<PersonTreeRow> rows,
+        PersonTree tree,
         bool kinshipLabels,
         GrampsApiClient client)
     {
+        var rows = tree.Rows;
         var sb = new StringBuilder();
-        sb.AppendLine($"{title} [root: {rootHandle}]");
+        sb.AppendLine(title);
         sb.AppendLine(new string('=', 60));
-        sb.AppendLine($"Total: {rows.Count}");
+        sb.AppendLine($"Root: {await FormatTreePersonAsync(tree.Root, client)} [handle: {tree.Root.Handle}]");
+        sb.AppendLine($"Total: {rows.Length}");
         sb.AppendLine();
 
-        for (var i = 0; i < rows.Count; i++)
+        for (var i = 0; i < rows.Length; i++)
         {
             var row = rows[i];
-            var summary = row.Person.Profile is { } profile
-                ? FormatProfileSummary(profile, row.Person.GrampsId)
-                : await FormatPersonSummary(row.Person, client);
+            var summary = await FormatTreePersonAsync(row.Person, client);
             var genPart = $"Gen {row.Generation}";
 
             string headLine;
@@ -345,11 +344,17 @@ public static class PersonFormatter
 
             sb.AppendLine($"  {i + 1}. {headLine}");
             sb.AppendLine($"     {summary}");
-            sb.AppendLine($"     [handle: {row.Person.Handle}] (gramps_id: {row.Person.GrampsId})");
+            sb.AppendLine($"     [handle: {row.Person.Handle}]");
         }
 
         return sb.ToString();
     }
+
+    /// <summary>"Ivanov, Pyotr, b. 1950 in Tver [I0002]" from the profile, or from the person's events without one.</summary>
+    private static async Task<string> FormatTreePersonAsync(GrampsPerson person, GrampsApiClient client) =>
+        person.Profile is { } profile
+            ? FormatProfileSummary(profile, person.GrampsId)
+            : await FormatPersonSummary(person, client);
 
     private readonly record struct BirthDeathHeaderParts(string? DatePlaceSummary, string? EventHandle);
 

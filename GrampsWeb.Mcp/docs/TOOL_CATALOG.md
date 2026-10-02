@@ -202,8 +202,10 @@ List either ancestors or descendants up to N generations with names, vital
 dates/places, and optional kinship labels. Ancestors follow parent-family links;
 descendants follow children on families where the person is a parent.
 
-Each row starts with `Gen N`, followed by the kinship label when enabled (such
-as `Gen 2 — Father's mother`), then the person summary and handle. Vitals read
+The header names the root person: `Root: Petrov, Ivan, b. 1880 in Dublin
+[I0012] [handle: …]`. Each row starts with `Gen N`, followed by the kinship
+label when enabled (such as `Gen 2 — Father's mother`), then the person summary
+ending in the Gramps ID and, on the next line, the handle. Vitals read
 `b. 1880 in Dublin` and `d. 1950`; when Gramps Web falls back to another event
 because birth or death is missing, the event type is named instead, such as
 `baptism 1880` or `burial 1950`.

@@ -9,3 +9,6 @@ public sealed record PersonTreeRow(
     GrampsPerson Person,
     int Generation,
     IReadOnlyList<bool>? AncestorPathFromRoot);
+
+/// <summary>The root person of a tree, read with its profile, and the ancestor or descendant rows.</summary>
+public sealed record PersonTree(GrampsPerson Root, PersonTreeRow[] Rows);

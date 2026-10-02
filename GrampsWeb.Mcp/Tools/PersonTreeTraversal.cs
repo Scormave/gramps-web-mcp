@@ -7,7 +7,7 @@ namespace GrampsWeb.Mcp.Tools;
 /// <summary>
 /// Client-side ancestor/descendant walks. Gramps Web API exposes people and families, not
 /// <c>/people/{{handle}}/ancestors</c> or <c>/descendants</c> routes. Each generation is loaded with one
-/// batch of families and one batch of people; people carry <c>profile=self</c> so rows need no event reads.
+/// batch of families and one batch of people; people, the root included, carry <c>profile=self</c> so rows need no event reads.
 /// </summary>
 internal static class PersonTreeTraversal
 {
@@ -16,12 +16,12 @@ internal static class PersonTreeTraversal
     // Backlinks find parent families missing from parent_family_list, for people whose parents are walked next.
     private const string RowQueryWithBacklinks = "profile=self&backlinks=true";
 
-    public static async Task<PersonTreeRow[]?> CollectAncestorsAsync(
+    public static async Task<PersonTree?> CollectAncestorsAsync(
         GrampsApiClient client,
         string rootHandle,
         int generations)
     {
-        var root = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{rootHandle}");
+        var root = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{rootHandle}?{RowQuery}");
         if (root is null)
             return null;
 
@@ -58,7 +58,7 @@ internal static class PersonTreeTraversal
             rows.AddRange(level.Select(x => new PersonTreeRow(x.Person, gen, x.Path)));
         }
 
-        return rows.ToArray();
+        return new PersonTree(root, rows.ToArray());
     }
 
     private static void AddParent(List<(string Handle, List<bool> Path)> parents, string? handle, List<bool> path, bool viaFather)
@@ -122,12 +122,12 @@ internal static class PersonTreeTraversal
         .Distinct(StringComparer.Ordinal)
         .ToArray();
 
-    public static async Task<PersonTreeRow[]?> CollectDescendantsAsync(
+    public static async Task<PersonTree?> CollectDescendantsAsync(
         GrampsApiClient client,
         string rootHandle,
         int generations)
     {
-        var root = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{rootHandle}");
+        var root = await client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{rootHandle}?{RowQuery}");
         if (root is null)
             return null;
 
@@ -153,6 +153,6 @@ internal static class PersonTreeTraversal
             rows.AddRange(level.Select(p => new PersonTreeRow(p, gen, null)));
         }
 
-        return rows.ToArray();
+        return new PersonTree(root, rows.ToArray());
     }
 }

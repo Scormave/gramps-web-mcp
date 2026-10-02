@@ -83,12 +83,12 @@ public static class PersonTools
                 throw McpToolErrors.ValidationError("Invalid direction. Must be either ancestors or descendants.");
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(person, client, "people");
-            var rows = normalizedDirection == "ancestors"
+            var tree = normalizedDirection == "ancestors"
                 ? await PersonTreeTraversal.CollectAncestorsAsync(client, resolvedHandle, generations)
                 : await PersonTreeTraversal.CollectDescendantsAsync(client, resolvedHandle, generations);
-            if (rows == null)
+            if (tree == null)
                 return NotFoundHelper.NotFoundMessage("Person", person);
-            if (rows.Length == 0)
+            if (tree.Rows.Length == 0)
             {
                 return normalizedDirection == "ancestors"
                     ? $"No ancestors found for {person}. Only people linked through a parent family (where this person is the child) appear. " +
@@ -97,7 +97,7 @@ public static class PersonTools
             }
 
             var title = normalizedDirection == "ancestors" ? "ANCESTOR TREE" : "DESCENDANT TREE";
-            return await PersonFormatter.FormatPersonTreeRows(title, resolvedHandle, rows, kinshipLabels, client);
+            return await PersonFormatter.FormatPersonTreeRows(title, tree, kinshipLabels, client);
         }
         catch (Exception ex)
         {

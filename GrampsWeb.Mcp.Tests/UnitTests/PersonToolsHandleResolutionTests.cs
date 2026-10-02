@@ -26,8 +26,8 @@ public class PersonToolsHandleResolutionTests
 
         Assert.Contains("No ancestors found for I0002", result);
         Assert.Equal(1, handler.RequestCount("/api/people/?gramps_id=I0002&pagesize=1"));
-        Assert.Equal(1, handler.RequestCount("/api/people/person-handle-2"));
-        Assert.Equal(0, handler.RequestCount("/api/people/I0002"));
+        Assert.Equal(1, handler.RequestCount("/api/people/person-handle-2?profile=self"));
+        Assert.Equal(0, handler.RequestCount("/api/people/I0002?profile=self"));
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class PersonToolsHandleResolutionTests
                     """));
             }
 
-            if (request.Method == HttpMethod.Get && path == "/api/people/person-handle-2")
+            if (request.Method == HttpMethod.Get && path == "/api/people/person-handle-2?profile=self")
             {
                 return Task.FromResult(JsonResponse("""
                     {

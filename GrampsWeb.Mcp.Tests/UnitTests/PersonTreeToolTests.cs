@@ -17,7 +17,10 @@ public class PersonTreeToolTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/people/me"] = """{ "handle": "me", "gramps_id": "I0001", "parent_family_list": [{ "ref": "fam-p" }] }""",
+            ["/api/people/me?profile=self"] = """
+                { "handle": "me", "gramps_id": "I0001", "parent_family_list": [{ "ref": "fam-p" }],
+                  "profile": { "name_display": "Ivanov, Sergei", "birth": { "type": "Birth", "date": "1980" }, "death": {} } }
+                """,
             ["/api/families/fam-p"] = """
                 { "handle": "fam-p", "father_handle": "dad", "mother_handle": "mom", "child_ref_list": [{ "ref": "me" }] }
                 """,
@@ -53,22 +56,23 @@ public class PersonTreeToolTests
 
         Assert.Equal(
             """
-            ANCESTOR TREE [root: me]
+            ANCESTOR TREE
             ============================================================
+            Root: Ivanov, Sergei, b. 1980 [I0001] [handle: me]
             Total: 4
 
               1. Gen 1 — Father
                  Ivanov, Pyotr, b. 1950 in Tver [I0002]
-                 [handle: dad] (gramps_id: I0002)
+                 [handle: dad]
               2. Gen 1 — Mother
                  Olga, baptism 1952 [I0003]
-                 [handle: mom] (gramps_id: I0003)
+                 [handle: mom]
               3. Gen 2 — Father's father
                  Ivanov, Ivan, d. 1990 [I0004]
-                 [handle: gf] (gramps_id: I0004)
+                 [handle: gf]
               4. Gen 2 — Mother's father
                  Unknown [I0005]
-                 [handle: mgf] (gramps_id: I0005)
+                 [handle: mgf]
 
             """.Replace("\r\n", "\n"),
             result);
@@ -80,7 +84,7 @@ public class PersonTreeToolTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/people/me"] = """{ "handle": "me", "gramps_id": "I0001" }""",
+            ["/api/people/me?profile=self"] = """{ "handle": "me", "gramps_id": "I0001" }""",
             ["/api/people/me?backlinks=true"] = """{ "handle": "me", "backlinks": { "family": ["fam-own", "fam-p"] } }""",
             // fam-own lists me as a parent, not as a child, so it is not a parent family.
             ["/api/families/?handles=fam-own,fam-p&page=1&pagesize=2"] = """
@@ -96,7 +100,7 @@ public class PersonTreeToolTests
 
         var result = await PersonTools.GetPersonTree("me", "ancestors", generations: 1, client: CreateClient(handler));
 
-        Assert.Contains("Total: 1\n", result.Replace("\r\n", "\n"));
+        Assert.Contains("Root: Unknown [I0001] [handle: me]\nTotal: 1\n", result.Replace("\r\n", "\n"));
         Assert.Contains("1. Gen 1 — Father", result);
         Assert.DoesNotContain("wife", result);
         Assert.Equal(4, handler.Requests.Count);
@@ -107,7 +111,10 @@ public class PersonTreeToolTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/people/me"] = """{ "handle": "me", "gramps_id": "I0001", "family_list": ["fam-a", "fam-b"] }""",
+            ["/api/people/me?profile=self"] = """
+                { "handle": "me", "gramps_id": "I0001", "family_list": ["fam-a", "fam-b"],
+                  "profile": { "name_display": "Ivanov, Sergei", "birth": {}, "death": {} } }
+                """,
             ["/api/families/?handles=fam-a,fam-b&page=1&pagesize=2"] = """
                 [
                   { "handle": "fam-a", "child_ref_list": [{ "ref": "kid1" }, { "ref": "kid2" }] },
@@ -131,14 +138,16 @@ public class PersonTreeToolTests
         var result = (await PersonTools.GetPersonTree("me", "descendants", generations: 2, client: CreateClient(handler)))
             .Replace("\r\n", "\n");
 
+        Assert.StartsWith("DESCENDANT TREE\n", result);
+        Assert.Contains("\nRoot: Ivanov, Sergei [I0001] [handle: me]\nTotal: 4\n", result);
         // Rows keep family and child order, not the order of the batch reply.
         Assert.Contains(
             "  1. Gen 1 — Son\n     A, b. 1980 [I0002]\n" +
-            "     [handle: kid1] (gramps_id: I0002)\n" +
+            "     [handle: kid1]\n" +
             "  2. Gen 1 — Daughter\n     B [I0003]\n" +
-            "     [handle: kid2] (gramps_id: I0003)\n" +
+            "     [handle: kid2]\n" +
             "  3. Gen 1 — Child\n     C [I0004]\n" +
-            "     [handle: kid3] (gramps_id: I0004)\n" +
+            "     [handle: kid3]\n" +
             "  4. Gen 2 — Granddaughter\n     D [I0005]\n",
             result);
         Assert.Equal(5, handler.Requests.Count);
