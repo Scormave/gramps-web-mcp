@@ -90,11 +90,24 @@ public static class TimelineFormatter
     private static bool IsShownRole(string? role) =>
         !string.IsNullOrWhiteSpace(role) && !role.Trim().Equals("Primary", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Age of the named person; for the timeline person's own events, their age.</summary>
+    /// <summary>
+    /// Age of the named person; for the timeline person's own events, their age. A zero age
+    /// ("0 days" on birth rows) is left out.
+    /// </summary>
     private static string FormatAge(GrampsTimelineEntry entry)
     {
         var age = !string.IsNullOrWhiteSpace(entry.Person?.NameDisplay) ? entry.Person.Age : entry.Age;
-        return string.IsNullOrWhiteSpace(age) ? "" : $", age {age.Trim()}";
+        return string.IsNullOrWhiteSpace(age) || IsZeroAge(age) ? "" : $", age {age.Trim()}";
+    }
+
+    /// <summary>
+    /// Gramps writes the age in the server's language, so a zero age is told by its digits
+    /// ("0 days", "0 дней") rather than by its words.
+    /// </summary>
+    private static bool IsZeroAge(string age)
+    {
+        var digits = age.Where(char.IsDigit).ToList();
+        return digits.Count > 0 && digits.All(c => char.GetNumericValue(c) == 0);
     }
 
     private static string FormatDateText(GrampsTimelineEntry entry) =>

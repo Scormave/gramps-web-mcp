@@ -39,7 +39,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   metadata, and GitHub Pages for the new media behavior
 - Name relatives in `get_timeline` rows with their Gramps ID and age, show the
   role when the person is not the primary participant, and list the people and
-  families of each event on place timelines with their roles
+  families of each event on place timelines with their roles. A zero age, such
+  as "0 days" on birth rows, is left out
 - Show a family's parents and children in `get_object` by name, Gramps ID,
   birth, and death, with the marriage, the divorce, and each event's type,
   date, and place, from one request instead of handles

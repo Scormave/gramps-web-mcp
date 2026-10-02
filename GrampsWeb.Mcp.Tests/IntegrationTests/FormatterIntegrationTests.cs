@@ -212,6 +212,31 @@ public class FormatterIntegrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void FormatTimelineChronological_LeavesOutZeroAge()
+    {
+        var entries = new[]
+        {
+            new GrampsTimelineEntry { Handle = "e1", Label = "Birth", Date = "1900-01-01", Age = "0 days" },
+            new GrampsTimelineEntry
+            {
+                Handle = "e2",
+                Label = "Birth (Son)",
+                Date = "1930-02-03",
+                Age = "30 years",
+                Person = new GrampsTimelinePersonProfile { GrampsId = "I0013", NameDisplay = "Petrov, Oleg", Age = "0 дней" }
+            },
+            new GrampsTimelineEntry { Handle = "e3", Label = "Baptism", Date = "1900-01-11", Age = "10 days" }
+        };
+
+        var result = TimelineFormatter.FormatTimelineChronological(entries);
+
+        Assert.Contains("  1900-01-01: Birth  [event: e1]", result);
+        Assert.Contains("  1930-02-03: Birth (Son): Petrov, Oleg (I0013)  [event: e2]", result);
+        Assert.Contains("  1900-01-11: Baptism, age 10 days  [event: e3]", result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void FormatTimelineChronological_ShowsParticipantsOfPlaceRows()
     {
         var entries = new[]
