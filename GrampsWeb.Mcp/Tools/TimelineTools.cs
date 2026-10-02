@@ -16,7 +16,9 @@ public static class TimelineTools
     [Description(
         "Read-only: chronological timeline for one person, family, or place. " +
         "objectType must be person, family, or place. Events can be filtered by category and date range. " +
-        "relatives and relativeEvents are supported only for person timelines. Place timelines are computed from direct event backlinks; child places are not included.")]
+        "relatives and relativeEvents are supported only for person timelines. Without dates, a person timeline lists relatives' events " +
+        "from their whole lives, also before the person's birth and after their death; pass dates to narrow it. " +
+        "Place timelines are computed from direct event backlinks; child places are not included.")]
     public static async Task<string> GetTimeline(
         [Description("Timeline owner type: person | family | place.")]
         string objectType,
@@ -63,7 +65,7 @@ public static class TimelineTools
         string? dates, GrampsApiClient client)
     {
         var handle = await HandleResolver.ResolveToHandleAsync(identifier, client, "people");
-        var query = BuildQueryString(events, relatives, relativeEvents, dates, includeUndated: true);
+        var query = BuildQueryString(events, relatives, relativeEvents, dates, includeUndated: true, personTimeline: true);
         var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
             $"/api/people/{Uri.EscapeDataString(handle)}/timeline{query}");
         if (timeline is null)
@@ -128,9 +130,14 @@ public static class TimelineTools
             outcome.Entries, $"Place: {GrampsValueFormatter.FormatPlace(place)}{id}");
     }
 
+    /// <param name="personTimeline">
+    /// Without <paramref name="dates"/>, keep relatives' events outside the person's first and last event.
+    /// Gramps Web otherwise drops them with Gramps' fuzzy date matching, where an "about 1876" birth spans
+    /// 1826 to 1926: every relative's event before 1926 was left out, the person's own marriage too.
+    /// </param>
     internal static string BuildQueryString(
         string[]? events, string[]? relatives, string[]? relativeEvents,
-        string? dates, bool includeUndated = true)
+        string? dates, bool includeUndated = true, bool personTimeline = false)
     {
         var queryParams = new List<string>();
         if (events?.Length > 0)
@@ -141,7 +148,15 @@ public static class TimelineTools
             queryParams.Add($"relative_event_classes={Uri.EscapeDataString(string.Join(",", relativeEvents))}");
         var normalizedDates = NormalizeDatesForGrampsApi(dates);
         if (!string.IsNullOrEmpty(normalizedDates))
+        {
             queryParams.Add($"dates={Uri.EscapeDataString(normalizedDates)}");
+        }
+        else if (personTimeline)
+        {
+            queryParams.Add("first=false");
+            queryParams.Add("last=false");
+        }
+
         if (includeUndated)
             queryParams.Add("discard_empty=false");
         return queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";

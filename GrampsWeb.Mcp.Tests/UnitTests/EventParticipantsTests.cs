@@ -28,7 +28,7 @@ public class EventParticipantsTests
     {
         var handler = new PathHandler(new Dictionary<string, string>
         {
-            ["/api/people/anchor/timeline?discard_empty=false"] = """
+            ["/api/people/anchor/timeline?first=false&last=false&discard_empty=false"] = """
                 [
                   { "handle": "own-birth", "type": "Birth", "date": "1820", "role": "Primary", "person": { "relationship": "self" } },
                   { "handle": "kid-birth", "type": "Birth", "date": "1856-08-01", "role": "Father", "age": "36 years",
@@ -76,7 +76,7 @@ public class EventParticipantsTests
             result);
         Assert.Equal(
             [
-                "/api/people/anchor/timeline?discard_empty=false",
+                "/api/people/anchor/timeline?first=false&last=false&discard_empty=false",
                 "/api/events/?handles=kid-birth,wedding,census&profile=participants&page=1&pagesize=3",
             ],
             handler.Requests);

@@ -205,6 +205,13 @@ event's participants with their roles; child places are not included.
 Without `dates`, undated events are included and listed after the dated ones.
 A place timeline with `dates` leaves out undated events.
 
+Without `dates`, a person timeline also keeps relatives' events from before
+the person's first event and after their last one (MCP sends `first=false` and
+`last=false`). Gramps Web would cut the timeline to the person's own events
+with Gramps' fuzzy date matching: an `about 1876` birth spans 1826 to 1926, so
+every relative's event before 1926 was dropped, the person's own marriage too.
+Pass `dates` to narrow the timeline to the years you need.
+
 ---
 
 ## Person (`PersonTools.cs`) — 4 tools

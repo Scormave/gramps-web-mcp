@@ -45,6 +45,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`1735/6`) instead of one year later; date parameters take the shown dates
   back, including three-digit years, and a date with a calendar suffix fails
   validation instead of being stored as Gregorian
+- Keep relatives' events in person timelines without `dates` when the person's
+  first event is imprecise: Gramps Web cut the timeline to the person's first
+  and last event with Gramps' fuzzy date matching, so an `about 1876` birth
+  (read as 1826 to 1926) dropped every relative's event before 1926, the
+  person's own marriage too. `get_timeline` now asks Gramps Web not to cut
+  person timelines unless `dates` are given, so relatives' events from before
+  the person's birth and after their death are listed as well
 
 ## [2.1.0] - 2026-10-02
 
