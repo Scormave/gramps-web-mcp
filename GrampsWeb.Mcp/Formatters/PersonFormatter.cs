@@ -351,25 +351,6 @@ public static class PersonFormatter
         return sb.ToString();
     }
 
-    public static async Task<string> FormatPersonList(
-        string title, string rootHandle, GrampsPerson[] people, GrampsApiClient client)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"{title} [root: {rootHandle}]");
-        sb.AppendLine(new string('=', 60));
-        sb.AppendLine($"Total: {people.Length}");
-        sb.AppendLine();
-
-        for (int i = 0; i < people.Length; i++)
-        {
-            var summary = await FormatPersonSummary(people[i], client);
-            sb.AppendLine($"  {i + 1}. {summary}");
-            sb.AppendLine($"     [handle: {people[i].Handle}] (gramps_id: {people[i].GrampsId})");
-        }
-
-        return sb.ToString();
-    }
-
     private readonly record struct BirthDeathHeaderParts(string? DatePlaceSummary, string? EventHandle);
 
     private static async Task AppendBirthDeathHeaderLinesAsync(
