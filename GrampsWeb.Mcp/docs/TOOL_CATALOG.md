@@ -166,8 +166,12 @@ descendants follow children on families where the person is a parent.
 | `kinshipLabels` | `bool` | no | `true` | Add kinship text such as Father's mother or Granddaughter |
 
 ### R — `GetRelations`
-Genealogical relationship between two people (e.g. "3rd cousin twice removed"),
-path distance, common-ancestor handles.
+How two people are related, read as "person 2 is the X of person 1" (e.g.
+"third cousin twice removed", "husband"). Shows both people by name, generations
+from each to the common ancestor, and every relationship Gramps finds, closest
+first, with its common ancestors by name (up to 10 named, the rest by handle).
+Searches blood relatives up to 15 generations, plus spouses; unrelated people
+get a clear message.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|

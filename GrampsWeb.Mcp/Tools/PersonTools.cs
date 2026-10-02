@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Text;
-using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
@@ -106,10 +105,15 @@ public static class PersonTools
         }
     }
 
+    /// <summary>Common ancestors fetched by name; any beyond are listed by handle.</summary>
+    internal const int MaxNamedCommonAncestors = 10;
+
     [McpServerTool(Title = "Get Relations", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: genealogical relationship between two people (e.g. '3rd cousin twice removed'), " +
-        "path distance, and common-ancestor handles, or a clear message if unrelated.")]
+        "Read-only: how two people are related, read as 'person 2 is the X of person 1' " +
+        "(e.g. 'third cousin twice removed', 'husband'), with generations to the common ancestor " +
+        "and every relationship found with its common ancestors by name; or a clear message if unrelated. " +
+        "Searches blood relatives up to 15 generations, plus spouses.")]
     public static async Task<string> GetRelations(
         [Description("First person handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle1,
@@ -121,26 +125,64 @@ public static class PersonTools
         {
             var resolvedHandle1 = await HandleResolver.ResolveToHandleAsync(handle1, client, "people");
             var resolvedHandle2 = await HandleResolver.ResolveToHandleAsync(handle2, client, "people");
-            var result = await client.GetJsonOrNullIfNotFoundAsync(
-                $"/api/relations/{Uri.EscapeDataString(resolvedHandle1)}/{Uri.EscapeDataString(resolvedHandle2)}");
-            if (result is null)
+            var escaped1 = Uri.EscapeDataString(resolvedHandle1);
+            var escaped2 = Uri.EscapeDataString(resolvedHandle2);
+
+            var person1Task = GetPersonProfileAsync(client, resolvedHandle1);
+            if (resolvedHandle1 == resolvedHandle2)
             {
-                if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
-                        $"/api/people/{Uri.EscapeDataString(resolvedHandle1)}") is null)
-                    return NotFoundHelper.NotFoundMessage("Person", handle1);
-                if (await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
-                        $"/api/people/{Uri.EscapeDataString(resolvedHandle2)}") is null)
-                    return NotFoundHelper.NotFoundMessage("Person", handle2);
-                return "Could not retrieve relationship data for these handles.";
+                var person = await person1Task;
+                return person is null
+                    ? NotFoundHelper.NotFoundMessage("Person", handle1)
+                    : $"{PersonFormatter.FormatRelationPerson(person.Profile, resolvedHandle1)}: both handles refer to the same person.";
             }
 
-            return PersonFormatter.FormatRelationships(resolvedHandle1, resolvedHandle2, result.Value);
+            // Independent requests run together; the relationship calculations are the slow part.
+            var person2Task = GetPersonProfileAsync(client, resolvedHandle2);
+            var relationTask = client.GetOrNullIfNotFoundAsync<GrampsRelationship>($"/api/relations/{escaped1}/{escaped2}");
+            var allTask = client.GetOrNullIfNotFoundAsync<GrampsRelationshipItem[]>($"/api/relations/{escaped1}/{escaped2}/all");
+            await Task.WhenAll(person1Task, person2Task, relationTask, allTask);
+
+            var person1 = await person1Task;
+            var person2 = await person2Task;
+            if (person1 is null)
+                return NotFoundHelper.NotFoundMessage("Person", handle1);
+            if (person2 is null)
+                return NotFoundHelper.NotFoundMessage("Person", handle2);
+            var relation = await relationTask;
+            if (relation is null)
+                return "Could not retrieve relationship data for these handles.";
+
+            var all = await allTask ?? [];
+            // A direct ancestor is its own common ancestor, so both people are already known.
+            var ancestors = new Dictionary<string, GrampsPersonProfile>();
+            if (person1.Profile is { } profile1)
+                ancestors[resolvedHandle1] = profile1;
+            if (person2.Profile is { } profile2)
+                ancestors[resolvedHandle2] = profile2;
+            var ancestorHandles = all.SelectMany(PersonFormatter.CommonAncestorHandles)
+                .Distinct()
+                .Where(h => h != resolvedHandle1 && h != resolvedHandle2)
+                .Take(MaxNamedCommonAncestors);
+            var ancestorPeople = await client.GetByHandlesAsync<GrampsPerson>(
+                "people", ancestorHandles, p => p.Handle, query: "profile=self");
+            foreach (var (handle, person) in ancestorPeople)
+            {
+                if (person.Profile is { } profile)
+                    ancestors[handle] = profile;
+            }
+
+            return PersonFormatter.FormatRelationships(
+                resolvedHandle1, person1.Profile, resolvedHandle2, person2.Profile, relation, all, ancestors);
         }
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
         }
     }
+
+    private static Task<GrampsPerson?> GetPersonProfileAsync(GrampsApiClient client, string handle) =>
+        client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{Uri.EscapeDataString(handle)}?profile=self");
 
     [McpServerTool(Title = "Create Person", ReadOnly = false, Destructive = false)]
     [Description(

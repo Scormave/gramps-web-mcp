@@ -135,4 +135,8 @@ public class GrampsPerson
 
     [JsonPropertyName("private")]
     public bool Private { get; set; }
+
+    /// <summary>Display name and life events; present when requested with <c>?profile=self</c>.</summary>
+    [JsonPropertyName("profile")]
+    public GrampsPersonProfile? Profile { get; set; }
 }

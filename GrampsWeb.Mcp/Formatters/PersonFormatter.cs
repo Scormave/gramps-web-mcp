@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Models;
 
@@ -629,13 +628,94 @@ public static class PersonFormatter
         sb.AppendLine($"{label}: {string.Join(", ", cleaned.Select(h => $"[handle: {h}]"))}");
     }
 
-    public static string FormatRelationships(string handle1, string handle2, JsonElement data)
+    /// <summary>Generations Gramps Web searches for a common ancestor (the API default for <c>depth</c>).</summary>
+    internal const int RelationSearchDepth = 15;
+
+    /// <summary>
+    /// Both people, the closest relationship as "person 2 is the X of person 1", generations to the
+    /// common ancestor, and the common ancestors of every relationship Gramps finds (closest first).
+    /// </summary>
+    /// <param name="ancestors">Common-ancestor profiles by handle; others are shown by handle.</param>
+    public static string FormatRelationships(
+        string handle1, GrampsPersonProfile? person1,
+        string handle2, GrampsPersonProfile? person2,
+        GrampsRelationship relation,
+        IReadOnlyList<GrampsRelationshipItem> all,
+        IReadOnlyDictionary<string, GrampsPersonProfile> ancestors)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"RELATIONSHIP: {handle1} ↔ {handle2}");
+        sb.AppendLine("RELATIONSHIP");
         sb.AppendLine(new string('=', 60));
-        sb.AppendLine(JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+        sb.AppendLine($"Person 1: {FormatRelationPerson(person1, handle1)}");
+        sb.AppendLine($"Person 2: {FormatRelationPerson(person2, handle2)}");
+        sb.AppendLine();
+
+        var items = all.Where(i => !string.IsNullOrWhiteSpace(i.RelationshipString)).ToArray();
+        var closest = relation.RelationshipString?.Trim();
+        if (string.IsNullOrEmpty(closest))
+            closest = items.FirstOrDefault()?.RelationshipString?.Trim();
+        if (string.IsNullOrEmpty(closest))
+        {
+            sb.AppendLine($"Not related: they are not spouses and share no ancestor within {RelationSearchDepth} generations.");
+            return sb.ToString();
+        }
+
+        sb.AppendLine($"{ShortRelationName(person2, handle2)} is the {closest} of {ShortRelationName(person1, handle1)}.");
+        if (relation.DistanceCommonOrigin is >= 0 and var fromFirst && relation.DistanceCommonOther is >= 0 and var fromSecond)
+            sb.AppendLine($"Generations to the common ancestor: {fromFirst} from person 1, {fromSecond} from person 2.");
+
+        if (items.Length == 1 && items[0].RelationshipString!.Trim() == closest)
+        {
+            AppendCommonAncestors(sb, items[0], ancestors, "");
+        }
+        else if (items.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"All relationships ({items.Length}), closest first:");
+            for (var i = 0; i < items.Length; i++)
+            {
+                sb.AppendLine($"  {i + 1}. {items[i].RelationshipString!.Trim()}");
+                AppendCommonAncestors(sb, items[i], ancestors, "     ");
+            }
+        }
+
         return sb.ToString();
+    }
+
+    /// <summary>Distinct non-empty common-ancestor handles in API order.</summary>
+    internal static IEnumerable<string> CommonAncestorHandles(GrampsRelationshipItem item) =>
+        (item.CommonAncestors ?? []).Where(h => !string.IsNullOrWhiteSpace(h)).Select(h => h.Trim()).Distinct();
+
+    private static void AppendCommonAncestors(
+        StringBuilder sb, GrampsRelationshipItem item, IReadOnlyDictionary<string, GrampsPersonProfile> ancestors, string indent)
+    {
+        var handles = CommonAncestorHandles(item).ToArray();
+        if (handles.Length == 0)
+            return;
+        if (indent.Length == 0)
+            sb.AppendLine();
+        sb.AppendLine($"{indent}Common ancestors:");
+        foreach (var handle in handles)
+            sb.AppendLine($"{indent}  - {FormatRelationPerson(ancestors.GetValueOrDefault(handle), handle)}");
+    }
+
+    /// <summary>Profile line when the person has a display name, otherwise the Gramps ID and handle.</summary>
+    internal static string FormatRelationPerson(GrampsPersonProfile? person, string handle)
+    {
+        if (!string.IsNullOrWhiteSpace(person?.NameDisplay))
+            return FormatProfilePerson(person, handle);
+        return string.IsNullOrWhiteSpace(person?.GrampsId)
+            ? $"[handle: {handle.Trim()}]"
+            : $"{person.GrampsId.Trim()} [handle: {handle.Trim()}]";
+    }
+
+    /// <summary>"Petrov, Ivan (I0001)" for the relationship sentence.</summary>
+    private static string ShortRelationName(GrampsPersonProfile? person, string handle)
+    {
+        var id = person?.GrampsId?.Trim();
+        if (!string.IsNullOrWhiteSpace(person?.NameDisplay))
+            return string.IsNullOrEmpty(id) ? person.NameDisplay.Trim() : $"{person.NameDisplay.Trim()} ({id})";
+        return string.IsNullOrEmpty(id) ? $"[handle: {handle.Trim()}]" : id;
     }
 
     /// <summary>"Petrov, Ivan (I0012) [handle: h], b. 1880 in Dublin, d. 1950".</summary>

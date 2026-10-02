@@ -50,11 +50,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Show `get_recent_changes` as one entry per transaction with its UTC time,
   description, user, undo flag, and each changed object's class, change kind,
   and handle, up to 10 objects per transaction, instead of raw JSON
-- Load place timeline events in batches of up to 50 objects with the list
-  endpoint's `handles` filter (Gramps Web API 3.14+), instead of one request
-  per object. Servers that reject or ignore the filter get one request per
-  object, up to 4 at a time, and the server answer is remembered per API URL
-  and tree
+- Show `get_relations` with both people by name, the closest relationship as a
+  sentence, generations to the common ancestor, and every relationship with
+  its common ancestors by name, instead of raw JSON; the two people load in
+  parallel and the common ancestors in one request
+- Load place timeline events and `get_relations` common ancestors in batches
+  of up to 50 objects with the list endpoint's `handles` filter (Gramps Web
+  API 3.14+), instead of one request per object. Servers that reject or ignore
+  the filter get one request per object, up to 4 at a time, and the server
+  answer is remembered per API URL and tree
 - Read a place once per place timeline instead of twice
 
 ### Removed

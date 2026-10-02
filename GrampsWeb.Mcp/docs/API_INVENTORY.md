@@ -39,7 +39,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/{type}/?handles=h1,h2&page=1&pagesize=N` | Array | `T[]` via `GrampsBatchFetch.GetByHandlesAsync` (API 3.14+; up to 50 handles per request; per-handle `GET /api/{type}/{h}` fallback) |
 | `GET /api/people/{h}/ancestors`, `/descendants` | Array | `GrampsPerson[]` |
 | `GET /api/people/{handle}/timeline` | Array | `GrampsTimelineEntry[]` (query: `events`, `relatives`, `relativeEvents`, `dates`) |
-| `GET /api/relations/{handle1}/{handle2}` | Object | `JsonElement` |
+| `GET /api/relations/{handle1}/{handle2}`, `.../all` | Object, array | `GrampsRelationship`, `GrampsRelationshipItem[]` (closest first); both people and the common ancestors are read with `profile=self` |
 | `GET /api/families/{handle}` | Family | `GrampsFamily` |
 | `GET /api/families/{handle}?profile=self,events` | Family | `GrampsFamily.Profile` (`GrampsFamilyProfile`): members and events by name for `get_object` |
 | `GET /api/families/{handle}?extend=all` | Family extended | `GrampsFamilyExtended` |

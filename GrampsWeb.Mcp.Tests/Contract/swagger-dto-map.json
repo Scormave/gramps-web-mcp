@@ -34,6 +34,8 @@
     { "typeName": "GrampsWeb.Mcp.Models.GrampsFamilyRef, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "ref", "relationship", "frel", "mrel" ] },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsSearchHit, GrampsWeb.Mcp", "swaggerDefinition": "SearchResult", "allowedExtraJsonNames": [ "rank", "gramps_id" ] },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsPagedResult`1, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "objects", "total", "page" ], "skipNested": true },
+    { "typeName": "GrampsWeb.Mcp.Models.GrampsRelationship, GrampsWeb.Mcp", "swaggerDefinition": "Relationship" },
+    { "typeName": "GrampsWeb.Mcp.Models.GrampsRelationshipItem, GrampsWeb.Mcp", "swaggerDefinition": "RelationshipItem" },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTransaction, GrampsWeb.Mcp", "swaggerDefinition": "UndoTransaction", "allowedExtraJsonNames": [ "description" ] },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTransactionChange, GrampsWeb.Mcp", "swaggerDefinition": "ObjectChange" },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTransactionConnection, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "id", "timestamp", "user" ] },
