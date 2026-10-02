@@ -80,6 +80,10 @@ public static class FamilyFormatter
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Family card. Names, life dates and event summaries come from <see cref="GrampsFamily.Profile"/>
+    /// (<c>?profile=self,events</c>) when present; otherwise linked objects are shown by handle.
+    /// </summary>
     public static async Task<string> FormatFamilyFullAsync(GrampsFamily family, GrampsApiClient client)
     {
         var relLabel = string.IsNullOrWhiteSpace(family.Relationship)
@@ -89,9 +93,14 @@ public static class FamilyFormatter
         sb.AppendLine($"FAMILY [handle: {family.Handle}] (gramps_id: {family.GrampsId})");
         sb.AppendLine(new string('=', 60));
 
-        sb.AppendLine($"Father: {family.FatherHandle ?? "—"}");
-        sb.AppendLine($"Mother: {family.MotherHandle ?? "—"}");
+        var profile = family.Profile;
+        AppendParentLine(sb, "Father", family.FatherHandle, profile?.Father);
+        AppendParentLine(sb, "Mother", family.MotherHandle, profile?.Mother);
         sb.AppendLine($"Relationship: {relLabel}");
+        if (PersonFormatter.FormatProfileEvent(profile?.Marriage) is { } marriage)
+            sb.AppendLine($"Marriage: {marriage}");
+        if (PersonFormatter.FormatProfileEvent(profile?.Divorce) is { } divorce)
+            sb.AppendLine($"Divorce: {divorce}");
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
 
@@ -99,11 +108,15 @@ public static class FamilyFormatter
         {
             sb.AppendLine();
             sb.AppendLine($"Children ({family.ChildRefList.Length}):");
-            foreach (var child in family.ChildRefList)
+            for (var i = 0; i < family.ChildRefList.Length; i++)
             {
+                var child = family.ChildRefList[i];
                 var frel = child.FatherRelType ?? "Birth";
                 var mrel = child.MotherRelType ?? "Birth";
-                var line = $"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}";
+                var who = FindProfile(profile?.Children, i, child.Ref) is { } childProfile
+                    ? PersonFormatter.FormatProfilePerson(childProfile, child.Ref!)
+                    : $"[handle: {child.Ref}]";
+                var line = $"  • {who} | frel: {frel}, mrel: {mrel}";
                 if (child.Private)
                     line += " ⚠ private (child link)";
                 if (child.TagList is { Length: > 0 } ctags)
@@ -125,9 +138,15 @@ public static class FamilyFormatter
         {
             sb.AppendLine();
             sb.AppendLine($"Events ({family.EventRefList.Length}):");
-            foreach (var er in family.EventRefList)
+            // Profile events line up with event_ref_list (missing events are sent as empty objects).
+            var eventProfiles = profile?.Events?.Length == family.EventRefList.Length ? profile.Events : null;
+            for (var i = 0; i < family.EventRefList.Length; i++)
             {
-                var line = $"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}";
+                var er = family.EventRefList[i];
+                var summary = PersonFormatter.FormatProfileEvent(eventProfiles?[i], withType: true);
+                var line = summary != null
+                    ? $"  • {summary} [handle: {er.Ref}] role: {er.Role ?? "Primary"}"
+                    : $"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}";
                 if (er.NoteList is { Length: > 0 })
                     line += $" | note refs: {er.NoteList.Length}";
                 if (er.AttributeList is { Length: > 0 })
@@ -147,6 +166,27 @@ public static class FamilyFormatter
             sb.AppendLine("⚠ Private record");
 
         return sb.ToString();
+    }
+
+    private static void AppendParentLine(StringBuilder sb, string label, string? handle, GrampsPersonProfile? profile)
+    {
+        if (string.IsNullOrWhiteSpace(handle))
+            return;
+        var who = !string.IsNullOrWhiteSpace(profile?.NameDisplay)
+            ? PersonFormatter.FormatProfilePerson(profile, handle)
+            : $"[handle: {handle.Trim()}]";
+        sb.AppendLine($"{label}: {who}");
+    }
+
+    /// <summary>Profile children line up with child_ref_list; the handle confirms the match.</summary>
+    private static GrampsPersonProfile? FindProfile(GrampsPersonProfile[]? profiles, int index, string? handle)
+    {
+        if (profiles == null || string.IsNullOrWhiteSpace(handle))
+            return null;
+        var match = index < profiles.Length && profiles[index].Handle == handle
+            ? profiles[index]
+            : profiles.FirstOrDefault(p => p.Handle == handle);
+        return string.IsNullOrWhiteSpace(match?.NameDisplay) ? null : match;
     }
 
     public static async Task<string> FormatFamilyExtended(GrampsFamilyExtended family, GrampsApiClient client)

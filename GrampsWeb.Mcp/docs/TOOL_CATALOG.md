@@ -107,7 +107,9 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 ### R — `GetObject`
 Fetch one record by handle or Gramps ID. A Gramps ID determines its type from
 its prefix; an opaque handle requires `objectType`. `extended=true` resolves
-linked details for people and families only.
+linked details for people and families only. Without it, a family names its
+parents and children and lists its events with type, date, and place, and a
+place names its enclosing places and full hierarchy, each in one request.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

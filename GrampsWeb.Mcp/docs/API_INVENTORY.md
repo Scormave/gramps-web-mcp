@@ -40,11 +40,13 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/people/{handle}/timeline` | Array | `GrampsTimelineEntry[]` (query: `events`, `relatives`, `relativeEvents`, `dates`) |
 | `GET /api/relations/{handle1}/{handle2}` | Object | `JsonElement` |
 | `GET /api/families/{handle}` | Family | `GrampsFamily` |
+| `GET /api/families/{handle}?profile=self,events` | Family | `GrampsFamily.Profile` (`GrampsFamilyProfile`): members and events by name for `get_object` |
 | `GET /api/families/{handle}?extend=all` | Family extended | `GrampsFamilyExtended` |
 | `GET /api/families/{h}/timeline` | Array | `GrampsTimelineEntry[]` |
 | `GET /api/places/{h}?backlinks=true` + `GET /api/events/{eh}` | Derived | `GrampsTimelineEntry[]` (MCP synthesizes; no `/places/{h}/timeline` in OpenAPI) |
 | `GET /api/events/{handle}` | Event | `GrampsEvent` |
 | `GET /api/places/{handle}` | Place | `GrampsPlace` |
+| `GET /api/places/{handle}?profile=self` | Place | `GrampsPlace.Profile` (`GrampsPlaceProfile`): enclosing places by name for `get_object` |
 | `GET /api/sources/{handle}` | Source | `GrampsSource` |
 | `GET /api/citations/{handle}` | Citation | `GrampsCitation` |
 | `GET /api/repositories/{handle}` | Repository | `GrampsRepository` |

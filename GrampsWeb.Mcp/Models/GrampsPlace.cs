@@ -66,4 +66,8 @@ public class GrampsPlace
 
     [JsonPropertyName("alt_loc")]
     public object[]? AlternateLocations { get; set; }
+
+    /// <summary>Type and enclosing places by name; present when requested with <c>?profile=self</c>.</summary>
+    [JsonPropertyName("profile")]
+    public GrampsPlaceProfile? Profile { get; set; }
 }

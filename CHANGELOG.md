@@ -37,6 +37,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update the README, security and privacy policies, architecture, developer,
   migration, and tool documentation, the system prompt, Docker Compose, MCPB
   metadata, and GitHub Pages for the new media behavior
+- Show a family's parents and children in `get_object` by name, Gramps ID,
+  birth, and death, with the marriage, the divorce, and each event's type,
+  date, and place, from one request instead of handles
+- Show a place's enclosing places and hierarchy in `get_object` by name, type,
+  and Gramps ID from the same request instead of one request per parent
 - Show the page count and total in `search` results, and the total when the
   page is past the last one
 - Show `get_recent_changes` as one entry per transaction with its UTC time,

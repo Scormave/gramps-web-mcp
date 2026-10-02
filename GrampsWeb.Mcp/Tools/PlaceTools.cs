@@ -16,7 +16,7 @@ namespace GrampsWeb.Mcp.Tools;
 public static class PlaceTools
 {
     [Description(
-        "Read-only: one place by handle (name, type, coordinates, hierarchy by traversing parent places). " +
+        "Read-only: one place by handle (name, type, coordinates, enclosing places and full hierarchy by name). " +
         "Use when resolving place handles from events or building geographic context.")]
     internal static async Task<string> ReadPlaceAsync(
         [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -26,8 +26,9 @@ public static class PlaceTools
         try
         {
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
+            // The profile names the enclosing places, so the card needs no request per parent.
             var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
-                $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");
+                $"/api/places/{Uri.EscapeDataString(resolvedHandle)}?profile=self");
             return place == null
                 ? NotFoundHelper.NotFoundMessage("Place", handle)
                 : await PlaceFormatter.FormatPlaceFull(place, client);

@@ -119,6 +119,67 @@ public class PlaceFormatterTests
         Assert.DoesNotContain("Old [", result);
     }
 
+    [Fact]
+    public async Task FormatPlaceFull_Names_Parents_From_Profile_Without_Requests()
+    {
+        const string json = """
+            {
+              "handle": "boise-h",
+              "gramps_id": "P1",
+              "name": { "value": "Boise" },
+              "place_type": "City",
+              "placeref_list": [
+                { "ref": "idaho-h", "date": { "modifier": 4, "dateval": [0, 0, 1900, false, 0, 0, 1950, false] } },
+                { "ref": "ada-h" }
+              ],
+              "profile": {
+                "gramps_id": "P1",
+                "name": "Boise",
+                "type": "City",
+                "parent_places": [
+                  { "gramps_id": "P2", "name": "Idaho", "type": "State" },
+                  { "gramps_id": "P3", "name": "United States", "type": "Country" }
+                ],
+                "direct_parent_places": [
+                  { "place": { "gramps_id": "P2", "name": "Idaho", "type": "State" }, "date_str": "between 1900 and 1950" },
+                  { "place": { "gramps_id": "P4", "name": "Ada", "type": "County" }, "date_str": "" }
+                ]
+              }
+            }
+            """;
+        var place = JsonSerializer.Deserialize<GrampsPlace>(json, GrampsJson.Options)!;
+        var handler = new PlaceHandler([]);
+
+        var result = await PlaceFormatter.FormatPlaceFull(place, CreateClient(handler));
+
+        Assert.Equal(0, handler.PlaceRequests);
+        Assert.Equal("Hierarchy: Idaho (State, P2), United States (Country, P3)", GetHierarchyLine(result).TrimEnd('\r'));
+        Assert.Contains("  - Idaho (State, P2) [handle: idaho-h] [between 1900 and 1950]", result);
+        Assert.Contains("  - Ada (County, P4) [handle: ada-h]", result);
+    }
+
+    [Fact]
+    public async Task FormatPlaceFull_Falls_Back_To_Handles_When_Profile_Skips_A_Missing_Parent()
+    {
+        var place = new GrampsPlace
+        {
+            Handle = "city-h",
+            Name = "City",
+            PlaceRefList = [new GrampsPlaceRef { Ref = "gone-h" }, new GrampsPlaceRef { Ref = "ada-h" }],
+            Profile = new GrampsPlaceProfile
+            {
+                ParentPlaces = [],
+                DirectParentPlaces = [new GrampsDirectParentPlace { Place = new GrampsPlaceProfile { Name = "Ada" } }]
+            }
+        };
+
+        var result = await PlaceFormatter.FormatPlaceFull(place, CreateClient(new PlaceHandler([])));
+
+        Assert.Contains("  - gone-h", result);
+        Assert.Contains("  - ada-h", result);
+        Assert.DoesNotContain("Ada", result);
+    }
+
     private static string GetHierarchyLine(string result)
     {
         foreach (var line in result.Split('\n'))
@@ -175,6 +236,8 @@ public class PlaceFormatterTests
 
     private sealed class PlaceHandler(Dictionary<string, string> placesByHandle) : HttpMessageHandler
     {
+        public int PlaceRequests { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             CancellationToken cancellationToken)
@@ -190,6 +253,7 @@ public class PlaceFormatterTests
             var path = request.RequestUri?.AbsolutePath ?? "";
             if (path.StartsWith("/api/places/", StringComparison.Ordinal))
             {
+                PlaceRequests++;
                 var handle = Uri.UnescapeDataString(path["/api/places/".Length..]);
                 if (placesByHandle.TryGetValue(handle, out var json))
                 {

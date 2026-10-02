@@ -36,6 +36,10 @@ public static class PlaceFormatter
         return result;
     }
 
+    /// <summary>
+    /// Full place card. With <see cref="GrampsPlace.Profile"/> (<c>?profile=self</c>) the hierarchy and
+    /// enclosing places are named from the same response; without it, parents are fetched one by one.
+    /// </summary>
     public static async Task<string> FormatPlaceFull(GrampsPlace place, GrampsApiClient client)
     {
         var sb = new StringBuilder();
@@ -45,7 +49,9 @@ public static class PlaceFormatter
         var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, place.Type);
         sb.AppendLine($"Type: {typeLabel}");
 
-        var hierarchy = await BuildPlaceHierarchy(place, client);
+        var hierarchy = place.Profile?.ParentPlaces is { } parentPlaces
+            ? string.Join(", ", parentPlaces.Select(FormatProfilePlace))
+            : await BuildPlaceHierarchy(place, client);
         if (!string.IsNullOrEmpty(hierarchy))
             sb.AppendLine($"Hierarchy: {hierarchy}");
 
@@ -158,18 +164,34 @@ public static class PlaceFormatter
         if (place.PlaceRefList is not { Length: > 0 })
             return;
 
-        sb.AppendLine("Enclosed by:");
-        foreach (var pref in place.PlaceRefList)
-        {
-            if (string.IsNullOrWhiteSpace(pref.Ref))
-                continue;
+        var refs = place.PlaceRefList.Where(r => !string.IsNullOrWhiteSpace(r.Ref)).ToArray();
+        // The profile lists parents in placeref order but skips missing ones; names line up only when none are missing.
+        var direct = place.Profile?.DirectParentPlaces;
+        var named = direct?.Length == refs.Length ? direct : null;
 
-            var line = $"  - {pref.Ref}";
+        sb.AppendLine("Enclosed by:");
+        for (var i = 0; i < refs.Length; i++)
+        {
+            var pref = refs[i];
+            var line = named?[i].Place is { } parent
+                ? $"  - {FormatProfilePlace(parent)} [handle: {pref.Ref!.Trim()}]"
+                : $"  - {pref.Ref}";
             var dateText = FormatOptionalDate(pref.Date);
             if (dateText != null)
                 line += $" [{dateText}]";
             sb.AppendLine(line);
         }
+    }
+
+    /// <summary>"Idaho (State, P0002)".</summary>
+    private static string FormatProfilePlace(GrampsPlaceProfile profile)
+    {
+        var name = string.IsNullOrWhiteSpace(profile.Name) ? "Unknown" : profile.Name.Trim();
+        var details = new[] { profile.Type, profile.GrampsId }
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s!.Trim())
+            .ToArray();
+        return details.Length == 0 ? name : $"{name} ({string.Join(", ", details)})";
     }
 
     private static void AppendAlternateNamesSection(StringBuilder sb, GrampsPlace place)

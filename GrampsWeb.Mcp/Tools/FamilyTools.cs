@@ -24,7 +24,7 @@ public static class FamilyTools
     [Description(
         "Read-only: one family by handle (parents, children, relationship type, events). " +
         "With extended=true, resolves member names, event dates/places, citations, media. " +
-        "Default extended=false returns handles only (faster).")]
+        "Default extended=false names parents and children with life dates and lists event types and dates in one request.")]
     internal static async Task<string> ReadFamilyAsync(
         [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
@@ -46,8 +46,9 @@ public static class FamilyTools
             }
             else
             {
+                // The profile names members and events in the same response.
                 var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>(
-                    $"/api/families/{Uri.EscapeDataString(resolvedHandle)}");
+                    $"/api/families/{Uri.EscapeDataString(resolvedHandle)}?profile=self,events");
                 return family == null
                     ? NotFoundHelper.NotFoundMessage("Family", handle)
                     : await FamilyFormatter.FormatFamilyFullAsync(family, client);

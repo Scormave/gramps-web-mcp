@@ -80,4 +80,8 @@ public class GrampsFamily
     [JsonPropertyName("type")]
     [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Relationship { get; set; }
+
+    /// <summary>Names of parents and children; present when requested with <c>?profile=self,events</c>.</summary>
+    [JsonPropertyName("profile")]
+    public GrampsFamilyProfile? Profile { get; set; }
 }

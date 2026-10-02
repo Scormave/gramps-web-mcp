@@ -637,4 +637,43 @@ public static class PersonFormatter
         sb.AppendLine(JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
         return sb.ToString();
     }
+
+    /// <summary>"Petrov, Ivan (I0012) [handle: h], b. 1880 in Dublin, d. 1950".</summary>
+    internal static string FormatProfilePerson(GrampsPersonProfile person, string handle)
+    {
+        var id = string.IsNullOrWhiteSpace(person.GrampsId) ? "" : $" ({person.GrampsId.Trim()})";
+        return string.Join(", ", [$"{person.NameDisplay!.Trim()}{id} [handle: {handle.Trim()}]", .. FormatProfileVitals(person)]);
+    }
+
+    /// <summary>
+    /// "b. 1880 in Dublin", "d. 1950". The profile falls back to baptism or burial when birth or death is
+    /// missing; a fallback is named by its type instead: "burial 1950".
+    /// </summary>
+    private static IEnumerable<string> FormatProfileVitals(GrampsPersonProfile person)
+    {
+        foreach (var (evt, abbreviation, type) in new[] { (person.Birth, "b.", "Birth"), (person.Death, "d.", "Death") })
+        {
+            if (FormatProfileEvent(evt) is not { } details)
+                continue;
+            var actual = evt!.Type?.Trim();
+            yield return string.IsNullOrEmpty(actual) || string.Equals(actual, type, StringComparison.OrdinalIgnoreCase)
+                ? $"{abbreviation} {details}"
+                : $"{actual.ToLowerInvariant()} {details}";
+        }
+    }
+
+    /// <summary>"1880 in Dublin", or "Marriage 1880 in Dublin" with <paramref name="withType"/>; null when empty.</summary>
+    internal static string? FormatProfileEvent(GrampsEventProfile? evt, bool withType = false)
+    {
+        if (evt == null)
+            return null;
+        var details = new List<string>();
+        if (!string.IsNullOrWhiteSpace(evt.Date))
+            details.Add(evt.Date.Trim());
+        if (!string.IsNullOrWhiteSpace(evt.PlaceName))
+            details.Add($"in {evt.PlaceName.Trim()}");
+        if (withType && !string.IsNullOrWhiteSpace(evt.Type))
+            details.Insert(0, evt.Type.Trim());
+        return details.Count == 0 ? null : string.Join(" ", details);
+    }
 }
