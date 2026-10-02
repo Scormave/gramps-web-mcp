@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Name the root person in the `get_person_tree` header (`Root: Petrov, Ivan,
   b. 1880 [I0012] [handle: …]`) instead of only its handle, and stop
   repeating each row's Gramps ID as `(gramps_id: …)` next to the handle
+- Name the others in an event a person takes part in under another role, such
+  as the child of a `Birth [Father]` row or the couple of a `Marriage
+  [Witness]` row, on a `Participants:` line in `get_timeline` for people and
+  in extended `get_object` for people; the rows did not say whose event it was
 
 ## [2.1.0] - 2026-10-02
 

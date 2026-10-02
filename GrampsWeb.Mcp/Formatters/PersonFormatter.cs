@@ -223,6 +223,10 @@ public static class PersonFormatter
         {
             sb.AppendLine();
             sb.AppendLine($"Events ({extEvents.Length}):");
+            string RoleOf(GrampsEvent evt) => person.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
+            // For an event under another role, such as the birth of a child, name the others in it.
+            var others = await EventParticipantsFormatter.LoadOtherParticipantsAsync(
+                client, extEvents.Where(e => !IsPrimaryRole(RoleOf(e))).Select(e => e.Handle), person.Handle);
             foreach (var evt in extEvents)
             {
                 var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : "—";
@@ -242,7 +246,7 @@ public static class PersonFormatter
                     }
                     catch { }
                 }
-                var role = person.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
+                var role = RoleOf(evt);
                 var evtTypeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, tables.EventTypes);
                 var evtHandleSuffix = string.IsNullOrWhiteSpace(evt.Handle)
                     ? ""
@@ -251,6 +255,8 @@ public static class PersonFormatter
                     ? ""
                     : $" [place: {evt.Place.Trim()}]";
                 sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]{placeHandleSuffix}{evtHandleSuffix}");
+                if (evt.Handle is { } eventHandle && others.TryGetValue(eventHandle, out var participants))
+                    sb.AppendLine($"    Participants: {participants}");
                 if (!string.IsNullOrEmpty(evt.Description))
                     sb.AppendLine($"    {evt.Description}");
             }

@@ -95,4 +95,11 @@ public class GrampsTimelineEntry
     /// <summary>Who took part, for rows MCP builds itself (place timelines); not sent by the API.</summary>
     [JsonIgnore]
     public string? Participants { get; set; }
+
+    /// <summary>
+    /// The others in an event the timeline person takes part in under another role, such as the child of
+    /// a "Birth [Father]" row; filled by MCP, not sent by the API.
+    /// </summary>
+    [JsonIgnore]
+    public string? OtherParticipants { get; set; }
 }

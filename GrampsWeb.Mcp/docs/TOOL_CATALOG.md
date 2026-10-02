@@ -142,9 +142,11 @@ Fetch one record by handle or Gramps ID. A Gramps ID determines its type from
 its prefix; an opaque handle requires `objectType`. `extended=true` resolves
 linked details for people and families only; an extended person names the
 parents, spouse, and children in each family, with the marriage and divorce,
-from the person request. Without it, a family names its parents and children
-and lists its events with type, date, and place, and a place names its
-enclosing places and full hierarchy, each in one request.
+from the person request, and names the others in each event the person takes
+part in under another role, such as the child of a `[Father]` birth, in one
+more batch. Without it, a family names its parents and children and lists its
+events with type, date, and place, and a place names its enclosing places and
+full hierarchy, each in one request.
 
 Validation errors name the problem: an opaque handle without `objectType`, an
 unknown `objectType`, an `objectType` that disagrees with the Gramps ID prefix
@@ -177,9 +179,11 @@ does not necessarily delete its file on disk.
 Chronological events for a person, family, or place. Person timelines can also
 include relatives' events, named with their Gramps ID and age; rows show the
 role when the person is not the primary participant and leave out a zero age,
-such as "0 days" on birth rows. Place timelines are computed from direct event
-backlinks, name the place once above the rows, and list each event's
-participants with their roles; child places are not included.
+such as "0 days" on birth rows. A row of the person's own event under another
+role, such as `Birth [Father]`, names the others in it on a `Participants:`
+line below, read in one batch for all such rows. Place timelines are computed
+from direct event backlinks, name the place once above the rows, and list each
+event's participants with their roles; child places are not included.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

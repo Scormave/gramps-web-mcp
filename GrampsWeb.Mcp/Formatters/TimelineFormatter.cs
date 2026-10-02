@@ -15,7 +15,8 @@ public static class TimelineFormatter
     /// <summary>
     /// Renders timeline rows in chronological order (by decade when there are more than 20 rows).
     /// A row names the person the event belongs to unless it is the timeline person's own event,
-    /// and appends <c>[event: handle]</c> when the entry has a handle. A <paramref name="heading"/>,
+    /// and appends <c>[event: handle]</c> when the entry has a handle; <see cref="GrampsTimelineEntry.OtherParticipants"/>
+    /// follow on a line of their own. A <paramref name="heading"/>,
     /// such as the place of a place timeline, comes before the event count.
     /// </summary>
     public static string FormatTimelineChronological(GrampsTimelineEntry[] entries, string? heading = null)
@@ -65,13 +66,23 @@ public static class TimelineFormatter
         var role = IsShownRole(entry.Role) ? $" [{entry.Role!.Trim()}]" : "";
         var age = FormatAge(entry);
         var place = FormatPlaceSuffix(entry);
+        var others = !string.IsNullOrWhiteSpace(entry.OtherParticipants)
+            ? $"\n    Participants: {entry.OtherParticipants.Trim()}"
+            : "";
         var desc = !string.IsNullOrWhiteSpace(entry.Description) ? $"\n    {entry.Description.Trim()}" : "";
         var handleSuffix = !string.IsNullOrWhiteSpace(entry.Handle)
             ? $"  [event: {entry.Handle.Trim()}]"
             : "";
 
-        return $"  {dateStr}: {type}{who}{role}{age}{place}{handleSuffix}{desc}";
+        return $"  {dateStr}: {type}{who}{role}{age}{place}{handleSuffix}{others}{desc}";
     }
+
+    /// <summary>
+    /// The timeline person's own event under a role other than Primary, such as "Birth [Father]": the row
+    /// alone does not say whose birth it is.
+    /// </summary>
+    internal static bool IsOwnEventInAnotherRole(GrampsTimelineEntry entry) =>
+        string.IsNullOrWhiteSpace(entry.Person?.NameDisplay) && IsShownRole(entry.Role);
 
     /// <summary>
     /// The API omits the person for the timeline person's own events, so a name appears only for

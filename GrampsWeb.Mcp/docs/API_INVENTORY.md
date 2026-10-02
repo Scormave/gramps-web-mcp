@@ -47,6 +47,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/families/{handle}?extend=all` | Family extended | `GrampsFamilyExtended` |
 | `GET /api/families/{h}/timeline` | Array | `GrampsTimelineEntry[]` (query: `event_classes`, `dates`, always `discard_empty=false`) |
 | `GET /api/places/{h}?backlinks=true` + `GET /api/events/?handles=…&profile=participants` | Derived | `GrampsTimelineEntry[]` (MCP synthesizes; no `/places/{h}/timeline` in OpenAPI) |
+| `GET /api/events/?handles=…&profile=participants` | Array | `GrampsEvent.Profile.Participants`: the others in the events a person takes part in under a role other than Primary, for person timelines (`OtherParticipants`) and extended people |
 | `GET /api/events/{handle}` | Event | `GrampsEvent` |
 | `GET /api/events/{handle}?backlinks=true` + `GET /api/people/{h}` per participant | Event card | Participants by name for `get_object` on an event |
 | `GET /api/places/{handle}` | Place | `GrampsPlace` |

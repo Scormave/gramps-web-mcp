@@ -71,6 +71,15 @@ public static class TimelineTools
         if (timeline.Length == 0)
             return $"No timeline events found for {identifier}. " +
                    "Only linked events (and relatives per filters) appear; a name date alone is not a timeline event.";
+
+        var others = await EventParticipantsFormatter.LoadOtherParticipantsAsync(
+            client, timeline.Where(TimelineFormatter.IsOwnEventInAnotherRole).Select(e => e.Handle), handle);
+        foreach (var entry in timeline)
+        {
+            if (TimelineFormatter.IsOwnEventInAnotherRole(entry) && entry.Handle is { } h && others.TryGetValue(h, out var text))
+                entry.OtherParticipants = text;
+        }
+
         return TimelineFormatter.FormatTimelineChronological(timeline);
     }
 
