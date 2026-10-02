@@ -138,18 +138,22 @@ public class GrampsApiClientMutationPolicyTests
     [Fact]
     public async Task Gate_Timeout_Surfaces_Retryable_Error_Without_Sending_Mutation()
     {
-        var handler = new RecordingHandler { MutationDelay = TimeSpan.FromMilliseconds(200) };
+        // The first mutation holds the gate until the second one has timed out. A fixed delay raced the timers:
+        // on a busy runner both fired late together, and the first one's release let the second one through.
+        var hold = new TaskCompletionSource();
+        var handler = new RecordingHandler { MutationHold = hold };
         var gate = new MutationGate(serialize: true, TimeSpan.Zero, TimeSpan.FromMilliseconds(40));
         var client1 = CreateClient(handler, gate);
         var client2 = CreateClient(handler, gate);
 
         var first = client1.PostMutationAsync("/api/people/", new { }, "Person");
-        await Task.Delay(15);
+        await handler.MutationStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => client2.PostMutationAsync("/api/people/", new { }, "Person"));
 
         Assert.Contains("queue timed out", ex.Message);
         Assert.Contains("Retry after", ex.Message);
+        hold.SetResult();
         await first;
         Assert.Equal(1, handler.Spans.Count(s => s.Path == "/api/people/"));
     }
@@ -184,6 +188,9 @@ public class GrampsApiClientMutationPolicyTests
         private readonly List<RequestSpan> _spans = [];
 
         public TimeSpan MutationDelay { get; init; } = TimeSpan.Zero;
+        /// <summary>When set, a mutation signals <see cref="MutationStarted"/> and waits for it.</summary>
+        public TaskCompletionSource? MutationHold { get; init; }
+        public TaskCompletionSource MutationStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public HttpStatusCode MutationStatus { get; init; } = HttpStatusCode.OK;
         public string MutationBody { get; init; } =
             """[{"_class":"Person","new":{"handle":"h1","gramps_id":"I1"}}]""";
@@ -220,6 +227,12 @@ public class GrampsApiClientMutationPolicyTests
             {
                 Record(request.Method, path, started, DateTimeOffset.UtcNow);
                 return Json("""{ "tree": "tree" }""");
+            }
+
+            if (MutationHold is not null)
+            {
+                MutationStarted.TrySetResult();
+                await MutationHold.Task.WaitAsync(cancellationToken);
             }
 
             if (MutationDelay > TimeSpan.Zero)
