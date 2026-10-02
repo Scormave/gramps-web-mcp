@@ -99,7 +99,7 @@ public static class TimelineTools
             return NotFoundHelper.NotFoundMessage("Place", identifier);
 
         var datesNormalized = NormalizeDatesForGrampsApi(dates);
-        var outcome = await PlaceTimelineFallback.CollectAsync(client, handle, place, events, datesNormalized, true);
+        var outcome = await PlaceTimelineFallback.CollectAsync(client, handle, events, datesNormalized, true);
         if (outcome.MatchedPlaceCount == 0)
         {
             return $"No events linked directly to place {identifier}. " +
@@ -113,7 +113,10 @@ public static class TimelineTools
                    "Try broader categories or widen the date range.";
         }
 
-        return TimelineFormatter.FormatTimelineChronological(outcome.Entries);
+        // Every event is at this place, so the heading names it once instead of each row.
+        var id = string.IsNullOrWhiteSpace(place.GrampsId) ? "" : $" ({place.GrampsId.Trim()})";
+        return TimelineFormatter.FormatTimelineChronological(
+            outcome.Entries, $"Place: {GrampsValueFormatter.FormatPlace(place)}{id}");
     }
 
     internal static string BuildQueryString(

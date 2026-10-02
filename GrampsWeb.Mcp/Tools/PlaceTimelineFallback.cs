@@ -7,7 +7,8 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// Builds a place timeline from <c>GET /api/places/{handle}?backlinks=true</c> event handles
-/// (the API spec has no <c>/places/{handle}/timeline</c> route).
+/// (the API spec has no <c>/places/{handle}/timeline</c> route). Rows leave the place out, since
+/// every event is at it.
 /// </summary>
 internal static class PlaceTimelineFallback
 {
@@ -17,7 +18,6 @@ internal static class PlaceTimelineFallback
     public static async Task<PlaceTimelineCollectOutcome> CollectAsync(
         GrampsApiClient client,
         string placeHandle,
-        GrampsPlace place,
         string[]? eventClasses,
         string? datesNormalized,
         bool includeUndated)
@@ -59,7 +59,7 @@ internal static class PlaceTimelineFallback
         // Backlinks come in no particular order; sortval orders events within a year, as the timeline routes do.
         var entries = matched
             .OrderBy(e => e.Date?.SortVal ?? 0)
-            .Select(e => ToTimelineEntry(e, place))
+            .Select(ToTimelineEntry)
             .ToArray();
         return new PlaceTimelineCollectOutcome(entries, matchedPlace);
     }
@@ -85,7 +85,7 @@ internal static class PlaceTimelineFallback
         return handles;
     }
 
-    private static GrampsTimelineEntry ToTimelineEntry(GrampsEvent evt, GrampsPlace place)
+    private static GrampsTimelineEntry ToTimelineEntry(GrampsEvent evt)
     {
         var dateDisplay = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : "";
         return new GrampsTimelineEntry
@@ -95,13 +95,7 @@ internal static class PlaceTimelineFallback
             Type = evt.Type,
             Date = dateDisplay,
             Description = evt.Description,
-            Participants = FormatParticipants(evt.Profile?.Participants),
-            Place = new GrampsTimelinePlaceProfile
-            {
-                Handle = place.Handle,
-                Name = place.Name,
-                DisplayName = place.Name
-            }
+            Participants = FormatParticipants(evt.Profile?.Participants)
         };
     }
 

@@ -43,8 +43,9 @@ public class PlaceTimelineToolTests
         using (GrampsReadScope.Begin())
             result = await TimelineTools.GetTimeline("place", "place-h", client: CreateClient(handler));
 
-        Assert.Contains("Timeline (2 events):", result);
+        Assert.StartsWith("Place: Tver (P0001)\nTimeline (2 events):", result.Replace("\r\n", "\n"));
         Assert.Contains("Ivanov, Pyotr (I0002), Petrov, Ivan (I0003) [Witness]", result);
+        Assert.DoesNotContain(" — Tver", result);
         Assert.DoesNotContain("Burial", result);
         Assert.True(
             result.IndexOf("Birth", StringComparison.Ordinal) < result.IndexOf("Death", StringComparison.Ordinal),

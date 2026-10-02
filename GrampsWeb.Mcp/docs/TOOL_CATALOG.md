@@ -138,8 +138,8 @@ Chronological events for a person, family, or place. Person timelines can also
 include relatives' events, named with their Gramps ID and age; rows show the
 role when the person is not the primary participant and leave out a zero age,
 such as "0 days" on birth rows. Place timelines are computed from direct event
-backlinks and list each event's participants with their roles; child places
-are not included.
+backlinks, name the place once above the rows, and list each event's
+participants with their roles; child places are not included.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

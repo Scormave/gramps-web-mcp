@@ -15,14 +15,17 @@ public static class TimelineFormatter
     /// <summary>
     /// Renders timeline rows in chronological order (by decade when there are more than 20 rows).
     /// A row names the person the event belongs to unless it is the timeline person's own event,
-    /// and appends <c>[event: handle]</c> when the entry has a handle.
+    /// and appends <c>[event: handle]</c> when the entry has a handle. A <paramref name="heading"/>,
+    /// such as the place of a place timeline, comes before the event count.
     /// </summary>
-    public static string FormatTimelineChronological(GrampsTimelineEntry[] entries)
+    public static string FormatTimelineChronological(GrampsTimelineEntry[] entries, string? heading = null)
     {
         if (entries == null || entries.Length == 0)
             return "No events recorded";
 
         var sb = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(heading))
+            sb.AppendLine(heading.Trim());
         sb.AppendLine($"Timeline ({entries.Length} events):");
         sb.AppendLine(new string('=', 60));
 

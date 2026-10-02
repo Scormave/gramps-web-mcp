@@ -41,6 +41,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   role when the person is not the primary participant, and list the people and
   families of each event on place timelines with their roles. A zero age, such
   as "0 days" on birth rows, is left out
+- Name the place once above a place timeline, with its Gramps ID, instead of
+  on every row
 - Show a family's parents and children in `get_object` by name, Gramps ID,
   birth, and death, with the marriage, the divorce, and each event's type,
   date, and place, from one request instead of handles
