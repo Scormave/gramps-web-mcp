@@ -127,6 +127,28 @@ public class PersonExtendedFamiliesTests
         Assert.DoesNotContain("Marriage:", result);
     }
 
+    [Theory]
+    [InlineData(false, "/api/people/anna-h?profile=self", "PERSON: ")]
+    [InlineData(true, "/api/people/anna-h?extend=all&profile=families", "Person (extended): ")]
+    public async Task ReadPerson_Header_Uses_The_Tree_Name_Display_Format(bool extended, string request, string header)
+    {
+        var handler = new PersonHandler("""
+            {
+              "handle": "anna-h", "gramps_id": "I0002", "gender": 0,
+              "primary_name": { "first_name": "Anna Ivanovna", "surname_list": [{ "surname": "Petrova", "primary": true }] },
+              "profile": { "handle": "anna-h", "gramps_id": "I0002", "name_display": "Petrova, Anna Ivanovna" }
+            }
+            """);
+
+        var result = (await PersonTools.ReadPersonAsync("anna-h", extended, client: CreateClient(handler)))
+            .Replace("\r\n", "\n");
+
+        Assert.Equal([request], handler.PersonRequests);
+        Assert.StartsWith($"{header}Petrova, Anna Ivanovna [handle: anna-h] (gramps_id: I0002)\n", result);
+        // The primary name line spells the name out as stored, like the alternate names.
+        Assert.Contains("]: Anna Ivanovna Petrova\n", result);
+    }
+
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
     {
         var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");

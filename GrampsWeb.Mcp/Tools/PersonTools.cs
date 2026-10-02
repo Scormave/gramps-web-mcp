@@ -47,7 +47,7 @@ public static class PersonTools
             else
             {
                 var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
-                    $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");
+                    $"/api/people/{Uri.EscapeDataString(resolvedHandle)}?profile=self");
                 return person == null
                     ? NotFoundHelper.NotFoundMessage("Person", handle)
                     : await PersonFormatter.FormatPersonFull(person, client);

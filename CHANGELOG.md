@@ -35,6 +35,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   people on person cards, and the media, notes, citations, and tags on family
   cards, in the same way (`• Birth — 1 Aug 1856 — Tver [handle: …] role:
   Primary`)
+- Head person cards in `get_object` with the name in the tree's display
+  format, as lists and `search` show it (`Petrova, Anna Ivanovna`), instead of
+  given names followed by surnames
 
 ## [2.1.0] - 2026-10-02
 

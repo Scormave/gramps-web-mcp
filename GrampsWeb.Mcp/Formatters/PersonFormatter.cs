@@ -83,7 +83,7 @@ public static class PersonFormatter
         var name = person.PrimaryName;
         var displayName = name != null ? GrampsValueFormatter.FormatName(name) : "Unknown";
 
-        sb.AppendLine($"PERSON: {displayName} [handle: {person.Handle}] (gramps_id: {person.GrampsId})");
+        sb.AppendLine($"PERSON: {HeaderName(person, displayName)} [handle: {person.Handle}] (gramps_id: {person.GrampsId})");
         sb.AppendLine(new string('=', 60));
         sb.AppendLine($"Gender:    {GenderLabels[Math.Clamp(person.Gender, 0, 2)]}");
 
@@ -137,6 +137,13 @@ public static class PersonFormatter
         return sb.ToString();
     }
 
+    /// <summary>
+    /// The name in the tree's display format from <see cref="GrampsPerson.Profile"/>, as lists and search show
+    /// it (<c>Ivanov, Pyotr</c>); <paramref name="fallback"/> when the person was read without a profile.
+    /// </summary>
+    private static string HeaderName(GrampsPerson person, string fallback) =>
+        string.IsNullOrWhiteSpace(person.Profile?.NameDisplay) ? fallback : person.Profile.NameDisplay.Trim();
+
     public static async Task<string> FormatPersonExtended(GrampsPersonExtended person, GrampsApiClient client)
     {
         var tables = await GrampsDefaultTypeLabels.PrefetchAllAsync(client).ConfigureAwait(false);
@@ -144,7 +151,7 @@ public static class PersonFormatter
         var name = person.PrimaryName;
         var displayName = name != null ? GrampsValueFormatter.FormatName(name) : "Unknown";
 
-        sb.AppendLine($"Person (extended): {displayName} [handle: {person.Handle}] (gramps_id: {person.GrampsId})");
+        sb.AppendLine($"Person (extended): {HeaderName(person, displayName)} [handle: {person.Handle}] (gramps_id: {person.GrampsId})");
         sb.AppendLine(new string('=', 60));
         sb.AppendLine($"Gender:    {GenderLabels[Math.Clamp(person.Gender, 0, 2)]}");
 

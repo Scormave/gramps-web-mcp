@@ -152,7 +152,9 @@ results (`• [General] Born at home [handle: …]`); a person also names its
 families, events, and associated people, and events, places, sources,
 citations, repositories, notes, and media name the objects in their
 `Referenced by` sections. This takes one batch per type; past 200 of one type,
-and for objects that cannot be read, the handle stays bare.
+and for objects that cannot be read, the handle stays bare. A person card is
+headed by the name in the tree's display format, as lists and `search` show it
+(`Petrova, Anna Ivanovna`), and spells out the primary name as stored below.
 
 Validation errors name the problem: an opaque handle without `objectType`, an
 unknown `objectType`, an `objectType` that disagrees with the Gramps ID prefix
