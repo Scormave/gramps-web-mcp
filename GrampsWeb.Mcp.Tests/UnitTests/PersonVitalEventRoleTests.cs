@@ -67,7 +67,7 @@ public class PersonVitalEventRoleTests
         var result = await PersonFormatter.FormatPersonExtended(person, Client(handler));
 
         Assert.DoesNotContain(result.Split('\n'), l => l.StartsWith("Birth:"));
-        Assert.Contains("Birth: 1 Feb 2019 [Father]", result);
+        Assert.Contains("Birth: 2019-02-01 [Father]", result);
     }
 
     [Fact]

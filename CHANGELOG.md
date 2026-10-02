@@ -33,11 +33,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   multi-line note on one line in `search` and `list_objects` rows
 - Name the families, events, media, notes, citations, tags, and associated
   people on person cards, and the media, notes, citations, and tags on family
-  cards, in the same way (`• Birth — 1 Aug 1856 — Tver [handle: …] role:
+  cards, in the same way (`• Birth — 1856-08-01 — Tver [handle: …] role:
   Primary`)
 - Head person cards in `get_object` with the name in the tree's display
   format, as lists and `search` show it (`Petrova, Anna Ivanovna`), instead of
   given names followed by surnames
+- Show dates on cards as Gramps Web shows them in timelines, `search`, and
+  trees (`1856-08-01`, `about 1930-08`) instead of `1 Aug 1856`, with the
+  quality and the non-Gregorian calendar that cards left out (`estimated
+  1850`, `1856-07-20 (Julian)`), and a dual-dated year as Gramps writes it
+  (`1735/6`) instead of one year later; date parameters take the shown dates
+  back, including three-digit years, and a date with a calendar suffix fails
+  validation instead of being stored as Gregorian
 
 ## [2.1.0] - 2026-10-02
 

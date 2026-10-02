@@ -1,4 +1,5 @@
 using Xunit;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Models;
 
@@ -6,15 +7,16 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 /// <summary>
 /// Unit tests for GrampsValueFormatter date formatting methods.
-/// Tests all 7 date modifiers and edge cases (BCE, partial dates, text-only).
+/// Tests all 7 date modifiers and edge cases (BCE, partial dates, text-only). Dates read as Gramps Web
+/// shows them in its default ISO format, so cards agree with the server-formatted dates in timelines.
 /// </summary>
 public class DateFormatterTests
 {
     [Theory]
-    [InlineData(0, "12 Nov 1899")]  // modifier=0 (None)
-    [InlineData(1, "before 12 Nov 1899")]  // modifier=1 (Before)
-    [InlineData(2, "after 12 Nov 1899")]   // modifier=2 (After)
-    [InlineData(3, "about 12 Nov 1899")]   // modifier=3 (About)
+    [InlineData(0, "1899-11-12")]  // modifier=0 (None)
+    [InlineData(1, "before 1899-11-12")]  // modifier=1 (Before)
+    [InlineData(2, "after 1899-11-12")]   // modifier=2 (After)
+    [InlineData(3, "about 1899-11-12")]   // modifier=3 (About)
     public void FormatDate_WithModifiers_ReturnsCorrectString(int modifier, string expected)
     {
         var date = new GrampsDate
@@ -72,7 +74,7 @@ public class DateFormatterTests
 
         var result = GrampsValueFormatter.FormatDate(date);
 
-        Assert.Contains("1850 B.C.E.", result);
+        Assert.Equal("1850 B.C.E.", result);
     }
 
     [Fact]
@@ -104,7 +106,7 @@ public class DateFormatterTests
             Quality = 0,
             Day = 1,
             Month = 1,
-            Year = 1735,
+            Year = 1736,
             Slash = true,
             Text = null,
             NewYear = 0
@@ -112,7 +114,8 @@ public class DateFormatterTests
 
         var result = GrampsValueFormatter.FormatDate(date);
 
-        Assert.Contains("1735/1736", result);
+        // Gramps stores the later year of a dual-dated year.
+        Assert.Equal("1735/6-01-01", result);
     }
 
     [Fact]
@@ -139,9 +142,7 @@ public class DateFormatterTests
 
         var result = GrampsValueFormatter.FormatDate(date);
 
-        Assert.Contains("between", result);
-        Assert.Contains("1800", result);
-        Assert.Contains("1850", result);
+        Assert.Equal("between 1800 and 1850", result);
     }
 
     [Fact]
@@ -160,8 +161,89 @@ public class DateFormatterTests
 
         var result = GrampsValueFormatter.FormatDate(date);
 
-        Assert.Contains("from", result);
-        Assert.Contains("1800", result);
-        Assert.Contains("1850", result);
+        Assert.Equal("from 1800 to 1850", result);
+    }
+
+    [Theory]
+    [InlineData(12, 11, 1899, "1899-11-12")]
+    [InlineData(0, 11, 1899, "1899-11")]
+    [InlineData(0, 0, 1899, "1899")]
+    [InlineData(12, 0, 1899, "1899-00-12")]
+    [InlineData(5, 3, 988, "988-03-05")]
+    [InlineData(1, 3, -1850, "1850-03-01 B.C.E.")]
+    public void FormatDate_Writes_Iso_Like_Gramps_Web(int day, int month, int year, string expected)
+    {
+        var date = new GrampsDate { Day = day, Month = month, Year = year };
+
+        Assert.Equal(expected, GrampsValueFormatter.FormatDate(date));
+    }
+
+    [Theory]
+    [InlineData(1736, "1735/6")]
+    [InlineData(1740, "1739/40")]
+    [InlineData(1700, "1699/700")]
+    public void FormatDate_Shortens_The_Second_Year_Of_A_Dual_Date_Like_Gramps(int year, string expected)
+    {
+        var date = new GrampsDate { Year = year, Slash = true };
+
+        Assert.Equal(expected, GrampsValueFormatter.FormatDate(date));
+    }
+
+    [Theory]
+    [InlineData(1, 3, 0, 0, "estimated about 1930-08")]
+    [InlineData(2, 0, 0, 0, "calculated 1930-08")]
+    [InlineData(0, 0, 1, 0, "1930-08 (Julian)")]
+    [InlineData(0, 1, 1, 2, "before 1930-08 (Julian, Mar25)")]
+    [InlineData(0, 0, 0, 3, "1930-08 (Sep1)")]
+    public void FormatDate_Shows_Quality_And_A_Non_Standard_Calendar(
+        int quality, int modifier, int calendar, int newYear, string expected)
+    {
+        var date = new GrampsDate
+        {
+            Quality = quality, Modifier = modifier, Calendar = calendar, NewYear = newYear, Month = 8, Year = 1930
+        };
+
+        Assert.Equal(expected, GrampsValueFormatter.FormatDate(date));
+    }
+
+    [Fact]
+    public void FormatDate_Qualifies_A_Whole_Range()
+    {
+        var date = new GrampsDate { Quality = 1, Modifier = 4, Calendar = 1, Year = 1850, EndYear = 1860 };
+
+        Assert.Equal("estimated between 1850 and 1860 (Julian)", GrampsValueFormatter.FormatDate(date));
+    }
+
+    [Theory]
+    [InlineData(0, 0, 21, 8, 1930, 0, 0, 0)]
+    [InlineData(0, 0, 0, 8, 1930, 0, 0, 0)]
+    [InlineData(0, 0, 0, 0, 1930, 0, 0, 0)]
+    [InlineData(0, 0, 5, 3, 988, 0, 0, 0)]
+    [InlineData(0, 1, 0, 0, 1930, 0, 0, 0)]
+    [InlineData(0, 2, 0, 8, 1930, 0, 0, 0)]
+    [InlineData(0, 3, 21, 8, 1930, 0, 0, 0)]
+    [InlineData(0, 4, 1, 1, 1850, 0, 0, 1860)]
+    [InlineData(0, 5, 1, 10, 1929, 27, 9, 1937)]
+    [InlineData(0, 7, 0, 10, 1929, 0, 0, 0)]
+    [InlineData(0, 8, 0, 0, 1937, 0, 0, 0)]
+    [InlineData(1, 3, 0, 8, 1930, 0, 0, 0)]
+    [InlineData(2, 0, 21, 8, 1930, 0, 0, 0)]
+    [InlineData(1, 4, 0, 0, 1850, 0, 0, 1860)]
+    public void FormatDate_Output_Parses_Back_To_The_Same_Date(
+        int quality, int modifier, int day, int month, int year, int endDay, int endMonth, int endYear)
+    {
+        var date = new GrampsDate
+        {
+            Quality = quality, Modifier = modifier, Day = day, Month = month, Year = year,
+            EndDay = endDay, EndMonth = endMonth, EndYear = endYear
+        };
+        var text = GrampsValueFormatter.FormatDate(date);
+
+        var parsed = AgentDateParser.ToDateRequestOrNull(text);
+
+        Assert.NotNull(parsed);
+        Assert.Equal(
+            (date.Modifier, date.Quality, date.Calendar, date.Day, date.Month, date.Year, date.EndDay, date.EndMonth, date.EndYear),
+            (parsed!.Modifier, parsed.Quality, parsed.Calendar, parsed.Day, parsed.Month, parsed.Year, parsed.EndDay, parsed.EndMonth, parsed.EndYear));
     }
 }

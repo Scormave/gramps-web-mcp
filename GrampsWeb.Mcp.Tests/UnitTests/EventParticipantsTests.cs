@@ -102,7 +102,7 @@ public class EventParticipantsTests
 
         Assert.Contains(
             "  • Birth: 1820 [Primary] [handle: own-birth]\n" +
-            "  • Birth: 1 Aug 1856 [Father] [handle: kid-birth]\n" +
+            "  • Birth: 1856-08-01 [Father] [handle: kid-birth]\n" +
             "    Participants: Ivanova, Evdokia (I0203), Ivanova, Anastasia (I0202) [Mother]\n" +
             "    Baptised\n",
             result);

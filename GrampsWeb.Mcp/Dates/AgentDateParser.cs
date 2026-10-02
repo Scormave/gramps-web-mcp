@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using GrampsWeb.Mcp.Models;
@@ -21,19 +22,19 @@ public static class AgentDateParser
 
     private const string UnrecognizedDateGuidance =
         "Use ISO (yyyy-MM-dd / yyyy-MM / yyyy), English months (1 Jul 1919 or July 1919), " +
-        "ranges (1800-1850, from … to …, between … and …), or prefixes (before/after/about). " +
+        "ranges (1800-1850, from … to …, between … and …), or prefixes (before/after/about, estimated/calculated). " +
         "See get_reference(topic: \"input-guide\", section: \"dates\").";
 
     private static readonly Regex IsoFull = new(
-        @"^(?<y>\d{4})-(?<m>\d{1,2})-(?<d>\d{1,2})$",
+        @"^(?<y>\d{3,4})-(?<m>\d{1,2})-(?<d>\d{1,2})$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex IsoMonthYear = new(
-        @"^(?<y>\d{4})-(?<m>\d{1,2})$",
+        @"^(?<y>\d{3,4})-(?<m>\d{1,2})$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex IsoYear = new(
-        @"^\d{4}$",
+        @"^\d{3,4}$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>Year–year only (both parts look like years, not yyyy-mm).</summary>
@@ -94,6 +95,14 @@ public static class AgentDateParser
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
+    /// The calendar and new-year day Gramps appends to a date outside the Gregorian calendar or the January
+    /// year: <c>1856-07-20 (Julian)</c>, <c>1735-03 (Julian, Mar25)</c>.
+    /// </summary>
+    private static readonly Regex CalendarSuffix = new(
+        @"\(\s*(?:Julian|Hebrew|French Republican|Persian|Islamic|Swedish|Mar1|Mar25|Sep1)\b[^()]*\)\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
     /// Day + English month + year, optional comma before year: <c>1 Jul 1919</c>, <c>5 July, 1944</c>.
     /// </summary>
     private static readonly Regex EnglishDayMonthYear = new(
@@ -120,7 +129,24 @@ public static class AgentDateParser
             return null;
 
         var raw = input.Trim();
-        var (working, modifier) = StripModifierPrefix(raw);
+        if (CalendarSuffix.IsMatch(raw))
+            throw McpToolErrors.ValidationError(
+                $"Date \"{raw}\" names another calendar or new-year day; only Gregorian dates with the year starting on " +
+                "1 January can be entered. Convert the date, or leave it out (update tools then keep the stored date).");
+
+        var (unqualified, quality) = StripQualityPrefix(raw);
+        var request = ParseUnqualified(raw, unqualified, order, intervalPreference);
+        request.Quality = quality;
+        return request;
+    }
+
+    private static DateRequest ParseUnqualified(
+        string raw,
+        string unqualified,
+        DateComponentOrder order,
+        DateIntervalPreference intervalPreference)
+    {
+        var (working, modifier) = StripModifierPrefix(unqualified);
 
         var betweenMatch = BetweenParts.Match(working);
         if (betweenMatch.Success
@@ -242,7 +268,7 @@ public static class AgentDateParser
     private static bool TryParseMixedPrecisionDash(
         string working,
         DateIntervalPreference preference,
-        out DateRequest? req)
+        [NotNullWhen(true)] out DateRequest? req)
     {
         req = null;
         for (var i = 1; i < working.Length - 1; i++)
@@ -271,7 +297,7 @@ public static class AgentDateParser
     private static bool TryParseOpenEnded(
         string working,
         DateIntervalPreference preference,
-        out DateRequest? req)
+        [NotNullWhen(true)] out DateRequest? req)
     {
         req = null;
         var openStartMod = preference == DateIntervalPreference.Range ? ModAfter : ModFrom;
@@ -376,7 +402,7 @@ public static class AgentDateParser
             return true;
         }
 
-        if (IsoYear.IsMatch(side) || Regex.IsMatch(side, @"^\d{3,4}$", RegexOptions.CultureInvariant))
+        if (IsoYear.IsMatch(side))
         {
             var y = int.Parse(side, CultureInfo.InvariantCulture);
             result = new CalendarSide(0, 0, y);
@@ -413,6 +439,16 @@ public static class AgentDateParser
         return false;
     }
 
+    /// <summary>Strips the quality Gramps writes before a date: <c>estimated about 1930</c>.</summary>
+    private static (string working, int quality) StripQualityPrefix(string raw)
+    {
+        if (raw.StartsWith("estimated ", StringComparison.OrdinalIgnoreCase))
+            return (raw.Substring(10).Trim(), 1);
+        if (raw.StartsWith("calculated ", StringComparison.OrdinalIgnoreCase))
+            return (raw.Substring(11).Trim(), 2);
+        return (raw, 0);
+    }
+
     private static (string working, int modifier) StripModifierPrefix(string raw)
     {
         var lower = raw;
@@ -427,7 +463,7 @@ public static class AgentDateParser
         return (raw, 0);
     }
 
-    private static bool TryParseIso(string working, int modifier, out DateRequest? req)
+    private static bool TryParseIso(string working, int modifier, [NotNullWhen(true)] out DateRequest? req)
     {
         req = null;
         var m = IsoFull.Match(working);

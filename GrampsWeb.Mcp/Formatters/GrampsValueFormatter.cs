@@ -1,6 +1,5 @@
 using System.Text;
 using System.Text.Json;
-using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
@@ -10,6 +9,20 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class GrampsValueFormatter
 {
+    /// <summary>Gramps date qualities by code; regular dates have none.</summary>
+    private static readonly string[] Qualities = ["", "estimated ", "calculated "];
+
+    /// <summary>Gramps calendars by code; Gramps names every calendar but the Gregorian.</summary>
+    private static readonly string[] Calendars = ["", "Julian", "Hebrew", "French Republican", "Persian", "Islamic", "Swedish"];
+
+    /// <summary>Gramps new-year days by code; Gramps names every start but 1 January.</summary>
+    private static readonly string[] NewYears = ["", "Mar1", "Mar25", "Sep1"];
+
+    /// <summary>
+    /// Formats a date as Gramps Web shows it in its default ISO format, so cards agree with the dates the
+    /// server formats in timelines and search results: <c>1856-08-01</c>, <c>estimated about 1930-08</c>,
+    /// <c>between 1850 and 1860</c>, <c>1856-07-20 (Julian)</c>.
+    /// </summary>
     public static string FormatDate(GrampsDate date)
     {
         if (date == null)
@@ -22,12 +35,9 @@ public static class GrampsValueFormatter
             && date.Modifier is not (4 or 5 or 7 or 8))
             return string.IsNullOrWhiteSpace(date.Text) ? "Unknown date" : date.Text.Trim();
 
-        int day = date.Day, month = date.Month, year = date.Year;
-        bool slash = date.Slash;
+        string formattedDate = FormatDateComponents(date.Day, date.Month, date.Year, date.Slash);
 
-        string formattedDate = FormatDateComponents(day, month, year, slash);
-
-        return date.Modifier switch
+        var text = date.Modifier switch
         {
             1 => $"before {formattedDate}",
             2 => $"after {formattedDate}",
@@ -38,6 +48,8 @@ public static class GrampsValueFormatter
             8 => $"to {formattedDate}",
             _ => formattedDate
         };
+
+        return $"{NameOf(Qualities, date.Quality)}{text}{FormatCalendarExtras(date)}";
     }
 
     private static string FormatDateRange(GrampsDate date)
@@ -66,38 +78,45 @@ public static class GrampsValueFormatter
         return $"from {date1} to {date2}";
     }
 
+    /// <summary>One side of a date as Gramps writes it in ISO: <c>1856</c>, <c>1856-08</c>, <c>1856-08-01</c>.</summary>
     private static string FormatDateComponents(int day, int month, int year, bool slash)
     {
-        var sb = new StringBuilder();
+        if (day == 0 && month == 0 && year == 0 && !slash)
+            return "";
 
-        if (year < 0)
-        {
-            if (day > 0 || month > 0)
-            {
-                if (day > 0)
-                    sb.Append($"{day} ");
-                if (month > 0 && month <= 12)
-                    sb.Append($"{EnglishMonthNames.Abbreviated[month]} ");
-            }
-            sb.Append($"{Math.Abs(year)} B.C.E.");
-            return sb.ToString();
-        }
+        var value = FormatYear(year, slash);
+        if (day != 0)
+            value += $"-{month:00}-{day:00}";
+        else if (month != 0)
+            value += $"-{month:00}";
 
-        if (day > 0)
-            sb.Append($"{day} ");
-
-        if (month > 0 && month <= 12)
-            sb.Append($"{EnglishMonthNames.Abbreviated[month]} ");
-
-        if (year > 0)
-        {
-            sb.Append(year);
-            if (slash)
-                sb.Append("/").Append(year + 1);
-        }
-
-        return sb.ToString().Trim();
+        return year < 0 ? $"{value} B.C.E." : value;
     }
+
+    /// <summary>
+    /// Gramps keeps the later year of a dual-dated year and shortens it after the slash: 1736 reads <c>1735/6</c>.
+    /// </summary>
+    private static string FormatYear(int year, bool slash)
+    {
+        var value = Math.Abs(year);
+        if (!slash)
+            return $"{value}";
+
+        var previous = value - 1;
+        var shortened = previous % 100 == 99 ? value % 1000 : previous % 10 == 9 ? value % 100 : value % 10;
+        return $"{previous}/{shortened}";
+    }
+
+    /// <summary>A non-Gregorian calendar and a new year not on 1 January: <c> (Julian, Mar25)</c>.</summary>
+    private static string FormatCalendarExtras(GrampsDate date)
+    {
+        var extras = new[] { NameOf(Calendars, date.Calendar), NameOf(NewYears, date.NewYear) }
+            .Where(name => name.Length > 0)
+            .ToList();
+        return extras.Count == 0 ? "" : $" ({string.Join(", ", extras)})";
+    }
+
+    private static string NameOf(string[] names, int code) => code > 0 && code < names.Length ? names[code] : "";
 
     public static string FormatName(GrampsName? name)
     {

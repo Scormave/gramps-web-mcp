@@ -1,12 +1,12 @@
 namespace GrampsWeb.Mcp.Dates;
 
 /// <summary>
-/// English month names shared by date formatting (abbreviated output) and agent date parsing.
+/// English month names that agent date parsing accepts.
 /// </summary>
 public static class EnglishMonthNames
 {
-    /// <summary>Index 1–12: Jan…Dec (empty at 0). Used for display.</summary>
-    public static readonly string[] Abbreviated =
+    /// <summary>Index 1–12: Jan…Dec (empty at 0).</summary>
+    private static readonly string[] Abbreviated =
     {
         "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
         "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"

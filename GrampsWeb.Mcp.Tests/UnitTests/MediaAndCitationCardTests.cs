@@ -40,7 +40,7 @@ public class MediaAndCitationCardTests
 
         var result = (await MediaFormatter.FormatMediaFull(media, CreateClient())).Replace("\r\n", "\n");
 
-        Assert.Contains("\nDate: 21 Aug 1930\n", result);
+        Assert.Contains("\nDate: 1930-08-21\n", result);
         Assert.Contains("  thumbnail resource: gramps://media/m1/thumbnail/1568\n", result);
         Assert.DoesNotContain("read_media needs mode file", result);
     }

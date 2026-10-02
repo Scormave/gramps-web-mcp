@@ -47,7 +47,7 @@ public class LinkedObjectLabelTests
             "  • Ivanov, Pyotr, b. 1880 in Tver [handle: p1]\n" +
             "  • person [handle: p2]\n",
             result);
-        Assert.Contains("  • Birth — 1 Aug 1856 — Tver [handle: e1]\n", result);
+        Assert.Contains("  • Birth — 1856-08-01 — Tver [handle: e1]\n", result);
         Assert.Equal(
             [
                 "/api/events/e1?profile=self",
@@ -154,8 +154,8 @@ public class LinkedObjectLabelTests
         Assert.Contains("  Families as parent or spouse (1):\n  • Petrova, Anna [handle: f2]\n", result);
         Assert.Contains(
             "Events (2):\n" +
-            "  • Birth — 1 Aug 1856 — Tver [handle: e1] role: Primary\n" +
-            "  • Baptism — 3 Aug 1856 [handle: e2] role: Godparent\n",
+            "  • Birth — 1856-08-01 — Tver [handle: e1] role: Primary\n" +
+            "  • Baptism — 1856-08-03 [handle: e2] role: Godparent\n",
             result);
         Assert.Contains("Gallery (media) (1):\n  • [image] Portrait (portrait.jpg) [handle: m1]\n", result);
         Assert.Contains("Notes (1):\n  • [Research] Check the census [handle: n1]\n", result);

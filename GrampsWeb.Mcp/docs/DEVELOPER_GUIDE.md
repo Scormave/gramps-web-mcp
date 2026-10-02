@@ -345,12 +345,15 @@ events, citations, media, composites, place enclosure, and place alternate names
 - English months: `1 Jul 1919`, `5 July 1944`, `Jul 1919` (abbreviated or full; optional comma before year)
 - Slash/dot triplets: `15/03/2024` (order controlled by `DateComponentOrder`; rejected under default `Iso`)
 - Modifiers: `about 1950`, `before 1 Apr 1920`, `after 2000`, `circa 1850`
+- Qualities before the date: `estimated 1850`, `calculated about 1930-08` → Gramps quality 1 / 2
 - Explicit open span: `from 1991`, `to 1917`, `from 5 Jul 1944` → Gramps From (7) / To (8)
 - Closed dashes (`1800-1850`, `1914-08-31-1924-01-26`, mixed `1703-1914-08-31`, English `1 Oct 1929-5 Jul 1944`):
   default **span** (5); events/citations/media pass **range** (4) via `DateIntervalPreference`
 - Open dashes (`1991-`, `-1722`, `5 Jul 1944-`): default **From/To** (7/8); with Range preference → After/Before (2/1)
 - `between A and B` → always range (4); `from A to B` → always span (5)
 - Unrecognized input → **validation error** (agents never create text-only modifier-6 dates). Existing tree text dates still format on read.
+- A calendar or new-year suffix as Gramps writes it (`1856-07-20 (Julian)`, `1735-03 (Mar25)`) → **validation error**:
+  only Gregorian dates with the year starting on 1 January can be entered
 
 `DateComponentOrder` enum controls ambiguous date parsing:
 - `Iso` — hyphenated ISO only for full dates (default)
@@ -360,8 +363,16 @@ events, citations, media, composites, place enclosure, and place alternate names
 `DateIntervalPreference` controls only ambiguous dashes (places default to Span;
 events, citations, and media use Range).
 
-`EnglishMonthNames` is the shared abbrev/full month table for parsing and
-`GrampsValueFormatter` display.
+### Gramps → Agent
+
+`GrampsValueFormatter.FormatDate` writes dates as Gramps Web does in its
+default ISO format, so cards agree with the dates the server formats in
+profiles (timelines, `search`, trees): `1856-08-01`, `estimated about 1930-08`,
+`between 1850 and 1860`, a dual-dated year as `1735/6`, and a non-Gregorian
+calendar or new-year day as a suffix (`1856-07-20 (Julian)`). The parser takes
+this output back, except dual years, B.C.E. dates, and calendar suffixes.
+
+`EnglishMonthNames` is the abbreviated/full month table the parser accepts.
 
 `GrampsDateHelpers.IsEmpty` detects empty/zero date objects from the API so
 mappers and formatters can omit them instead of emitting blank `[]` brackets.
@@ -471,7 +482,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Update contract mapping | `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` |
 | Parse dates from agent input | `Dates/AgentDateParser.cs` |
 | Date interval preference (span vs range) | `Dates/DateIntervalPreference.cs` |
-| English month names (parse + format) | `Dates/EnglishMonthNames.cs` |
+| English month names (parse) | `Dates/EnglishMonthNames.cs` |
 | Detect empty Gramps dates | `Dates/GrampsDateHelpers.cs` |
 | Parse gender/confidence enums | `Tools/Parsing/` |
 | Look up default type labels | `Formatters/GrampsDefaultTypeLabels.cs` |

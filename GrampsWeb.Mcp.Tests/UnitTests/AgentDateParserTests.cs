@@ -220,6 +220,17 @@ public class AgentDateParserTests
         Assert.Equal(1920, before.Year);
     }
 
+    [Theory]
+    [InlineData("1856-07-20 (Julian)")]
+    [InlineData("before 1856-07 (Julian, Mar25)")]
+    [InlineData("between 1850 and 1860 (julian)")]
+    [InlineData("1735-03 (Mar25)")]
+    public void NonGregorianCalendar_ThrowsValidationError(string input)
+    {
+        var ex = Assert.Throws<McpException>(() => AgentDateParser.ToDateRequestOrNull(input));
+        Assert.Contains("only Gregorian dates", ex.Message);
+    }
+
     [Fact]
     public void English_UsMonthDayYear_ThrowsValidationError()
     {

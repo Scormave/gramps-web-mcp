@@ -630,11 +630,15 @@ public sealed class GrampsResources
             "MCP tools take human-readable date strings. The server still receives Gramps Date JSON with dateval; the MCP layer parses your string.",
         preferred_iso = new[] { "yyyy-MM-dd", "yyyy-MM", "yyyy" },
         examples_iso = new[] { "1990-03-15", "1990-03", "1920" },
+        tool_output =
+            "Tools show dates as Gramps Web does: ISO with modifiers and quality (1856-08-01, estimated about 1930-08, " +
+            "between 1850 and 1860). Pass them back as is. Dual years (1735/6), B.C.E. dates, and calendar suffixes " +
+            "(1856-07-20 (Julian)) can't be entered: only Gregorian dates are accepted.",
         english_months = new
         {
             forms = new[] { "1 Jul 1919", "5 July 1944", "1 July, 1919", "Jul 1919", "October 1929" },
             note =
-                "Day-month-year with English abbreviated or full month names (same style as tool output). US month-first forms like July 1, 1919 are rejected."
+                "Day-month-year with English abbreviated or full month names. US month-first forms like July 1, 1919 are rejected."
         },
         date_component_order = new
         {
@@ -646,7 +650,9 @@ public sealed class GrampsResources
         modifiers = new
         {
             prefixes = new[] { "before ", "after ", "about ", "circa " },
-            example = "before 1 Apr 1920"
+            example = "before 1 Apr 1920",
+            qualities = new[] { "estimated ", "calculated " },
+            quality_example = "estimated about 1930-08"
         },
         year_ranges = new
         {
