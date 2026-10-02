@@ -37,7 +37,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/people/{handle}` | Person | `GrampsPerson` (`primary_name`, `alternate_names`) |
 | `GET /api/people/{handle}?extend=all` | Person extended | `GrampsPersonExtended` |
 | `GET /api/{type}/?handles=h1,h2&page=1&pagesize=N` | Array | `T[]` via `GrampsBatchFetch.GetByHandlesAsync` (API 3.14+; up to 50 handles per request; per-handle `GET /api/{type}/{h}` fallback) |
-| `GET /api/people/{h}/ancestors`, `/descendants` | Array | `GrampsPerson[]` |
+| `GET /api/people/?handles=…&profile=self[&backlinks=true]` + `GET /api/families/?handles=…` | Derived | `PersonTreeRow[]` for `get_person_tree`, one batch of each per generation (no `/people/{h}/ancestors` or `/descendants` in OpenAPI) |
 | `GET /api/people/{handle}/timeline` | Array | `GrampsTimelineEntry[]` (query: `events`, `relatives`, `relativeEvents`, `dates`) |
 | `GET /api/relations/{handle1}/{handle2}`, `.../all` | Object, array | `GrampsRelationship`, `GrampsRelationshipItem[]` (closest first); both people and the common ancestors are read with `profile=self` |
 | `GET /api/families/{handle}` | Family | `GrampsFamily` |
@@ -56,7 +56,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/media/{handle}/file` | Binary | MCP resources `gramps://media/{handle}/file` and `gramps://media/{handle}/thumbnail/{size}` via `GetBytesAsync`; thumbnails are rendered locally by `MediaPreviewRenderer`; opt-in safeguards apply |
 | `GET /api/media/{handle}/thumbnail/{size}` | Binary | Not used: Gramps Web always returns AVIF, which MCP clients cannot display |
 | `GET /api/tags/{handle}` | Tag | `GrampsTag` |
-| `GET ...?backlinks=true` | Backlinks | `JsonElement` |
+| `GET ...?backlinks=true` | Backlinks | `JsonElement`; `GrampsPerson.Backlinks` (`GrampsBacklinks`, families only) in `get_person_tree` batches |
 | `GET /api/types/default/` | Types | `JsonElement` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in OpenAPI) |
 | `GET /api/types/custom/` | Nested lists | `JsonElement` → `TypesPayloadParser.ParseCategories` (same shape as default; see `CustomTypes` in OpenAPI) |
 | `GET /api/transactions/history/?page=1&pagesize=N&sort=-id` | Paged array | `GrampsPagedResult<GrampsTransaction>` via `GetPagedListAsync<T>` |

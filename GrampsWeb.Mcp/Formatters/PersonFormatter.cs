@@ -301,7 +301,9 @@ public static class PersonFormatter
         for (var i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
-            var summary = await FormatPersonSummary(row.Person, client);
+            var summary = row.Person.Profile is { } profile
+                ? FormatProfileSummary(profile, row.Person.GrampsId)
+                : await FormatPersonSummary(row.Person, client);
             var genPart = $"Gen {row.Generation}";
 
             string headLine;
@@ -723,6 +725,14 @@ public static class PersonFormatter
     {
         var id = string.IsNullOrWhiteSpace(person.GrampsId) ? "" : $" ({person.GrampsId.Trim()})";
         return string.Join(", ", [$"{person.NameDisplay!.Trim()}{id} [handle: {handle.Trim()}]", .. FormatProfileVitals(person)]);
+    }
+
+    /// <summary>"Petrov, Ivan, b. 1880 in Dublin, d. 1950 [I0012]", the <see cref="FormatPersonSummary"/> layout.</summary>
+    internal static string FormatProfileSummary(GrampsPersonProfile person, string? grampsId)
+    {
+        var name = string.IsNullOrWhiteSpace(person.NameDisplay) ? "Unknown" : person.NameDisplay.Trim();
+        var summary = string.Join(", ", [name, .. FormatProfileVitals(person)]);
+        return string.IsNullOrWhiteSpace(grampsId) ? summary : $"{summary} [{grampsId.Trim()}]";
     }
 
     /// <summary>

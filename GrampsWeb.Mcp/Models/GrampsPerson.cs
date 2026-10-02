@@ -139,4 +139,8 @@ public class GrampsPerson
     /// <summary>Display name and life events; present when requested with <c>?profile=self</c>.</summary>
     [JsonPropertyName("profile")]
     public GrampsPersonProfile? Profile { get; set; }
+
+    /// <summary>Present when requested with <c>?backlinks=true</c>; empty groups are left out.</summary>
+    [JsonPropertyName("backlinks")]
+    public GrampsBacklinks? Backlinks { get; set; }
 }

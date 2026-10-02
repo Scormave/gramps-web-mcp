@@ -54,12 +54,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   sentence, generations to the common ancestor, and every relationship with
   its common ancestors by name, instead of raw JSON; the two people load in
   parallel and the common ancestors in one request
-- Load place timeline events and `get_relations` common ancestors in batches
-  of up to 50 objects with the list endpoint's `handles` filter (Gramps Web
-  API 3.14+), instead of one request per object. Servers that reject or ignore
-  the filter get one request per object, up to 4 at a time, and the server
-  answer is remembered per API URL and tree
+- Load place timeline events, each `get_person_tree` generation, and
+  `get_relations` common ancestors in batches of up to 50 objects with the list
+  endpoint's `handles` filter (Gramps Web API 3.14+), instead of one request
+  per object. Servers that reject or ignore the filter get one request per
+  object, up to 4 at a time, and the server answer is remembered per API URL
+  and tree
 - Read a place once per place timeline instead of twice
+- Build `get_person_tree` rows from the person profile in the batch instead of
+  reading each person's birth and death events and places; an ancestor tree
+  takes about two requests per generation instead of several per person
+- Label baptism, christening, burial, and cremation dates by event type in
+  `get_person_tree` rows, family members, and `get_relations`, e.g.
+  "burial 1950", instead of showing them as birth and death
 
 ### Removed
 
@@ -88,6 +95,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Sort `get_timeline` events dated before the year 1000 by year; they were
   listed after the undated events. Place timeline events of the same year
   follow their dates instead of the order of the place's backlinks
+- Drop the separator of an empty name part from Gramps display names, so a
+  person without a surname shows as "Anna" instead of ", Anna" in trees,
+  families, relationships, and timelines
 - Name the `objectType` parameter in the `list_objects` error for an unknown
   type instead of `object_type`
 
