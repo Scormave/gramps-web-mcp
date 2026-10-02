@@ -11,10 +11,18 @@ public static class FamilyFormatter
 {
     /// <summary>
     /// Family card. Names, life dates and event summaries come from <see cref="GrampsFamily.Profile"/>
-    /// (<c>?profile=self,events</c>) when present; otherwise linked objects are shown by handle.
+    /// (<c>?profile=self,events</c>) when present; otherwise members and events are shown by handle.
+    /// Tags, media, notes and citations are named by <see cref="LinkedObjectLabels"/>.
     /// </summary>
     public static async Task<string> FormatFamilyFullAsync(GrampsFamily family, GrampsApiClient client)
     {
+        var labelsTask = LinkedObjectLabels.LoadAsync(client,
+        [
+            ("tags", family.TagList),
+            ("media", GrampsMediaRef.ToHandleStrings(family.MediaList)),
+            ("notes", family.NoteList),
+            ("citations", family.CitationList),
+        ]);
         var relLabel = string.IsNullOrWhiteSpace(family.Relationship)
             ? "Unknown"
             : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, family.Relationship);
@@ -31,7 +39,8 @@ public static class FamilyFormatter
         if (PersonFormatter.FormatProfileEvent(profile?.Divorce) is { } divorce)
             sb.AppendLine($"Divorce: {divorce}");
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList);
+        var labels = await labelsTask;
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", family.TagList, labels);
 
         if (family.ChildRefList?.Length > 0)
         {
@@ -84,10 +93,9 @@ public static class FamilyFormatter
             }
         }
 
-        MediaFormatter.AppendExtendedMediaSection(sb, null, GrampsMediaRef.ToHandleStrings(family.MediaList));
-
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", family.CitationList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Gallery (media)", GrampsMediaRef.ToHandleStrings(family.MediaList), labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", family.NoteList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", family.CitationList, labels);
 
         AttributeListFormatter.AppendSection(sb, family.AttributeList);
 

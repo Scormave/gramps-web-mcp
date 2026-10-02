@@ -108,6 +108,123 @@ public class LinkedObjectLabelTests
         Assert.Equal(["/api/citations/?handles=c1,c2&profile=self&page=1&pagesize=2"], handler.Requests);
     }
 
+    [Fact]
+    public async Task PersonCard_Names_Its_Families_Events_Media_Notes_Citations_And_Associates()
+    {
+        var handler = new PathHandler(new Dictionary<string, string>
+        {
+            // The Birth header line reads the event on its own.
+            ["/api/events/e1"] = """{"handle":"e1","type":"Birth","date":{"modifier":0,"dateval":[1,8,1856,false]}}""",
+            ["/api/tags/t1"] = """{"handle":"t1","name":"To check"}""",
+            ["/api/families/?handles=f1,f2&profile=self&page=1&pagesize=2"] = """
+                [{"handle":"f1","profile":{"father":{"name_display":"Ivanov, Ivan"},"mother":{"name_display":"Ivanova, Maria"}}},
+                 {"handle":"f2","profile":{"mother":{"name_display":"Petrova, Anna"}}}]
+                """,
+            ["/api/events/?handles=e1,e2&profile=self&page=1&pagesize=2"] = """
+                [{"handle":"e1","type":"Birth","date":{"modifier":0,"dateval":[1,8,1856,false]},"profile":{"place_name":"Tver"}},
+                 {"handle":"e2","type":"Baptism","date":{"modifier":0,"dateval":[3,8,1856,false]}}]
+                """,
+            ["/api/media/m1"] = """{"handle":"m1","path":"scans/portrait.jpg","mime":"image/jpeg","desc":"Portrait"}""",
+            ["/api/notes/n1"] = """{"handle":"n1","type":"Research","text":"Check the census"}""",
+            ["/api/citations/c1?profile=self"] = """
+                {"handle":"c1","page":"12","confidence":2,"profile":{"source":{"title":"Metrical book"}}}
+                """,
+            // p3 is gone: the association keeps its generic wording.
+            ["/api/people/?handles=p2,p3&profile=self&page=1&pagesize=2"] = """
+                [{"handle":"p2","profile":{"name_display":"Sidorov, Fyodor"}}]
+                """,
+        });
+        var person = JsonSerializer.Deserialize<GrampsPerson>(
+            """
+            {"handle":"p1","gramps_id":"I0001","gender":1,
+             "primary_name":{"first_name":"Pyotr","surname_list":[{"surname":"Ivanov"}]},
+             "tag_list":["t1"],
+             "parent_family_list":["f1"],"family_list":["f2"],
+             "event_ref_list":[{"ref":"e1","role":"Primary"},{"ref":"e2","role":"Godparent"}],
+             "media_list":[{"ref":"m1"}],"note_list":["n1"],"citation_list":["c1"],
+             "person_ref_list":[{"ref":"p2","rel":"Godfather"},{"ref":"p3","rel":"Witness"}]}
+            """,
+            GrampsJson.Options)!;
+
+        var result = (await PersonFormatter.FormatPersonFull(person, CreateClient(handler))).Replace("\r\n", "\n");
+
+        Assert.Contains("Tags (1):\n  • To check [handle: t1]\n", result);
+        Assert.Contains(
+            "  Parent families (as child) (1):\n  • Ivanov, Ivan and Ivanova, Maria [handle: f1]\n", result);
+        Assert.Contains("  Families as parent or spouse (1):\n  • Petrova, Anna [handle: f2]\n", result);
+        Assert.Contains(
+            "Events (2):\n" +
+            "  • Birth — 1 Aug 1856 — Tver [handle: e1] role: Primary\n" +
+            "  • Baptism — 3 Aug 1856 [handle: e2] role: Godparent\n",
+            result);
+        Assert.Contains("Gallery (media) (1):\n  • [image] Portrait (portrait.jpg) [handle: m1]\n", result);
+        Assert.Contains("Notes (1):\n  • [Research] Check the census [handle: n1]\n", result);
+        Assert.Contains(
+            "Sources (citations) (1):\n  • Metrical book — p. 12 (confidence: Normal) [handle: c1]\n", result);
+        Assert.Contains(
+            "  • Sidorov, Fyodor [handle: p2] — Godfather\n" +
+            "  • related person [handle: p3] — Witness\n",
+            result);
+        Assert.Equal(
+            [
+                "/api/citations/c1?profile=self",
+                "/api/events/?handles=e1,e2&profile=self&page=1&pagesize=2",
+                "/api/events/e1",
+                "/api/families/?handles=f1,f2&profile=self&page=1&pagesize=2",
+                "/api/media/m1",
+                "/api/notes/n1",
+                "/api/people/?handles=p2,p3&profile=self&page=1&pagesize=2",
+                "/api/tags/t1",
+            ],
+            handler.Requests.Distinct().Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task FamilyCard_Names_Its_Tags_Media_Notes_And_Citations()
+    {
+        var handler = new PathHandler(new Dictionary<string, string>
+        {
+            ["/api/tags/t1"] = """{"handle":"t1","name":"To check"}""",
+            // m2 is gone: its handle stays bare.
+            ["/api/media/?handles=m1,m2&page=1&pagesize=2"] = """
+                [{"handle":"m1","path":"scans/wedding.jpg","mime":"image/jpeg"}]
+                """,
+            ["/api/notes/n1"] = """{"handle":"n1","type":"General","text":"Married in Tver"}""",
+            ["/api/citations/c1?profile=self"] = """
+                {"handle":"c1","page":"7","confidence":3,"profile":{"source":{"title":"Marriage register"}}}
+                """,
+        });
+        var family = JsonSerializer.Deserialize<GrampsFamily>(
+            """
+            {"handle":"f1","gramps_id":"F0001","father_handle":"p1",
+             "profile":{"father":{"handle":"p1","name_display":"Ivanov, Pyotr"}},
+             "tag_list":["t1"],"media_list":[{"ref":"m1"},{"ref":"m2"}],
+             "note_list":["n1"],"citation_list":["c1"]}
+            """,
+            GrampsJson.Options)!;
+
+        var result = (await FamilyFormatter.FormatFamilyFullAsync(family, CreateClient(handler))).Replace("\r\n", "\n");
+
+        Assert.Contains("Father: Ivanov, Pyotr", result);
+        Assert.Contains("Tags (1):\n  • To check [handle: t1]\n", result);
+        Assert.Contains(
+            "Gallery (media) (2):\n" +
+            "  • [image] wedding.jpg [handle: m1]\n" +
+            "  • [handle: m2]\n",
+            result);
+        Assert.Contains("Notes (1):\n  • [General] Married in Tver [handle: n1]\n", result);
+        Assert.Contains(
+            "Sources (citations) (1):\n  • Marriage register — p. 7 (confidence: High) [handle: c1]\n", result);
+        Assert.Equal(
+            [
+                "/api/citations/c1?profile=self",
+                "/api/media/?handles=m1,m2&page=1&pagesize=2",
+                "/api/notes/n1",
+                "/api/tags/t1",
+            ],
+            handler.Requests.Order(StringComparer.Ordinal));
+    }
+
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
     {
         var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");

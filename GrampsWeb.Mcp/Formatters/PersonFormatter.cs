@@ -62,6 +62,17 @@ public static class PersonFormatter
 
     public static async Task<string> FormatPersonFull(GrampsPerson person, GrampsApiClient client)
     {
+        var labelsTask = LinkedObjectLabels.LoadAsync(client,
+        [
+            ("tags", person.TagList),
+            ("families", person.ParentFamilyList?.Select(pf => pf.Ref!)),
+            ("families", person.FamilyList),
+            ("events", person.EventRefList?.Select(er => er.Ref!)),
+            ("media", GrampsMediaRef.ToHandleStrings(person.MediaList)),
+            ("notes", person.NoteList),
+            ("citations", person.CitationList),
+            ("people", person.PersonRefList?.Select(pr => pr.Ref!)),
+        ]);
         var nameTypeLabelsTask = GrampsDefaultTypeLabels.LoadNameTypeLabelsAsync(client);
         var nameOriginTypeLabelsTask = GrampsDefaultTypeLabels.LoadNameOriginTypeLabelsAsync(client);
         await Task.WhenAll(nameTypeLabelsTask, nameOriginTypeLabelsTask).ConfigureAwait(false);
@@ -85,18 +96,22 @@ public static class PersonFormatter
 
         await AppendBirthDeathHeaderLinesAsync(sb, person, client, preloadedExtendedEvents: null).ConfigureAwait(false);
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", person.TagList);
-        AppendPersonRelationshipsHandleSections(sb, person);
+        var labels = await labelsTask.ConfigureAwait(false);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", person.TagList, labels);
+        AppendPersonRelationshipsHandleSections(sb, person, labels);
 
         if (person.EventRefList?.Length > 0)
         {
             sb.AppendLine();
             sb.AppendLine($"Events ({person.EventRefList.Length}):");
             foreach (var er in person.EventRefList)
-                sb.AppendLine($"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}");
+            {
+                var named = er.Ref != null && labels.TryGetValue(er.Ref.Trim(), out var label) ? $"{label} " : "";
+                sb.AppendLine($"  • {named}[handle: {er.Ref}] role: {er.Role ?? "Primary"}");
+            }
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Gallery (media)", GrampsMediaRef.ToHandleStrings(person.MediaList));
+        HandleListFormatter.AppendHandleBulletSection(sb, "Gallery (media)", GrampsMediaRef.ToHandleStrings(person.MediaList), labels);
 
         if (person.AlternateNames is { Length: > 0 })
         {
@@ -110,11 +125,11 @@ public static class PersonFormatter
             }
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", person.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", person.CitationList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", person.NoteList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Sources (citations)", person.CitationList, labels);
 
         AppendMetadataSectionsForPerson(sb, person);
-        AppendPersonAssociationsSection(sb, person.PersonRefList);
+        AppendPersonAssociationsSection(sb, person.PersonRefList, labels);
 
         if (person.Private)
             sb.AppendLine("⚠ Private record");
@@ -525,7 +540,8 @@ public static class PersonFormatter
         return string.IsNullOrWhiteSpace(s) ? null : s;
     }
 
-    private static void AppendPersonRelationshipsHandleSections(StringBuilder sb, GrampsPerson person)
+    private static void AppendPersonRelationshipsHandleSections(
+        StringBuilder sb, GrampsPerson person, IReadOnlyDictionary<string, string> labels)
     {
         var parentHandles = person.ParentFamilyList?
             .Select(pf => pf.Ref)
@@ -540,9 +556,9 @@ public static class PersonFormatter
         sb.AppendLine();
         sb.AppendLine("Relationships:");
         if (hasParents)
-            HandleListFormatter.AppendHandleBulletSection(sb, "  Parent families (as child)", parentHandles);
+            HandleListFormatter.AppendHandleBulletSection(sb, "  Parent families (as child)", parentHandles, labels);
         if (hasSpouseFamilies)
-            HandleListFormatter.AppendHandleBulletSection(sb, "  Families as parent or spouse", person.FamilyList);
+            HandleListFormatter.AppendHandleBulletSection(sb, "  Families as parent or spouse", person.FamilyList, labels);
     }
 
     private static void AppendMetadataSectionsForPerson(StringBuilder sb, GrampsPerson person)
@@ -617,7 +633,9 @@ public static class PersonFormatter
         }
     }
 
-    private static void AppendPersonAssociationsSection(StringBuilder sb, GrampsPersonRef[]? list)
+    /// <param name="labels">Names of the related people by handle; others are shown as "related person".</param>
+    private static void AppendPersonAssociationsSection(
+        StringBuilder sb, GrampsPersonRef[]? list, IReadOnlyDictionary<string, string>? labels = null)
     {
         if (list is null || list.Length == 0)
             return;
@@ -629,7 +647,8 @@ public static class PersonFormatter
             var rh = string.IsNullOrWhiteSpace(p.Ref) ? "—" : p.Ref.Trim();
             var rel = string.IsNullOrWhiteSpace(p.Relationship) ? "—" : p.Relationship.Trim();
             var priv = p.Private ? " ⚠ private" : "";
-            sb.AppendLine($"  • related person [handle: {rh}] — {rel}{priv}");
+            var who = labels?.GetValueOrDefault(rh) ?? "related person";
+            sb.AppendLine($"  • {who} [handle: {rh}] — {rel}{priv}");
             AppendIndentedHandleListLine(sb, "    citations", p.CitationList);
             AppendIndentedHandleListLine(sb, "    notes", p.NoteList);
         }

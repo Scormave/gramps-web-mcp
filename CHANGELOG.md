@@ -31,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   in their `Referenced by` sections, as in `search` results (`• [General]
   Born at home [handle: …]`) instead of listing bare handles; keep a
   multi-line note on one line in `search` and `list_objects` rows
+- Name the families, events, media, notes, citations, tags, and associated
+  people on person cards, and the media, notes, citations, and tags on family
+  cards, in the same way (`• Birth — 1 Aug 1856 — Tver [handle: …] role:
+  Primary`)
 
 ## [2.1.0] - 2026-10-02
 
