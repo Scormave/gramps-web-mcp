@@ -64,6 +64,27 @@ public class FormatterIntegrationTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void FormatTimelineChronological_SortsYearsBefore1000_AndPutsUndatedLast()
+    {
+        var events = new[]
+        {
+            new GrampsTimelineEntry { Type = "Note" },
+            new GrampsTimelineEntry { Type = "Death", Date = "1014" },
+            new GrampsTimelineEntry { Type = "Birth", Date = "960" },
+            new GrampsTimelineEntry { Type = "Baptism", Date = "0961-03-05" },
+        };
+
+        var result = TimelineFormatter.FormatTimelineChronological(events);
+
+        var positions = new[] { "960: Birth", "0961-03-05: Baptism", "1014: Death", "—: Note" }
+            .Select(row => result.IndexOf(row, StringComparison.Ordinal))
+            .ToArray();
+        Assert.DoesNotContain(-1, positions);
+        Assert.Equal(positions.Order(), positions);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void FormatTimelineChronological_IncludesHandlePerRowWhenPresent()
     {
         var events = new[]

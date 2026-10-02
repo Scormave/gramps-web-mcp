@@ -65,6 +65,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and 422 still fall back to the original value
 - Leave a missing type, date, or place out of `search` event lines instead of
   showing dashes
+- Sort `get_timeline` events dated before the year 1000 by year; they were
+  listed after the undated events
 - Name the `objectType` parameter in the `list_objects` error for an unknown
   type instead of `object_type`
 

@@ -9,7 +9,8 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class TimelineFormatter
 {
-    private static readonly Regex YearToken = new(@"\b(1[0-9]{3}|20[0-9]{2})\b", RegexOptions.Compiled);
+    // Days and months take one or two digits, so a three- or four-digit number is the year (960, 0960, 1850).
+    private static readonly Regex YearToken = new(@"\b[0-9]{3,4}\b", RegexOptions.Compiled);
 
     /// <summary>
     /// Renders timeline rows in chronological order (by decade when there are more than 20 rows).
