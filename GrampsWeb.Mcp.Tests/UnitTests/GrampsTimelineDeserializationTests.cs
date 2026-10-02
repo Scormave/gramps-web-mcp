@@ -68,6 +68,7 @@ public class GrampsTimelineDeserializationTests
         Assert.Equal("Petrov, Ivan", e.Person.NameDisplay);
         Assert.Equal("father", e.Person.Relationship);
         Assert.Equal("70 years", e.Person.Age);
+        Assert.Null(e.Participants);
     }
 
     [Theory]

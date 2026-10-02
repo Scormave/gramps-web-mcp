@@ -51,4 +51,8 @@ public class GrampsEvent
 
     [JsonPropertyName("private")]
     public bool Private { get; set; }
+
+    /// <summary>Display summary; participants are included with <c>?profile=participants</c>.</summary>
+    [JsonPropertyName("profile")]
+    public GrampsEventProfile? Profile { get; set; }
 }

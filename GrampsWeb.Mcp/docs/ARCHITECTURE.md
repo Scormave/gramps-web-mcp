@@ -286,6 +286,15 @@ binary downloads, paginated-list requests, and direct client calls outside an
 MCP read scope retain their existing behavior. No entity data is shared across
 calls or client instances.
 
+`GrampsBatchFetch.GetByHandlesAsync` loads many objects of one type through the
+list endpoint's `handles` filter (`GET /api/{type}/?handles=a,b`, Gramps Web
+API 3.14+), 50 handles per request and up to 4 requests at a time, with the
+same `profile` or `backlinks` arguments as a detail read. Place timelines use
+it. A server that answers HTTP 400 or 422, or returns objects that were not
+asked for, is remembered per API URL and tree for the life of the process, and
+its objects are fetched one per request, up to 4 at a time. Handles missing
+from a filtered reply are treated as deleted.
+
 Search formatting loads type-label categories only for the entity types in
 the results. Shared bulk/default/custom vocabulary requests benefit from the
 same per-call cache, without changing vocabulary order or adding a new TTL.

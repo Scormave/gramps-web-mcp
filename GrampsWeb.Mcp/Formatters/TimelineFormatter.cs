@@ -72,7 +72,7 @@ public static class TimelineFormatter
 
     /// <summary>
     /// The API omits the person for the timeline person's own events, so a name appears only for
-    /// relatives and family members.
+    /// relatives, family members, and place participants.
     /// </summary>
     private static string FormatWho(GrampsTimelineEntry entry)
     {
@@ -83,7 +83,7 @@ public static class TimelineFormatter
             return $": {person.NameDisplay.Trim()}{id}";
         }
 
-        return "";
+        return string.IsNullOrWhiteSpace(entry.Participants) ? "" : $": {entry.Participants.Trim()}";
     }
 
     /// <summary>Primary is the usual role and only adds noise.</summary>

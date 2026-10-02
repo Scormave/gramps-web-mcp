@@ -92,8 +92,9 @@ public static class TimelineTools
         string identifier, string[]? events, string? dates, GrampsApiClient client)
     {
         var handle = await HandleResolver.ResolveToHandleAsync(identifier, client, "places");
+        // Same route as the backlinks read in CollectAsync, so the read scope serves both from one request.
         var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
-            $"/api/places/{Uri.EscapeDataString(handle)}");
+            $"/api/places/{Uri.EscapeDataString(handle)}?backlinks=true");
         if (place is null)
             return NotFoundHelper.NotFoundMessage("Place", identifier);
 

@@ -115,7 +115,10 @@ If the endpoint returns a new entity type:
 Most tools use the generic `client.GetAsync<T>()`, `client.PostMutationAsync<T>()`
 etc.  Only add new client methods if you need special request/response handling.
 Use `GetBytesAsync(path, maxBytes)` for binary responses so payload bytes are
-not logged or converted through text.
+not logged or converted through text. To read several objects of one type, use
+`client.GetByHandlesAsync<T>(collection, handles, handleOf, query)` instead of
+one `GetAsync` per handle; it batches with the `handles` filter and falls back
+on older servers.
 
 ### Step 4: Add formatter
 
@@ -415,6 +418,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Add/modify an MCP resource | `Resources/GrampsResources.cs` |
 | Add a multi-step convenience tool | `Tools/CompositeTools.cs` |
 | Resolve Gramps ID → handle | `Client/HandleResolver.cs` |
+| Load many objects by handle | `Client/GrampsBatchFetch.cs` |
 | Validate type strings server-side | `Client/TypeCache.cs` |
 | Return helpful not-found messages | `Tools/NotFoundHelper.cs` |
 | Add structured metadata to responses | `Formatters/ResponseEnvelope.cs` |

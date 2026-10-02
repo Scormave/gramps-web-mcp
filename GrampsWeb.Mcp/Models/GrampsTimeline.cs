@@ -91,4 +91,8 @@ public class GrampsTimelineEntry
     /// <summary>Age of the anchor person at the event; on family timelines, the age of <see cref="Person"/>.</summary>
     [JsonPropertyName("age")]
     public string? Age { get; set; }
+
+    /// <summary>Who took part, for rows MCP builds itself (place timelines); not sent by the API.</summary>
+    [JsonIgnore]
+    public string? Participants { get; set; }
 }

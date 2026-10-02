@@ -36,6 +36,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/{type}/` (list) | Paged or bare array | `GrampsPagedResult<T>` via `GetPagedListAsync<T>` + `GrampsPagedResultParser` |
 | `GET /api/people/{handle}` | Person | `GrampsPerson` (`primary_name`, `alternate_names`) |
 | `GET /api/people/{handle}?extend=all` | Person extended | `GrampsPersonExtended` |
+| `GET /api/{type}/?handles=h1,h2&page=1&pagesize=N` | Array | `T[]` via `GrampsBatchFetch.GetByHandlesAsync` (API 3.14+; up to 50 handles per request; per-handle `GET /api/{type}/{h}` fallback) |
 | `GET /api/people/{h}/ancestors`, `/descendants` | Array | `GrampsPerson[]` |
 | `GET /api/people/{handle}/timeline` | Array | `GrampsTimelineEntry[]` (query: `events`, `relatives`, `relativeEvents`, `dates`) |
 | `GET /api/relations/{handle1}/{handle2}` | Object | `JsonElement` |
@@ -43,7 +44,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/families/{handle}?profile=self,events` | Family | `GrampsFamily.Profile` (`GrampsFamilyProfile`): members and events by name for `get_object` |
 | `GET /api/families/{handle}?extend=all` | Family extended | `GrampsFamilyExtended` |
 | `GET /api/families/{h}/timeline` | Array | `GrampsTimelineEntry[]` |
-| `GET /api/places/{h}?backlinks=true` + `GET /api/events/{eh}` | Derived | `GrampsTimelineEntry[]` (MCP synthesizes; no `/places/{h}/timeline` in OpenAPI) |
+| `GET /api/places/{h}?backlinks=true` + `GET /api/events/?handles=…&profile=participants` | Derived | `GrampsTimelineEntry[]` (MCP synthesizes; no `/places/{h}/timeline` in OpenAPI) |
 | `GET /api/events/{handle}` | Event | `GrampsEvent` |
 | `GET /api/places/{handle}` | Place | `GrampsPlace` |
 | `GET /api/places/{handle}?profile=self` | Place | `GrampsPlace.Profile` (`GrampsPlaceProfile`): enclosing places by name for `get_object` |

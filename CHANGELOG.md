@@ -37,8 +37,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update the README, security and privacy policies, architecture, developer,
   migration, and tool documentation, the system prompt, Docker Compose, MCPB
   metadata, and GitHub Pages for the new media behavior
-- Name relatives in `get_timeline` rows with their Gramps ID and age, and show
-  the role when the person is not the primary participant
+- Name relatives in `get_timeline` rows with their Gramps ID and age, show the
+  role when the person is not the primary participant, and list the people and
+  families of each event on place timelines with their roles
 - Show a family's parents and children in `get_object` by name, Gramps ID,
   birth, and death, with the marriage, the divorce, and each event's type,
   date, and place, from one request instead of handles
@@ -49,6 +50,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Show `get_recent_changes` as one entry per transaction with its UTC time,
   description, user, undo flag, and each changed object's class, change kind,
   and handle, up to 10 objects per transaction, instead of raw JSON
+- Load place timeline events in batches of up to 50 objects with the list
+  endpoint's `handles` filter (Gramps Web API 3.14+), instead of one request
+  per object. Servers that reject or ignore the filter get one request per
+  object, up to 4 at a time, and the server answer is remembered per API URL
+  and tree
+- Read a place once per place timeline instead of twice
 
 ### Removed
 
@@ -75,7 +82,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Leave a missing type, date, or place out of `search` event lines instead of
   showing dashes
 - Sort `get_timeline` events dated before the year 1000 by year; they were
-  listed after the undated events
+  listed after the undated events. Place timeline events of the same year
+  follow their dates instead of the order of the place's backlinks
 - Name the `objectType` parameter in the `list_objects` error for an unknown
   type instead of `object_type`
 

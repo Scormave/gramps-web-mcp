@@ -209,4 +209,25 @@ public class FormatterIntegrationTests
         Assert.Contains("  1950-03-02: Death (Father): Petrov, Ivan (I0012), age 70 years  [event: e2]", result);
         Assert.Contains("  1955-01-01: Baptism (Son): Petrov, Oleg (I0013) [Godparent]  [event: e3]", result);
     }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void FormatTimelineChronological_ShowsParticipantsOfPlaceRows()
+    {
+        var entries = new[]
+        {
+            new GrampsTimelineEntry
+            {
+                Handle = "e1",
+                Type = "Census",
+                Date = "1897",
+                Participants = "Petrov, Ivan (I0012)",
+                Description = "First census"
+            }
+        };
+
+        var result = TimelineFormatter.FormatTimelineChronological(entries);
+
+        Assert.Contains("  1897: Census: Petrov, Ivan (I0012)  [event: e1]\n    First census", result.Replace("\r\n", "\n"));
+    }
 }
