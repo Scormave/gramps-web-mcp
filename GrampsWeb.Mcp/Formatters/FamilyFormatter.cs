@@ -179,7 +179,7 @@ public static class FamilyFormatter
     }
 
     /// <summary>Profile children line up with child_ref_list; the handle confirms the match.</summary>
-    private static GrampsPersonProfile? FindProfile(GrampsPersonProfile[]? profiles, int index, string? handle)
+    internal static GrampsPersonProfile? FindProfile(GrampsPersonProfile[]? profiles, int index, string? handle)
     {
         if (profiles == null || string.IsNullOrWhiteSpace(handle))
             return null;

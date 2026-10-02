@@ -46,6 +46,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Show a family's parents and children in `get_object` by name, Gramps ID,
   birth, and death, with the marriage, the divorce, and each event's type,
   date, and place, from one request instead of handles
+- Show the parents, spouse, and children in each family of an extended person
+  `get_object` by name, Gramps ID, birth, and death, with the family's Gramps
+  ID, marriage, and divorce, from the person request instead of handles
 - Show a place's enclosing places and hierarchy in `get_object` by name, type,
   and Gramps ID from the same request instead of one request per parent
 - Show the page count and total in `search` results, and the total when the

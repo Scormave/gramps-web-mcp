@@ -38,7 +38,7 @@ public static class PersonTools
             if (extended)
             {
                 var person = await client.GetOrNullIfNotFoundAsync<GrampsPersonExtended>(
-                    $"/api/people/{Uri.EscapeDataString(resolvedHandle)}?extend=all");
+                    $"/api/people/{Uri.EscapeDataString(resolvedHandle)}?extend=all&profile=families");
                 if (person == null)
                     return NotFoundHelper.NotFoundMessage("Person", handle);
                 await ExtendedEntityEnrichment.EnrichPersonExtendedAsync(person, client);

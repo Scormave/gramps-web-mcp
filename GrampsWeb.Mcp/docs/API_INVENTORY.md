@@ -35,7 +35,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/search/?profile=self` | Paged array | `GrampsPagedResult<GrampsSearchHit>` via `GetPagedListAsync<T>`; the total comes from `X-Total-Count`. Each hit's `object` carries the person, family, event, or citation `profile` used for its summary line |
 | `GET /api/{type}/` (list) | Paged or bare array | `GrampsPagedResult<T>` via `GetPagedListAsync<T>` + `GrampsPagedResultParser`; `list_objects` adds `profile=self` for people, families, events, and citations |
 | `GET /api/people/{handle}` | Person | `GrampsPerson` (`primary_name`, `alternate_names`) |
-| `GET /api/people/{handle}?extend=all` | Person extended | `GrampsPersonExtended` |
+| `GET /api/people/{handle}?extend=all&profile=families` | Person extended | `GrampsPersonExtended`; `Profile` (`GrampsPersonProfile`) names parents, spouses, and children for `get_object` |
 | `GET /api/{type}/?handles=h1,h2&page=1&pagesize=N` | Array | `T[]` via `GrampsBatchFetch.GetByHandlesAsync` (API 3.14+; up to 50 handles per request; per-handle `GET /api/{type}/{h}` fallback) |
 | `GET /api/people/?handles=…&profile=self[&backlinks=true]` + `GET /api/families/?handles=…` | Derived | `PersonTreeRow[]` for `get_person_tree`, one batch of each per generation (no `/people/{h}/ancestors` or `/descendants` in OpenAPI) |
 | `GET /api/people/{handle}/timeline` | Array | `GrampsTimelineEntry[]` (query: `events`, `relatives`, `relativeEvents`, `dates`) |

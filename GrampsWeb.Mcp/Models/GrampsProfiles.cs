@@ -30,6 +30,18 @@ public class GrampsPersonProfile
     /// <summary>Death, or the best fallback such as burial.</summary>
     [JsonPropertyName("death")]
     public GrampsEventProfile? Death { get; set; }
+
+    /// <summary>With <c>profile=families</c>: the main parent family, an empty object when there is none.</summary>
+    [JsonPropertyName("primary_parent_family")]
+    public GrampsFamilyProfile? PrimaryParentFamily { get; set; }
+
+    /// <summary>With <c>profile=families</c>: the other parent families, in parent_family_list order.</summary>
+    [JsonPropertyName("other_parent_families")]
+    public GrampsFamilyProfile[]? OtherParentFamilies { get; set; }
+
+    /// <summary>With <c>profile=families</c>: one entry per family_list item, in the same order.</summary>
+    [JsonPropertyName("families")]
+    public GrampsFamilyProfile[]? Families { get; set; }
 }
 
 /// <summary>Event summary from <c>?profile=</c> payloads (OpenAPI <c>EventProfile</c>).</summary>

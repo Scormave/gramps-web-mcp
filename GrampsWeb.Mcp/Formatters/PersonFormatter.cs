@@ -163,15 +163,19 @@ public static class PersonFormatter
             sb.AppendLine("Relationships:");
         }
 
+        // Names and life dates come from the person's profile=families; without it, handles only.
+        var profile = person.Profile;
         if (extParentFamilies is { Length: > 0 })
         {
+            GrampsFamilyProfile?[] parentProfiles = [profile?.PrimaryParentFamily, .. profile?.OtherParentFamilies ?? []];
             sb.AppendLine();
             sb.AppendLine($"  Parent families (as child) ({extParentFamilies.Length}):");
             foreach (var fam in extParentFamilies)
             {
-                var fh = string.IsNullOrWhiteSpace(fam.FatherHandle) ? "—" : fam.FatherHandle.Trim();
-                var mh = string.IsNullOrWhiteSpace(fam.MotherHandle) ? "—" : fam.MotherHandle.Trim();
-                sb.AppendLine($"  • [handle: {fam.Handle}] — father [handle: {fh}], mother [handle: {mh}]");
+                var famProfile = FindFamilyProfile(parentProfiles, fam.Handle);
+                sb.AppendLine($"  • {FormatFamilyId(fam)}");
+                sb.AppendLine($"    Father: {FormatFamilyMember(famProfile?.Father, fam.FatherHandle)}");
+                sb.AppendLine($"    Mother: {FormatFamilyMember(famProfile?.Mother, fam.MotherHandle)}");
             }
         }
 
@@ -181,17 +185,36 @@ public static class PersonFormatter
             sb.AppendLine($"  Families as parent or spouse ({extFamilies.Length}):");
             foreach (var fam in extFamilies)
             {
-                var spouseHandle = fam.FatherHandle == person.Handle ? fam.MotherHandle : fam.FatherHandle;
-                var childCount = fam.ChildRefList?.Length ?? 0;
+                var famProfile = FindFamilyProfile(profile?.Families, fam.Handle);
+                var isFather = fam.FatherHandle == person.Handle;
+                var spouseHandle = isFather ? fam.MotherHandle : fam.FatherHandle;
                 var relLabel = string.IsNullOrWhiteSpace(fam.Relationship)
                     ? "Married"
                     : GrampsDefaultTypeLabels.ResolveStored(fam.Relationship.Trim(), tables.FamilyRelationTypes);
                 if (relLabel == "—")
                     relLabel = "Married";
-                var spousePart = string.IsNullOrWhiteSpace(spouseHandle)
-                    ? "spouse: —"
-                    : $"spouse [handle: {spouseHandle.Trim()}]";
-                sb.AppendLine($"  • [{relLabel}] [handle: {fam.Handle}] — {spousePart}, children: {childCount}");
+                sb.AppendLine($"  • [{relLabel}] {FormatFamilyId(fam)}");
+                sb.AppendLine($"    Spouse: {FormatFamilyMember(isFather ? famProfile?.Mother : famProfile?.Father, spouseHandle)}");
+                if (FormatProfileEvent(famProfile?.Marriage) is { } marriage)
+                    sb.AppendLine($"    Marriage: {marriage}");
+                if (FormatProfileEvent(famProfile?.Divorce) is { } divorce)
+                    sb.AppendLine($"    Divorce: {divorce}");
+                var childRefs = fam.ChildRefList ?? [];
+                var childCount = childRefs.Count(c => !string.IsNullOrWhiteSpace(c.Ref));
+                if (childCount == 0)
+                {
+                    sb.AppendLine("    Children: none");
+                    continue;
+                }
+
+                sb.AppendLine($"    Children ({childCount}):");
+                for (var i = 0; i < childRefs.Length; i++)
+                {
+                    if (childRefs[i].Ref is not { } childRef || string.IsNullOrWhiteSpace(childRef))
+                        continue;
+                    var childProfile = FamilyFormatter.FindProfile(famProfile?.Children, i, childRef);
+                    sb.AppendLine($"      • {FormatRelationPerson(childProfile, childRef)}");
+                }
             }
         }
 
@@ -710,6 +733,20 @@ public static class PersonFormatter
             ? $"[handle: {handle.Trim()}]"
             : $"{person.GrampsId.Trim()} [handle: {handle.Trim()}]";
     }
+
+    /// <summary>The profile of a family by handle; null when the person profile has no such family.</summary>
+    private static GrampsFamilyProfile? FindFamilyProfile(IEnumerable<GrampsFamilyProfile?>? profiles, string? handle) =>
+        string.IsNullOrWhiteSpace(handle) ? null : profiles?.FirstOrDefault(p => p?.Handle == handle);
+
+    /// <summary>"F0001 [handle: h]", or the handle alone without a Gramps ID.</summary>
+    private static string FormatFamilyId(GrampsFamily family) =>
+        string.IsNullOrWhiteSpace(family.GrampsId)
+            ? $"[handle: {family.Handle}]"
+            : $"{family.GrampsId.Trim()} [handle: {family.Handle}]";
+
+    /// <summary>A parent or spouse of a family; "—" when the family has none.</summary>
+    private static string FormatFamilyMember(GrampsPersonProfile? profile, string? handle) =>
+        string.IsNullOrWhiteSpace(handle) ? "—" : FormatRelationPerson(profile, handle);
 
     /// <summary>"Petrov, Ivan (I0001)" for the relationship sentence.</summary>
     private static string ShortRelationName(GrampsPersonProfile? person, string handle)
