@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Models;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -14,7 +15,8 @@ public static class SystemTools
 {
     [McpServerTool(Title = "Get Recent Changes", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: recent transaction history (most recently changed objects). " +
+        "Read-only: recent transaction history, newest first: commit time (UTC), description, user, " +
+        "and each changed object's class, change kind (added/updated/deleted) and handle. " +
         "Use for sync auditing or 'what changed last' workflows.")]
     public static async Task<string> GetRecentChanges(
         [Description("How many history rows (clamped 1–100). Default 20.")]
@@ -26,8 +28,9 @@ public static class SystemTools
             limit = Math.Clamp(limit, 1, 100);
             // Transaction history is read via /transactions/history; /transactions only accepts POST.
             // Without page the endpoint ignores pagesize and returns the entire history.
-            var changes = await client.GetAsync<JsonElement>($"/api/transactions/history/?page=1&pagesize={limit}&sort=-id");
-            return SystemFormatter.FormatRecentChanges(changes);
+            var history = await client.GetPagedListAsync<GrampsTransaction>(
+                $"/api/transactions/history/?page=1&pagesize={limit}&sort=-id");
+            return SystemFormatter.FormatRecentChanges(history.Objects ?? [], history.Total);
         }
         catch (Exception ex)
         {

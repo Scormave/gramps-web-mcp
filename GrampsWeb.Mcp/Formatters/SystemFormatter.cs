@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
 
@@ -129,43 +130,74 @@ public static class SystemFormatter
         _ => value.ToString()
     };
 
-    public static string FormatRecentChanges(JsonElement changes)
+    internal const int MaxChangesShownPerTransaction = 10;
+
+    /// <summary>
+    /// "1. 2026-09-30 14:22:05 UTC — Edit Person — by Jane Doe [transaction: 42]" followed by one line per
+    /// changed object; long transactions such as imports are cut after <see cref="MaxChangesShownPerTransaction"/>.
+    /// </summary>
+    public static string FormatRecentChanges(IReadOnlyList<GrampsTransaction> transactions, int totalCount = -1)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("RECENT CHANGES");
+        sb.AppendLine(totalCount >= 0
+            ? $"RECENT CHANGES ({transactions.Count} of {totalCount}, newest first)"
+            : "RECENT CHANGES (newest first)");
         sb.AppendLine(new string('=', 60));
         sb.AppendLine();
 
-        try
+        if (transactions.Count == 0)
         {
-            if (changes.ValueKind == JsonValueKind.Array)
-            {
-                int count = 0;
-                foreach (var item in changes.EnumerateArray())
-                {
-                    count++;
-                    var fields = new List<string>();
-                    foreach (var prop in item.EnumerateObject())
-                    {
-                        if (prop.Value.ValueKind == JsonValueKind.String)
-                            fields.Add($"{prop.Name}: {prop.Value.GetString()}");
-                        else if (prop.Value.ValueKind == JsonValueKind.Number)
-                            fields.Add($"{prop.Name}: {prop.Value}");
-                    }
-                    if (fields.Count > 0)
-                        sb.AppendLine($"{count}. {string.Join(" | ", fields)}");
-                }
-                if (count == 0)
-                    sb.AppendLine("No recent changes found.");
-            }
-            else
-            {
-                sb.AppendLine(JsonSerializer.Serialize(changes, new JsonSerializerOptions { WriteIndented = true }));
-            }
+            sb.AppendLine("No recent changes found.");
+            return sb.ToString();
         }
-        catch { }
+
+        for (var i = 0; i < transactions.Count; i++)
+        {
+            var transaction = transactions[i];
+            var parts = new List<string>();
+            if (FormatUnixTime(transaction.Timestamp ?? transaction.Connection?.Timestamp) is { } time)
+                parts.Add(time);
+            parts.Add(string.IsNullOrWhiteSpace(transaction.Description) ? "(no description)" : transaction.Description.Trim());
+            if (FormatUser(transaction.Connection?.User) is { } user)
+                parts.Add($"by {user}");
+            var undo = transaction.Undo ? " (undo)" : "";
+            sb.AppendLine($"{i + 1}. {string.Join(" — ", parts)}{undo} [transaction: {transaction.Id}]");
+
+            var changes = transaction.Changes ?? [];
+            foreach (var change in changes.Take(MaxChangesShownPerTransaction))
+            {
+                var kind = change.TransType switch
+                {
+                    0 => "Added",
+                    1 => "Updated",
+                    2 => "Deleted",
+                    _ => "Changed"
+                };
+                var objClass = string.IsNullOrWhiteSpace(change.ObjClass) ? "object" : change.ObjClass.Trim();
+                var handle = string.IsNullOrWhiteSpace(change.ObjHandle) ? "" : $" [handle: {change.ObjHandle.Trim()}]";
+                sb.AppendLine($"   {kind} {objClass}{handle}");
+            }
+
+            if (changes.Length > MaxChangesShownPerTransaction)
+                sb.AppendLine($"   … (+{changes.Length - MaxChangesShownPerTransaction} more changes)");
+        }
 
         return sb.ToString();
+    }
+
+    private static string? FormatUnixTime(double? seconds)
+    {
+        if (seconds is not { } value || double.IsNaN(value) || value <= 0)
+            return null;
+        return DateTimeOffset.FromUnixTimeMilliseconds((long)(value * 1000))
+            .UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string? FormatUser(GrampsTransactionUser? user)
+    {
+        if (!string.IsNullOrWhiteSpace(user?.FullName))
+            return user.FullName.Trim();
+        return string.IsNullOrWhiteSpace(user?.Name) ? null : user.Name.Trim();
     }
 
     public static string FormatBookmarks(JsonElement bookmarks)

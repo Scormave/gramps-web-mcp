@@ -56,7 +56,8 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET ...?backlinks=true` | Backlinks | `JsonElement` |
 | `GET /api/types/default/` | Types | `JsonElement` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in OpenAPI) |
 | `GET /api/types/custom/` | Nested lists | `JsonElement` → `TypesPayloadParser.ParseCategories` (same shape as default; see `CustomTypes` in OpenAPI) |
-| `GET /api/metadata/`, `/api/transactions/history/`, `/api/bookmarks/` | Various | `JsonElement` |
+| `GET /api/transactions/history/?page=1&pagesize=N&sort=-id` | Paged array | `GrampsPagedResult<GrampsTransaction>` via `GetPagedListAsync<T>` |
+| `GET /api/metadata/`, `/api/bookmarks/` | Various | `JsonElement` |
 | `GET /api/name-formats/`, `/api/name-groups/` | Various | `dynamic` |
 | `POST/PUT /api/{type}/` (create/update) | Often JSON array of changes `{ _class, type, old, new }` (not in OpenAPI); may be bare entity | `PostMutationAsync` / `PutMutationAsync` unwrap `new` via `GrampsMutationParser` into `Gramps*` |
 

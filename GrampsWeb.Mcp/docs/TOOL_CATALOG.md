@@ -454,7 +454,9 @@ Paginated list of one object type with optional filtering.
 ## System (`SystemTools.cs`) — 2 tools
 
 ### R — `GetRecentChanges`
-Recent transaction history (most recently changed objects).
+Recent transaction history, newest first: UTC commit time, description, user,
+and each changed object's class, change kind (added, updated, or deleted), and
+handle, up to 10 objects per transaction.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

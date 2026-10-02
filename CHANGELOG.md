@@ -39,6 +39,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   metadata, and GitHub Pages for the new media behavior
 - Show the page count and total in `search` results, and the total when the
   page is past the last one
+- Show `get_recent_changes` as one entry per transaction with its UTC time,
+  description, user, undo flag, and each changed object's class, change kind,
+  and handle, up to 10 objects per transaction, instead of raw JSON
 
 ### Removed
 
