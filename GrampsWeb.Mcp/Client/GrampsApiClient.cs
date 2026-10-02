@@ -24,6 +24,7 @@ public class GrampsApiClient
     private readonly ILogger<GrampsApiClient> _logger;
     private readonly GrampsAuthTokenProvider _tokenProvider;
     private readonly MutationGate _mutationGate;
+    private readonly GrampsTypeVocabularies _typeVocabularies;
     private string? _accessToken;
 
     /// <summary>
@@ -36,13 +37,15 @@ public class GrampsApiClient
         GrampsConfig config,
         ILogger<GrampsApiClient> logger,
         GrampsAuthTokenProvider tokenProvider,
-        MutationGate? mutationGate = null)
+        MutationGate? mutationGate = null,
+        GrampsTypeVocabularies? typeVocabularies = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _tokenProvider = tokenProvider ?? throw new ArgumentNullException(nameof(tokenProvider));
         _mutationGate = mutationGate ?? MutationGate.Disabled;
+        _typeVocabularies = typeVocabularies ?? new GrampsTypeVocabularies();
 
         // Set base address without /api suffix; it's added per endpoint
         _httpClient.BaseAddress = new Uri(_config.ApiUrl);
@@ -88,10 +91,32 @@ public class GrampsApiClient
     public async Task<T> GetAsync<T>(string path)
     {
         var body = await GrampsReadScope.ReadAsync(this, path, () => GetJsonBodyAsync(path));
-        // Cache wire JSON, not mutable DTOs: each caller receives its own object graph.
-        return JsonSerializer.Deserialize<T>(body, GrampsJson.Options)
-            ?? throw new InvalidOperationException($"Failed to deserialize response as {typeof(T).Name}");
+        return Deserialize<T>(body);
     }
+
+    /// <summary>
+    /// GET <c>/api/types/default/{category}</c>, or every category when it is empty.
+    /// Kept for the process lifetime by <see cref="GrampsTypeVocabularies"/>.
+    /// </summary>
+    public async Task<JsonElement> GetDefaultTypesAsync(string category = "")
+    {
+        var path = $"/api/types/default/{category}";
+        return Deserialize<JsonElement>(
+            await _typeVocabularies.GetDefaultAsync(path, () => GetJsonBodyAsync(path)));
+    }
+
+    /// <summary>
+    /// GET <c>/api/types/custom/</c>, kept for <see cref="GrampsTypeVocabularies.CustomTypesTtl"/>;
+    /// <paramref name="reload"/> reads it again.
+    /// </summary>
+    public async Task<JsonElement> GetCustomTypesAsync(bool reload = false) =>
+        Deserialize<JsonElement>(
+            await _typeVocabularies.GetCustomAsync(() => GetJsonBodyAsync("/api/types/custom/"), reload));
+
+    // Cache wire JSON, not mutable DTOs: each caller receives its own object graph.
+    private static T Deserialize<T>(string body) =>
+        JsonSerializer.Deserialize<T>(body, GrampsJson.Options)
+            ?? throw new InvalidOperationException($"Failed to deserialize response as {typeof(T).Name}");
 
     private async Task<string> GetJsonBodyAsync(string path)
     {

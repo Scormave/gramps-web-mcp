@@ -77,6 +77,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   London, d. 1852" in the tree's name display format, with death and baptism
   or burial fallbacks, instead of "Given Surname (b. 1815 in London)"; family
   partners use the display format too
+- Keep type vocabularies between tool calls instead of reading them in every
+  call: default types for the life of the process and custom types for 10
+  minutes; failed reads are not kept. After the first call, an extended person
+  `get_object` takes 2 requests instead of 10 and an event `list_objects` page
+  1 instead of 2
+- Read custom types each time in `gramps://types` and `get_reference(topic:
+  "types")`, and list the default types when the custom types endpoint fails
+  instead of failing
 
 ### Removed
 
@@ -115,6 +123,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   The first tool call no longer logs in again and hits the rate limit on
   `/api/token/` (HTTP 429), and health probes no longer log in each time. A
   check that gets HTTP 401 for a cached token logs in again once
+- Accept a custom type added in Gramps after the server read the types: write
+  tools read custom types again before rejecting a type, instead of rejecting
+  it for up to 10 minutes
 
 ## [2.0.1] - 2026-10-01
 

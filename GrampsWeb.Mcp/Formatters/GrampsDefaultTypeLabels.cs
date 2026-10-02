@@ -195,7 +195,7 @@ public static class GrampsDefaultTypeLabels
     {
         try
         {
-            var root = await client.GetAsync<JsonElement>("/api/types/custom/").ConfigureAwait(false);
+            var root = await client.GetCustomTypesAsync().ConfigureAwait(false);
             var categories = TypesPayloadParser.ParseCategories(root);
             foreach (var key in bulkCategoryKeys)
             {
@@ -230,7 +230,7 @@ public static class GrampsDefaultTypeLabels
     {
         try
         {
-            var el = await client.GetAsync<JsonElement>($"/api/types/default/{typesListSegment}").ConfigureAwait(false);
+            var el = await client.GetDefaultTypesAsync(typesListSegment).ConfigureAwait(false);
             if (el.ValueKind == JsonValueKind.Array)
             {
                 var list = ParseStringArray(el);
@@ -245,7 +245,7 @@ public static class GrampsDefaultTypeLabels
 
         try
         {
-            var root = await client.GetAsync<JsonElement>("/api/types/default/").ConfigureAwait(false);
+            var root = await client.GetDefaultTypesAsync().ConfigureAwait(false);
             var categories = TypesPayloadParser.ParseCategories(root);
             foreach (var key in bulkCategoryKeys)
             {

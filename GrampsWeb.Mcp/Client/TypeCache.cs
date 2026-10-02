@@ -1,88 +1,65 @@
-using System.Text.Json;
 using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Client;
 
 /// <summary>
-/// In-memory cache of Gramps type vocabularies (default + custom) with lazy loading and TTL.
-/// Thread-safe for concurrent tool calls. Static so tools (which are static classes) can use it
-/// without DI wiring.
+/// Merged (default + custom) Gramps type vocabularies and type validation for write tools.
+/// The vocabularies themselves are kept by <see cref="GrampsTypeVocabularies"/>.
 /// </summary>
 public static class TypeCache
 {
-    private static Dictionary<string, IReadOnlyList<string>>? _types;
-    private static DateTime _loadedAt = DateTime.MinValue;
-    private static readonly SemaphoreSlim Lock = new(1, 1);
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(10);
-
     /// <summary>
-    /// Gets the merged (default + custom) type vocabularies, loading from the API if the cache
-    /// is missing or stale.
+    /// Gets the merged (default + custom) type vocabularies. Custom types are skipped when their
+    /// endpoint fails; <paramref name="reloadCustom"/> reads them again instead of using the cache.
     /// </summary>
-    public static async Task<Dictionary<string, IReadOnlyList<string>>> GetTypesAsync(GrampsApiClient client)
+    public static async Task<Dictionary<string, IReadOnlyList<string>>> GetTypesAsync(
+        GrampsApiClient client,
+        bool reloadCustom = false)
     {
-        if (_types is not null && DateTime.UtcNow - _loadedAt < CacheTtl)
-            return _types;
+        var types = TypesPayloadParser.ParseCategories(await client.GetDefaultTypesAsync());
 
-        await Lock.WaitAsync();
         try
         {
-            // Double-check after acquiring lock.
-            if (_types is not null && DateTime.UtcNow - _loadedAt < CacheTtl)
-                return _types;
+            var customTypes = TypesPayloadParser.ParseCategories(await client.GetCustomTypesAsync(reloadCustom));
 
-            var defaultRoot = await client.GetAsync<JsonElement>("/api/types/default/");
-            var types = TypesPayloadParser.ParseCategories(defaultRoot);
-
-            try
+            foreach (var kvp in customTypes)
             {
-                var customRoot = await client.GetAsync<JsonElement>("/api/types/custom/");
-                var customTypes = TypesPayloadParser.ParseCategories(customRoot);
-
-                foreach (var kvp in customTypes)
+                if (types.TryGetValue(kvp.Key, out var existing))
                 {
-                    if (types.TryGetValue(kvp.Key, out var existing))
-                    {
-                        var merged = existing.ToList();
-                        merged.AddRange(kvp.Value);
-                        types[kvp.Key] = merged;
-                    }
-                    else
-                    {
-                        types[kvp.Key] = kvp.Value.ToList();
-                    }
+                    var merged = existing.ToList();
+                    merged.AddRange(kvp.Value);
+                    types[kvp.Key] = merged;
+                }
+                else
+                {
+                    types[kvp.Key] = kvp.Value.ToList();
                 }
             }
-            catch
-            {
-                // Custom types endpoint may not be available; default types are sufficient.
-            }
-
-            _types = types;
-            _loadedAt = DateTime.UtcNow;
-            return _types;
         }
-        finally
+        catch
         {
-            Lock.Release();
+            // Custom types endpoint may not be available; default types are sufficient.
         }
+
+        return types;
     }
 
     /// <summary>
     /// Validates a type string against a specific category (e.g. "event_types").
     /// Returns <c>null</c> if valid, or an error message with suggestions if invalid.
-    /// Comparison is case-insensitive.
+    /// Comparison is case-insensitive. An unknown value reloads custom types once, so a type
+    /// just added in Gramps is accepted.
     /// </summary>
     public static async Task<string?> ValidateTypeAsync(string value, string category, GrampsApiClient client)
     {
-        var types = await GetTypesAsync(client);
-
-        if (!types.TryGetValue(category, out var candidates) || candidates.Count == 0)
-            return null; // unknown category — skip validation rather than block
-
-        if (candidates.Any(c => string.Equals(c, value, StringComparison.OrdinalIgnoreCase)))
+        if (IsValid(await GetTypesAsync(client), value, category))
             return null;
 
+        var types = await GetTypesAsync(client, reloadCustom: true);
+        if (IsValid(types, value, category))
+            return null;
+
+        var candidates = types[category];
         var suggestions = FindSimilar(value, candidates);
         var suggestionText = suggestions.Count > 0
             ? $" Did you mean: {string.Join(", ", suggestions)}?"
@@ -97,12 +74,11 @@ public static class TypeCache
                $"Valid values from gramps://types: {validPreview}";
     }
 
-    /// <summary>Invalidates the cache, forcing a reload on next access.</summary>
-    public static void Invalidate()
-    {
-        _types = null;
-        _loadedAt = DateTime.MinValue;
-    }
+    // An unknown category skips validation rather than blocking the write.
+    private static bool IsValid(Dictionary<string, IReadOnlyList<string>> types, string value, string category) =>
+        !types.TryGetValue(category, out var candidates)
+        || candidates.Count == 0
+        || candidates.Any(c => string.Equals(c, value, StringComparison.OrdinalIgnoreCase));
 
     private static List<string> FindSimilar(string input, IReadOnlyList<string> candidates, int maxResults = 5)
     {

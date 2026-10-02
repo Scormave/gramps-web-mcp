@@ -86,10 +86,12 @@ polymorphic wire shapes.
 
 ### TypeCache (`Client/TypeCache.cs`)
 
-`TypeCache` is a thread-safe in-memory cache of merged default + custom type
-vocabularies with a 10-minute TTL.  Write tools call
+`TypeCache` merges default + custom type vocabularies, which
+`GrampsTypeVocabularies` keeps between tool calls: default types for the life
+of the process, custom types for 10 minutes.  Write tools call
 `TypeCache.ValidateTypeAsync` to check type strings before sending requests,
-providing fuzzy-match suggestions on invalid values.
+providing fuzzy-match suggestions on invalid values; an unknown value reads
+custom types again before it is rejected.
 
 ### HandleResolver (`Client/HandleResolver.cs`)
 

@@ -156,25 +156,8 @@ public sealed class GrampsResources
 
     internal static async Task<string> FetchTypesTextAsync(GrampsApiClient client, string? section = null)
     {
-        var defaultRoot = await client.GetAsync<JsonElement>("/api/types/default/");
-        var types = TypesPayloadParser.ParseCategories(defaultRoot);
-
-        var customRoot = await client.GetAsync<JsonElement>("/api/types/custom/");
-        var customTypes = TypesPayloadParser.ParseCategories(customRoot);
-
-        foreach (var kvp in customTypes)
-        {
-            if (types.TryGetValue(kvp.Key, out var existing))
-            {
-                var merged = existing.ToList();
-                merged.AddRange(kvp.Value);
-                types[kvp.Key] = merged;
-            }
-            else
-            {
-                types[kvp.Key] = kvp.Value.ToList();
-            }
-        }
+        // An explicit listing should show custom types added since the cached read.
+        var types = await TypeCache.GetTypesAsync(client, reloadCustom: true);
 
         if (string.IsNullOrWhiteSpace(section))
             return TypesFormatter.FormatTypesResponse(types);

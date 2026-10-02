@@ -271,10 +271,21 @@ where the API doesn't deeply populate references.
 resolves them to opaque API handles via a list-endpoint query. This lets
 agents pass either handles or Gramps IDs to any tool parameter.
 
-`TypeCache` is a thread-safe, TTL-based in-memory cache of Gramps type
-vocabularies (default + custom). Write tools use `TypeCache.ValidateTypeAsync`
-to check type strings before sending requests to the API, providing helpful
-error messages with suggestions on typos.
+`GrampsTypeVocabularies` keeps Gramps type vocabularies between tool calls.
+One instance is registered as a singleton and passed to every
+`GrampsApiClient`, which reads types through `GetDefaultTypesAsync` and
+`GetCustomTypesAsync`. Default types come with the Gramps version and are kept
+for the life of the process; custom types change when someone adds one in
+Gramps and are read again after 10 minutes. Concurrent reads share one
+request, and failed reads are not kept. A client constructed without an
+instance, as in unit tests, gets its own.
+
+`TypeCache` merges the default and custom vocabularies. Write tools use
+`TypeCache.ValidateTypeAsync` to check type strings before sending requests to
+the API, providing helpful error messages with suggestions on typos. A value
+missing from the cached vocabularies reads custom types again before it is
+rejected, so a type just added in Gramps is accepted. `gramps://types` and
+`get_reference(topic: "types")` read custom types each time.
 
 Read-only MCP tool calls also open a `GrampsReadScope`. Within that call,
 identical `GetAsync` requests (same client instance and exact path, including
@@ -298,8 +309,8 @@ objects are fetched one per request, up to 4 at a time. Handles missing from a
 filtered reply are treated as deleted.
 
 Search formatting loads type-label categories only for the entity types in
-the results. Shared bulk/default/custom vocabulary requests benefit from the
-same per-call cache, without changing vocabulary order or adding a new TTL.
+the results, through `GrampsTypeVocabularies`, without changing vocabulary
+order.
 
 Search requests `profile=self`, so each hit's embedded `object` carries the
 summary of its related objects: a person's name, birth, and death, a family's

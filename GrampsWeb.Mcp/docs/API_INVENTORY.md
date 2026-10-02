@@ -57,8 +57,9 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/media/{handle}/thumbnail/{size}` | Binary | Not used: Gramps Web always returns AVIF, which MCP clients cannot display |
 | `GET /api/tags/{handle}` | Tag | `GrampsTag` |
 | `GET ...?backlinks=true` | Backlinks | `JsonElement`; `GrampsPerson.Backlinks` (`GrampsBacklinks`, families only) in `get_person_tree` batches |
-| `GET /api/types/default/` | Types | `JsonElement` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in OpenAPI) |
-| `GET /api/types/custom/` | Nested lists | `JsonElement` → `TypesPayloadParser.ParseCategories` (same shape as default; see `CustomTypes` in OpenAPI) |
+| `GET /api/types/default/` | Types | `JsonElement` via `GetDefaultTypesAsync` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in OpenAPI); kept for the process lifetime by `GrampsTypeVocabularies` |
+| `GET /api/types/default/{datatype}` | String array | `JsonElement` via `GetDefaultTypesAsync(category)` for type labels, with the bulk endpoint as fallback; kept for the process lifetime |
+| `GET /api/types/custom/` | Nested lists | `JsonElement` via `GetCustomTypesAsync` → `TypesPayloadParser.ParseCategories` (same shape as default; see `CustomTypes` in OpenAPI); kept for 10 minutes, read again for `gramps://types` and before rejecting a type in write tools |
 | `GET /api/transactions/history/?page=1&pagesize=N&sort=-id` | Paged array | `GrampsPagedResult<GrampsTransaction>` via `GetPagedListAsync<T>` |
 | `GET /api/metadata/`, `/api/bookmarks/` | Various | `JsonElement` |
 | `GET /api/name-formats/`, `/api/name-groups/` | Various | `dynamic` |
