@@ -3,6 +3,7 @@ using System.Text;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -63,6 +64,34 @@ public class SystemToolsTests
         Assert.Contains("2. 2025-09-30 14:20:00 UTC — Import (undo) [transaction: 41]\n   Added Event [handle: e1]\n", result);
         Assert.Contains("   … (+2 more changes)", result);
         Assert.DoesNotContain("[handle: e11]", result);
+    }
+
+    [Fact]
+    public void RecentChanges_Show_Reference_Changes_As_Links()
+    {
+        GrampsTransactionChange Change(string objClass, int transType, string? objHandle, string? refHandle = null) =>
+            new() { ObjClass = objClass, TransType = transType, ObjHandle = objHandle, RefHandle = refHandle };
+        GrampsTransaction[] transactions =
+        [
+            new()
+            {
+                Id = 4567, Description = "Edit Person",
+                Changes =
+                [
+                    Change("7", 0, "p1", "e1"), Change("7", 2, "p1", "c1"), Change("7", 0, null, "e2"),
+                    Change("7", 0, "p1"), Change("Person", 1, "p1"),
+                ]
+            }
+        ];
+
+        var result = SystemFormatter.FormatRecentChanges(transactions).Replace("\r\n", "\n");
+
+        Assert.Contains("1. Edit Person [transaction: 4567]\n" +
+                        "   Added Reference from [handle: p1] to [handle: e1]\n" +
+                        "   Deleted Reference from [handle: p1] to [handle: c1]\n" +
+                        "   Added Reference to [handle: e2]\n" +
+                        "   Added Reference from [handle: p1]\n" +
+                        "   Updated Person [handle: p1]\n", result);
     }
 
     private sealed class HistoryHandler(string body = """[{"id":1,"description":"Edit Person"}]""", int? total = null) : HttpMessageHandler

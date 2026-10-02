@@ -526,7 +526,9 @@ Recent transaction history, newest first, under the header
 commit time, description, user, an `(undo)` marker for undo transactions, and
 `[transaction: id]`. Below it, each changed object appears as `Added`,
 `Updated`, `Deleted`, or `Changed` with its class and handle, up to 10 objects
-per transaction followed by `(+N more changes)`.
+per transaction followed by `(+N more changes)`. A link that an edit adds or
+removes, which Gramps records as a reference change, appears as
+`Added Reference from [handle: …] to [handle: …]`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

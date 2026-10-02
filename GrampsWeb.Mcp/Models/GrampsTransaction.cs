@@ -58,7 +58,7 @@ public class GrampsTransactionChange
     [JsonPropertyName("id")]
     public int? Id { get; set; }
 
-    /// <summary>Object class name, e.g. "Person".</summary>
+    /// <summary>Object class name, e.g. "Person"; "7" (Gramps REFERENCE_KEY) for a link added or removed.</summary>
     [JsonPropertyName("obj_class")]
     public string? ObjClass { get; set; }
 
@@ -68,6 +68,10 @@ public class GrampsTransactionChange
 
     [JsonPropertyName("obj_handle")]
     public string? ObjHandle { get; set; }
+
+    /// <summary>For a reference change, the object that <see cref="ObjHandle"/> links to.</summary>
+    [JsonPropertyName("ref_handle")]
+    public string? RefHandle { get; set; }
 
     [JsonPropertyName("timestamp")]
     public double? Timestamp { get; set; }

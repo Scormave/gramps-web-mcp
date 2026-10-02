@@ -173,9 +173,7 @@ public static class SystemFormatter
                     2 => "Deleted",
                     _ => "Changed"
                 };
-                var objClass = string.IsNullOrWhiteSpace(change.ObjClass) ? "object" : change.ObjClass.Trim();
-                var handle = string.IsNullOrWhiteSpace(change.ObjHandle) ? "" : $" [handle: {change.ObjHandle.Trim()}]";
-                sb.AppendLine($"   {kind} {objClass}{handle}");
+                sb.AppendLine($"   {kind} {FormatChangedObject(change)}");
             }
 
             if (changes.Length > MaxChangesShownPerTransaction)
@@ -183,6 +181,22 @@ public static class SystemFormatter
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// "Person [handle: …]", or "Reference from [handle: …] to [handle: …]" for a link: Gramps logs each link
+    /// an edit adds or removes as a change of REFERENCE_KEY, which Gramps Web sends as class "7".
+    /// </summary>
+    private static string FormatChangedObject(GrampsTransactionChange change)
+    {
+        var handle = string.IsNullOrWhiteSpace(change.ObjHandle) ? null : $"[handle: {change.ObjHandle.Trim()}]";
+        var objClass = string.IsNullOrWhiteSpace(change.ObjClass) ? "object" : change.ObjClass.Trim();
+        if (objClass != "7")
+            return handle == null ? objClass : $"{objClass} {handle}";
+
+        var from = handle == null ? "" : $" from {handle}";
+        var to = string.IsNullOrWhiteSpace(change.RefHandle) ? "" : $" to [handle: {change.RefHandle.Trim()}]";
+        return $"Reference{from}{to}";
     }
 
     private static string? FormatUnixTime(double? seconds)
