@@ -57,7 +57,7 @@ public class GrampsUserAgentTests
             ("PUT", "/api/people/handle"),
             ("DELETE", "/api/people/handle"),
             ("GET", "/api/media/handle/file"),
-            ("POST", "/api/token/"),
+            // The health check reuses the refreshed token instead of logging in again.
             ("GET", "/api/metadata/"),
             ("GET", "/api/people/")
         }, requests.Select(r => (r.Method, r.Path)));

@@ -71,7 +71,8 @@ Limitations of the static shared key:
 - There is no per-user audit trail on the MCP layer.
 
 `GET /health` remains anonymous so Docker `HEALTHCHECK` and load balancers can
-probe liveness without credentials.
+probe liveness without credentials. Probes reuse the server's cached Gramps Web
+token, so anonymous callers cannot make the server log in on every request.
 
 Inside Docker, `ASPNETCORE_URLS` is typically `http://0.0.0.0:8080`, so the
 server logs a startup warning when `MCP_API_KEY` is not set even if the host

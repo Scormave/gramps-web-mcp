@@ -100,6 +100,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   families, relationships, and timelines
 - Name the `objectType` parameter in the `list_objects` error for an unknown
   type instead of `object_type`
+- Log in to Gramps Web once instead of twice at startup: the connectivity
+  check and `GET /health` take their token from the token cache the tools use.
+  The first tool call no longer logs in again and hits the rate limit on
+  `/api/token/` (HTTP 429), and health probes no longer log in each time. A
+  check that gets HTTP 401 for a cached token logs in again once
 
 ## [2.0.1] - 2026-10-01
 

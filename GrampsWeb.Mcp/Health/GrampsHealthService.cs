@@ -1,27 +1,34 @@
-using System.Text;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
+using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
-using GrampsWeb.Mcp.Serialization;
+using GrampsWeb.Mcp.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace GrampsWeb.Mcp.Health;
 
 /// <summary>
-/// Verifies that the configured Gramps Web API is reachable and accepts credentials.
+/// Verifies that the configured Gramps Web API is reachable and accepts credentials. The token comes from
+/// the shared <see cref="GrampsAuthTokenProvider"/>, so a check logs in only when the cached token is
+/// missing, expiring, or rejected; Gramps Web rate-limits its token route.
 /// </summary>
 public sealed class GrampsHealthService
 {
     private readonly HttpClient _httpClient;
     private readonly GrampsConfig _config;
+    private readonly GrampsAuthTokenProvider _tokenProvider;
     private readonly ILogger<GrampsHealthService> _logger;
 
     public GrampsHealthService(
         HttpClient httpClient,
         GrampsConfig config,
+        GrampsAuthTokenProvider tokenProvider,
         ILogger<GrampsHealthService> logger)
     {
         _httpClient = httpClient;
         _config = config;
+        _tokenProvider = tokenProvider;
         _logger = logger;
 
         _httpClient.BaseAddress = new Uri(_config.ApiUrl);
@@ -32,8 +39,7 @@ public sealed class GrampsHealthService
     {
         try
         {
-            var accessToken = await GetAccessTokenAsync(cancellationToken);
-            var metadata = await GetMetadataAsync(accessToken, cancellationToken);
+            var metadata = await GetMetadataAsync(cancellationToken);
             var treeName = TryGetString(metadata, "database", "name");
             var treeDatabaseId = TryGetString(metadata, "database", "id");
             var grampsVersion = TryGetString(metadata, "gramps", "version");
@@ -46,7 +52,8 @@ public sealed class GrampsHealthService
                 TreeDatabaseId: treeDatabaseId,
                 GrampsVersion: grampsVersion);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+        catch (Exception ex) when (ex is GrampsApiException or HttpRequestException or TaskCanceledException
+                                       or JsonException or InvalidOperationException)
         {
             _logger.LogDebug(ex, "Gramps Web connectivity check failed for {ApiUrl}", _config.ApiUrl);
 
@@ -58,54 +65,30 @@ public sealed class GrampsHealthService
         }
     }
 
-    private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
+    private async Task<JsonElement> GetMetadataAsync(CancellationToken cancellationToken)
     {
-        using var response = _config.UsesRefreshToken
-            ? await ExchangeRefreshTokenAsync(cancellationToken)
-            : await PostCredentialsAsync(cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Failed to obtain token: {response.StatusCode}");
-
-        using var doc = JsonDocument.Parse(body);
-        var root = doc.RootElement;
-        var accessToken = GetString(root, "access_token") ?? GetString(root, "access");
-
-        if (string.IsNullOrWhiteSpace(accessToken))
-            throw new InvalidOperationException("Token response does not contain access token");
-
-        return accessToken;
-    }
-
-    private async Task<HttpResponseMessage> PostCredentialsAsync(CancellationToken cancellationToken)
-    {
-        var tokenRequest = new { username = _config.Username, password = _config.Password };
-        var json = JsonSerializer.Serialize(tokenRequest, GrampsJson.Options);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        return await _httpClient.PostAsync("/api/token/", content, cancellationToken);
-    }
-
-    private async Task<HttpResponseMessage> ExchangeRefreshTokenAsync(CancellationToken cancellationToken)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/token/refresh/");
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _config.RefreshToken);
-        return await _httpClient.SendAsync(request, cancellationToken);
-    }
-
-    private async Task<JsonElement> GetMetadataAsync(string accessToken, CancellationToken cancellationToken)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/metadata/");
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Failed to read metadata: {response.StatusCode}");
+        var body = await ReadMetadataAsync(await _tokenProvider.GetAccessTokenAsync(), cancellationToken);
+        // The server rejected the cached token, e.g. after its SECRET_KEY changed: log in again once.
+        body ??= await ReadMetadataAsync(await _tokenProvider.GetTokenAsync(), cancellationToken)
+                 ?? throw new InvalidOperationException($"Failed to read metadata: {HttpStatusCode.Unauthorized}");
 
         using var doc = JsonDocument.Parse(body);
         return doc.RootElement.Clone();
+    }
+
+    /// <summary>The metadata body, or null when the server answers HTTP 401 to the token.</summary>
+    private async Task<string?> ReadMetadataAsync(string accessToken, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/metadata/");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            return null;
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Failed to read metadata: {response.StatusCode}");
+
+        return await response.Content.ReadAsStringAsync(cancellationToken);
     }
 
     private static string? TryGetString(JsonElement root, string objectProperty, string childProperty)
@@ -117,12 +100,5 @@ public sealed class GrampsHealthService
             return null;
 
         return value.GetString();
-    }
-
-    private static string? GetString(JsonElement root, string propertyName)
-    {
-        return root.TryGetProperty(propertyName, out var prop) && prop.ValueKind == JsonValueKind.String
-            ? prop.GetString()
-            : null;
     }
 }

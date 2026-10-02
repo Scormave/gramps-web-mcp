@@ -1,9 +1,11 @@
+using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol.AspNetCore;
 using Xunit;
 
@@ -147,6 +149,10 @@ public class McpAuthPipelineTests
             TreeId: "tree-id");
 
         services.AddSingleton(config);
+        services.AddSingleton(sp => new GrampsAuthTokenProvider(
+            new HttpClient(new UnreachableHandler()),
+            config,
+            sp.GetRequiredService<ILogger<GrampsAuthTokenProvider>>()));
         services.AddHttpClient<GrampsWeb.Mcp.Health.GrampsHealthService>()
             .ConfigurePrimaryHttpMessageHandler(() => new UnreachableHandler());
     }

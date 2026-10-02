@@ -83,8 +83,9 @@ For refresh-token authentication, replace the `GRAMPS_USERNAME` and
 
 The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
 container health, and other uptime monitors. It returns HTTP 200 when the MCP
-server can authenticate against Gramps Web, or HTTP 503 otherwise. The public
-response is minimal by default: `{ "status": "healthy" }` or
+server can authenticate against Gramps Web, or HTTP 503 otherwise. Probes reuse
+the token the tools use, so they do not log in to Gramps Web each time. The
+public response is minimal by default: `{ "status": "healthy" }` or
 `{ "status": "unhealthy" }`. Startup logs include a line such as
 `Connected to Gramps Web at …` once the API is reachable.
 
