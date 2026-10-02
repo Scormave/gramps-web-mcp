@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Formatters;
@@ -39,10 +38,11 @@ public static class SearchTools
 
             var queryString = $"/api/search/?query={Uri.EscapeDataString(query)}&page={page}&pagesize={pagesize}";
 
-            JsonElement raw;
+            GrampsPagedResult<GrampsSearchHit> result;
             try
             {
-                raw = await client.GetAsync<JsonElement>(queryString);
+                // Paged list read: the hit array comes with the X-Total-Count header.
+                result = await client.GetPagedListAsync<GrampsSearchHit>(queryString);
             }
             catch (GrampsApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.InternalServerError)
             {
@@ -51,12 +51,14 @@ public static class SearchTools
                     "Try a shorter term (for example, one archive number or file number) or search the relevant object list. " +
                     "If short queries also fail, check the Gramps Web server logs and search index.", ex);
             }
-            var hits = ParseSearchHits(raw);
+            var hits = result.Objects ?? [];
 
             if (hits.Length == 0)
-                return $"No results found for '{query}'";
+                return result.Total > 0
+                    ? $"No results on page {page} for '{query}' (Total: {result.Total}); try a lower page."
+                    : $"No results found for '{query}'";
 
-            return await SearchFormatter.FormatSearchResults(hits, client);
+            return await SearchFormatter.FormatSearchResults(hits, client, page, pagesize, result.Total);
         }
         catch (Exception ex)
         {
@@ -163,26 +165,5 @@ public static class SearchTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
-    }
-
-    private static GrampsSearchHit[] ParseSearchHits(JsonElement raw)
-    {
-        // Current Gramps Web search shape: array of hits.
-        if (raw.ValueKind == JsonValueKind.Array)
-        {
-            return JsonSerializer.Deserialize<GrampsSearchHit[]>(raw.GetRawText(), GrampsJson.Options)
-                ?? Array.Empty<GrampsSearchHit>();
-        }
-
-        // Backward/alternate shape: paged object with "objects".
-        if (raw.ValueKind == JsonValueKind.Object &&
-            raw.TryGetProperty("objects", out var objectsElement) &&
-            objectsElement.ValueKind == JsonValueKind.Array)
-        {
-            return JsonSerializer.Deserialize<GrampsSearchHit[]>(objectsElement.GetRawText(), GrampsJson.Options)
-                ?? Array.Empty<GrampsSearchHit>();
-        }
-
-        return Array.Empty<GrampsSearchHit>();
     }
 }

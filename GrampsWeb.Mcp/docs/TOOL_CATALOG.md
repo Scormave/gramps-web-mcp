@@ -427,7 +427,8 @@ Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
 ## Search (`SearchTools.cs`) — 2 tools
 
 ### R — `Search`
-Full-text search across all object types.  Supports `*` wildcards.
+Full-text search across all object types.  Supports `*` wildcards. The header
+shows the page, page count, and total matches.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

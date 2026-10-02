@@ -66,6 +66,72 @@ public class SearchPaginationTests
             Assert.DoesNotContain($"Page {page} of", result);
     }
 
+    [Theory]
+    [InlineData(2, 2, 5, "Search Results (Page 2 of 3, Total: 5):")]
+    [InlineData(1, 20, 2, "Search Results (Page 1 of 1, Total: 2):")]
+    [InlineData(1, 20, null, "Search Results (2):")]
+    public async Task Search_Header_Shows_Page_Count_And_Total(int page, int pageSize, int? total, string expectedHeader)
+    {
+        const string hits = """
+            [
+              { "handle": "t1", "object_type": "tag", "object": { "handle": "t1", "name": "Reviewed" } },
+              { "handle": "t2", "object_type": "tag", "object": { "handle": "t2", "name": "Todo" } }
+            ]
+            """;
+        using var handler = new SearchHandler(hits, total);
+
+        var result = await SearchTools.Search("tag", page, pageSize, Client(handler));
+
+        Assert.Equal($"/api/search/?query=tag&page={page}&pagesize={pageSize}", handler.SearchPath);
+        Assert.StartsWith(expectedHeader, result);
+    }
+
+    [Fact]
+    public async Task Search_Page_Past_The_End_Reports_Total()
+    {
+        using var handler = new SearchHandler("[]", 5);
+
+        var result = await SearchTools.Search("tag", 9, 2, Client(handler));
+
+        Assert.Equal("No results on page 9 for 'tag' (Total: 5); try a lower page.", result);
+    }
+
+    private static GrampsApiClient Client(HttpMessageHandler handler)
+    {
+        var http = new HttpClient(handler);
+        var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");
+        var provider = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
+        return new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, provider);
+    }
+
+    private sealed class SearchHandler(string body, int? total) : HttpMessageHandler
+    {
+        public string? SearchPath { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri!.PathAndQuery;
+            if (path.StartsWith("/api/token/", StringComparison.Ordinal))
+                return Task.FromResult(JsonResponse("""{"access_token":"token","refresh_token":"refresh","expires_in":900}"""));
+            if (path.StartsWith("/api/search/", StringComparison.Ordinal))
+            {
+                SearchPath = path;
+                var response = JsonResponse(body);
+                if (total.HasValue)
+                    response.Headers.Add("X-Total-Count", total.Value.ToString());
+                return Task.FromResult(response);
+            }
+
+            // Type-label lookups for the formatter.
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+    }
+
     private sealed class ListHandler(string body, int? total) : HttpMessageHandler
     {
         public string? ListPath { get; private set; }

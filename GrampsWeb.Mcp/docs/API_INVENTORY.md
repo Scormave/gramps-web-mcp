@@ -32,7 +32,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 
 | HTTP path pattern | Response / body type | Model / notes |
 |-------------------|----------------------|----------------|
-| `GET /api/search/` | `JsonElement` → parsed hits | `GrampsSearchHit[]` via `SearchTools.ParseSearchHits` (response root is typically a JSON array) |
+| `GET /api/search/` | Paged array | `GrampsPagedResult<GrampsSearchHit>` via `GetPagedListAsync<T>`; the total comes from `X-Total-Count` |
 | `GET /api/{type}/` (list) | Paged or bare array | `GrampsPagedResult<T>` via `GetPagedListAsync<T>` + `GrampsPagedResultParser` |
 | `GET /api/people/{handle}` | Person | `GrampsPerson` (`primary_name`, `alternate_names`) |
 | `GET /api/people/{handle}?extend=all` | Person extended | `GrampsPersonExtended` |

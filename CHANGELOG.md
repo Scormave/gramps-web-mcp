@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update the README, security and privacy policies, architecture, developer,
   migration, and tool documentation, the system prompt, Docker Compose, MCPB
   metadata, and GitHub Pages for the new media behavior
+- Show the page count and total in `search` results, and the total when the
+  page is past the last one
 
 ### Removed
 

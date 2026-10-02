@@ -13,7 +13,13 @@ public static class SearchFormatter
 {
     private const int ResultSeparatorWidth = 60;
 
-    public static async Task<string> FormatSearchResults(GrampsSearchHit[] hits, GrampsApiClient client)
+    /// <summary>Formats one page of search hits; the header shows the page count when <paramref name="totalCount"/> is known.</summary>
+    public static async Task<string> FormatSearchResults(
+        GrampsSearchHit[] hits,
+        GrampsApiClient client,
+        int page = 1,
+        int pageSize = 0,
+        int totalCount = -1)
     {
         if (hits == null || hits.Length == 0)
             return "No results found";
@@ -21,7 +27,13 @@ public static class SearchFormatter
         var tables = await GrampsDefaultTypeLabels.PrefetchForSearchAsync(
             hits.Select(hit => hit.ObjectType), client);
         var sb = new StringBuilder();
-        sb.AppendLine($"Search Results ({hits.Length}):");
+        if (totalCount >= 0 && pageSize > 0)
+        {
+            var totalPages = Math.Max(1, (int)(((long)totalCount + pageSize - 1) / pageSize));
+            sb.AppendLine($"Search Results (Page {page} of {totalPages}, Total: {totalCount}):");
+        }
+        else
+            sb.AppendLine($"Search Results ({hits.Length}):");
         sb.AppendLine(new string('=', ResultSeparatorWidth));
 
         foreach (var hit in hits)
