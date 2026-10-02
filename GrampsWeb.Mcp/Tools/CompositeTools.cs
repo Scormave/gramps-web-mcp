@@ -170,7 +170,7 @@ public static class CompositeTools
         string eventType,
         [Description("Event date as text (e.g. '1985-04-12', 'about 1920'). Optional.")]
         string? date = null,
-        [Description("Place name or handle. If a name, searches for existing place or creates new. Optional.")]
+        [Description("Place Gramps ID, handle, or name. A name reuses the place with that exact name (ignoring case) or creates a new place; an ID or handle that matches no place is treated as a name. Optional.")]
         string? place = null,
         [Description("Event description text. Optional.")]
         string? description = null,

@@ -115,7 +115,7 @@ public static class SourceTools
         string? pubinfo = null,
         [Description("Abbreviation. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? abbrev = null,
-        [Description("Repository refs. Omit to keep. Non-empty replaces the list; empty array does not clear (omit to keep). " + FlexibleRepositoryRefList.DescriptionHint)]
+        [Description("Repository refs. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleRepositoryRefList.DescriptionHint)]
         FlexibleRepositoryRefList? repositoryHandles = null,
         [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,

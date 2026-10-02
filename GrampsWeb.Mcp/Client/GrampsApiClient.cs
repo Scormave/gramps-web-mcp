@@ -60,7 +60,8 @@ public class GrampsApiClient
     public Task<IDisposable> BeginUpdateAsync() => _mutationGate.BeginUpdateAsync();
 
     /// <summary>
-    /// Gets a new JWT access token via POST /api/token/{username}/{password}.
+    /// Gets a new JWT access token: POST /api/token/ with the username and password in a JSON body,
+    /// or POST /api/token/refresh/ with the configured refresh token.
     /// </summary>
     public async Task GetTokenAsync()
     {

@@ -25,8 +25,8 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
   settings, and opt-in media previews/files for vision-capable agents
 - **Media safeguards** — size limits, private-record defaults, and previews with
   EXIF/GPS metadata stripped
-- **MCP prompts** — guided workflows for research, adding people/families,
-  imports, changing links, and citing facts
+- **MCP prompts** — guided workflows for research, finding connections, adding
+  people/families, imports, changing links, and citing facts
 - **Multiple transports** — stdio (local clients), Streamable HTTP, legacy SSE
 - **Read-only mode** — publish only read tools and block direct mutation calls
 
@@ -85,7 +85,7 @@ The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
 container health, and other uptime monitors. It returns HTTP 200 when the MCP
 server can authenticate against Gramps Web, or HTTP 503 otherwise. Probes reuse
 the token the tools use, so they do not log in to Gramps Web each time. The
-public response is minimal by default: `{ "status": "healthy" }` or
+public response is minimal: `{ "status": "healthy" }` or
 `{ "status": "unhealthy" }`. Startup logs include a line such as
 `Connected to Gramps Web at …` once the API is reachable.
 
@@ -126,7 +126,7 @@ Basic setup:
    network.
 4. Keep the default container port `8080`, or map it to another host port.
 5. Start the container and check `/health`; it returns HTTP 200 once the service
-   can authenticate to Gramps Web, with a minimal JSON response by default.
+   can authenticate to Gramps Web, with a minimal JSON response.
 
 For the easiest pairing, run Gramps Web and `gramps-web-mcp` on the same Unraid
 Docker network and set `GRAMPS_API_URL` to the Gramps Web container URL. The MCP
@@ -231,8 +231,9 @@ edge so handwriting and small print in document scans stay legible. Pass `size`
 (1–4096) for a smaller or larger preview; images are never upscaled. Previews are
 re-encoded from pixels, so EXIF (including GPS), XMP, IPTC, and ICC metadata are
 not sent. They can be rendered from JPEG, PNG, GIF, WebP, BMP, TIFF, TGA, PBM, and
-QOI originals; multi-page files use the first page. PDF, AVIF, HEIC, and SVG
-media have no preview. Use `mode: "file"` for an original file and omit `size`.
+QOI originals; multi-page files use the first page. PDF and other non-image
+media, and AVIF, HEIC/HEIF, JPEG XL, and SVG images, have no preview. Use
+`mode: "file"` for an original file and omit `size`.
 File mode returns image, audio, or embedded blob resource content depending on
 MIME type; images that MCP clients cannot display, such as TIFF, come back as
 an embedded blob with a hint to use the thumbnail. End-to-end analysis depends
@@ -323,7 +324,7 @@ configuration error without downloading bytes.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media tools/resources for thumbnails and full files | `false` |
-| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource | `5242880` |
+| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by `read_media` or any media resource | `5242880` |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allows bytes for Gramps media records marked private | `false` |
 
 Prefer `read_media(mode: "thumbnail")` or `gramps://media/{handle}/thumbnail/{size}` for AI
@@ -394,7 +395,8 @@ Logs go to stderr. Claude Desktop saves them to a local file
 (`~/Library/Logs/Claude/mcp-server-Gramps Web MCP.log` on macOS).
 
 At `Information`, each Gramps API call is logged as its method, path (without
-the query string), status, duration, and body length. Request and response
+the query string), status, duration, and body length; media downloads log the
+content type and length instead of the body length. Request and response
 bodies and full URLs hold genealogy data (names, dates, search terms), so they
 are logged only at `Debug` or `Trace`. Fields that look like credentials are
 redacted even then. Use `Debug` only while troubleshooting, and delete the log

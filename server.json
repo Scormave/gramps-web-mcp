@@ -3,7 +3,7 @@
   "name": "io.github.Scormave/gramps-web-mcp",
   "title": "Gramps Web MCP",
   "description": "MCP server for structured access to Gramps Web genealogy data",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "repository": {
     "url": "https://github.com/Scormave/gramps-web-mcp",
     "source": "github"
@@ -11,7 +11,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/scormave/gramps-web-mcp:2.0.1",
+      "identifier": "ghcr.io/scormave/gramps-web-mcp:2.1.0",
       "runtimeHint": "docker",
       "transport": {
         "type": "stdio"
@@ -68,6 +68,21 @@
           "name": "GRAMPS_LOG_LEVEL",
           "description": "Server log level: Trace, Debug, Information, Warning, Error, Critical, or None. Debug and Trace also log request and response bodies, which contain genealogy data",
           "default": "Information"
+        },
+        {
+          "name": "GRAMPS_MEDIA_RESOURCES_ENABLED",
+          "description": "Set to true to expose read_media and the media resources for thumbnails and full files",
+          "default": "false"
+        },
+        {
+          "name": "GRAMPS_MEDIA_MAX_BYTES",
+          "description": "Maximum bytes returned by read_media or a media resource",
+          "default": "5242880"
+        },
+        {
+          "name": "GRAMPS_MEDIA_ALLOW_PRIVATE",
+          "description": "Set to true to return bytes for media records marked private",
+          "default": "false"
         }
       ]
     }

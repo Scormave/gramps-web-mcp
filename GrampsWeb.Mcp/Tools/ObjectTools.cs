@@ -33,6 +33,7 @@ public static class ObjectTools
         "For an opaque handle, objectType must be person, family, event, place, source, citation, note, media, repository, or tag. " +
         "extended=true resolves linked details for people and families only; it is not supported for other object types.")]
     public static async Task<string> GetObject(
+        [Description("Object handle or Gramps ID (e.g. I0001). Gramps ID prefixes: I person, F family, E event, P place, S source, C citation, N note, O media, R repository, T tag.")]
         string identifier,
         [Description("Optional for a Gramps ID, whose prefix determines the type. Required for an opaque handle: person | family | event | place | source | citation | note | media | repository | tag.")]
         string? objectType = null,

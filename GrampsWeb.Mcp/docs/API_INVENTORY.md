@@ -1,6 +1,6 @@
 # Gramps Web API call inventory (DTO mapping)
 
-Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, and `GrampsWeb.Mcp/Client/GrampsApiClient.cs`. Paginated browsing of each `GET /api/{type}/` list is exposed only via MCP `list_objects` (and `search`), which formats rows through `SearchFormatter` (shared with search results).
+Call sites are under `GrampsWeb.Mcp/Tools/`, `GrampsWeb.Mcp/Formatters/`, `GrampsWeb.Mcp/Resources/`, `GrampsWeb.Mcp/Health/`, and `GrampsWeb.Mcp/Client/` (`GrampsApiClient`, `GrampsAuthTokenProvider`, `HandleResolver`, `GrampsBatchFetch`, `ExtendedEntityEnrichment`). Paginated browsing of each `GET /api/{type}/` list is exposed only via MCP `list_objects` (and `search`), which formats rows through `SearchFormatter` (shared with search results).
 
 **Current OpenAPI spec:** repo-root `openapi.json` is a verbatim snapshot of
 the generated [Gramps Web demo schema](https://demo.grampsweb.org/api/openapi.json),
@@ -32,20 +32,23 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 
 | HTTP path pattern | Response / body type | Model / notes |
 |-------------------|----------------------|----------------|
-| `GET /api/search/?profile=self` | Paged array | `GrampsPagedResult<GrampsSearchHit>` via `GetPagedListAsync<T>`; the total comes from `X-Total-Count`. Each hit's `object` carries the person, family, event, or citation `profile` used for its summary line |
-| `GET /api/{type}/` (list) | Paged or bare array | `GrampsPagedResult<T>` via `GetPagedListAsync<T>` + `GrampsPagedResultParser`; `list_objects` adds `profile=self` for people, families, events, and citations |
+| `GET /api/search/?query=…&page=…&pagesize=…&profile=self` | Paged array | `GrampsPagedResult<GrampsSearchHit>` via `GetPagedListAsync<T>`; `pagesize` is clamped to 1–100 and the total comes from `X-Total-Count`. Each hit's `object` carries the person, family, event, or citation `profile` used for its summary line |
+| `GET /api/{type}/` (list) | Paged or bare array | `GrampsPagedResult<T>` via `GetPagedListAsync<T>` + `GrampsPagedResultParser`; `list_objects` sends `page`, `pagesize` (1–100), and optional `gramps_id`, `gql`, and `sort`, and adds `profile=self` for people, families, events, and citations. A citation `sourceHandle` becomes `gql=source_handle="…"`, joined with any caller `gql` by `and` |
+| `GET /api/{type}/?gramps_id=…&pagesize=1` | Paged or bare array | `HandleResolver` lookup behind every Gramps ID argument; the handle is cached for 10 minutes in `HandleCache` |
 | `GET /api/people/{handle}` | Person | `GrampsPerson` (`primary_name`, `alternate_names`) |
 | `GET /api/people/{handle}?extend=all&profile=families` | Person extended | `GrampsPersonExtended`; `Profile` (`GrampsPersonProfile`) names parents, spouses, and children for `get_object` |
-| `GET /api/{type}/?handles=h1,h2&page=1&pagesize=N` | Array | `T[]` via `GrampsBatchFetch.GetByHandlesAsync` (API 3.14+; up to 50 handles per request; per-handle `GET /api/{type}/{h}` fallback) |
-| `GET /api/people/?handles=…&profile=self[&backlinks=true]` + `GET /api/families/?handles=…` | Derived | `PersonTreeRow[]` for `get_person_tree`, one batch of each per generation (no `/people/{h}/ancestors` or `/descendants` in OpenAPI) |
-| `GET /api/people/{handle}/timeline` | Array | `GrampsTimelineEntry[]` (query: `events`, `relatives`, `relativeEvents`, `dates`) |
+| `GET /api/{type}/?handles=h1,h2&page=1&pagesize=N` | Array | `T[]` via `GrampsBatchFetch.GetByHandlesAsync` (API 3.14+; up to 50 handles per request, 4 requests at a time; a single handle uses `GET /api/{type}/{h}`; a 400/422 or a reply with objects that were not asked for switches that API URL and tree to per-handle reads for the life of the process) |
+| `GET /api/citations/?handles=…&extend=all`, `GET /api/events/?handles=…&extend=place`, `GET /api/media/?handles=…` | Arrays | `ExtendedEntityEnrichment` refills citations, event places, and media of an extended person or family, one batch per type |
+| `GET /api/people/{h}` (+ `?backlinks=true` for descendants), then `GET /api/people/?handles=…&profile=self[&backlinks=true]` + `GET /api/families/?handles=…` | Derived | `PersonTreeRow[]` for `get_person_tree`: the root, then one batch of each per generation (no `/people/{h}/ancestors` or `/descendants` in OpenAPI) |
+| `GET /api/people/{handle}/timeline` | Array | `GrampsTimelineEntry[]` (query: `event_classes`, `relatives`, `relative_event_classes`, `dates`, always `discard_empty=false`; `dates` is normalized from `Y/M/D-Y/M/D`, `-Y/M/D`, `Y/M/D-`, or a single date) |
 | `GET /api/relations/{handle1}/{handle2}`, `.../all` | Object, array | `GrampsRelationship`, `GrampsRelationshipItem[]` (closest first); both people and the common ancestors are read with `profile=self` |
 | `GET /api/families/{handle}` | Family | `GrampsFamily` |
 | `GET /api/families/{handle}?profile=self,events` | Family | `GrampsFamily.Profile` (`GrampsFamilyProfile`): members and events by name for `get_object` |
 | `GET /api/families/{handle}?extend=all` | Family extended | `GrampsFamilyExtended` |
-| `GET /api/families/{h}/timeline` | Array | `GrampsTimelineEntry[]` |
+| `GET /api/families/{h}/timeline` | Array | `GrampsTimelineEntry[]` (query: `event_classes`, `dates`, always `discard_empty=false`) |
 | `GET /api/places/{h}?backlinks=true` + `GET /api/events/?handles=…&profile=participants` | Derived | `GrampsTimelineEntry[]` (MCP synthesizes; no `/places/{h}/timeline` in OpenAPI) |
 | `GET /api/events/{handle}` | Event | `GrampsEvent` |
+| `GET /api/events/{handle}?backlinks=true` + `GET /api/people/{h}` per participant | Event card | Participants by name for `get_object` on an event |
 | `GET /api/places/{handle}` | Place | `GrampsPlace` |
 | `GET /api/places/{handle}?profile=self` | Place | `GrampsPlace.Profile` (`GrampsPlaceProfile`): enclosing places by name for `get_object` |
 | `GET /api/sources/{handle}` | Source | `GrampsSource` |
@@ -61,9 +64,11 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/types/default/{datatype}` | String array | `JsonElement` via `GetDefaultTypesAsync(category)` for type labels, with the bulk endpoint as fallback; kept for the process lifetime |
 | `GET /api/types/custom/` | Nested lists | `JsonElement` via `GetCustomTypesAsync` → `TypesPayloadParser.ParseCategories` (same shape as default; see `CustomTypes` in OpenAPI); kept for 10 minutes, read again for `gramps://types` and before rejecting a type in write tools |
 | `GET /api/transactions/history/?page=1&pagesize=N&sort=-id` | Paged array | `GrampsPagedResult<GrampsTransaction>` via `GetPagedListAsync<T>` |
-| `GET /api/metadata/`, `/api/bookmarks/` | Various | `JsonElement` |
+| `GET /api/metadata/`, `/api/bookmarks/` | Various | `JsonElement`; `/api/metadata/` also serves the `GET /health` connectivity check (`GrampsHealthService`) |
+| `GET /api/places/?pagesize=5&keys=handle,gramps_id,name` | Array | `quick_add_person` / `add_event_to_person` place lookup by exact name (`CompositeTools.ResolveOrCreatePlaceAsync`). Without `page`, Gramps Web returns every place, which this lookup relies on |
 | `GET /api/name-formats/`, `/api/name-groups/` | Various | `dynamic` |
-| `POST/PUT /api/{type}/` (create/update) | Often JSON array of changes `{ _class, type, old, new }` (not in OpenAPI); may be bare entity | `PostMutationAsync` / `PutMutationAsync` unwrap `new` via `GrampsMutationParser` into `Gramps*` |
+| `POST /api/{type}/`, `PUT /api/{type}/{h}` (create/update) | Often JSON array of changes `{ _class, type, old, new }` (not in OpenAPI); may be bare entity | `PostMutationAsync` reads the new handle and Gramps ID from `new` via `GrampsMutationParser`; `PutMutationAsync` only checks the status |
+| `GET /api/{type}/{h}?backlinks=true`, then `DELETE /api/{type}/{h}` | Backlinks, empty | `delete_object` (`DeleteHelper`): blocks the delete while backlinks exist unless `force` is set |
 
 High-risk JSON fields (polymorphic or spec vs runtime): `parent_family_list`, `family_list` / `media_list` (handle strings vs `{ref}` / `{handle}` objects), `child_ref_list` (object vs string), `reporef_list` (object vs string), search root (array vs wrapped), list endpoints (array vs `{ objects, total, page }`).
 

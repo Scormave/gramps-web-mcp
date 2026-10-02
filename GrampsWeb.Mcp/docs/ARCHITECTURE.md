@@ -32,7 +32,10 @@ gramps-web-mcp.sln
 │   ├── Dates/              — date parsing for agent-friendly input
 │   ├── Exceptions/         — domain exceptions
 │   ├── Formatters/         — model → human-readable text
+│   ├── Health/             — Gramps Web connectivity check behind GET /health
+│   ├── Hosting/            — DI setup, MCP/health endpoints, tool profile, argument checks
 │   ├── Input/              — Flexible* types (agent-friendly deserialization)
+│   ├── Logging/            — GRAMPS_LOG_LEVEL parsing, one-line console formatter
 │   ├── Models/             — Gramps entity DTOs
 │   ├── Requests/           — create/update request DTOs
 │   ├── Prompts/            — MCP workflow prompts (add-person, research-person, …)
@@ -44,7 +47,7 @@ gramps-web-mcp.sln
 └── GrampsWeb.Mcp.Tests/    — test project
     ├── Contract/           — DTO ↔ OpenAPI spec sync tests
     ├── Fixtures/           — JSON test payloads
-    ├── IntegrationTests/   — formatter integration tests
+    ├── IntegrationTests/   — formatter and in-process MCP pipeline tests
     └── UnitTests/          — unit tests
 ```
 
@@ -59,7 +62,8 @@ gramps-web-mcp.sln
 | `Microsoft.Extensions.Http` | 10.0.5 |
 | `SixLabors.ImageSharp` | 3.1.12 (media thumbnails; Six Labors Split License, Apache 2.0 terms for open-source use) |
 
-Test-only: xUnit 2.7, Moq 4.20, YamlDotNet 16.3 (for OpenAPI spec parsing).
+Test-only: xUnit 2.7, Moq 4.20, YamlDotNet 16.3 (for OpenAPI spec parsing),
+Microsoft.AspNetCore.TestHost 10.0.5 (in-process MCP server tests).
 
 [`THIRD-PARTY-NOTICES.txt`](../../THIRD-PARTY-NOTICES.txt) lists every package the
 server restores, including transitive ones, with its license.
@@ -83,7 +87,8 @@ with `MCP_API_KEY` via `RequireAuthorization()`; `GET /health` stays anonymous.
 ## Configuration
 
 Configuration is loaded from **environment variables** (no appsettings files).
-Read-only mode can also be enabled with a server CLI argument.
+The server has no command-line options of its own; read-only mode is set only
+through `GRAMPS_READ_ONLY`.
 
 ### Required (Gramps connection)
 
@@ -120,8 +125,9 @@ Read-only mode can also be enabled with a server CLI argument.
 - `GRAMPS_MUTATION_SERIALIZE`: serializes mutation HTTP calls in-process, plus
   read/modify/write sequences of update tools and `add_event_to_person` against
   each other using a separate lock. It does not coordinate with external clients.
-  Set
-  `false` to allow parallel writes.
+  Writes run in parallel only when this is `false` and
+  `GRAMPS_MUTATION_MIN_INTERVAL_MS` is `0`; a minimum interval keeps the
+  single-flight lock.
 - `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum milliseconds between mutation HTTP
   calls, including steps inside composite tools.
 
@@ -182,8 +188,11 @@ a single tool invocation.
 chronologies. It dispatches to the appropriate API route or place-backlink
 fallback while keeping the public catalog to one timeline tool.
 
-The MCP SDK discovers tools at startup via `WithToolsFromAssembly()`. A
-`tools/list` filter publishes only tools enabled by the current configuration:
+Tools are registered through `WithGrampsToolProfile()` in
+`Hosting/McpToolProfileExtensions.cs`. It calls `WithToolsFromAssembly()`,
+adds the call-tool filters for argument checks and read scopes, and, when
+needed, a `tools/list` filter that publishes only tools enabled by the current
+configuration:
 read-only mode removes write tools, and disabled media access removes
 `read_media`. Hidden tools remain registered so direct calls still receive
 the normal read-only or configuration error.
@@ -253,8 +262,9 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
   more. Gramps Web checks the token before the endpoint runs, so writes are
   retried too; Gramps Web's own HTTP 422 validation errors are not
 - typed GET plus mutation POST/PUT/DELETE with `System.Text.Json`
-- mutation response parsing (`PostMutationAsync` / `PutMutationAsync`)
-  that handles Gramps' change-array responses
+- mutation response parsing in `PostMutationAsync`, which reads the new
+  handle and Gramps ID from Gramps' change-array response through
+  `GrampsMutationParser`; `PutMutationAsync` only checks the status
 - read-only enforcement for mutation helpers (`PostMutationAsync`,
   `PutMutationAsync`, `DeleteAsync`) before authentication or request creation
 - in-process write policy via singleton `MutationGate`: optional single-flight
@@ -274,7 +284,10 @@ where the API doesn't deeply populate references, one batch per object type.
 
 `HandleResolver` detects Gramps ID patterns (e.g. `I0001`, `F0023`) and
 resolves them to opaque API handles via a list-endpoint query. This lets
-agents pass either handles or Gramps IDs to any tool parameter.
+agents pass either handles or Gramps IDs to any tool parameter. Successful
+resolutions are kept in the static `HandleCache` for 10 minutes, keyed by API
+URL, tree ID, and Gramps ID; concurrent lookups of the same ID share one
+request.
 
 `GrampsTypeVocabularies` keeps Gramps type vocabularies between tool calls.
 One instance is registered as a singleton and passed to every
@@ -300,7 +313,8 @@ enrichment cannot mutate another consumer's data. Failed requests are removed
 to allow retries. The scope is disposed at the end of the call; write tools,
 binary downloads, paginated-list requests, and direct client calls outside an
 MCP read scope retain their existing behavior. No entity data is shared across
-calls or client instances.
+calls or client instances; only Gramps ID resolutions (`HandleCache`), type
+vocabularies, and the batch-filter support flag outlive a call.
 
 `GrampsBatchFetch.GetByHandlesAsync` loads many objects of one type through the
 list endpoint's `handles` filter (`GET /api/{type}/?handles=a,b`, Gramps Web
@@ -348,7 +362,8 @@ inconsistencies:
 
 `GrampsJson.Options` is the shared `JsonSerializerOptions` instance:
 camelCase naming, case-insensitive read, skip unknown members, ignore nulls
-on write, omit empty collections.
+on write, omit empty collections. `GrampsJson.UpdateOptions` is the same but
+writes empty collections, so `PutMutationAsync` can clear a list.
 
 ### 5. Input (`Input/`)
 
@@ -454,9 +469,18 @@ HTTP transport on port 8080.
 
 ### CI
 
-- **GitHub Actions** (`.github/workflows/ci.yml`): build and test on push/PR.
-- **GitHub Actions** (`.github/workflows/docker.yml`): build and publish the
-  Docker image to `ghcr.io/scormave/gramps-web-mcp`.
+- **GitHub Actions** (`.github/workflows/ci.yml`): build and test on pushes
+  and pull requests to `main`/`master`.
+- **GitHub Actions** (`.github/workflows/docker.yml`): on pushes to
+  `main`/`master`, `v*` tags, or manual dispatch, test, then build and publish
+  the Docker image to `ghcr.io/scormave/gramps-web-mcp` (`:latest` from the
+  default branch, `:x.y.z` from a tag). Tag runs also publish `server.json` to
+  the MCP Registry.
+- **GitHub Actions** (`.github/workflows/mcpb-release.yml`): on `v*` tags,
+  pack the Claude Desktop MCPB bundles for five platforms and attach them to
+  the GitHub Release.
+- **GitHub Actions** (`.github/workflows/pages.yml`): deploy `site/` to GitHub
+  Pages when it changes on `main`.
 - **Gitea Actions** (`.gitea/workflows/docker.yml`): builds and publishes the
   Docker image to a private Gitea container registry.
 
@@ -469,6 +493,8 @@ HTTP transport on port 8080.
 - **Unit tests** (`UnitTests/`): cover serialization, date parsing, formatters,
   flexible input types, mutation parsing.
 - **Integration tests** (`IntegrationTests/`): end-to-end formatter tests with
-  realistic JSON fixtures.
+  realistic JSON fixtures, plus in-process MCP server tests on ASP.NET Core
+  `TestServer` with a stubbed Gramps Web API (API key auth, argument checks,
+  per-call read cache) and a DI test of the User-Agent sent to Gramps Web.
 - **Fixtures** (`Fixtures/`): JSON files representing actual API responses for
   deserialization tests.

@@ -6,13 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-02
+
 ### Added
 
 - Add SixLabors.ImageSharp 3.1.12 to render media thumbnails; it is fully
   managed, so the Docker image and MCP Bundle need no native libraries
 - Add `THIRD-PARTY-NOTICES.txt` with the licenses of the bundled NuGet packages
-  and the .NET runtime. MCP Bundles and the Docker image now include it and
-  `LICENSE`, and a test fails when the restored packages and the list differ
+  and the .NET runtime. MCP Bundles now include it, the Docker image includes
+  it and `LICENSE`, and a test fails when the restored packages and the list
+  differ
 
 ### Changed
 
@@ -26,26 +29,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   handwriting and small print in document scans stay legible; `size` accepts
   1 to 4096
 - Render thumbnails from JPEG, PNG, GIF, WebP, BMP, TIFF, TGA, PBM, and QOI
-  originals, using the first page of multi-page files; reject PDF, audio,
-  AVIF, HEIC, and SVG media before downloading the original
+  originals, using the first page of multi-page files; reject non-image media
+  such as PDF and audio, and AVIF, HEIC, HEIF, JPEG XL, and SVG images, before
+  downloading the original
 - Download originals for thumbnails up to 50 MiB, or `GRAMPS_MEDIA_MAX_BYTES`
   if larger, and up to 100 megapixels; `GRAMPS_MEDIA_MAX_BYTES` still limits
   the preview returned to the client
 - Return media files of any MIME type in `read_media` file mode and the file
   resource; images other than JPEG, PNG, GIF, and WebP are returned as an
-  embedded blob with a hint to use thumbnail mode
+  embedded blob with a hint, which points to thumbnail mode when the server can
+  render the format
 - Update the README, security and privacy policies, architecture, developer,
   migration, and tool documentation, the system prompt, Docker Compose, MCPB
   metadata, and GitHub Pages for the new media behavior
-- Name relatives in `get_timeline` rows with their Gramps ID and age, show the
-  role when the person is not the primary participant, and list the people and
-  families of each event on place timelines with their roles. A zero age, such
-  as "0 days" on birth rows, is left out
+- Show the Gramps ID and age of relatives in `get_timeline` rows, and the
+  person's own age; show the role only when it is not Primary instead of on
+  every row; and list up to 5 people and families of each event on place
+  timelines with their roles. A zero age, such as "0 days" on birth rows, is
+  left out
 - Name the place once above a place timeline, with its Gramps ID, instead of
   on every row
-- Show a family's parents and children in `get_object` by name, Gramps ID,
-  birth, and death, with the marriage, the divorce, and each event's type,
-  date, and place, from one request instead of handles
+- Show a family's parents and children in `get_object` without `extended` by
+  name, Gramps ID, birth, and death, with the marriage, the divorce, and each
+  event's type, date, and place, from one request instead of handles
 - Show the parents, spouse, and children in each family of an extended person
   `get_object` by name, Gramps ID, birth, and death, with the family's Gramps
   ID, marriage, and divorce, from the person request instead of handles
@@ -53,13 +59,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and Gramps ID from the same request instead of one request per parent
 - Show the page count and total in `search` results, and the total when the
   page is past the last one
-- Show `get_recent_changes` as one entry per transaction with its UTC time,
+- Show `get_recent_changes` as one entry per transaction with its ID, UTC time,
   description, user, undo flag, and each changed object's class, change kind,
   and handle, up to 10 objects per transaction, instead of raw JSON
 - Show `get_relations` with both people by name, the closest relationship as a
-  sentence, generations to the common ancestor, and every relationship with
-  its common ancestors by name, instead of raw JSON; the two people load in
-  parallel and the common ancestors in one request
+  sentence, generations to the common ancestor, and every relationship with up
+  to 10 common ancestors by name and the rest by handle, instead of raw JSON;
+  the people and relationships load in parallel and the common ancestors in one
+  request
 - Load place timeline events, each `get_person_tree` generation, and
   `get_relations` common ancestors in batches of up to 50 objects with the list
   endpoint's `handles` filter (Gramps Web API 3.14+), instead of one request
@@ -68,15 +75,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and tree
 - Read a place once per place timeline instead of twice
 - Refetch the events, citations, and media of an extended person or family
-  `get_object` in one batch per type instead of one request per object; a
-  person with six events at places and one citation takes 3 requests
-  instead of 8
+  `get_object` in one batch per type, the three in parallel, instead of one
+  request per object. With the type cache below, a person with six events at
+  places and one citation takes 3 requests after the first call instead of 16
 - Build `get_person_tree` rows from the person profile in the batch instead of
   reading each person's birth and death events and places; an ancestor tree
-  takes about two requests per generation instead of several per person
+  takes about two requests per generation instead of several per person. Rows
+  show the name in the tree's display format, "Surname, Given, b. 1815 in
+  London, d. 1852 [I0001]", instead of "Given Surname"
 - Label baptism, christening, burial, and cremation dates by event type in
-  `get_person_tree` rows, family members, and `get_relations`, e.g.
-  "burial 1950", instead of showing them as birth and death
+  `get_person_tree` rows, family members, `get_relations`, and people in
+  `search` and `list_objects`, e.g. "burial 1950", instead of showing them as
+  birth and death
 - Build `search` and `list_objects` lines for people, families, events, and
   citations from the `profile=self` summary in the same response instead of
   reading each person's birth event and place, each family's parents, each
@@ -86,18 +96,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Show people in `search` and `list_objects` as "Surname, Given, b. 1815 in
   London, d. 1852" in the tree's name display format, with death and baptism
   or burial fallbacks, instead of "Given Surname (b. 1815 in London)"; family
-  partners use the display format too
+  partners use the display format too. Display names leave out the separator
+  of an empty name part, so a person without a surname shows as "Anna"
 - Keep type vocabularies between tool calls instead of reading them in every
   call: default types for the life of the process and custom types for 10
   minutes; failed reads are not kept. After the first call, an extended person
-  `get_object` takes 2 requests instead of 10 and an event `list_objects` page
-  1 instead of 2
-- Read custom types each time in `gramps://types` and `get_reference(topic:
-  "types")`, and list the default types when the custom types endpoint fails
-  instead of failing
+  `get_object` makes 8 fewer requests and an event `list_objects` page takes 1
+  instead of 2
 - Reject a tool call with an argument the tool does not have, such as `extend`
   for `extended` or `object_type` for `objectType`, and suggest the likely
   parameter; such arguments were ignored, so a misspelled option had no effect
+- Describe the Gramps ID prefixes in `get_object`, the place lookup by Gramps
+  ID, handle, or name in `add_event_to_person`, and the undo marker and
+  10-object limit in `get_recent_changes` in the tool descriptions
+- Document the `GRAMPS_MEDIA_*` variables in MCP Registry metadata and the
+  Dockerfile; list read-only mode, the prompts, and the Linux MCP Bundles on
+  GitHub Pages; and correct the tool catalog, system prompt, architecture,
+  data model, developer guide, API inventory, and release checklist
 
 ### Removed
 
@@ -108,6 +123,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Say in the `update_source` description that `[]` for `repositoryHandles`
+  clears the repository links in replace mode, as it does; the description
+  said an empty list was ignored
 - Resolve media Gramps IDs by the Gramps default `O` prefix instead of `M`, so
   `get_object`, `read_media`, `update_media`, and `delete_object` accept IDs
   like `O0001`
@@ -121,16 +139,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and 422 still fall back to the original value
 - Show relatives' names in `get_timeline`; the server read a `name` field that
   Gramps Web does not send, so relatives' events were unnamed
-- Leave a missing type, date, or place out of `search` event lines instead of
-  showing dashes
+- Leave a missing type, date, or place out of `search` and `list_objects`
+  event lines instead of showing dashes
 - Sort `get_timeline` events dated before the year 1000 by year; they were
   listed after the undated events. Place timeline events of the same year
   follow their dates instead of the order of the place's backlinks
-- Drop the separator of an empty name part from Gramps display names, so a
-  person without a surname shows as "Anna" instead of ", Anna" in trees,
-  families, relationships, and timelines
 - Name the `objectType` parameter in the `list_objects` error for an unknown
   type instead of `object_type`
+- List the default types in `gramps://types` and `get_reference(topic:
+  "types")` when the custom types endpoint fails, instead of failing
 - Explain a Gramps ID that was not found instead of suggesting `get_object`
   with the same ID: an ID with another type's prefix names that type and how
   to read it, an unknown prefix gets the right one, and a missing ID points to
@@ -390,7 +407,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.8...v2.0.0
 [1.0.8]: https://github.com/Scormave/gramps-web-mcp/compare/v1.0.7...v1.0.8

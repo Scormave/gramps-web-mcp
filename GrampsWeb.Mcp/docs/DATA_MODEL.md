@@ -55,6 +55,7 @@ polymorphic wire shapes.
 | `GrampsFamilyRef` | in `GrampsPerson.cs` | `Ref`, `Relationship`, `FatherRelationship`, `MotherRelationship`; whole-type converter |
 | `GrampsRepositoryRef` | `GrampsRepositoryRef.cs` | `Ref`, `CallNumber`, `MediaType`, `NoteList`; whole-type converter |
 | `GrampsPersonRef` | `GrampsPersonRef.cs` | `Ref`, `Relationship`, `CitationList`, `NoteList`, `Private` |
+| `GrampsMediaRef` | `GrampsMediaRef.cs` | `Ref`, `Private`, `CitationList`, `NoteList`, `AttributeList`, `Rect` (crop `[x, y, width, height]`) — `media_list` entries |
 | `GrampsAttribute` | in `GrampsPerson.cs` | `Type`, `Value`, `CitationList`, `NoteList`, `Private` |
 | `GrampsAddress` | `GrampsAddress.cs` | `Street`, `Locality`, `City`, `County`, `State`, `Country`, `Postal`, `Phone`, `Date`, `CitationList`, `NoteList`, `Private` |
 | `GrampsUrl` | `GrampsUrl.cs` | `Type`, `Path`, `Description`, `Private` |
@@ -67,7 +68,7 @@ polymorphic wire shapes.
 | Model | File | Description |
 |-------|------|-------------|
 | `GrampsPersonExtended` | `GrampsPersonExtended.cs` | Person + `Extended` → events, families, parent_families, notes, tags, media, citations as resolved objects |
-| `GrampsFamilyExtended` | in `GrampsFamily.cs` | Family + `Extended` → events, father, mother, children, notes, tags, media, citations |
+| `GrampsFamilyExtended` | in `GrampsPersonExtended.cs` | Family + `Extended` → events, father, mother, children, notes, tags, media, citations |
 | `GrampsEventExtended` | `GrampsEventExtended.cs` | Event + `Extended` → place, citations, media, notes, tags |
 | `GrampsCitationExtended` | `GrampsCitationExtended.cs` | Citation + `Extended` → source, media, notes, tags |
 
@@ -77,7 +78,7 @@ polymorphic wire shapes.
 |-------|------|-------------|
 | `GrampsSearchHit` | `GrampsSearchHit.cs` | `Handle`, `ObjectType`, `GrampsId`, `Rank`, `Score`, `Object` (raw `JsonElement?`) |
 | `GrampsPagedResult<T>` | `GrampsPagedResult.cs` | `Objects`, `Total`, `Page` — generic wrapper for paged lists |
-| `GrampsTimelineEntry` | `GrampsTimeline.cs` | `Handle`, `GrampsId`, `Label`, `Type`, `Date`, `Place`, `Description`, `Role`, `Name`, `Category`, `Rating` — returned by `get_timeline` for people, families, and places |
+| `GrampsTimelineEntry` | `GrampsTimeline.cs` | `Handle`, `GrampsId`, `Label`, `Type`, `Date`, `Place` → `GrampsTimelinePlaceProfile`, `Description`, `Role`, `Person` → `GrampsTimelinePersonProfile`, `Age`; `Participants` is app-side (`[JsonIgnore]`) — returned by `get_timeline` for people, families, and places |
 | `PersonTreeRow` | `PersonTreeRow.cs` | `Person`, `Generation`, `AncestorPathFromRoot` — app-side model for tree traversal |
 
 ---
@@ -95,22 +96,30 @@ custom types again before it is rejected.
 
 ### HandleResolver (`Client/HandleResolver.cs`)
 
-`HandleResolver` detects Gramps ID patterns (single uppercase letter + digits,
-e.g. `I0001`, `F0023`) and resolves them to opaque API handles by querying the
-list endpoint with a `gramps_id` filter.  If the value doesn't match the
-pattern, it's returned as-is (assumed to already be a handle).  This allows
-agents to use either identifier format in any tool parameter.
+`HandleResolver` detects Gramps ID patterns (one uppercase letter followed by
+digits, 2–8 characters, e.g. `I0001`, `F0023`) and resolves them to opaque API
+handles with `GET /api/{type}/?gramps_id={id}&pagesize=1`.  The prefix picks
+the type: `I` person, `F` family, `E` event, `P` place, `S` source, `C`
+citation, `R` repository, `N` note, `O` media, `T` tag.  A value that doesn't
+match the pattern, has an unknown prefix, or has another type's prefix than
+the caller expects is returned as-is (assumed to already be a handle), as is
+an ID no object has.  Successful resolutions are cached in `HandleCache` for
+10 minutes per API URL and tree.  This allows agents to use either identifier
+format in any tool parameter.
 
 ### Shared options: `GrampsJson`
 
-`GrampsJson.Options` is the single `JsonSerializerOptions` instance used for all
-API communication:
+`GrampsJson.Options` is the `JsonSerializerOptions` instance used for API
+reads and creates:
 
 - `PropertyNamingPolicy = JsonNamingPolicy.CamelCase`
 - `PropertyNameCaseInsensitive = true`
 - `UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip`
 - `DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull`
 - Empty collection omission modifier (non-string `IEnumerable`)
+
+`GrampsJson.UpdateOptions` has the same settings but writes empty collections,
+so a PUT can clear a list; `PutMutationAsync` uses it.
 
 ### Wire-format converters (polymorphic field handling)
 
@@ -131,6 +140,7 @@ structured object.  Custom converters normalize these:
 | `GrampsPersonRefJsonConverter` | Person association ref; read accepts `rel`/`relationship` and camelCase list fields | → `GrampsPersonRef` |
 | `GrampsEventRefJsonConverter` | Event ref; read accepts camelCase list fields and wire-type `role` objects | → `GrampsEventRef` |
 | `GrampsMediaRefJsonConverter` | Media ref; read accepts snake_case and camelCase aliases | → `GrampsMediaRef` |
+| `GrampsMediaRefArrayConverter` | `media_list`: full media-ref objects **or** bare handle strings | → `GrampsMediaRef[]` |
 | `GrampsDateJsonConverter` | Delegates to `GrampsDateWireCodec` | → `GrampsDate` |
 
 ### Date wire codec: `GrampsDateWireCodec`
@@ -174,6 +184,7 @@ canonical model type.
 | `FlexibleEventRefList` | `EventRefRequest[]` | Object array; `"HANDLE::Role"` strings (default role Primary); comma/pipe/newline-separated |
 | `FlexiblePlaceRefList` | `PlaceRefRequest[]` | Handle strings; `"HANDLE::date"`; objects `{ref, date?}` |
 | `FlexiblePlaceNameList` | `PlaceNameRequest[]` | Strings (`"Name"` or `"Name::lang"`); objects `{value, lang?, date?}`; multiline |
+| `FlexibleRepositoryRefList` | `GrampsRepositoryRef[]` | Object array; `"Ref : CallNumber : MediaType"` strings (call number and media type optional); multiline/pipe-separated string; JSON-array string |
 
 ### Parsing logic
 
@@ -204,7 +215,7 @@ Common pattern:
 - `handle`, `gramps_id`, `change` — optional (API generates on create)
 - `[JsonPropertyName("snake_case")]` for all fields
 - Nested request types: `GrampsNameRequest`, `SurnameRequest`,
-  `EventRefRequest`, `FamilyRefRequest`, `AttributeRequest`,
+  `EventRefRequest`, `MediaRefRequest`, `AttributeRequest`,
   `DateRequest`, `PlaceNameRequest`, `PlaceRefRequest`, `StyledTextRequest`
 
 ### Mapping: `GrampsRequestMapping`
@@ -213,7 +224,13 @@ Common pattern:
 updates (read-modify-write pattern):
 - `GrampsDate` → `DateRequest` (via `ToDateRequestOrNull`)
 - `GrampsAttribute[]` → `AttributeRequest[]`
-- Event ref lists, family ref lists → request equivalents
+- Event refs → `EventRefRequest[]` (`ToEventRefRequests`)
+- Parent family refs → handle strings (`ToParentFamilyHandles`)
+- Media refs → `MediaRefRequest[]` (`ToMediaRefRequests`), keeping crop and
+  other metadata of existing refs
+- Repository refs → `GrampsRepositoryRef[]` payloads (`ToRepositoryRefRequests`),
+  filling missing fields from existing refs
+- Place refs → `PlaceRefRequest[]`; place names → `PlaceNameRequest[]`
 - Parallel handle/role arrays → `EventRefRequest[]` (`BuildEventRefList`)
 
 ### Tool response helpers

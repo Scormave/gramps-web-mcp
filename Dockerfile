@@ -28,6 +28,9 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # GRAMPS_MUTATION_SERIALIZE  true|false — serialize mutation HTTP calls in-process (default true).
 # GRAMPS_MUTATION_MIN_INTERVAL_MS  Minimum ms between mutation HTTP calls (default 0; SQLite often 250).
 # GRAMPS_LOG_LEVEL    Server log level (default Information); Debug/Trace also log API bodies.
+# GRAMPS_MEDIA_RESOURCES_ENABLED  true|false — expose read_media and media resources (default false).
+# GRAMPS_MEDIA_MAX_BYTES  Max bytes returned by read_media or a media resource (default 5242880).
+# GRAMPS_MEDIA_ALLOW_PRIVATE  true|false — return bytes for media marked private (default false).
 
 # --- MCP transport (optional; these defaults suit a networked container) ---
 # MCP_TRANSPORT       stdio | http | sse — default in image is http for Docker.
@@ -36,7 +39,7 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # MCP_STATELESS       true|false — Streamable HTTP stateless mode (default true for http).
 # MCP_ENABLE_LEGACY_SSE  true|false — with http, also expose legacy /sse + /message.
 # MCP_API_KEY         Optional shared secret for HTTP/SSE transport (min 16 chars; comma-separated for rotation).
-# GET /health         Liveness/readiness probe; minimal JSON by default.
+# GET /health         Liveness/readiness probe; minimal JSON {"status": ...}.
 
 ENV MCP_TRANSPORT=http \
     ASPNETCORE_URLS=http://0.0.0.0:8080 \

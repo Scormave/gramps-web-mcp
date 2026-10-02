@@ -19,7 +19,7 @@ public static class SearchTools
     [Description(
         "Read-only: full-text search across all object types (people, families, events, places, sources, citations, repositories, notes, media, tags). " +
         "Use * wildcards (e.g. Smith*). " +
-        "Results include handles—pass them to get_object or list_objects for more rows. " +
+        "Results include handles and Gramps IDs—pass one to get_object for full details. " +
         "Paginate with page and pagesize.")]
     public static async Task<string> Search(
         [Description("Query string; * is wildcard. Examples: Smith*, John, Dublin*")]

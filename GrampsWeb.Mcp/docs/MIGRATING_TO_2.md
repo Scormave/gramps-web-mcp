@@ -124,8 +124,8 @@ the server's `GRAMPS_READ_ONLY` default is `false`.
 is available when file access is disabled. Media resource URIs remain
 `gramps://media/{handle}/thumbnail/{size}` and
 `gramps://media/{handle}/file`; size and private-record safeguards continue
-to apply. Releases after 2.0.1 no longer read `GRAMPS_MEDIA_ALLOWED_MIME_TYPES`
-and log a startup warning while it is set; remove it from your configuration.
+to apply. Since 2.1.0 the server ignores `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` and
+logs a startup warning while it is set; remove it from your configuration.
 
 The stdio and HTTP transport setup is unchanged. Existing username/password
 configuration still works; `GRAMPS_REFRESH_TOKEN` is now an alternative for

@@ -57,6 +57,39 @@ their entire read/modify/write sequence against each other. HTTP write throttlin
 still applies. This is not a transaction or a lock against external API clients,
 other server processes, creates, or deletes.
 
+## Identifiers and errors
+
+Parameters that take a handle also accept a Gramps ID: an uppercase prefix
+letter followed by digits, 2–8 characters in total. The server resolves it by
+the Gramps default prefixes: `I` person, `F` family, `E` event, `P` place,
+`S` source, `C` citation, `R` repository, `N` note, `O` media, `T` tag. An ID
+with another type's prefix, or one that no object has, is passed on unchanged
+and ends in a not-found result.
+
+A missing object returns `<Type> not found: <identifier>` as normal tool
+output, with a hint when the identifier looks like a Gramps ID:
+
+- An ID with another type's prefix names that type and suggests
+  `get_object(identifier: "…")` to read it.
+- An ID with an unknown prefix gets the prefix the tool expects.
+- An ID with the right prefix that no object has points to `search` and
+  `list_objects(objectType: "…")`.
+- An identifier shorter than five characters that is not a Gramps ID gets a
+  reminder that handles are long strings and Gramps IDs need their prefix.
+
+### Argument validation
+
+Before a tool runs, the server checks the argument names against the tool's
+input schema. An unknown argument (with a suggestion for a close match, such as
+`extend` for `extended`), a missing required argument, or a value the server
+cannot convert to the parameter's type returns a tool error that names the
+argument and lists the tool's parameters, their types, and which are required.
+Numbers sent as strings are accepted.
+
+```text
+An error occurred invoking 'get_object': Unknown argument: extend (did you mean extended?). Parameters: identifier (string, required), objectType (string), extended (boolean).
+```
+
 ## Resources
 
 Read-only reference/discovery data exposed as MCP resources:
@@ -113,6 +146,11 @@ from the person request. Without it, a family names its parents and children
 and lists its events with type, date, and place, and a place names its
 enclosing places and full hierarchy, each in one request.
 
+Validation errors name the problem: an opaque handle without `objectType`, an
+unknown `objectType`, an `objectType` that disagrees with the Gramps ID prefix
+(such as `objectType: "family"` with `I0001`), or `extended=true` for a type
+other than person or family.
+
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `identifier` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
@@ -150,7 +188,10 @@ participants with their roles; child places are not included.
 | `events` | `string[]?` | no | all | Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom |
 | `relatives` | `string[]?` | no | none | Person only: father, mother, brother, sister, wife, husband, son, daughter |
 | `relativeEvents` | `string[]?` | no | none | Person only: event categories for relatives |
-| `dates` | `string?` | no | — | Date range `YYYY/M/D-YYYY/M/D` |
+| `dates` | `string?` | no | — | `Y/M/D-Y/M/D` range, `-Y/M/D` (up to), `Y/M/D-` (from), or a single `Y/M/D`; leading zeros are normalized |
+
+Without `dates`, undated events are included and listed after the dated ones.
+A place timeline with `dates` leaves out undated events.
 
 ---
 
@@ -160,6 +201,12 @@ participants with their roles; child places are not included.
 List either ancestors or descendants up to N generations with names, vital
 dates/places, and optional kinship labels. Ancestors follow parent-family links;
 descendants follow children on families where the person is a parent.
+
+Each row starts with `Gen N`, followed by the kinship label when enabled (such
+as `Gen 2 — Father's mother`), then the person summary and handle. Vitals read
+`b. 1880 in Dublin` and `d. 1950`; when Gramps Web falls back to another event
+because birth or death is missing, the event type is named instead, such as
+`baptism 1880` or `burial 1950`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -174,12 +221,14 @@ How two people are related, read as "person 2 is the X of person 1" (e.g.
 from each to the common ancestor, and every relationship Gramps finds, closest
 first, with its common ancestors by name (up to 10 named, the rest by handle).
 Searches blood relatives up to 15 generations, plus spouses; unrelated people
-get a clear message.
+get a clear message. Two identifiers for the same person return "both handles
+refer to the same person" without a relationship lookup, and a missing person
+returns the usual not-found message.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `handle1` | `string` | yes | First person handle |
-| `handle2` | `string` | yes | Second person handle |
+| `handle1` | `string` | yes | First person handle or Gramps ID |
+| `handle2` | `string` | yes | Second person handle or Gramps ID |
 
 ### C — `CreatePerson`
 Create a new person.  Returns handle and Gramps ID.
@@ -298,7 +347,8 @@ Create a source.  Create sources **before** citations.
 | `author` | `string?` | no | — | Author |
 | `pubinfo` | `string?` | no | — | Publication info |
 | `abbrev` | `string?` | no | — | Abbreviation |
-| `repositoryHandles`, `noteHandles`, `mediaHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handle strings, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted) |
+| `noteHandles`, `mediaHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -368,11 +418,11 @@ Download media bytes as typed MCP content. Default mode `thumbnail` returns a
 JPEG preview (PNG when the image has transparency) rendered by the server from
 the original, with EXIF, GPS, and other metadata stripped. Previews can be
 rendered from JPEG, PNG, GIF, WebP, BMP, TIFF, TGA, PBM, and QOI originals;
-multi-page files use the first page. PDF, AVIF, HEIC, and SVG media are
-rejected before download. Mode `file` returns the original as image, audio, or
-embedded blob resource content according to MIME type; images other than JPEG,
-PNG, GIF, and WebP come back as an embedded blob with a text hint. Prefer
-thumbnails before full files.
+multi-page files use the first page. Non-image media such as PDF, and AVIF,
+HEIC/HEIF, JPEG XL, and SVG images, are rejected before download. Mode `file`
+returns the original as image, audio, or embedded blob resource content
+according to MIME type; images other than JPEG, PNG, GIF, and WebP come back as
+an embedded blob with a text hint. Prefer thumbnails before full files.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -439,7 +489,10 @@ Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
 
 ### R — `Search`
 Full-text search across all object types.  Supports `*` wildcards. The header
-shows the page, page count, and total matches.
+reads `Search Results (Page 1 of 3, Total: 47):`; each row is a one-line
+summary such as `Person: …` or `Place: … (City)` followed by
+`— handle: … | gramps_id: …`. A page past the last one says so and gives the
+total instead of returning nothing.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -448,7 +501,10 @@ shows the page, page count, and total matches.
 | `pagesize` | `int` | no | `20` | Page size (max 100) |
 
 ### R — `ListObjects`
-Paginated list of one object type with optional filtering.
+Paginated list of one object type with optional filtering. The header reads
+`PEOPLE (Page 1 of 5, Total: 93)`; rows are numbered across pages and use the
+same summary and `handle | gramps_id` suffix as `search`. An empty page returns
+`No <objectType> found.`
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -465,13 +521,16 @@ Paginated list of one object type with optional filtering.
 ## System (`SystemTools.cs`) — 2 tools
 
 ### R — `GetRecentChanges`
-Recent transaction history, newest first: UTC commit time, description, user,
-and each changed object's class, change kind (added, updated, or deleted), and
-handle, up to 10 objects per transaction.
+Recent transaction history, newest first, under the header
+`RECENT CHANGES (20 of 512, newest first)`. Each transaction row shows its UTC
+commit time, description, user, an `(undo)` marker for undo transactions, and
+`[transaction: id]`. Below it, each changed object appears as `Added`,
+`Updated`, `Deleted`, or `Changed` with its class and handle, up to 10 objects
+per transaction followed by `(+N more changes)`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `limit` | `int` | no | `20` | Number of rows (max 100) |
+| `limit` | `int` | no | `20` | Number of transactions (clamped 1–100) |
 
 ### R — `GetBookmarks`
 Gramps Web user bookmarks (saved shortcuts).
@@ -495,6 +554,9 @@ Automatically creates place and event objects as needed, then links them.
 | `deathDate` | `string?` | no | — | Death date text |
 | `deathPlace` | `string?` | no | — | Death place name |
 
+A place name reuses the place whose name matches exactly, ignoring case, and
+otherwise creates a new place.
+
 ### C — `AddEventToPerson`
 Create an event and attach it to an existing person in one call.
 Handles event creation + person update automatically.
@@ -504,9 +566,14 @@ Handles event creation + person update automatically.
 | `personHandle` | `string` | yes | — | Person handle or Gramps ID |
 | `eventType` | `string` | yes | — | Event type (e.g. Birth, Death, Baptism) |
 | `date` | `string?` | no | — | Event date text |
-| `place` | `string?` | no | — | Place name or handle |
+| `place` | `string?` | no | — | Place Gramps ID, handle, or name |
 | `description` | `string?` | no | — | Event description |
 | `role` | `string` | no | `"Primary"` | Person's role in the event |
+
+`place` takes an existing place by Gramps ID or handle. Any other value is a
+name: it reuses the place whose name matches exactly, ignoring case, or creates
+a new place, so an ID or handle that matches no place creates a place with
+that text as its name.
 
 ---
 

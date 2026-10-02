@@ -93,7 +93,7 @@ Key rules:
 - Use dedicated `*Formatter` static classes.
 - `GrampsDefaultTypeLabels` resolves wire type keys to display labels.
 - `GrampsValueFormatter` handles atomic values (names, dates).
-- For dynamic/unknown payloads, use `JsonResponseFormatter.FormatJson()`.
+- For dynamic/unknown payloads, use `JsonResponseFormatter.FormatDynamic()`.
 
 ---
 
@@ -115,8 +115,9 @@ If the endpoint returns a new entity type:
 
 ### Step 3: Add API client method (if needed)
 
-Most tools use the generic `client.GetAsync<T>()`, `client.PostMutationAsync<T>()`
-etc.  Only add new client methods if you need special request/response handling.
+Most tools use the generic `client.GetAsync<T>()`,
+`client.PostMutationAsync(path, body, grampsClass)`,
+`client.PutMutationAsync(path, body)` etc.  Only add new client methods if you need special request/response handling.
 Use `GetBytesAsync(path, maxBytes)` for binary responses so payload bytes are
 not logged or converted through text. To read several objects of one type, use
 `client.GetByHandlesAsync<T>(collection, handles, handleOf, query)` instead of
@@ -202,7 +203,7 @@ When you want agents to pass data in free-form text as well as structured JSON:
 
 Composite tools (`CompositeTools.cs`) combine multiple API calls into a single
 tool invocation, reducing the number of sequential tool calls an agent must
-make.  Examples: `GetObject`, `QuickAddPerson`, `AddEventToPerson`.
+make.  Examples: `QuickAddPerson`, `AddEventToPerson`.
 
 Pattern:
 1. Add a new `[McpServerTool]` method in `CompositeTools.cs`.
@@ -212,8 +213,9 @@ Pattern:
 4. Aggregate results into a single formatted response.
 5. Track created objects and list them in the output for transparency.
 
-Keep private helpers (place resolution, name conversion) in the same class
-to avoid coupling with entity-specific tool files.
+Keep composite-only helpers (place resolution, vital-event creation) private
+in the same class. Reuse shared conversions from entity tool files instead of
+copying them; for example `QuickAddPerson` calls `PersonTools.ConvertNameToRequest`.
 
 ---
 
@@ -297,18 +299,36 @@ This is a critical distinction for update tools:
 | What agent does | Effect |
 |----------------|--------|
 | **Omits parameter** | Field is unchanged (keeps current value) |
-| **Passes `[]` (empty array)** | **Clears** all items of that kind |
+| **Passes `[]` (empty array)** | **Clears** all items of that kind (link lists: only with `linkMode: "replace"`) |
 | **Passes `null`** | Same as omit (ignored) |
 
 This is documented in tool descriptions via `ToolDescriptionFragments.OmitToKeepEmptyClears`
 and `UpdateEmptyListRemovesLinks`.
 
+### Link list modes
+
+Every update tool takes `linkMode` (`replace`, the default; `add`; `remove`),
+applied by `Tools/LinkUpdates.cs` to every link list supplied in the call
+(handles of citations, notes, media, tags, events, children, and so on):
+
+- `replace`: the supplied list replaces the current one; `[]` clears it.
+- `add`: appends handles not linked yet and keeps the metadata of existing links.
+- `remove`: drops links whose handle was supplied.
+
+With `add` or `remove`, `[]` changes nothing. Names, attributes, addresses, and
+URLs always use replacement.
+
 ### Read-modify-write pattern
 
 Update tools follow this pattern:
-1. `GET` the current entity
-2. Build a request DTO merging current values with provided changes
-3. `PUT` the merged request
+1. Validate `linkMode` and take `using var lease = await client.BeginUpdateAsync()`;
+   while the mutation gate is enabled (`GRAMPS_MUTATION_SERIALIZE=true` or a
+   nonzero `GRAMPS_MUTATION_MIN_INTERVAL_MS`), it keeps other updates in this
+   process from interleaving with the sequence
+2. `GET` the current entity
+3. Build a request DTO merging current values with provided changes; link
+   lists go through `LinkUpdates.Apply(existing, supplied, linkMode, key)`
+4. `PUT` the merged request (`PutMutationAsync`)
 
 This means the tool must preserve all fields the agent didn't explicitly change.
 
@@ -374,7 +394,8 @@ per type, and keeps the rows the API sent when a request fails:
   place details
 - Media: fetch by handle when `extended.media` is empty but `media_list` has handles
 
-This is applied automatically in `GetPersonExtended` and `GetFamilyExtended`.
+This is applied automatically by `PersonTools.ReadPersonAsync` and
+`FamilyTools.ReadFamilyAsync` when `get_object` is called with `extended: true`.
 
 ---
 
@@ -396,9 +417,16 @@ Default environment in the image:
 
 ### CI
 
-- **GitHub Actions** (`.github/workflows/ci.yml`): build and test on push/PR.
-- **GitHub Actions** (`.github/workflows/docker.yml`): publish Docker image to
-  `ghcr.io/scormave/gramps-web-mcp` on push to `main`.
+- **GitHub Actions** (`.github/workflows/ci.yml`): build and test on pushes
+  and pull requests to `main`/`master`.
+- **GitHub Actions** (`.github/workflows/docker.yml`): test, then publish the
+  Docker image to `ghcr.io/scormave/gramps-web-mcp` on pushes to
+  `main`/`master` (`:latest`), `v*` tags (`:x.y.z`, plus the MCP Registry
+  entry), or manual dispatch.
+- **GitHub Actions** (`.github/workflows/mcpb-release.yml`): on `v*` tags,
+  pack MCPB bundles for five platforms and attach them to the GitHub Release.
+- **GitHub Actions** (`.github/workflows/pages.yml`): deploy `site/` to GitHub
+  Pages when it changes on `main`.
 - **Gitea Actions** (`.gitea/workflows/docker.yml`): build and publish the
   Docker image to a private Gitea container registry.
 

@@ -16,7 +16,8 @@ public static class SystemTools
     [McpServerTool(Title = "Get Recent Changes", ReadOnly = true, Destructive = false)]
     [Description(
         "Read-only: recent transaction history, newest first: commit time (UTC), description, user, " +
-        "and each changed object's class, change kind (added/updated/deleted) and handle. " +
+        "an undo marker, and each changed object's class, change kind (added/updated/deleted) and handle, " +
+        "up to 10 objects per transaction. " +
         "Use for sync auditing or 'what changed last' workflows.")]
     public static async Task<string> GetRecentChanges(
         [Description("How many history rows (clamped 1–100). Default 20.")]

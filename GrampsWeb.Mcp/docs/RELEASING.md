@@ -6,7 +6,7 @@ Registry publishing, so keep the version metadata aligned before tagging.
 
 ## Before You Tag
 
-- Choose the next semantic version, for example `1.0.4`.
+- Choose the next semantic version, for example `2.1.1`.
 - Update `CHANGELOG.md`:
   - Move relevant entries from `Unreleased` into a dated `## [x.y.z] - YYYY-MM-DD`
     section.
@@ -23,6 +23,8 @@ Registry publishing, so keep the version metadata aligned before tagging.
     default of `MCP_TRANSPORT=http` on port 8080 is documented in `README.md`
     instead, because a package transport of `streamable-http` would have to pin a
     fixed host port that not every deployment uses.
+- Update the example `pack-mcpb.sh <rid> x.y.z` commands in `mcpb/README.md`
+  and the usage comment of `scripts/pack-mcpb.sh`.
 - Check whether the Docker runtime surface changed:
   - Update `Dockerfile` comments, labels, exposed ports, health check, or default
     environment variables if needed.
@@ -60,15 +62,19 @@ docker build -t ghcr.io/scormave/gramps-web-mcp:x.y.z .
 ```
 
 If you have the MCPB CLI installed, `pack-mcpb.sh` validates the generated
-manifest before packing.
+manifest before packing. The pack restores the project for one runtime, which
+adds runtime-only packages to `obj/project.assets.json`; run
+`dotnet restore gramps-web-mcp.sln` before testing again, or the
+third-party notices test fails.
 
 ## Create The Release
 
-Create the release commit and tag:
+Create the release commit and tag. Add every file the checklist above touched;
+at minimum:
 
 ```bash
 git status
-git add CHANGELOG.md GrampsWeb.Mcp/GrampsWeb.Mcp.csproj server.json GrampsWeb.Mcp/docs/RELEASING.md
+git add CHANGELOG.md GrampsWeb.Mcp/GrampsWeb.Mcp.csproj server.json mcpb/README.md scripts/pack-mcpb.sh
 git commit -m "Release x.y.z"
 git tag vx.y.z
 git push origin main --tags
@@ -80,12 +86,12 @@ Adjust the branch name if the release branch is not `main`.
 
 After the tag push, verify these GitHub Actions complete successfully:
 
-- `.github/workflows/docker.yml`
+- `.github/workflows/docker.yml` (one run for the `main` push, one for the tag)
   - Runs tests.
-  - Builds and pushes `ghcr.io/scormave/gramps-web-mcp:x.y.z`.
-  - Publishes `ghcr.io/scormave/gramps-web-mcp:latest` when the default branch is
-    released.
-  - Publishes `server.json` to the MCP Registry on `v*` tags.
+  - The tag run builds and pushes `ghcr.io/scormave/gramps-web-mcp:x.y.z` and
+    publishes `server.json` to the MCP Registry.
+  - The `main` run builds and pushes `ghcr.io/scormave/gramps-web-mcp:latest`;
+    tag runs never move `latest`.
 - `.github/workflows/mcpb-release.yml`
   - Builds platform MCPB bundles for `osx-arm64`, `osx-x64`, `win-x64`,
     `linux-x64`, and `linux-arm64`.
@@ -101,8 +107,8 @@ the equivalent tagged image to the configured container registry.
   - Confirm all five MCPB assets are attached.
 - Check GHCR:
   - Confirm `ghcr.io/scormave/gramps-web-mcp:x.y.z` exists.
-  - Confirm `latest` points at the expected image when releasing from the default
-    branch.
+  - Confirm `latest` points at the image built from the release commit on the
+    default branch.
 - Check the MCP Registry:
   - Confirm the published version is `x.y.z`.
   - Confirm the package identifier points to
