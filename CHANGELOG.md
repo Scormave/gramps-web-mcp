@@ -37,6 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Update the README, security and privacy policies, architecture, developer,
   migration, and tool documentation, the system prompt, Docker Compose, MCPB
   metadata, and GitHub Pages for the new media behavior
+- Name relatives in `get_timeline` rows with their Gramps ID and age, and show
+  the role when the person is not the primary participant
 - Show a family's parents and children in `get_object` by name, Gramps ID,
   birth, and death, with the marriage, the divorce, and each event's type,
   date, and place, from one request instead of handles
@@ -68,6 +70,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Report server errors, network errors, and timeouts during Gramps ID
   resolution instead of treating them as a missing object; only HTTP 400, 404,
   and 422 still fall back to the original value
+- Show relatives' names in `get_timeline`; the server read a `name` field that
+  Gramps Web does not send, so relatives' events were unnamed
 - Leave a missing type, date, or place out of `search` event lines instead of
   showing dashes
 - Sort `get_timeline` events dated before the year 1000 by year; they were

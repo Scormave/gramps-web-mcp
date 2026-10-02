@@ -161,6 +161,52 @@ public class FormatterIntegrationTests
         Assert.Contains("Timeline (1 events)", result);
         Assert.Contains("Birth", result);
         Assert.Contains("Boston", result);
-        Assert.Contains("Primary", result);
+        Assert.DoesNotContain("Primary", result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void FormatTimelineChronological_NamesRelativeWithTheirAge_AndOwnEventsWithAnchorAge()
+    {
+        var entries = new[]
+        {
+            new GrampsTimelineEntry
+            {
+                Handle = "e1",
+                Label = "Marriage",
+                Date = "1925-06-05",
+                Role = "Primary",
+                Age = "25 years",
+                Person = new GrampsTimelinePersonProfile { Relationship = "self" },
+                Place = new GrampsTimelinePlaceProfile { DisplayName = "Dublin" }
+            },
+            new GrampsTimelineEntry
+            {
+                Handle = "e2",
+                Label = "Death (Father)",
+                Date = "1950-03-02",
+                Role = "Primary",
+                Age = "50 years",
+                Person = new GrampsTimelinePersonProfile
+                {
+                    Handle = "p2", GrampsId = "I0012", NameDisplay = "Petrov, Ivan",
+                    Relationship = "father", Age = "70 years"
+                }
+            },
+            new GrampsTimelineEntry
+            {
+                Handle = "e3",
+                Label = "Baptism (Son)",
+                Date = "1955-01-01",
+                Role = "Godparent",
+                Person = new GrampsTimelinePersonProfile { GrampsId = "I0013", NameDisplay = "Petrov, Oleg" }
+            }
+        };
+
+        var result = TimelineFormatter.FormatTimelineChronological(entries);
+
+        Assert.Contains("  1925-06-05: Marriage, age 25 years — Dublin  [event: e1]", result);
+        Assert.Contains("  1950-03-02: Death (Father): Petrov, Ivan (I0012), age 70 years  [event: e2]", result);
+        Assert.Contains("  1955-01-01: Baptism (Son): Petrov, Oleg (I0013) [Godparent]  [event: e3]", result);
     }
 }

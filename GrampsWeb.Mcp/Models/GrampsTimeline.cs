@@ -19,6 +19,33 @@ public class GrampsTimelinePlaceProfile
 }
 
 /// <summary>
+/// Person the timeline event belongs to (OpenAPI <c>TimelinePersonProfile</c>).
+/// For the anchor person's own events the API sends only <c>relationship: "self"</c>.
+/// </summary>
+public class GrampsTimelinePersonProfile
+{
+    [JsonPropertyName("handle")]
+    public string? Handle { get; set; }
+
+    [JsonPropertyName("gramps_id")]
+    public string? GrampsId { get; set; }
+
+    private string? _nameDisplay;
+
+    /// <summary>Name in the tree's display format, cleaned by <see cref="GrampsNameDisplay.Clean"/>.</summary>
+    [JsonPropertyName("name_display")]
+    public string? NameDisplay { get => _nameDisplay; set => _nameDisplay = GrampsNameDisplay.Clean(value); }
+
+    /// <summary>Relationship to the anchor person, e.g. "father"; "self" for the anchor or on family timelines.</summary>
+    [JsonPropertyName("relationship")]
+    public string? Relationship { get; set; }
+
+    /// <summary>This person's age at the event.</summary>
+    [JsonPropertyName("age")]
+    public string? Age { get; set; }
+}
+
+/// <summary>
 /// Represents a single entry in a Gramps timeline response.
 /// Returned by /api/people/{handle}/timeline and /api/families/{handle}/timeline.
 /// For places, MCP may synthesize rows from events (backlinks); the bundled API spec does not define <c>/api/places/{handle}/timeline</c>.
@@ -35,7 +62,7 @@ public class GrampsTimelineEntry
     [JsonPropertyName("gramps_id")]
     public string? GrampsId { get; set; }
 
-    /// <summary>Human-oriented event label (e.g. includes relationship); preferred for display when set.</summary>
+    /// <summary>Event label; for relatives' events it names the relationship, e.g. "Death (Father)".</summary>
     [JsonPropertyName("label")]
     public string? Label { get; set; }
 
@@ -54,18 +81,14 @@ public class GrampsTimelineEntry
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
+    /// <summary>Role of <see cref="Person"/> in the event, e.g. "Primary".</summary>
     [JsonPropertyName("role")]
     public string? Role { get; set; }
 
-    /// <summary>Display name of the person the event belongs to (for relative events).</summary>
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
+    [JsonPropertyName("person")]
+    public GrampsTimelinePersonProfile? Person { get; set; }
 
-    /// <summary>Event category, e.g. "vital", "family", "vocational".</summary>
-    [JsonPropertyName("category")]
-    public string? Category { get; set; }
-
-    /// <summary>Average citation confidence (0=very low … 4=very high). Populated when the timeline API returns it.</summary>
-    [JsonPropertyName("rating")]
-    public double? Rating { get; set; }
+    /// <summary>Age of the anchor person at the event; on family timelines, the age of <see cref="Person"/>.</summary>
+    [JsonPropertyName("age")]
+    public string? Age { get; set; }
 }

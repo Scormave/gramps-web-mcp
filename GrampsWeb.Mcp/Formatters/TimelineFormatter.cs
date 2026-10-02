@@ -14,7 +14,8 @@ public static class TimelineFormatter
 
     /// <summary>
     /// Renders timeline rows in chronological order (by decade when there are more than 20 rows).
-    /// Each row appends <c>[event: handle]</c> when the entry has a handle.
+    /// A row names the person the event belongs to unless it is the timeline person's own event,
+    /// and appends <c>[event: handle]</c> when the entry has a handle.
     /// </summary>
     public static string FormatTimelineChronological(GrampsTimelineEntry[] entries)
     {
@@ -57,16 +58,43 @@ public static class TimelineFormatter
     {
         var dateStr = FormatDateText(entry);
         var type = EventHeading(entry);
-        var role = !string.IsNullOrEmpty(entry.Role) ? $" [{entry.Role}]" : "";
+        var who = FormatWho(entry);
+        var role = IsShownRole(entry.Role) ? $" [{entry.Role!.Trim()}]" : "";
+        var age = FormatAge(entry);
         var place = FormatPlaceSuffix(entry);
-        var relative = !string.IsNullOrEmpty(entry.Name) ? $" ({entry.Name})" : "";
-        var rating = entry.Rating.HasValue ? $" ★{entry.Rating:F1}" : "";
-        var desc = !string.IsNullOrEmpty(entry.Description) ? $"\n    {entry.Description}" : "";
+        var desc = !string.IsNullOrWhiteSpace(entry.Description) ? $"\n    {entry.Description.Trim()}" : "";
         var handleSuffix = !string.IsNullOrWhiteSpace(entry.Handle)
             ? $"  [event: {entry.Handle.Trim()}]"
             : "";
 
-        return $"  {dateStr}: {type}{role}{place}{relative}{rating}{desc}{handleSuffix}";
+        return $"  {dateStr}: {type}{who}{role}{age}{place}{handleSuffix}{desc}";
+    }
+
+    /// <summary>
+    /// The API omits the person for the timeline person's own events, so a name appears only for
+    /// relatives and family members.
+    /// </summary>
+    private static string FormatWho(GrampsTimelineEntry entry)
+    {
+        var person = entry.Person;
+        if (!string.IsNullOrWhiteSpace(person?.NameDisplay))
+        {
+            var id = string.IsNullOrWhiteSpace(person.GrampsId) ? "" : $" ({person.GrampsId.Trim()})";
+            return $": {person.NameDisplay.Trim()}{id}";
+        }
+
+        return "";
+    }
+
+    /// <summary>Primary is the usual role and only adds noise.</summary>
+    private static bool IsShownRole(string? role) =>
+        !string.IsNullOrWhiteSpace(role) && !role.Trim().Equals("Primary", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Age of the named person; for the timeline person's own events, their age.</summary>
+    private static string FormatAge(GrampsTimelineEntry entry)
+    {
+        var age = !string.IsNullOrWhiteSpace(entry.Person?.NameDisplay) ? entry.Person.Age : entry.Age;
+        return string.IsNullOrWhiteSpace(age) ? "" : $", age {age.Trim()}";
     }
 
     private static string FormatDateText(GrampsTimelineEntry entry) =>
