@@ -510,10 +510,15 @@ public static class SearchFormatter
         GrampsApiClient client,
         IReadOnlyList<string>? eventTypes)
     {
-        var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : "—";
+        var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : null;
         var placeStr = await FormatEventPlaceSegmentAsync(evt, client);
         var typeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, eventTypes);
-        return $"Event: {typeLabel} — {dateStr} — {placeStr}";
+        // Missing parts are left out rather than shown as "— — —".
+        var segments = new[] { typeLabel, dateStr, placeStr }
+            .Where(s => !string.IsNullOrWhiteSpace(s) && s.Trim() is not ("—" or "Unknown" or "Unknown date"))
+            .Select(s => s!.Trim())
+            .ToArray();
+        return segments.Length == 0 ? "Event" : $"Event: {string.Join(" — ", segments)}";
     }
 
     private static async Task<string> FormatEventPlaceSegmentAsync(GrampsEvent evt, GrampsApiClient client)

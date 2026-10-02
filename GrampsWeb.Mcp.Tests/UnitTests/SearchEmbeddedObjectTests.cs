@@ -108,6 +108,20 @@ public class SearchEmbeddedObjectTests
         Assert.DoesNotContain(handler.Paths, p => p.StartsWith("/api/events/"));
     }
 
+    [Theory]
+    [InlineData("""{"handle":"h","type":"Birth","date":null,"place":""}""", "Event: Birth")]
+    [InlineData("""{"handle":"h","type":"","date":null,"place":""}""", "Event")]
+    [InlineData("""{"handle":"h","type":"Death","date":{"dateval":[0,0,1950,false]},"place":""}""", "Event: Death — 1950")]
+    public async Task EventLineLeavesOutMissingParts(string evt, string expectedLine)
+    {
+        using var handler = new Handler("{}");
+        var result = await SearchFormatter.FormatSearchResults([new GrampsSearchHit
+        {
+            Handle = "h", ObjectType = "event", Object = JsonSerializer.Deserialize<JsonElement>(evt)
+        }], Client(handler));
+        Assert.Contains($"\n{expectedLine} — handle: h", result.Replace("\r\n", "\n"));
+    }
+
     [Fact]
     public async Task FamilyWithoutEmbeddedParentsKeepsSingleExtendedFetch()
     {

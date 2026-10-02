@@ -60,6 +60,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Report server errors, network errors, and timeouts during Gramps ID
   resolution instead of treating them as a missing object; only HTTP 400, 404,
   and 422 still fall back to the original value
+- Leave a missing type, date, or place out of `search` event lines instead of
+  showing dashes
+- Name the `objectType` parameter in the `list_objects` error for an unknown
+  type instead of `object_type`
 
 ## [2.0.1] - 2026-10-01
 

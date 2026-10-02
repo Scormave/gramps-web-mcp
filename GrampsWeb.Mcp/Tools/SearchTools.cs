@@ -100,7 +100,7 @@ public static class SearchTools
 
             if (!validTypes.Contains(objectType.ToLower()))
                 throw McpToolErrors.ValidationError(
-                    $"Invalid object_type. Must be one of: {string.Join(", ", validTypes)}");
+                    $"Invalid objectType. Must be one of: {string.Join(", ", validTypes)}");
 
             if (page < 1) page = 1;
             if (pagesize < 1) pagesize = 20;
