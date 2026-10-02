@@ -393,11 +393,19 @@ on mutations
 Validation errors           →  McpToolErrors.ValidationError() →  McpException
 (bad input from agent)
 
+Argument errors             →  ToolArgumentValidator           →  McpException
+(unknown or missing names,     (call-tool filter, input schema)
+values of the wrong type)
+
 Composite partial failure   →  McpToolErrors.ToMcpException(ex, createdObjects)
 (lock after some writes)       lists already-created IDs so the agent does not retry the whole tool
 ```
 
 All tool methods follow the same pattern: `try { ... } catch (Exception ex) { throw McpToolErrors.ToMcpException(ex); }`.
+Argument binding happens before the tool method runs, and the SDK reports its failures as a
+bare "An error occurred invoking", so `McpToolProfileExtensions` checks arguments in a
+call-tool filter: an unknown name (with a suggestion such as `extended` for `extend`), a
+missing required argument, or a value of the wrong type returns the tool's parameter list.
 
 ## Deployment
 

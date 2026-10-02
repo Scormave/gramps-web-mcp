@@ -1,6 +1,8 @@
+using System.Text.Json;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Client;
 using Microsoft.Extensions.DependencyInjection;
+using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -14,13 +16,33 @@ internal static class McpToolProfileExtensions
     /// <summary>
     /// Registers every tool while publishing only tools enabled by the current configuration.
     /// Tools remain registered for compatibility, so direct calls to a hidden write or media-byte
-    /// tool still return its normal safety or configuration error.
+    /// tool still return its normal safety or configuration error. Call arguments are checked
+    /// against each tool's input schema by <see cref="ToolArgumentValidator"/>.
     /// </summary>
     public static IMcpServerBuilder WithGrampsToolProfile(
         this IMcpServerBuilder builder,
         GrampsConfig config)
     {
         builder.WithToolsFromAssembly();
+        builder.WithRequestFilters(filters => filters.AddCallToolFilter(next =>
+            async (request, cancellationToken) =>
+            {
+                if (request.MatchedPrimitive is not McpServerTool tool)
+                    return await next(request, cancellationToken);
+                var schema = tool.ProtocolTool.InputSchema;
+                var arguments = request.Params?.Arguments;
+                if (ToolArgumentValidator.CheckNames(schema, arguments) is { } nameError)
+                    throw new McpException(nameError);
+                try
+                {
+                    return await next(request, cancellationToken);
+                }
+                // The SDK hides the message of a value it cannot convert; name the argument instead.
+                catch (JsonException) when (ToolArgumentValidator.FindTypeMismatch(schema, arguments) is { } typeError)
+                {
+                    throw new McpException(typeError);
+                }
+            }));
         builder.WithRequestFilters(filters => filters.AddCallToolFilter(next =>
             async (request, cancellationToken) =>
             {

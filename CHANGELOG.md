@@ -91,6 +91,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Read custom types each time in `gramps://types` and `get_reference(topic:
   "types")`, and list the default types when the custom types endpoint fails
   instead of failing
+- Reject a tool call with an argument the tool does not have, such as `extend`
+  for `extended` or `object_type` for `objectType`, and suggest the likely
+  parameter; such arguments were ignored, so a misspelled option had no effect
 
 ### Removed
 
@@ -132,6 +135,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Accept a custom type added in Gramps after the server read the types: write
   tools read custom types again before rejecting a type, instead of rejecting
   it for up to 10 minutes
+- Name a missing required argument, or an argument whose value has the wrong
+  type, and list the tool's parameters, instead of the bare "An error occurred
+  invoking" error
 
 ## [2.0.1] - 2026-10-01
 

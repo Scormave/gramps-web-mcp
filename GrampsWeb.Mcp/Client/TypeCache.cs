@@ -114,7 +114,7 @@ public static class TypeCache
             .ToList();
     }
 
-    private static int LevenshteinDistance(string a, string b)
+    internal static int LevenshteinDistance(string a, string b)
     {
         var n = a.Length;
         var m = b.Length;

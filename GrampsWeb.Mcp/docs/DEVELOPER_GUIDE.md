@@ -81,6 +81,9 @@ Key rules:
 - SQLite lock / HTTP 429 on mutations → rewritten retryable `GrampsApiException` message, then the same mapping
 - Composite tools that already created objects → `McpToolErrors.ToMcpException(ex, createdObjects)`
 - Input validation → `McpToolErrors.ValidationError(message)` → `McpException`
+- Argument names and JSON types are checked against the input schema by
+  `Hosting/ToolArgumentValidator.cs` before the tool runs; tools need no checks of their own
+  for unknown or missing arguments
 - Never let raw exceptions escape a tool method.
 
 ### Formatting
