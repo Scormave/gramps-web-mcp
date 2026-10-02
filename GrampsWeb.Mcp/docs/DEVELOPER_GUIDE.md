@@ -367,9 +367,11 @@ When `?extend=all` is used, the API fills first-level linked objects but
 does **not** deeply resolve nested references (e.g., citation → source,
 event → place).
 
-`ExtendedEntityEnrichment` refetches these:
-- Citations: refetch with `?extend=all` to get source info
-- Events: refetch with `?extend=place` to get place details
+`ExtendedEntityEnrichment` refetches these with `GetByHandlesAsync`, one batch
+per type, and keeps the rows the API sent when a request fails:
+- Citations without a source: refetch with `extend=all` to get source info
+- Events with a place handle but no place: refetch with `extend=place` to get
+  place details
 - Media: fetch by handle when `extended.media` is empty but `media_list` has handles
 
 This is applied automatically in `GetPersonExtended` and `GetFamilyExtended`.

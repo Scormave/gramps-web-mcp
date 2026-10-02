@@ -67,6 +67,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   object, up to 4 at a time, and the server answer is remembered per API URL
   and tree
 - Read a place once per place timeline instead of twice
+- Refetch the events, citations, and media of an extended person or family
+  `get_object` in one batch per type instead of one request per object; a
+  person with six events at places and one citation takes 3 requests
+  instead of 8
 - Build `get_person_tree` rows from the person profile in the batch instead of
   reading each person's birth and death events and places; an ancestor tree
   takes about two requests per generation instead of several per person

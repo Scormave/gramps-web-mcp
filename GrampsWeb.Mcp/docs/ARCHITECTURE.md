@@ -270,7 +270,7 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 
 `GrampsApiClientExtensions` adds null-on-404 helpers.
 `ExtendedEntityEnrichment` refetches nested objects for `?extend=all` responses
-where the API doesn't deeply populate references.
+where the API doesn't deeply populate references, one batch per object type.
 
 `HandleResolver` detects Gramps ID patterns (e.g. `I0001`, `F0023`) and
 resolves them to opaque API handles via a list-endpoint query. This lets
@@ -306,8 +306,9 @@ calls or client instances.
 list endpoint's `handles` filter (`GET /api/{type}/?handles=a,b`, Gramps Web
 API 3.14+), 50 handles per request and up to 4 requests at a time, with the
 same `profile` or `backlinks` arguments as a detail read. Place timelines,
-`get_person_tree` generations, `get_relations` common ancestors, and search
-hits without a usable embedded object use it. A
+`get_person_tree` generations, `get_relations` common ancestors, search hits
+without a usable embedded object, and the events, citations, and media of an
+extended person or family use it. A
 server that answers HTTP 400 or 422, or returns objects that were not asked
 for, is remembered per API URL and tree for the life of the process, and its
 objects are fetched one per request, up to 4 at a time. Handles missing from a
