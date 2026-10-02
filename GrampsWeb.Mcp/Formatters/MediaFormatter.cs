@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Resources;
 using GrampsWeb.Mcp.Models;
@@ -38,8 +39,14 @@ public static class MediaFormatter
         HandleListFormatter.AppendHandleBulletSection(sb, GallerySectionTitle, handleFallback);
     }
 
-    public static string FormatMediaFull(GrampsMedia media, IReadOnlyList<BacklinkGroup>? backlinks = null)
+    public static async Task<string> FormatMediaFull(
+        GrampsMedia media,
+        GrampsApiClient client,
+        IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
+        var labels = await LinkedObjectLabels.LoadAsync(client,
+            [("citations", media.CitationList), ("notes", media.NoteList), ("tags", media.TagList)],
+            backlinks);
         var sb = new StringBuilder();
         sb.AppendLine($"MEDIA [handle: {media.Handle}] (gramps_id: {media.GrampsId})");
         sb.AppendLine(new string('=', 60));
@@ -72,10 +79,10 @@ public static class MediaFormatter
             }
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", media.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", media.TagList);
-        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", media.CitationList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", media.NoteList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", media.TagList, labels);
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks, labels);
         if (media.Private)
             sb.AppendLine("⚠ Private record");
 

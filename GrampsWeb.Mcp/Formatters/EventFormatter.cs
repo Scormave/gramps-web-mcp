@@ -14,6 +14,13 @@ public static class EventFormatter
         GrampsApiClient client,
         IReadOnlyList<(string Handle, string? DisplayName, string Role)>? linkedPeople = null)
     {
+        var labelsTask = LinkedObjectLabels.LoadAsync(client,
+            [
+                ("citations", evt.CitationList),
+                ("notes", evt.NoteList),
+                ("media", GrampsMediaRef.ToHandleStrings(evt.MediaList)),
+                ("tags", evt.TagList),
+            ]);
         var typeDisplay = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, evt.Type);
         var sb = new StringBuilder();
         sb.AppendLine($"EVENT: {typeDisplay} [handle: {evt.Handle}] (gramps_id: {evt.GrampsId})");
@@ -44,10 +51,11 @@ public static class EventFormatter
                 sb.AppendLine($"  • {attr.Type}: {attr.Value}");
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", evt.CitationList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", evt.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(evt.MediaList));
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", evt.TagList);
+        var labels = await labelsTask;
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", evt.CitationList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", evt.NoteList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(evt.MediaList), labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", evt.TagList, labels);
 
         if (linkedPeople is { Count: > 0 })
         {

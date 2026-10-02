@@ -21,7 +21,14 @@ public static class BacklinkFormatter
             ["repositories"] = "repository",
         };
 
-    public static void AppendReferencedBySections(StringBuilder sb, IReadOnlyList<BacklinkGroup>? backlinks)
+    /// <summary>
+    /// One section per referencing type; each object is named from <paramref name="labels"/>
+    /// (<see cref="LinkedObjectLabels"/>) when it has the handle, otherwise by its type.
+    /// </summary>
+    public static void AppendReferencedBySections(
+        StringBuilder sb,
+        IReadOnlyList<BacklinkGroup>? backlinks,
+        IReadOnlyDictionary<string, string>? labels = null)
     {
         if (backlinks == null || backlinks.Count == 0)
             return;
@@ -36,7 +43,9 @@ public static class BacklinkFormatter
             sb.AppendLine();
             sb.AppendLine($"Referenced by {g.Title} ({g.Handles.Count}) [READ-ONLY — to add/remove this link, update the {singular} record, not this object]:");
             foreach (var h in g.Handles)
-                sb.AppendLine($"  • {singular} [handle: {h}]");
+                sb.AppendLine(labels?.GetValueOrDefault(h) is { } label
+                    ? $"  • {label} [handle: {h}]"
+                    : $"  • {singular} [handle: {h}]");
         }
     }
 }

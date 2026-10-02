@@ -26,6 +26,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   thumbnail was always rejected
 - Leave out empty dates on media and citation cards instead of printing
   `Date:  Unknown date` and `Access Date: Unknown date`
+- Name the citations, notes, media, tags, and repositories that event, place,
+  source, citation, repository, note, and media cards link to, and the objects
+  in their `Referenced by` sections, as in `search` results (`• [General]
+  Born at home [handle: …]`) instead of listing bare handles; keep a
+  multi-line note on one line in `search` and `list_objects` rows
 
 ## [2.1.0] - 2026-10-02
 

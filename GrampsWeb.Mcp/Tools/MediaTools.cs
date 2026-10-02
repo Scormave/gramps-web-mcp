@@ -37,7 +37,7 @@ public static class MediaTools
             if (media == null)
                 return NotFoundHelper.NotFoundMessage("Media", handle);
             var backlinks = await BacklinkCollector.CollectAsync(client, "media", resolvedHandle);
-            return MediaFormatter.FormatMediaFull(media, backlinks);
+            return await MediaFormatter.FormatMediaFull(media, client, backlinks);
         }
         catch (Exception ex)
         {

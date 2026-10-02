@@ -32,7 +32,7 @@ public static class SourceTools
             if (source == null)
                 return NotFoundHelper.NotFoundMessage("Source", handle);
             var backlinks = await BacklinkCollector.CollectAsync(client, "sources", resolvedHandle);
-            return SourceFormatter.FormatSourceFull(source, backlinks);
+            return await SourceFormatter.FormatSourceFull(source, client, backlinks);
         }
         catch (Exception ex)
         {

@@ -1,4 +1,5 @@
 using System.Text;
+using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Formatters;
@@ -8,8 +9,19 @@ namespace GrampsWeb.Mcp.Formatters;
 /// </summary>
 public static class SourceFormatter
 {
-    public static string FormatSourceFull(GrampsSource source, IReadOnlyList<BacklinkGroup>? backlinks = null)
+    public static async Task<string> FormatSourceFull(
+        GrampsSource source,
+        GrampsApiClient client,
+        IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
+        var labels = await LinkedObjectLabels.LoadAsync(client,
+            [
+                ("repositories", source.RepositoryRefList?.Select(r => r.Ref ?? "")),
+                ("notes", source.NoteList),
+                ("media", GrampsMediaRef.ToHandleStrings(source.MediaList)),
+                ("tags", source.TagList),
+            ],
+            backlinks);
         var sb = new StringBuilder();
         sb.AppendLine($"SOURCE: {source.Title} [handle: {source.Handle}] (gramps_id: {source.GrampsId})");
         sb.AppendLine(new string('=', 60));
@@ -28,18 +40,18 @@ public static class SourceFormatter
             foreach (var repo in source.RepositoryRefList)
             {
                 var h = string.IsNullOrWhiteSpace(repo.Ref) ? "—" : repo.Ref.Trim();
-                var line = $"  • [handle: {h}]";
+                var line = HandleListFormatter.FormatBullet(h, labels);
                 if (!string.IsNullOrWhiteSpace(repo.CallNumber))
                     line += $" — call #: {repo.CallNumber.Trim()}";
                 sb.AppendLine(line);
             }
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", source.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(source.MediaList));
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", source.TagList);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", source.NoteList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(source.MediaList), labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", source.TagList, labels);
 
-        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks, labels);
         return sb.ToString();
     }
 }

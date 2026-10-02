@@ -146,7 +146,12 @@ from the person request, and names the others in each event the person takes
 part in under another role, such as the child of a `[Father]` birth, in one
 more batch. Without it, a family names its parents and children and lists its
 events with type, date, and place, and a place names its enclosing places and
-full hierarchy, each in one request.
+full hierarchy, each in one request. Events, places, sources, citations,
+repositories, notes, and media name the citations, notes, media, tags, and
+repositories they link to and the objects in their `Referenced by` sections,
+as in `search` results (`• [General] Born at home [handle: …]`), with one batch
+per type; past 200 of one type, and for objects that cannot be read, the
+handle stays bare.
 
 Validation errors name the problem: an opaque handle without `objectType`, an
 unknown `objectType`, an `objectType` that disagrees with the Gramps ID prefix

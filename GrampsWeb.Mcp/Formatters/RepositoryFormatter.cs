@@ -14,6 +14,7 @@ public static class RepositoryFormatter
         GrampsApiClient client,
         IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
+        var labelsTask = LinkedObjectLabels.LoadAsync(client, [("notes", repo.NoteList), ("tags", repo.TagList)], backlinks);
         var sb = new StringBuilder();
         sb.AppendLine($"REPOSITORY: {repo.Name} [handle: {repo.Handle}] (gramps_id: {repo.GrampsId})");
         sb.AppendLine(new string('=', 60));
@@ -35,10 +36,11 @@ public static class RepositoryFormatter
                 sb.AppendLine($"  • {url}");
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", repo.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", repo.TagList);
+        var labels = await labelsTask;
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", repo.NoteList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", repo.TagList, labels);
 
-        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks, labels);
         return sb.ToString();
     }
 }

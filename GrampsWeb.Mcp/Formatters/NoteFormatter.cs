@@ -14,6 +14,7 @@ public static class NoteFormatter
         GrampsApiClient client,
         IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
+        var labelsTask = LinkedObjectLabels.LoadAsync(client, [("tags", note.TagList)], backlinks);
         var typeLabel = string.IsNullOrWhiteSpace(note.Type)
             ? "General"
             : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, note.Type);
@@ -24,8 +25,9 @@ public static class NoteFormatter
         sb.AppendLine($"Format: {(note.Format == 1 ? "Flowed (HTML)" : "Plain Text")}");
         sb.AppendLine();
         sb.AppendLine(note.Text ?? "(empty)");
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", note.TagList);
-        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
+        var labels = await labelsTask;
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", note.TagList, labels);
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks, labels);
         return sb.ToString();
     }
 }

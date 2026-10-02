@@ -15,11 +15,11 @@ public class MediaAndCitationCardTests
     private const string EmptyDate = """{"calendar":0,"modifier":0,"quality":0,"dateval":[0,0,0,false],"text":"","sortval":0,"newyear":0}""";
 
     [Fact]
-    public void MediaCard_Leaves_Out_An_Empty_Date_And_The_Thumbnail_Of_A_Pdf()
+    public async Task MediaCard_Leaves_Out_An_Empty_Date_And_The_Thumbnail_Of_A_Pdf()
     {
         var media = Media("application/pdf", EmptyDate);
 
-        var result = MediaFormatter.FormatMediaFull(media).Replace("\r\n", "\n");
+        var result = (await MediaFormatter.FormatMediaFull(media, CreateClient())).Replace("\r\n", "\n");
 
         Assert.DoesNotContain("Date:", result);
         Assert.DoesNotContain("Unknown date", result);
@@ -34,11 +34,11 @@ public class MediaAndCitationCardTests
     [Theory]
     [InlineData("image/jpeg")]
     [InlineData("")]
-    public void MediaCard_Offers_The_Thumbnail_Of_An_Image_Or_An_Unknown_Type(string mime)
+    public async Task MediaCard_Offers_The_Thumbnail_Of_An_Image_Or_An_Unknown_Type(string mime)
     {
         var media = Media(mime, """{"modifier":0,"dateval":[21,8,1930,false]}""");
 
-        var result = MediaFormatter.FormatMediaFull(media).Replace("\r\n", "\n");
+        var result = (await MediaFormatter.FormatMediaFull(media, CreateClient())).Replace("\r\n", "\n");
 
         Assert.Contains("\nDate: 21 Aug 1930\n", result);
         Assert.Contains("  thumbnail resource: gramps://media/m1/thumbnail/1568\n", result);

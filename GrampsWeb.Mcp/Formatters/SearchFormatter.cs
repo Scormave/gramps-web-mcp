@@ -176,7 +176,7 @@ public static class SearchFormatter
     }
 
     /// <summary>The collection of a search hit's object type, singular or plural; null for unknown types.</summary>
-    private static string? CollectionOf(string? objectType) => objectType?.ToLowerInvariant() switch
+    internal static string? CollectionOf(string? objectType) => objectType?.ToLowerInvariant() switch
     {
         "person" or "people" => "people",
         "family" or "families" => "families",
@@ -230,7 +230,11 @@ public static class SearchFormatter
         return objects;
     }
 
-    private static Task<IReadOnlyDictionary<string, object>> FetchByHandlesAsync(
+    /// <summary>
+    /// Objects of one <paramref name="collection"/> by handle, with what their summaries read; handles that
+    /// do not exist are left out.
+    /// </summary>
+    internal static Task<IReadOnlyDictionary<string, object>> FetchByHandlesAsync(
         string collection,
         IEnumerable<string> handles,
         GrampsApiClient client)
@@ -300,35 +304,59 @@ public static class SearchFormatter
         }
     }
 
-    /// <summary>The summary line of a loaded object; reads nothing from the server.</summary>
+    /// <summary>The summary line of a loaded object, such as "Note: [General] Born at home"; reads nothing from the server.</summary>
     private static string? FormatLine(object item, GrampsTypeLabelTables tables)
+    {
+        var kind = item switch
+        {
+            GrampsPerson => "Person",
+            GrampsFamily => "Family",
+            GrampsEvent => "Event",
+            GrampsPlace => "Place",
+            GrampsSource => "Source",
+            GrampsCitation => "Citation",
+            GrampsRepository => "Repository",
+            GrampsNote => "Note",
+            GrampsMedia => "Media",
+            GrampsTag => "Tag",
+            _ => null
+        };
+        if (kind == null)
+            return null;
+        return FormatSummary(item, tables) is { } summary ? $"{kind}: {summary}" : kind;
+    }
+
+    /// <summary>
+    /// The summary line without its kind, such as "[General] Born at home"; null for an event with no type,
+    /// date or place. Reads nothing from the server.
+    /// </summary>
+    internal static string? FormatSummary(object item, GrampsTypeLabelTables tables)
     {
         return item switch
         {
-            GrampsPerson p => BuildPersonSearchLine(p),
-            GrampsFamily f => BuildFamilySearchLine(f, tables.FamilyRelationTypes),
-            GrampsEvent e => BuildEventSearchLine(e, tables.EventTypes),
-            GrampsPlace pl => BuildPlaceSearchLine(pl, tables.PlaceTypes),
-            GrampsSource s => BuildSourceSearchLine(s),
-            GrampsCitation c => BuildCitationSearchLine(c),
-            GrampsRepository r => BuildRepositorySearchLine(r, tables.RepositoryTypes),
-            GrampsNote n => BuildNoteSearchLine(n, tables.NoteTypes),
-            GrampsMedia m => BuildMediaSearchLine(m),
-            GrampsTag tag => BuildTagSearchLine(tag),
+            GrampsPerson p => BuildPersonSummary(p),
+            GrampsFamily f => BuildFamilySummary(f, tables.FamilyRelationTypes),
+            GrampsEvent e => BuildEventSummary(e, tables.EventTypes),
+            GrampsPlace pl => BuildPlaceSummary(pl, tables.PlaceTypes),
+            GrampsSource s => s.Title ?? "",
+            GrampsCitation c => BuildCitationSummary(c),
+            GrampsRepository r => BuildRepositorySummary(r, tables.RepositoryTypes),
+            GrampsNote n => BuildNoteSummary(n, tables.NoteTypes),
+            GrampsMedia m => BuildMediaSummary(m),
+            GrampsTag tag => tag.Name ?? "",
             _ => null
         };
     }
 
-    /// <summary>"Person: Ivanov, Pyotr, b. 1880 in Tver, d. 1950", the name in the tree's display format.</summary>
-    private static string BuildPersonSearchLine(GrampsPerson person)
+    /// <summary>"Ivanov, Pyotr, b. 1880 in Tver, d. 1950", the name in the tree's display format.</summary>
+    private static string BuildPersonSummary(GrampsPerson person)
     {
-        var summary = person.Profile is { } profile
+        return person.Profile is { } profile
             ? PersonFormatter.FormatProfileSummary(profile, grampsId: null)
             : GrampsValueFormatter.FormatName(person.PrimaryName);
-        return $"Person: {summary}";
     }
 
-    private static string BuildFamilySearchLine(GrampsFamily family, IReadOnlyList<string>? familyRelationTypes)
+    private static string BuildFamilySummary(GrampsFamily family, IReadOnlyList<string>? familyRelationTypes)
     {
         var names = new[] { family.Profile?.Father, family.Profile?.Mother }
             .Select(partner => partner?.NameDisplay?.Trim())
@@ -346,10 +374,10 @@ public static class SearchFormatter
             relPart = $" ({relLabel})";
         }
 
-        return $"Family: {partners}{relPart}";
+        return $"{partners}{relPart}";
     }
 
-    private static string BuildEventSearchLine(GrampsEvent evt, IReadOnlyList<string>? eventTypes)
+    private static string? BuildEventSummary(GrampsEvent evt, IReadOnlyList<string>? eventTypes)
     {
         var dateStr = evt.Date != null ? GrampsValueFormatter.FormatDate(evt.Date) : null;
         var typeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, eventTypes);
@@ -358,23 +386,18 @@ public static class SearchFormatter
             .Where(s => !string.IsNullOrWhiteSpace(s) && s.Trim() is not ("—" or "Unknown" or "Unknown date"))
             .Select(s => s!.Trim())
             .ToArray();
-        return segments.Length == 0 ? "Event" : $"Event: {string.Join(" — ", segments)}";
+        return segments.Length == 0 ? null : string.Join(" — ", segments);
     }
 
-    private static string BuildPlaceSearchLine(GrampsPlace place, IReadOnlyList<string>? placeTypes)
+    private static string BuildPlaceSummary(GrampsPlace place, IReadOnlyList<string>? placeTypes)
     {
         if (string.IsNullOrWhiteSpace(place.Type))
-            return $"Place: {place.Name}";
+            return place.Name ?? "";
         var typeLabel = GrampsDefaultTypeLabels.ResolveStored(place.Type.Trim(), placeTypes);
-        return $"Place: {place.Name} ({typeLabel})";
+        return $"{place.Name} ({typeLabel})";
     }
 
-    private static string BuildSourceSearchLine(GrampsSource source)
-    {
-        return $"Source: {source.Title}";
-    }
-
-    private static string BuildCitationSearchLine(GrampsCitation citation)
+    private static string BuildCitationSummary(GrampsCitation citation)
     {
         var pageStr = string.IsNullOrWhiteSpace(citation.Page) ? null : citation.Page.Trim();
         var sourceTitle = citation.Profile?.Source?.Title?.Trim();
@@ -389,25 +412,27 @@ public static class SearchFormatter
             core = "—";
 
         var confLabel = CitationFormatter.ConfidenceLabels[Math.Clamp(citation.Confidence, 0, 4)];
-        return $"Citation: {core} (confidence: {confLabel})";
+        return $"{core} (confidence: {confLabel})";
     }
 
-    private static string BuildNoteSearchLine(GrampsNote note, IReadOnlyList<string>? noteTypes)
+    private static string BuildNoteSummary(GrampsNote note, IReadOnlyList<string>? noteTypes)
     {
+        // A multi-line note keeps to one line.
+        var text = note.Text?.ReplaceLineEndings(" ").Trim();
         string preview;
-        if (string.IsNullOrEmpty(note.Text))
+        if (string.IsNullOrEmpty(text))
             preview = "—";
-        else if (note.Text.Length <= 50)
-            preview = note.Text;
+        else if (text.Length <= 50)
+            preview = text;
         else
-            preview = note.Text.Substring(0, 50) + "…";
+            preview = text.Substring(0, 50) + "…";
         var typeLabel = string.IsNullOrWhiteSpace(note.Type)
             ? "General"
             : GrampsDefaultTypeLabels.ResolveStored(note.Type.Trim(), noteTypes);
-        return $"Note: [{typeLabel}] {preview}";
+        return $"[{typeLabel}] {preview}";
     }
 
-    private static string BuildMediaSearchLine(GrampsMedia media)
+    private static string BuildMediaSummary(GrampsMedia media)
     {
         var mimeShort = string.IsNullOrEmpty(media.Mime) ? "unknown" : media.Mime.Split('/')[0];
         var fileName = Path.GetFileName(media.Path ?? "");
@@ -423,19 +448,14 @@ public static class SearchFormatter
         else
             label = "(unnamed)";
 
-        return $"Media: [{mimeShort}] {label}";
+        return $"[{mimeShort}] {label}";
     }
 
-    private static string BuildTagSearchLine(GrampsTag tag)
-    {
-        return $"Tag: {tag.Name}";
-    }
-
-    private static string BuildRepositorySearchLine(GrampsRepository repo, IReadOnlyList<string>? repositoryTypes)
+    private static string BuildRepositorySummary(GrampsRepository repo, IReadOnlyList<string>? repositoryTypes)
     {
         if (string.IsNullOrWhiteSpace(repo.Type))
-            return $"Repository: {repo.Name}";
+            return repo.Name ?? "";
         var typeLabel = GrampsDefaultTypeLabels.ResolveStored(repo.Type.Trim(), repositoryTypes);
-        return $"Repository: {repo.Name} ({typeLabel})";
+        return $"{repo.Name} ({typeLabel})";
     }
 }

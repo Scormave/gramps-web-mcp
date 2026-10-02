@@ -42,6 +42,13 @@ public static class PlaceFormatter
     /// </summary>
     public static async Task<string> FormatPlaceFull(GrampsPlace place, GrampsApiClient client)
     {
+        var labelsTask = LinkedObjectLabels.LoadAsync(client,
+            [
+                ("citations", place.CitationList),
+                ("notes", place.NoteList),
+                ("media", GrampsMediaRef.ToHandleStrings(place.MediaList)),
+                ("tags", place.TagList),
+            ]);
         var sb = new StringBuilder();
         sb.AppendLine($"PLACE: {place.Name} [handle: {place.Handle}] (gramps_id: {place.GrampsId})");
         sb.AppendLine(new string('=', 60));
@@ -64,10 +71,11 @@ public static class PlaceFormatter
 
         AppendAlternateNamesSection(sb, place);
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", place.CitationList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", place.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(place.MediaList));
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", place.TagList);
+        var labels = await labelsTask;
+        HandleListFormatter.AppendHandleBulletSection(sb, "Citations", place.CitationList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", place.NoteList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(place.MediaList), labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", place.TagList, labels);
 
         return sb.ToString();
     }

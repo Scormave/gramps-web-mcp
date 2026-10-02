@@ -31,6 +31,9 @@ public static class CitationFormatter
         GrampsApiClient client,
         IReadOnlyList<BacklinkGroup>? backlinks = null)
     {
+        var labelsTask = LinkedObjectLabels.LoadAsync(client,
+            [("notes", citation.NoteList), ("media", GrampsMediaRef.ToHandleStrings(citation.MediaList)), ("tags", citation.TagList)],
+            backlinks);
         var sb = new StringBuilder();
         sb.AppendLine($"CITATION [handle: {citation.Handle}] (gramps_id: {citation.GrampsId})");
         sb.AppendLine(new string('=', 60));
@@ -55,11 +58,12 @@ public static class CitationFormatter
         if (!GrampsDateHelpers.IsEmpty(citation.Date))
             sb.AppendLine($"Access Date: {GrampsValueFormatter.FormatDate(citation.Date!)}");
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", citation.NoteList);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(citation.MediaList));
-        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", citation.TagList);
+        var labels = await labelsTask;
+        HandleListFormatter.AppendHandleBulletSection(sb, "Notes", citation.NoteList, labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(citation.MediaList), labels);
+        HandleListFormatter.AppendHandleBulletSection(sb, "Tags", citation.TagList, labels);
 
-        BacklinkFormatter.AppendReferencedBySections(sb, backlinks);
+        BacklinkFormatter.AppendReferencedBySections(sb, backlinks, labels);
         return sb.ToString();
     }
 }
