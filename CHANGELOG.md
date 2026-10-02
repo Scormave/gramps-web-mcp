@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Show Gramps IDs in `search` results, as the tool description says; Gramps
+  Web search hits carry the ID only inside the object, so rows showed only the
+  handle
+
 ## [2.1.0] - 2026-10-02
 
 ### Added

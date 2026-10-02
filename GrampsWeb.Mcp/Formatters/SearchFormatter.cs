@@ -50,10 +50,13 @@ public static class SearchFormatter
         for (var i = 0; i < hits.Length; i++)
         {
             var hit = hits[i];
-            var suffix = FormatHandleGrampsSuffix(hit.Handle, hit.GrampsId);
+            var item = objects[i];
+            // Gramps Web search hits carry the Gramps ID only inside the object.
+            var grampsId = string.IsNullOrWhiteSpace(hit.GrampsId) && item != null ? GetGrampsId(item) : hit.GrampsId;
+            var suffix = FormatHandleGrampsSuffix(hit.Handle, grampsId);
             if (CollectionOf(hit.ObjectType) == null)
                 sb.AppendLine($"{hit.ObjectType}: {hit.GrampsId}{suffix}");
-            else if (objects[i] is { } item && FormatLine(item, tables) is { Length: > 0 } line)
+            else if (item != null && FormatLine(item, tables) is { Length: > 0 } line)
                 sb.AppendLine($"{line}{suffix}");
             else
                 sb.AppendLine($"{hit.ObjectType}: {hit.GrampsId}{suffix} (error loading details)");

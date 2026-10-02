@@ -98,6 +98,25 @@ public class SearchEmbeddedObjectTests
     }
 
     [Fact]
+    public async Task GrampsIdComesFromTheObjectWhenTheHitHasNone()
+    {
+        using var handler = new Handler("""{"handle":"b","gramps_id":"S0002","title":"Second"}""");
+        var result = (await SearchFormatter.FormatSearchResults(
+        [
+            new GrampsSearchHit
+            {
+                Handle = "a", ObjectType = "source",
+                Object = JsonSerializer.Deserialize<JsonElement>("""{"handle":"a","gramps_id":"S0001","title":"First"}""")
+            },
+            new GrampsSearchHit { Handle = "b", ObjectType = "source" },
+        ], Client(handler))).Replace("\r\n", "\n");
+
+        // The embedded object and the object read afterwards both supply the ID.
+        Assert.Contains("\nSource: First — handle: a | gramps_id: S0001\n", result);
+        Assert.Contains("\nSource: Second — handle: b | gramps_id: S0002\n", result);
+    }
+
+    [Fact]
     public async Task HitsWithoutObjectsAreReadInOneBatchPerType()
     {
         using var handler = new Handler("{}")
