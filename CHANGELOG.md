@@ -131,6 +131,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   families, relationships, and timelines
 - Name the `objectType` parameter in the `list_objects` error for an unknown
   type instead of `object_type`
+- Explain a Gramps ID that was not found instead of suggesting `get_object`
+  with the same ID: an ID with another type's prefix names that type and how
+  to read it, an unknown prefix gets the right one, and a missing ID points to
+  `search` and `list_objects`
 - Log in to Gramps Web once instead of twice at startup: the connectivity
   check and `GET /health` take their token from the token cache the tools use.
   The first tool call no longer logs in again and hits the rate limit on
