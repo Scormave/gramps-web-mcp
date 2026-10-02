@@ -73,40 +73,6 @@ public class GrampsReadScopeTests
     }
 
     [Fact]
-    public async Task TwentyPeopleShareOnePlace_IdenticalOutputWithNineteenFewerRequests()
-    {
-        using var handler = new Handler();
-        var client = Client(handler);
-        var hits = Enumerable.Range(1, 20).Select(i => new GrampsSearchHit
-        {
-            ObjectType = "person", Handle = $"p{i}", GrampsId = $"I{i:0000}"
-        }).ToArray();
-        var baseline = await SearchFormatter.FormatSearchResults(hits, client);
-        Assert.Equal(60, handler.ReadCount);
-        handler.Paths.Clear();
-        string cached;
-        using (GrampsReadScope.Begin())
-            cached = await SearchFormatter.FormatSearchResults(hits, client);
-        Assert.Equal(baseline, cached);
-        Assert.Equal(41, handler.ReadCount);
-        Assert.Equal(1, handler.Count("/api/places/shared"));
-        Assert.DoesNotContain(handler.Paths.Keys, p => p.StartsWith("/api/types/"));
-
-        handler.Paths.Clear();
-        foreach (var hit in hits)
-            hit.Object = JsonSerializer.SerializeToElement(new
-            {
-                handle = hit.Handle, primary_name = new { first_name = hit.Handle },
-                birth_ref_index = 0, event_ref_list = new[] { new { @ref = "e" + hit.Handle } }
-            });
-        using (GrampsReadScope.Begin())
-            cached = await SearchFormatter.FormatSearchResults(hits, client);
-        Assert.Equal(baseline, cached);
-        Assert.Equal(21, handler.ReadCount);
-        Assert.DoesNotContain(handler.Paths.Keys, p => p.StartsWith("/api/people/"));
-    }
-
-    [Fact]
     public async Task SearchLoadsOnlyRequiredCategories_AndSharesBulkFallback()
     {
         using var handler = new Handler();
@@ -165,17 +131,10 @@ public class GrampsReadScopeTests
             if (path.StartsWith("/api/people/"))
             {
                 var id = request.RequestUri.Segments.Last();
-                return Response(JsonSerializer.Serialize(new
-                {
-                    handle = id, primary_name = new { first_name = id },
-                    birth_ref_index = 0, event_ref_list = new[] { new { @ref = "e" + id } }
-                }));
+                return Response(JsonSerializer.Serialize(new { handle = id }));
             }
-            if (path.StartsWith("/api/events/"))
-                return Response("""{"type":"Birth","place":"shared"}""");
             return Response(path switch
             {
-                "/api/places/shared" => """{"name":{"value":"Shared city"}}""",
                 "/api/types/default/" => """{"event_types":["Birth"],"place_types":["City"]}""",
                 "/api/types/default/name_types" => """["Birth Name"]""",
                 "/api/types/default/name_origin_types" => """["Inherited"]""",

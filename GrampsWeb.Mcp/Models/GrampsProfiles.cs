@@ -117,6 +117,29 @@ public class GrampsFamilyProfile
     public GrampsEventProfile[]? Events { get; set; }
 }
 
+/// <summary>Citation summary from <c>?profile=</c> payloads (OpenAPI <c>CitationProfile</c>).</summary>
+public class GrampsCitationProfile
+{
+    [JsonPropertyName("gramps_id")]
+    public string? GrampsId { get; set; }
+
+    [JsonPropertyName("source")]
+    public GrampsSourceProfile? Source { get; set; }
+}
+
+/// <summary>Source summary from <c>?profile=</c> payloads (OpenAPI <c>SourceProfile</c>).</summary>
+public class GrampsSourceProfile
+{
+    [JsonPropertyName("gramps_id")]
+    public string? GrampsId { get; set; }
+
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    [JsonPropertyName("author")]
+    public string? Author { get; set; }
+}
+
 /// <summary>Place summary from <c>?profile=</c> payloads (OpenAPI <c>PlaceProfile</c>).</summary>
 public class GrampsPlaceProfile
 {

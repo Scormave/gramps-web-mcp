@@ -67,6 +67,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Label baptism, christening, burial, and cremation dates by event type in
   `get_person_tree` rows, family members, and `get_relations`, e.g.
   "burial 1950", instead of showing them as birth and death
+- Build `search` and `list_objects` lines for people, families, events, and
+  citations from the `profile=self` summary in the same response instead of
+  reading each person's birth event and place, each family's parents, each
+  event's place, and each citation's source; a search page takes one request
+  plus type labels instead of up to three per hit. Hits without a usable
+  embedded object are read in one batch per type
+- Show people in `search` and `list_objects` as "Surname, Given, b. 1815 in
+  London, d. 1852" in the tree's name display format, with death and baptism
+  or burial fallbacks, instead of "Given Surname (b. 1815 in London)"; family
+  partners use the display format too
 
 ### Removed
 

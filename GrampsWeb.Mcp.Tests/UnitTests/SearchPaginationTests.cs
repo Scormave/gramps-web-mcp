@@ -82,7 +82,7 @@ public class SearchPaginationTests
 
         var result = await SearchTools.Search("tag", page, pageSize, Client(handler));
 
-        Assert.Equal($"/api/search/?query=tag&page={page}&pagesize={pageSize}", handler.SearchPath);
+        Assert.Equal($"/api/search/?query=tag&page={page}&pagesize={pageSize}&profile=self", handler.SearchPath);
         Assert.StartsWith(expectedHeader, result);
     }
 

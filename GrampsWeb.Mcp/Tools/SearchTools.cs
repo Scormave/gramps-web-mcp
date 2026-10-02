@@ -36,7 +36,9 @@ public static class SearchTools
             if (pagesize < 1) pagesize = 20;
             if (pagesize > 100) pagesize = 100;
 
-            var queryString = $"/api/search/?query={Uri.EscapeDataString(query)}&page={page}&pagesize={pagesize}";
+            // The profile gives each hit's summary line without a read per hit.
+            var queryString = $"/api/search/?query={Uri.EscapeDataString(query)}&page={page}&pagesize={pagesize}" +
+                              $"&{SearchFormatter.ProfileQuery}";
 
             GrampsPagedResult<GrampsSearchHit> result;
             try
@@ -134,26 +136,20 @@ public static class SearchTools
             if (!string.IsNullOrEmpty(sort))
                 queryParams.Add($"sort={Uri.EscapeDataString(sort)}");
 
-            // Match search formatting: embed father/mother in one response (apispec: query name is extend).
-            if (objectType.Equals("families", StringComparison.OrdinalIgnoreCase))
-                queryParams.Add("extend=father_handle,mother_handle");
-
-            if (objectType.Equals("events", StringComparison.OrdinalIgnoreCase))
-                queryParams.Add("extend=place");
-
-            if (isCitations)
-                queryParams.Add("extend=source_handle");
+            // Match search formatting: names, vitals, event places and citation sources come from the profile.
+            if (objectType.ToLowerInvariant() is "people" or "families" or "events" or "citations")
+                queryParams.Add(SearchFormatter.ProfileQuery);
 
             var queryString = $"/api/{objectType.ToLower()}/?{string.Join("&", queryParams)}";
 
             return objectType.ToLower() switch
             {
                 "people" => await SearchFormatter.FetchAndFormatObjects<GrampsPerson>(queryString, client, objectType, pagesize),
-                "families" => await SearchFormatter.FetchAndFormatObjects<GrampsFamilyExtended>(queryString, client, objectType, pagesize),
-                "events" => await SearchFormatter.FetchAndFormatObjects<GrampsEventExtended>(queryString, client, objectType, pagesize),
+                "families" => await SearchFormatter.FetchAndFormatObjects<GrampsFamily>(queryString, client, objectType, pagesize),
+                "events" => await SearchFormatter.FetchAndFormatObjects<GrampsEvent>(queryString, client, objectType, pagesize),
                 "places" => await SearchFormatter.FetchAndFormatObjects<GrampsPlace>(queryString, client, objectType, pagesize),
                 "sources" => await SearchFormatter.FetchAndFormatObjects<GrampsSource>(queryString, client, objectType, pagesize),
-                "citations" => await SearchFormatter.FetchAndFormatObjects<GrampsCitationExtended>(queryString, client, objectType, pagesize),
+                "citations" => await SearchFormatter.FetchAndFormatObjects<GrampsCitation>(queryString, client, objectType, pagesize),
                 "repositories" => await SearchFormatter.FetchAndFormatObjects<GrampsRepository>(queryString, client, objectType, pagesize),
                 "notes" => await SearchFormatter.FetchAndFormatObjects<GrampsNote>(queryString, client, objectType, pagesize),
                 "media" => await SearchFormatter.FetchAndFormatObjects<GrampsMedia>(queryString, client, objectType, pagesize),

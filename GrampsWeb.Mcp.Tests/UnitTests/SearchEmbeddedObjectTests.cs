@@ -14,12 +14,12 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 public class SearchEmbeddedObjectTests
 {
     [Theory]
-    [InlineData("person", "people", "\"primary_name\":{\"first_name\":\"Ada\"},\"event_ref_list\":[],\"birth_ref_index\":-1")]
-    [InlineData("family", "families", "\"father_handle\":null,\"mother_handle\":null,\"type\":\"Married\"")]
-    [InlineData("event", "events", "\"type\":\"Birth\",\"date\":null,\"place\":\"\"")]
+    [InlineData("person", "people", "\"profile\":{\"name_display\":\"Lovelace, Ada\",\"birth\":{\"date\":\"1815\"}}")]
+    [InlineData("family", "families", "\"type\":\"Married\",\"profile\":{\"father\":{\"name_display\":\"Smith, John\"},\"mother\":{}}")]
+    [InlineData("event", "events", "\"type\":\"Birth\",\"date\":null,\"profile\":{\"place_name\":\"London\"}")]
     [InlineData("place", "places", "\"name\":{\"value\":\"London\"},\"place_type\":\"City\"")]
     [InlineData("source", "sources", "\"title\":\"Register\"")]
-    [InlineData("citation", "citations", "\"source_handle\":null,\"page\":\"42\",\"confidence\":2")]
+    [InlineData("citation", "citations", "\"page\":\"42\",\"confidence\":2,\"profile\":{\"source\":{\"title\":\"Register\"}}")]
     [InlineData("note", "notes", "\"text\":{\"string\":\"Text\"},\"type\":\"General\"")]
     [InlineData("media", "media", "\"path\":\"photo.jpg\",\"mime\":\"image/jpeg\",\"desc\":\"Photo\"")]
     [InlineData("tag", "tags", "\"name\":\"Reviewed\"")]
@@ -78,40 +78,77 @@ public class SearchEmbeddedObjectTests
         Assert.True(result.IndexOf("Source: First", StringComparison.Ordinal) < result.IndexOf("Source: Second", StringComparison.Ordinal));
         Assert.Contains("Source: First", result);
         Assert.Contains("Source: Second", result);
-        Assert.Equal(["/api/search/?query=query&page=1&pagesize=20", "/api/sources/h"], handler.Paths);
+        Assert.Equal(["/api/search/?query=query&page=1&pagesize=20&profile=self", "/api/sources/h"], handler.Paths);
     }
 
     [Fact]
-    public async Task PersonMissingEventReferencesFallsBackInsteadOfLosingBirth()
+    public async Task PersonWithoutProfileIsReadAgainWithProfile()
     {
-        using var handler = new Handler("""{"handle":"h","primary_name":{"first_name":"Ada"},"event_ref_list":[{"ref":"birth"}],"birth_ref_index":0}""");
+        using var handler = new Handler("""
+            {"handle":"h","primary_name":{"first_name":"Ada"},
+             "profile":{"name_display":"Lovelace, Ada","birth":{"type":"Birth","date":"1815","place_name":"London"},"death":{}}}
+            """);
         var result = await SearchFormatter.FormatSearchResults([new GrampsSearchHit
         {
-            Handle = "h", ObjectType = "person",
+            Handle = "h", ObjectType = "person", GrampsId = "I0001",
             Object = JsonSerializer.Deserialize<JsonElement>("""{"handle":"h","primary_name":{"first_name":"Ada"}}""")
         }], Client(handler));
-        Assert.Contains("b. ", result);
-        Assert.Equal(["/api/people/h", "/api/events/birth", "/api/places/place"], handler.Paths);
+        Assert.Contains("\nPerson: Lovelace, Ada, b. 1815 in London — handle: h | gramps_id: I0001\n", result.Replace("\r\n", "\n"));
+        Assert.Equal(["/api/people/h?profile=self"], handler.Paths);
     }
 
     [Fact]
-    public async Task EmbeddedEventLoadsOnlyMissingPlace()
+    public async Task HitsWithoutObjectsAreReadInOneBatchPerType()
     {
-        using var handler = new Handler("{}");
-        var result = await SearchFormatter.FormatSearchResults([new GrampsSearchHit
+        using var handler = new Handler("{}")
         {
-            Handle = "h", ObjectType = "event",
-            Object = JsonSerializer.Deserialize<JsonElement>("""{"handle":"h","type":"Birth","date":null,"place":"place"}""")
-        }], Client(handler));
-        Assert.Contains("London", result);
-        Assert.Contains("/api/places/place", handler.Paths);
-        Assert.DoesNotContain(handler.Paths, p => p.StartsWith("/api/events/"));
+            Bodies =
+            {
+                ["/api/people/?handles=p1,p2,gone&profile=self&page=1&pagesize=3"] = """
+                    [
+                      {"handle":"p2","profile":{"name_display":"Petrov, Ivan","birth":{},"death":{"type":"Death","date":"1950"}}},
+                      {"handle":"p1","profile":{"name_display":"Ivanov, Pyotr","birth":{"date":"1900","place_name":"Tver"},"death":{}}}
+                    ]
+                    """,
+                ["/api/events/?handles=e1,e2&profile=self&page=1&pagesize=2"] = """
+                    [
+                      {"handle":"e1","type":"Birth","date":{"dateval":[0,0,1900,false]},"profile":{"place_name":"Tver"}},
+                      {"handle":"e2","type":"Death","date":null,"profile":{}}
+                    ]
+                    """,
+            }
+        };
+        GrampsSearchHit Hit(string type, string handle) => new() { ObjectType = type, Handle = handle };
+        GrampsSearchHit[] hits =
+        [
+            Hit("person", "p1"), Hit("event", "e1"), Hit("person", "p2"), Hit("event", "e2"), Hit("person", "gone"),
+            new() { ObjectType = "source", Handle = "s1", Object = JsonSerializer.Deserialize<JsonElement>("""{"handle":"s1","title":"Register"}""") },
+        ];
+
+        var result = (await SearchFormatter.FormatSearchResults(hits, Client(handler))).Replace("\r\n", "\n");
+
+        // Rows keep the order of the hits, not of the batch replies; "gone" was deleted after indexing.
+        Assert.Contains(
+            "Person: Ivanov, Pyotr, b. 1900 in Tver — handle: p1\n" +
+            "Event: Birth — 1900 — Tver — handle: e1\n" +
+            "Person: Petrov, Ivan, d. 1950 — handle: p2\n" +
+            "Event: Death — handle: e2\n" +
+            "person:  — handle: gone (error loading details)\n" +
+            "Source: Register — handle: s1\n",
+            result);
+        Assert.Equal(
+            [
+                "/api/events/?handles=e1,e2&profile=self&page=1&pagesize=2",
+                "/api/people/?handles=p1,p2,gone&profile=self&page=1&pagesize=3",
+            ],
+            handler.Paths.Where(p => !p.StartsWith("/api/types/")).Order(StringComparer.Ordinal));
     }
 
     [Theory]
-    [InlineData("""{"handle":"h","type":"Birth","date":null,"place":""}""", "Event: Birth")]
-    [InlineData("""{"handle":"h","type":"","date":null,"place":""}""", "Event")]
-    [InlineData("""{"handle":"h","type":"Death","date":{"dateval":[0,0,1950,false]},"place":""}""", "Event: Death — 1950")]
+    [InlineData("""{"handle":"h","type":"Birth","date":null,"profile":{}}""", "Event: Birth")]
+    [InlineData("""{"handle":"h","type":"","date":null,"profile":{"place_name":""}}""", "Event")]
+    [InlineData("""{"handle":"h","type":"Death","date":{"dateval":[0,0,1950,false]},"profile":{}}""", "Event: Death — 1950")]
+    [InlineData("""{"handle":"h","type":"Death","date":null,"profile":{"place_name":"London"}}""", "Event: Death — London")]
     public async Task EventLineLeavesOutMissingParts(string evt, string expectedLine)
     {
         using var handler = new Handler("{}");
@@ -123,34 +160,36 @@ public class SearchEmbeddedObjectTests
     }
 
     [Fact]
-    public async Task FamilyWithoutEmbeddedParentsKeepsSingleExtendedFetch()
+    public async Task FamilyPartnersComeFromTheProfile()
     {
-        const string family = """{"handle":"h","father_handle":"father","mother_handle":"mother","type":"Married"}""";
-        using var handler = new Handler("""{"handle":"h","father_handle":"father","mother_handle":"mother","type":"Married","extended":{"father":{"primary_name":{"first_name":"John"}},"mother":{"primary_name":{"first_name":"Jane"}}}}""");
+        using var handler = new Handler("{}");
         var result = await SearchFormatter.FormatSearchResults([new GrampsSearchHit
         {
-            Handle = "h", ObjectType = "family", Object = JsonSerializer.Deserialize<JsonElement>(family)
+            Handle = "h", ObjectType = "family",
+            Object = JsonSerializer.Deserialize<JsonElement>("""
+                {"handle":"h","father_handle":"father","mother_handle":"mother","type":"Married",
+                 "profile":{"father":{"name_display":"Smith, John"},"mother":{"name_display":"Doe, Jane"}}}
+                """)
         }], Client(handler));
-        Assert.Contains("John and Jane", result);
-        Assert.Contains("/api/families/h?extend=father_handle,mother_handle", handler.Paths);
-        Assert.DoesNotContain(handler.Paths, p => p.StartsWith("/api/people/"));
+        Assert.Contains("Family: Smith, John and Doe, Jane (Married)", result);
+        Assert.DoesNotContain(handler.Paths, p => !p.StartsWith("/api/types/"));
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task CitationUsesEmbeddedSourceOrFetchesOnlySource(bool embeddedSource)
+    public async Task CitationSourceComesFromTheProfile(bool embeddedProfile)
     {
         var body = "{\"handle\":\"h\",\"source_handle\":\"source\",\"page\":\"42\",\"confidence\":2"
-            + (embeddedSource ? ",\"extended\":{\"source\":{\"title\":\"Register\"}}" : "") + "}";
-        using var handler = new Handler("""{"title":"Register"}""");
+            + (embeddedProfile ? ",\"profile\":{\"source\":{\"title\":\"Register\"}}" : "") + "}";
+        using var handler = new Handler("""{"handle":"h","page":"42","confidence":2,"profile":{"source":{"title":"Register"}}}""");
         var result = await SearchFormatter.FormatSearchResults([new GrampsSearchHit
         {
             Handle = "h", ObjectType = "citation", Object = JsonSerializer.Deserialize<JsonElement>(body)
         }], Client(handler));
-        Assert.Contains("Register — p. 42", result);
-        if (embeddedSource) Assert.Empty(handler.Paths);
-        else Assert.Equal(["/api/sources/source"], handler.Paths);
+        Assert.Contains("Citation: Register — p. 42 (confidence: Normal)", result);
+        if (embeddedProfile) Assert.Empty(handler.Paths);
+        else Assert.Equal(["/api/citations/h?profile=self"], handler.Paths);
     }
 
     private static GrampsApiClient Client(HttpMessageHandler handler)
@@ -165,16 +204,17 @@ public class SearchEmbeddedObjectTests
     {
         public List<string> Paths { get; } = [];
         public string SearchBody { get; init; } = "[]";
+        /// <summary>Bodies by path and query, served before the defaults below.</summary>
+        public Dictionary<string, string> Bodies { get; } = [];
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.PathAndQuery;
             var token = path.StartsWith("/api/token/");
-            if (!token) Paths.Add(path);
+            if (!token) lock (Paths) Paths.Add(path);
             var body = token ? """{"access_token":"token","refresh_token":"refresh","expires_in":900}"""
+                : Bodies.TryGetValue(path, out var known) ? known
                 : path.StartsWith("/api/search/") ? SearchBody
                 : path.StartsWith("/api/types/") ? "[]"
-                : path == "/api/events/birth" ? """{"type":"Birth","place":"place"}"""
-                : path == "/api/places/place" ? """{"name":{"value":"London"}}"""
                 : detail;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {

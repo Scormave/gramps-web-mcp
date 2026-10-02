@@ -29,7 +29,8 @@ public class ListObjectsSourceFilterTests
         var query = HttpUtility.ParseQueryString(new Uri("https://gramps-web.test" + handler.CitationPath).Query);
         Assert.Equal("source_handle = \"102a49c11b31375183b9ad45a991\"", query["gql"]);
         Assert.Null(query["source_handle"]);
-        Assert.Equal("source_handle", query["extend"]);
+        Assert.Null(query["extend"]);
+        Assert.Equal("self", query["profile"]);
     }
 
     [Fact]

@@ -47,4 +47,8 @@ public class GrampsCitation
 
     [JsonPropertyName("private")]
     public bool Private { get; set; }
+
+    /// <summary>Source title and author; present when requested with <c>?profile=self</c>.</summary>
+    [JsonPropertyName("profile")]
+    public GrampsCitationProfile? Profile { get; set; }
 }

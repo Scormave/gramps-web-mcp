@@ -290,7 +290,8 @@ calls or client instances.
 list endpoint's `handles` filter (`GET /api/{type}/?handles=a,b`, Gramps Web
 API 3.14+), 50 handles per request and up to 4 requests at a time, with the
 same `profile` or `backlinks` arguments as a detail read. Place timelines,
-`get_person_tree` generations, and `get_relations` common ancestors use it. A
+`get_person_tree` generations, `get_relations` common ancestors, and search
+hits without a usable embedded object use it. A
 server that answers HTTP 400 or 422, or returns objects that were not asked
 for, is remembered per API URL and tree for the life of the process, and its
 objects are fetched one per request, up to 4 at a time. Handles missing from a
@@ -300,12 +301,15 @@ Search formatting loads type-label categories only for the entity types in
 the results. Shared bulk/default/custom vocabulary requests benefit from the
 same per-call cache, without changing vocabulary order or adding a new TTL.
 
-Search summaries reuse the search hit's embedded `object` when its handle
-matches and it contains the fields needed for that entity's summary. Missing,
-partial, or incompatible objects fall back to the detail endpoint. Related
-event/place/source data is still resolved as needed. Families without embedded
-parent names retain the single extended family fetch, avoiding two separate
-parent reads. Result order and sequential processing are unchanged.
+Search requests `profile=self`, so each hit's embedded `object` carries the
+summary of its related objects: a person's name, birth, and death, a family's
+partners, an event's place name, and a citation's source title. The summary
+line is built from the hit alone when its handle matches and it contains the
+fields that entity needs. Missing, partial, or incompatible objects are read
+again in one `GetByHandlesAsync` batch per type with the same profile; a hit
+the batch does not return is shown with "(error loading details)".
+`list_objects` requests the same profile for people, families, events, and
+citations and formats rows with the same code. Result order follows the hits.
 
 ### 3. Models (`Models/`)
 
