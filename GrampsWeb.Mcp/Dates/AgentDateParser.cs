@@ -96,11 +96,26 @@ public static class AgentDateParser
 
     /// <summary>
     /// The calendar and new-year day Gramps appends to a date outside the Gregorian calendar or the January
-    /// year: <c>1856-07-20 (Julian)</c>, <c>1735-03 (Julian, Mar25)</c>.
+    /// year: <c>1856-07-20 (Julian)</c>, <c>1735-03-10 (Julian, Mar25)</c>, <c>1735-03-10 (Mar25)</c>.
     /// </summary>
     private static readonly Regex CalendarSuffix = new(
-        @"\(\s*(?:Julian|Hebrew|French Republican|Persian|Islamic|Swedish|Mar1|Mar25|Sep1)\b[^()]*\)\s*$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+        @"\s*\(\s*(?<first>[^(),]*?)\s*(?:,\s*(?<second>[^(),]*?)\s*)?\)\s*$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// A year of one or two digits in a French Republican date (<c>12-03-15</c>, <c>an 12</c> as <c>12</c>), not a
+    /// month or day after a dash and not part of a slash or dot triplet.
+    /// </summary>
+    private static readonly Regex ShortYear = new(
+        @"(?<![\d/.])(?<!\d-)(?<y>\d{1,2})(?![\d/.])",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex Word = new(
+        @"[A-Za-z]+",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>New-year names by Gramps code, as Gramps writes them after the calendar.</summary>
+    private static readonly string[] NewYearNames = ["Jan1", "Mar1", "Mar25", "Sep1"];
 
     /// <summary>
     /// Day + English month + year, optional comma before year: <c>1 Jul 1919</c>, <c>5 July, 1944</c>.
@@ -129,51 +144,172 @@ public static class AgentDateParser
             return null;
 
         var raw = input.Trim();
-        if (CalendarSuffix.IsMatch(raw))
+        var (dated, calendar, newYear) = StripCalendarSuffix(raw);
+        if (dated.Contains('('))
             throw McpToolErrors.ValidationError(
-                $"Date \"{raw}\" names another calendar or new-year day; only Gregorian dates with the year starting on " +
-                "1 January can be entered. Convert the date, or leave it out (update tools then keep the stored date).");
+                $"Date \"{raw}\" has parentheses inside the date. Put the calendar once at the end: " +
+                "between 1850-01-01 and 1860-01-01 (Julian).");
+        if (!GrampsCalendars.HasEnglishMonthNames(calendar))
+            RejectEnglishMonths(raw, dated, calendar);
+        if (calendar == GrampsCalendars.FrenchRepublican && order == DateComponentOrder.Iso)
+            dated = ShortYear.Replace(dated, m => m.Groups["y"].Value.PadLeft(3, '0'));
 
-        var (unqualified, quality) = StripQualityPrefix(raw);
-        var request = ParseUnqualified(raw, unqualified, order, intervalPreference);
+        var (unqualified, quality) = StripQualityPrefix(dated);
+        var request = ParseUnqualified(raw, unqualified, order, intervalPreference, calendar);
         request.Quality = quality;
+        request.Calendar = calendar;
+        request.NewYear = newYear;
+        ValidateInCalendar(raw, dated, request);
         return request;
     }
+
+    /// <summary>
+    /// Splits the trailing <c>(Julian)</c>, <c>(Julian, Mar25)</c>, or <c>(Mar25)</c> off a date, as the Gramps date
+    /// parser does. Without one the date is Gregorian with the year starting on 1 January.
+    /// </summary>
+    private static (string Dated, int Calendar, int NewYear) StripCalendarSuffix(string raw)
+    {
+        var match = CalendarSuffix.Match(raw);
+        if (!match.Success)
+            return (raw, GrampsCalendars.Gregorian, 0);
+
+        var first = match.Groups["first"].Value;
+        var second = match.Groups["second"].Success ? match.Groups["second"].Value : null;
+        int calendar;
+        int newYear;
+        if (second == null && IndexOf(NewYearNames, first) is >= 0 and var onlyNewYear)
+        {
+            calendar = GrampsCalendars.Gregorian;
+            newYear = onlyNewYear;
+        }
+        else
+        {
+            calendar = IndexOf(GrampsCalendars.Names, first);
+            newYear = second == null ? 0 : IndexOf(NewYearNames, second);
+            if (calendar < 0 || newYear < 0)
+                throw McpToolErrors.ValidationError(
+                    $"Date \"{raw}\" ends in \"{match.Value.Trim()}\", which isn't a Gramps calendar or new year. " +
+                    $"Use {string.Join(", ", GrampsCalendars.Names)}, optionally followed by the day the year " +
+                    "starts (Mar1, Mar25, Sep1): 1856-07-20 (Julian), 1735-03-10 (Julian, Mar25).");
+        }
+
+        if (newYear != 0 && GrampsCalendars.HasFixedNewYear(calendar))
+            throw McpToolErrors.ValidationError(
+                $"Date \"{raw}\": the {GrampsCalendars.Names[calendar]} calendar has its own new year. A new year " +
+                "such as Mar25 can only follow a Gregorian, Julian, or Swedish date.");
+
+        return (raw[..match.Index].TrimEnd(), calendar, newYear);
+    }
+
+    private static int IndexOf(IReadOnlyList<string> names, string name)
+    {
+        for (var i = 0; i < names.Count; i++)
+        {
+            if (string.Equals(names[i], name, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+
+        return -1;
+    }
+
+    /// <summary>English month names only exist in the Gregorian, Julian, and Swedish calendars.</summary>
+    private static void RejectEnglishMonths(string raw, string dated, int calendar)
+    {
+        foreach (Match word in Word.Matches(dated))
+        {
+            if (EnglishMonthNames.TryParse(word.Value, out _))
+                throw McpToolErrors.ValidationError(
+                    $"Date \"{raw}\" names the month \"{word.Value}\", but the {GrampsCalendars.Names[calendar]} " +
+                    $"calendar has its own months. Write the month as a number (1–{GrampsCalendars.MonthsInYear(calendar)}): " +
+                    $"{ExampleIn(calendar)}. See get_reference(topic: \"input-guide\", section: \"dates\").");
+        }
+    }
+
+    private static string ExampleIn(int calendar) => calendar switch
+    {
+        GrampsCalendars.Hebrew => "5600-01-15 (Hebrew)",
+        GrampsCalendars.FrenchRepublican => "12-03-15 (French Republican)",
+        GrampsCalendars.Persian => "1300-01-15 (Persian)",
+        GrampsCalendars.Islamic => "1250-01-15 (Islamic)",
+        _ => $"1856-07-20 ({GrampsCalendars.Names[calendar]})"
+    };
+
+    /// <summary>
+    /// Rejects dates Gramps would refuse to store: a day the month doesn't have in the date's calendar
+    /// (<c>1900-02-29</c> in the Gregorian calendar, Adar II in a common Hebrew year), or a range Gramps can't
+    /// combine with the new year.
+    /// </summary>
+    private static void ValidateInCalendar(string raw, string dated, DateRequest request)
+    {
+        if (!ExistsInCalendar(request.Calendar, request))
+        {
+            var hint = request.Calendar switch
+            {
+                GrampsCalendars.Gregorian when ExistsInCalendar(GrampsCalendars.Julian, request) =>
+                    $" For an Old Style date add the calendar: {dated} (Julian).",
+                GrampsCalendars.Hebrew when request.Month == 7 || request.EndMonth == 7 =>
+                    " Adar II (month 7) exists only in leap years; Adar in other years is month 6.",
+                _ => ""
+            };
+            throw McpToolErrors.ValidationError(
+                $"Date \"{raw}\" doesn't exist in the {GrampsCalendars.Names[request.Calendar]} calendar.{hint}");
+        }
+
+        if (!GrampsDateSortVal.PassesGrampsDateCheck(request))
+            throw McpToolErrors.ValidationError(
+                $"Date \"{raw}\": Gramps can't store a range or span with the new year {NewYearNames[request.NewYear]} " +
+                "when it starts on or after that day. Leave out the new year and count both years from 1 January.");
+    }
+
+    /// <summary>The start date, and the end date of a range or span, exist in the calendar.</summary>
+    private static bool ExistsInCalendar(int calendar, DateRequest request) =>
+        GrampsDateSortVal.PassesGrampsDateCheck(new DateRequest
+        {
+            Calendar = calendar,
+            Modifier = request.Modifier is ModRange or ModSpan ? request.Modifier : 0,
+            Year = request.Year,
+            Month = request.Month,
+            Day = request.Day,
+            EndYear = request.EndYear,
+            EndMonth = request.EndMonth,
+            EndDay = request.EndDay
+        });
 
     private static DateRequest ParseUnqualified(
         string raw,
         string unqualified,
         DateComponentOrder order,
-        DateIntervalPreference intervalPreference)
+        DateIntervalPreference intervalPreference,
+        int calendar)
     {
         var (working, modifier) = StripModifierPrefix(unqualified);
 
         var betweenMatch = BetweenParts.Match(working);
         if (betweenMatch.Success
-            && TryParseSingleCalendarSide(betweenMatch.Groups["a"].Value.Trim(), out var betweenStart)
-            && TryParseSingleCalendarSide(betweenMatch.Groups["b"].Value.Trim(), out var betweenEnd))
+            && TryParseSingleCalendarSide(betweenMatch.Groups["a"].Value.Trim(), calendar, out var betweenStart)
+            && TryParseSingleCalendarSide(betweenMatch.Groups["b"].Value.Trim(), calendar, out var betweenEnd))
         {
             return IntervalCalendar(betweenStart, betweenEnd, DateIntervalPreference.Range);
         }
 
         var fromToMatch = FromToParts.Match(working);
         if (fromToMatch.Success
-            && TryParseSingleCalendarSide(fromToMatch.Groups["a"].Value.Trim(), out var spanStart)
-            && TryParseSingleCalendarSide(fromToMatch.Groups["b"].Value.Trim(), out var spanEnd))
+            && TryParseSingleCalendarSide(fromToMatch.Groups["a"].Value.Trim(), calendar, out var spanStart)
+            && TryParseSingleCalendarSide(fromToMatch.Groups["b"].Value.Trim(), calendar, out var spanEnd))
         {
             return IntervalCalendar(spanStart, spanEnd, DateIntervalPreference.Span);
         }
 
         var fromOnly = FromOnly.Match(working);
         if (fromOnly.Success
-            && TryParseSingleCalendarSide(fromOnly.Groups["a"].Value.Trim(), out var fromSide))
+            && TryParseSingleCalendarSide(fromOnly.Groups["a"].Value.Trim(), calendar, out var fromSide))
         {
             return CalendarSideDate(ModFrom, fromSide);
         }
 
         var toOnly = ToOnly.Match(working);
         if (toOnly.Success
-            && TryParseSingleCalendarSide(toOnly.Groups["a"].Value.Trim(), out var toSide))
+            && TryParseSingleCalendarSide(toOnly.Groups["a"].Value.Trim(), calendar, out var toSide))
         {
             return CalendarSideDate(ModTo, toSide);
         }
@@ -187,8 +323,8 @@ public static class AgentDateParser
             var d2 = int.Parse(isoFullRange.Groups["d2"].Value, CultureInfo.InvariantCulture);
             var m2 = int.Parse(isoFullRange.Groups["m2"].Value, CultureInfo.InvariantCulture);
             var y2 = int.Parse(isoFullRange.Groups["y2"].Value, CultureInfo.InvariantCulture);
-            ValidateDayMonth(d1, m1);
-            ValidateDayMonth(d2, m2);
+            ValidateDayMonth(d1, m1, calendar);
+            ValidateDayMonth(d2, m2, calendar);
             return IntervalCalendar(
                 new CalendarSide(d1, m1, y1),
                 new CalendarSide(d2, m2, y2),
@@ -202,8 +338,8 @@ public static class AgentDateParser
             var y1 = int.Parse(isoMonthRange.Groups["y1"].Value, CultureInfo.InvariantCulture);
             var m2 = int.Parse(isoMonthRange.Groups["m2"].Value, CultureInfo.InvariantCulture);
             var y2 = int.Parse(isoMonthRange.Groups["y2"].Value, CultureInfo.InvariantCulture);
-            if (m1 is < 1 or > 12 || m2 is < 1 or > 12)
-                throw McpToolErrors.ValidationError("Invalid month in date (use 1–12).");
+            ValidateMonth(m1, calendar);
+            ValidateMonth(m2, calendar);
             return IntervalCalendar(
                 new CalendarSide(0, m1, y1),
                 new CalendarSide(0, m2, y2),
@@ -221,13 +357,13 @@ public static class AgentDateParser
                 intervalPreference);
         }
 
-        if (TryParseMixedPrecisionDash(working, intervalPreference, out var mixed))
+        if (TryParseMixedPrecisionDash(working, intervalPreference, calendar, out var mixed))
             return mixed;
 
-        if (TryParseOpenEnded(working, intervalPreference, out var openEnded))
+        if (TryParseOpenEnded(working, intervalPreference, calendar, out var openEnded))
             return openEnded;
 
-        if (TryParseIso(working, modifier, out var iso))
+        if (TryParseIso(working, modifier, calendar, out var iso))
             return iso;
 
         if (TryParseEnglish(working, out var englishSide))
@@ -244,21 +380,10 @@ public static class AgentDateParser
             var p2 = int.Parse(trip.Groups["p2"].Value, CultureInfo.InvariantCulture);
             var p3 = int.Parse(trip.Groups["p3"].Value, CultureInfo.InvariantCulture);
 
-            int day, month, year;
-            if (order == DateComponentOrder.DayMonthYear)
-            {
-                day = p1;
-                month = p2;
-                year = NormalizeYear(p3);
-            }
-            else
-            {
-                month = p1;
-                day = p2;
-                year = NormalizeYear(p3);
-            }
+            var (day, month) = order == DateComponentOrder.DayMonthYear ? (p1, p2) : (p2, p1);
+            var year = NormalizeYear(p3, calendar, raw);
 
-            ValidateDayMonth(day, month);
+            ValidateDayMonth(day, month, calendar);
             return SingleCalendarDate(modifier, day, month, year);
         }
 
@@ -268,6 +393,7 @@ public static class AgentDateParser
     private static bool TryParseMixedPrecisionDash(
         string working,
         DateIntervalPreference preference,
+        int calendar,
         [NotNullWhen(true)] out DateRequest? req)
     {
         req = null;
@@ -282,9 +408,9 @@ public static class AgentDateParser
             if (left.Length == 0 || right.Length == 0)
                 continue;
 
-            if (!TryParseSingleCalendarSide(left, out var start))
+            if (!TryParseSingleCalendarSide(left, calendar, out var start))
                 continue;
-            if (!TryParseSingleCalendarSide(right, out var end))
+            if (!TryParseSingleCalendarSide(right, calendar, out var end))
                 continue;
 
             req = IntervalCalendar(start, end, preference);
@@ -297,6 +423,7 @@ public static class AgentDateParser
     private static bool TryParseOpenEnded(
         string working,
         DateIntervalPreference preference,
+        int calendar,
         [NotNullWhen(true)] out DateRequest? req)
     {
         req = null;
@@ -311,13 +438,12 @@ public static class AgentDateParser
             var d = isoAfter.Groups["d"].Success
                 ? int.Parse(isoAfter.Groups["d"].Value, CultureInfo.InvariantCulture)
                 : 0;
-            if (m is < 1 or > 12)
-                throw McpToolErrors.ValidationError("Invalid month in date (use 1–12).");
+            ValidateMonth(m, calendar);
             if (d > 0)
-                ValidateDayMonth(d, m);
+                ValidateDayMonth(d, m, calendar);
             req = d > 0
                 ? SingleCalendarDate(openStartMod, d, m, y)
-                : new DateRequest { Calendar = 0, Modifier = openStartMod, Quality = 0, Month = m, Year = y };
+                : new DateRequest { Modifier = openStartMod, Quality = 0, Month = m, Year = y };
             return true;
         }
 
@@ -329,13 +455,12 @@ public static class AgentDateParser
             var d = isoBefore.Groups["d"].Success
                 ? int.Parse(isoBefore.Groups["d"].Value, CultureInfo.InvariantCulture)
                 : 0;
-            if (m is < 1 or > 12)
-                throw McpToolErrors.ValidationError("Invalid month in date (use 1–12).");
+            ValidateMonth(m, calendar);
             if (d > 0)
-                ValidateDayMonth(d, m);
+                ValidateDayMonth(d, m, calendar);
             req = d > 0
                 ? SingleCalendarDate(openEndMod, d, m, y)
-                : new DateRequest { Calendar = 0, Modifier = openEndMod, Quality = 0, Month = m, Year = y };
+                : new DateRequest { Modifier = openEndMod, Quality = 0, Month = m, Year = y };
             return true;
         }
 
@@ -357,7 +482,7 @@ public static class AgentDateParser
 
         var trailing = OpenEndedTrailingDash.Match(working);
         if (trailing.Success
-            && TryParseSingleCalendarSide(trailing.Groups["side"].Value.Trim(), out var afterSide))
+            && TryParseSingleCalendarSide(trailing.Groups["side"].Value.Trim(), calendar, out var afterSide))
         {
             req = CalendarSideDate(openStartMod, afterSide);
             return true;
@@ -365,7 +490,7 @@ public static class AgentDateParser
 
         var leading = OpenEndedLeadingDash.Match(working);
         if (leading.Success
-            && TryParseSingleCalendarSide(leading.Groups["side"].Value.Trim(), out var beforeSide))
+            && TryParseSingleCalendarSide(leading.Groups["side"].Value.Trim(), calendar, out var beforeSide))
         {
             req = CalendarSideDate(openEndMod, beforeSide);
             return true;
@@ -374,7 +499,7 @@ public static class AgentDateParser
         return false;
     }
 
-    private static bool TryParseSingleCalendarSide(string side, out CalendarSide result)
+    private static bool TryParseSingleCalendarSide(string side, int calendar, out CalendarSide result)
     {
         result = default;
         if (string.IsNullOrWhiteSpace(side))
@@ -386,7 +511,7 @@ public static class AgentDateParser
             var y = int.Parse(full.Groups["y"].Value, CultureInfo.InvariantCulture);
             var m = int.Parse(full.Groups["m"].Value, CultureInfo.InvariantCulture);
             var d = int.Parse(full.Groups["d"].Value, CultureInfo.InvariantCulture);
-            ValidateDayMonth(d, m);
+            ValidateDayMonth(d, m, calendar);
             result = new CalendarSide(d, m, y);
             return true;
         }
@@ -396,8 +521,7 @@ public static class AgentDateParser
         {
             var y = int.Parse(monthYear.Groups["y"].Value, CultureInfo.InvariantCulture);
             var m = int.Parse(monthYear.Groups["m"].Value, CultureInfo.InvariantCulture);
-            if (m is < 1 or > 12)
-                throw McpToolErrors.ValidationError("Invalid month in date (use 1–12).");
+            ValidateMonth(m, calendar);
             result = new CalendarSide(0, m, y);
             return true;
         }
@@ -422,7 +546,7 @@ public static class AgentDateParser
             && int.TryParse(dmy.Groups["d"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var day)
             && int.TryParse(dmy.Groups["y"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var year))
         {
-            ValidateDayMonth(day, month);
+            ValidateDay(day);
             result = new CalendarSide(day, month, year);
             return true;
         }
@@ -463,7 +587,7 @@ public static class AgentDateParser
         return (raw, 0);
     }
 
-    private static bool TryParseIso(string working, int modifier, [NotNullWhen(true)] out DateRequest? req)
+    private static bool TryParseIso(string working, int modifier, int calendar, [NotNullWhen(true)] out DateRequest? req)
     {
         req = null;
         var m = IsoFull.Match(working);
@@ -472,7 +596,7 @@ public static class AgentDateParser
             var y = int.Parse(m.Groups["y"].Value, CultureInfo.InvariantCulture);
             var mo = int.Parse(m.Groups["m"].Value, CultureInfo.InvariantCulture);
             var d = int.Parse(m.Groups["d"].Value, CultureInfo.InvariantCulture);
-            ValidateDayMonth(d, mo);
+            ValidateDayMonth(d, mo, calendar);
             req = SingleCalendarDate(modifier, d, mo, y);
             return true;
         }
@@ -482,11 +606,9 @@ public static class AgentDateParser
         {
             var y = int.Parse(m.Groups["y"].Value, CultureInfo.InvariantCulture);
             var mo = int.Parse(m.Groups["m"].Value, CultureInfo.InvariantCulture);
-            if (mo is < 1 or > 12)
-                throw McpToolErrors.ValidationError("Invalid month in date (use 1–12).");
+            ValidateMonth(mo, calendar);
             req = new DateRequest
             {
-                Calendar = 0,
                 Modifier = modifier,
                 Quality = 0,
                 Month = mo,
@@ -509,7 +631,6 @@ public static class AgentDateParser
 
     private static DateRequest YearDate(int modifier, int year) => new()
     {
-        Calendar = 0,
         Modifier = modifier,
         Quality = 0,
         Year = year
@@ -517,7 +638,6 @@ public static class AgentDateParser
 
     private static DateRequest SingleCalendarDate(int modifier, int day, int month, int year) => new()
     {
-        Calendar = 0,
         Modifier = modifier,
         Quality = 0,
         Day = day,
@@ -528,7 +648,6 @@ public static class AgentDateParser
 
     private static DateRequest CalendarSideDate(int modifier, CalendarSide side) => new()
     {
-        Calendar = 0,
         Modifier = modifier,
         Quality = 0,
         Day = side.Day,
@@ -541,7 +660,6 @@ public static class AgentDateParser
         CalendarSide end,
         DateIntervalPreference preference) => new()
     {
-        Calendar = 0,
         Modifier = preference == DateIntervalPreference.Range ? ModRange : ModSpan,
         Quality = 0,
         Day = start.Day,
@@ -552,13 +670,36 @@ public static class AgentDateParser
         EndYear = end.Year
     };
 
-    private static void ValidateDayMonth(int day, int month)
+    private static void ValidateDayMonth(int day, int month, int calendar)
     {
-        if (month is < 1 or > 12)
-            throw McpToolErrors.ValidationError("Invalid month in date (use 1–12).");
+        ValidateMonth(month, calendar);
+        ValidateDay(day);
+    }
+
+    private static void ValidateMonth(int month, int calendar)
+    {
+        var months = GrampsCalendars.MonthsInYear(calendar);
+        if (month < 1 || month > months)
+            throw McpToolErrors.ValidationError($"Invalid month in date (use 1–{months}).");
+    }
+
+    private static void ValidateDay(int day)
+    {
         if (day is < 1 or > 31)
             throw McpToolErrors.ValidationError("Invalid day in date.");
     }
 
-    private static int NormalizeYear(int y) => y < 100 ? (y >= 70 ? 1900 + y : 2000 + y) : y;
+    /// <summary>
+    /// Reads a two-digit Gregorian year as 1970–2069. French Republican years are short; other calendars need the
+    /// full year.
+    /// </summary>
+    private static int NormalizeYear(int y, int calendar, string raw)
+    {
+        if (y >= 100 || calendar == GrampsCalendars.FrenchRepublican)
+            return y;
+        if (calendar != GrampsCalendars.Gregorian)
+            throw McpToolErrors.ValidationError(
+                $"Date \"{raw}\" has a two-digit year. Write the full year in a {GrampsCalendars.Names[calendar]} date.");
+        return y >= 70 ? 1900 + y : 2000 + y;
+    }
 }

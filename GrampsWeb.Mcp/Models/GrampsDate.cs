@@ -4,7 +4,7 @@ using GrampsWeb.Mcp.Serialization;
 namespace GrampsWeb.Mcp.Models;
 
 /// <summary>
-/// Gramps Web API date (Gregorian segments + modifiers). Wire format uses <c>dateval</c>; this type exposes structured fields.
+/// Gramps Web API date (segments in its calendar + modifiers). Wire format uses <c>dateval</c>; this type exposes structured fields.
 /// </summary>
 [JsonConverter(typeof(GrampsDateJsonConverter))]
 public class GrampsDate
@@ -22,7 +22,7 @@ public class GrampsDate
 
     public int NewYear { get; set; }
 
-    /// <summary>Server sort key (Gramps serial day number for Gregorian). Included on <see cref="Requests.DateRequest"/> writes when computable.</summary>
+    /// <summary>Server sort key (Gramps serial day number). Included on <see cref="Requests.DateRequest"/> writes when computable.</summary>
     public int? SortVal { get; set; }
 
     // ── First date segment (JSON dateval[0..3]: day, month, year, slash) ──

@@ -29,6 +29,7 @@ public static class ToolDescriptionFragments
 
     public const string CallGetDateInputGuide =
         "Date format: use ISO dates (1990-03-15), year-only (1920), or modifiers (before 1920, about 1950). " +
+        "Add the calendar at the end for Old Style and other calendars: 1856-07-20 (Julian). " +
         "See gramps://input-guide resource or call get_reference(topic: \"input-guide\", section: \"dates\") for full syntax.";
 
     public const string CallGetNameSchema =

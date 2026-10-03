@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Enter dates in every Gramps calendar: date parameters take the calendar at
+  the end, as Gramps writes it, and for a year that started on 1 March, 25
+  March, or 1 September the new year too (`1856-07-20 (Julian)`, `between
+  1850 and 1860 (Julian)`, `1735-03-10 (Julian, Mar25)`, `1735-03-10
+  (Mar25)`). Gregorian, Julian, Hebrew, French Republican, Persian, Islamic,
+  and Swedish dates keep the day, month, and year as written and get the sort
+  value Gramps computes for them, so an Old Style date from a church book
+  sorts on the right day. Hebrew, French Republican, Persian, and Islamic
+  dates take numeric months; `get_reference(topic: "input-guide", section:
+  "dates")` lists the months of each calendar
+
+### Changed
+
+- Reject dates that don't exist in their calendar, as Gramps does, instead of
+  storing them: `1900-02-29` and `1856-02-30` in the Gregorian calendar (the
+  error suggests `(Julian)` when the date exists there), Adar II in a common
+  Hebrew year, and a range or span with a new year that starts on or after
+  the new year day, which Gramps can't store
+
+### Fixed
+
+- Send a sort value for a stored Julian or other non-Gregorian date that an
+  update tool writes back unchanged; it was left out. A stored dual-dated year
+  (`1735/6`) or a date with a new year such as Mar25 got a sort value computed
+  as a Gregorian date, and now gets the one Gramps computes
+
 ## [2.1.1] - 2026-10-02
 
 ### Fixed

@@ -352,8 +352,16 @@ events, citations, media, composites, place enclosure, and place alternate names
 - Open dashes (`1991-`, `-1722`, `5 Jul 1944-`): default **From/To** (7/8); with Range preference → After/Before (2/1)
 - `between A and B` → always range (4); `from A to B` → always span (5)
 - Unrecognized input → **validation error** (agents never create text-only modifier-6 dates). Existing tree text dates still format on read.
-- A calendar or new-year suffix as Gramps writes it (`1856-07-20 (Julian)`, `1735-03 (Mar25)`) → **validation error**:
-  only Gregorian dates with the year starting on 1 January can be entered
+- A calendar and new-year suffix at the end, as Gramps writes it: `1856-07-20 (Julian)`,
+  `between 1850 and 1860 (Julian)`, `1735-03-10 (Julian, Mar25)`, `1735-03-10 (Mar25)` (Gregorian).
+  All Gramps calendars are accepted (Gregorian, Julian, Hebrew, French Republican, Persian, Islamic,
+  Swedish), with new years Mar1, Mar25, and Sep1 for Gregorian, Julian, and Swedish dates. The numbers
+  are kept as written. Hebrew, French Republican, Persian, and Islamic dates take numeric months only
+  (Hebrew and French Republican have 13); French Republican years may have one or two digits.
+- A date that doesn't exist in its calendar → **validation error**: `1900-02-29` (the message suggests
+  `(Julian)`), `1856-02-30`, Adar II in a common Hebrew year. So is a range or span
+  with a new year that starts on or after the new year day, which Gramps can't store.
+  `GrampsDateSortVal.PassesGrampsDateCheck` ports the round trip in Gramps `Date.set`.
 
 `DateComponentOrder` enum controls ambiguous date parsing:
 - `Iso` — hyphenated ISO only for full dates (default)
@@ -370,7 +378,7 @@ default ISO format, so cards agree with the dates the server formats in
 profiles (timelines, `search`, trees): `1856-08-01`, `estimated about 1930-08`,
 `between 1850 and 1860`, a dual-dated year as `1735/6`, and a non-Gregorian
 calendar or new-year day as a suffix (`1856-07-20 (Julian)`). The parser takes
-this output back, except dual years, B.C.E. dates, and calendar suffixes.
+this output back, except dual years and B.C.E. dates.
 
 `EnglishMonthNames` is the abbreviated/full month table the parser accepts.
 
@@ -387,8 +395,12 @@ into `GrampsDate` model.
 
 ### Sort values
 
-`GrampsDateSortVal` computes integer sort keys from date components,
-used for chronological ordering in timelines.
+`GrampsDateSortVal` computes Gramps `sortval` (the serial day number) from date
+components, as Gramps `Date.set` does: it is sent with every date write and used
+for chronological ordering in timelines. `GrampsCalendars` ports the Gramps
+calendar conversions (`gramps.gen.lib.gcalendar`) to and from serial day numbers.
+A dual-dated year sorts as Julian, and a date on or after a March or September
+new year day sorts with the previous year, as in Gramps.
 
 ---
 

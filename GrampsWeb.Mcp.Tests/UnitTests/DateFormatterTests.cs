@@ -246,4 +246,32 @@ public class DateFormatterTests
             (date.Modifier, date.Quality, date.Calendar, date.Day, date.Month, date.Year, date.EndDay, date.EndMonth, date.EndYear),
             (parsed!.Modifier, parsed.Quality, parsed.Calendar, parsed.Day, parsed.Month, parsed.Year, parsed.EndDay, parsed.EndMonth, parsed.EndYear));
     }
+
+    [Theory]
+    [InlineData(1, 0, 0, 20, 7, 1856, 0)]
+    [InlineData(1, 2, 1, 10, 3, 1735, 0)]
+    [InlineData(0, 3, 0, 0, 8, 1930, 0)]
+    [InlineData(2, 0, 0, 0, 7, 5784, 0)]
+    [InlineData(3, 0, 0, 15, 3, 12, 0)]
+    [InlineData(3, 0, 5, 0, 0, 11, 12)]
+    [InlineData(4, 0, 3, 0, 0, 1300, 0)]
+    [InlineData(5, 0, 0, 15, 1, 1250, 0)]
+    [InlineData(6, 0, 0, 30, 2, 1712, 0)]
+    public void FormatDate_Output_With_A_Calendar_Parses_Back_To_The_Same_Date(
+        int calendar, int newYear, int modifier, int day, int month, int year, int endYear)
+    {
+        var date = new GrampsDate
+        {
+            Calendar = calendar, NewYear = newYear, Modifier = modifier, Day = day, Month = month, Year = year,
+            EndYear = endYear
+        };
+        var text = GrampsValueFormatter.FormatDate(date);
+
+        var parsed = AgentDateParser.ToDateRequestOrNull(text);
+
+        Assert.NotNull(parsed);
+        Assert.Equal(
+            (date.Calendar, date.NewYear, date.Modifier, date.Day, date.Month, date.Year, date.EndYear),
+            (parsed!.Calendar, parsed.NewYear, parsed.Modifier, parsed.Day, parsed.Month, parsed.Year, parsed.EndYear));
+    }
 }

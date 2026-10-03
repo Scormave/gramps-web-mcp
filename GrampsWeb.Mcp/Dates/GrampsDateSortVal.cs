@@ -8,45 +8,29 @@ namespace GrampsWeb.Mcp.Dates;
 /// Gramps normally recalculates this in Python; Gramps Web may persist JSON without recalc, leaving <c>sortval</c> at 0.
 /// </summary>
 /// <remarks>
-/// Matches <c>gramps.gen.lib.gcalendar.gregorian_sdn</c> for Gregorian calendar. Other calendars are not supported here.
+/// Matches Gramps <c>Date.set</c> for every Gramps calendar (<see cref="GrampsCalendars"/>): the date is converted from
+/// its calendar, a dual-dated year counts as Julian, and a date on or after the new year day of a year that starts
+/// in March or September sorts with the previous year.
 /// </remarks>
 internal static class GrampsDateSortVal
 {
+    private const int ModRange = 4;
+    private const int ModSpan = 5;
     private const int ModTextOnly = 6;
 
-    private const int GrgSdnOffset = 32045;
-    private const int GrgDaysPer5Months = 153;
-    private const int GrgDaysPer4Years = 1461;
-    private const int GrgDaysPer400Years = 146097;
-
     /// <summary>
-    /// Returns a sort value to send on the wire, or <c>null</c> to omit (let server handle text-only / non-Gregorian).
+    /// Returns a sort value to send on the wire, or <c>null</c> to omit (let server handle text-only / unknown calendars).
     /// </summary>
     public static int? TryComputeForDateRequest(DateRequest d)
     {
         if (d.Modifier == ModTextOnly)
             return null;
 
-        if (d.Calendar != 0)
-            return null;
-
-        var y = d.Year;
-        var m = d.Month;
-        var day = d.Day;
-
-        if (y == 0 && m == 0 && day == 0)
-            return null;
-
-        // Gramps Date._zero_adjust_ymd
-        y = y == 0 ? 1 : y;
-        m = m < 1 ? 1 : m;
-        day = day < 1 ? 1 : day;
-
-        return GregorianSdn(y, m, day);
+        return TryCompute(d.Calendar, d.NewYear, d.Slash, d.Year, d.Month, d.Day, out _);
     }
 
     /// <summary>
-    /// Sort key for timeline-style filtering: prefers wire <see cref="GrampsDate.SortVal"/>, else Gregorian first segment (calendar 0, not text-only).
+    /// Sort key for timeline-style filtering: prefers wire <see cref="GrampsDate.SortVal"/>, else computed from the first segment (not text-only).
     /// Returns <c>null</c> when no comparable key; <c>0</c> means undated in Gramps.
     /// </summary>
     internal static int? TryGetTimelineSortKey(GrampsDate? d)
@@ -55,22 +39,10 @@ internal static class GrampsDateSortVal
             return null;
         if (d.SortVal.HasValue)
             return d.SortVal.Value;
-        if (d.Calendar != 0)
-            return null;
         if (d.Modifier == ModTextOnly)
             return null;
 
-        var y = d.Year;
-        var m = d.Month;
-        var day = d.Day;
-        if (y == 0 && m == 0 && day == 0)
-            return null;
-
-        y = y == 0 ? 1 : y;
-        m = m < 1 ? 1 : m;
-        day = day < 1 ? 1 : day;
-
-        return GregorianSdn(y, m, day);
+        return TryCompute(d.Calendar, d.NewYear, d.Slash, d.Year, d.Month, d.Day, out _);
     }
 
     /// <summary>Gregorian serial day for a calendar date (after Gramps zero-adjust).</summary>
@@ -78,32 +50,79 @@ internal static class GrampsDateSortVal
     {
         if (year == 0 && month == 0 && day == 0)
             return null;
-        var y = year == 0 ? 1 : year;
-        var m = month < 1 ? 1 : month;
-        var d = day < 1 ? 1 : day;
-        return GregorianSdn(y, m, d);
+        return ZeroAdjustedSdn(GrampsCalendars.Gregorian, year, month, day);
     }
 
-    /// <summary>Port of <c>gregorian_sdn</c> from Gramps <c>gcalendar.py</c>.</summary>
-    private static int GregorianSdn(int year, int month, int day)
+    /// <summary>
+    /// Port of the round trip at the end of Gramps <c>Date.set</c>, which rejects dates that don't exist in their
+    /// calendar: the start date is converted back from its sort value, and the end of a range or span from its own
+    /// serial day. A month or day of 0 may come back as 1.
+    /// </summary>
+    /// <remarks>
+    /// Gramps adds a year to the end of a range or span when the start falls on or after the new year day, so it
+    /// rejects such dates with a March or September new year even when both dates exist.
+    /// </remarks>
+    internal static bool PassesGrampsDateCheck(DateRequest d)
     {
-        if (year < 0)
-            year += 4801;
-        else
-            year += 4800;
+        if (d.Modifier == ModTextOnly)
+            return true;
 
-        if (month > 2)
-            month -= 3;
-        else
+        var calendar = d.Slash ? GrampsCalendars.Julian : d.Calendar;
+        if (!GrampsCalendars.IsKnown(calendar))
+            return false;
+
+        var sortVal = TryCompute(calendar, d.NewYear, slash: false, d.Year, d.Month, d.Day, out var yearDelta) ?? 0;
+        var (year, month, day) = GrampsCalendars.FromSdn(calendar, sortVal);
+        if (!RoundTripMatches(year, month, day, d.Year, d.Month, d.Day, yearDelta))
+            return false;
+
+        if (d.Modifier is not (ModRange or ModSpan))
+            return true;
+
+        var endSdn = ZeroAdjustedSdn(calendar, d.EndYear, d.EndMonth, d.EndDay);
+        var (endYear, endMonth, endDay) = GrampsCalendars.FromSdn(calendar, endSdn);
+        return RoundTripMatches(endYear, endMonth, endDay, d.EndYear, d.EndMonth, d.EndDay, yearDelta);
+    }
+
+    /// <summary>
+    /// Gramps <c>Date._calc_sort_value</c> and <c>Date._adjust_newyear</c>; <paramref name="yearDelta"/> is -1 when the
+    /// new year moved the date into the previous year.
+    /// </summary>
+    private static int? TryCompute(int calendar, int newYear, bool slash, int year, int month, int day, out int yearDelta)
+    {
+        yearDelta = 0;
+        if (slash)
+            calendar = GrampsCalendars.Julian;
+        if (!GrampsCalendars.IsKnown(calendar))
+            return null;
+        if (year == 0 && month == 0 && day == 0)
+            return null;
+
+        // Gramps compares the stored month and day, so a month-only date in March isn't moved by a 1 March new year.
+        if (NewYearSplit(newYear) is { } split && (month, day).CompareTo(split) >= 0)
         {
-            month += 9;
+            yearDelta = -1;
             year -= 1;
         }
 
-        return ((year / 100) * GrgDaysPer400Years) / 4
-            + ((year % 100) * GrgDaysPer4Years) / 4
-            + (month * GrgDaysPer5Months + 2) / 5
-            + day
-            - GrgSdnOffset;
+        return ZeroAdjustedSdn(calendar, year, month, day);
     }
+
+    private static (int Month, int Day)? NewYearSplit(int newYear) => newYear switch
+    {
+        1 => (3, 1),
+        2 => (3, 25),
+        3 => (9, 1),
+        _ => null
+    };
+
+    /// <summary>Gramps <c>Date._zero_adjust_ymd</c> followed by the calendar conversion.</summary>
+    private static int ZeroAdjustedSdn(int calendar, int year, int month, int day) =>
+        GrampsCalendars.ToSdn(calendar, year == 0 ? 1 : year, Math.Max(month, 1), Math.Max(day, 1));
+
+    /// <summary>Gramps <c>Date.__compare</c> for one date of the round trip.</summary>
+    private static bool RoundTripMatches(int year, int month, int day, int originalYear, int originalMonth, int originalDay, int yearDelta) =>
+        Same(day, originalDay) && Same(month, originalMonth) && Same(year - yearDelta, originalYear);
+
+    private static bool Same(int adjusted, int original) => adjusted == original || (original == 0 && adjusted == 1);
 }

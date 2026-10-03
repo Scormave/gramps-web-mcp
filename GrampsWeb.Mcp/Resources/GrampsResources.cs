@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Serialization;
@@ -632,8 +633,54 @@ public sealed class GrampsResources
         examples_iso = new[] { "1990-03-15", "1990-03", "1920" },
         tool_output =
             "Tools show dates as Gramps Web does: ISO with modifiers and quality (1856-08-01, estimated about 1930-08, " +
-            "between 1850 and 1860). Pass them back as is. Dual years (1735/6), B.C.E. dates, and calendar suffixes " +
-            "(1856-07-20 (Julian)) can't be entered: only Gregorian dates are accepted.",
+            "between 1850 and 1860, 1856-07-20 (Julian)). Pass them back as is, calendar included. Dual years (1735/6) " +
+            "and B.C.E. dates can't be entered.",
+        calendars = new
+        {
+            usage =
+                "Add the calendar in parentheses once, at the end of the whole date: 1856-07-20 (Julian), " +
+                "between 1850 and 1860 (Julian), about 1700-03 (Swedish). Without it the date is Gregorian. The day, " +
+                "month, and year are stored as written; Gramps converts them only to sort and compare dates.",
+            names = GrampsCalendars.Names,
+            old_style =
+                "Enter a date from a record kept in the Julian calendar (Old Style), such as a Russian Orthodox church " +
+                "book before 1918, as written with (Julian) instead of converting it to the Gregorian calendar.",
+            new_year =
+                "For a year that started on 1 March, 25 March, or 1 September, add Mar1, Mar25, or Sep1 after the " +
+                "calendar, or alone for a Gregorian date: 1735-03-10 (Julian, Mar25), 1735-03-10 (Mar25). The year is " +
+                "stored as written; Gramps sorts dates from the new year day on with the previous year. Only " +
+                "Gregorian, Julian, and Swedish dates take a new year, and a range or span with one must start before " +
+                "the new year day.",
+            months = new
+            {
+                note =
+                    "Hebrew, French Republican, Persian, and Islamic dates take numeric months only: 5600-01-15 (Hebrew). " +
+                    "Gregorian, Julian, and Swedish dates also take English month names: 20 Jul 1856 (Julian).",
+                hebrew =
+                    "1 Tishri, 2 Heshvan, 3 Kislev, 4 Tevet, 5 Shevat, 6 AdarI (Adar in a common year), " +
+                    "7 AdarII (leap years only), 8 Nisan, 9 Iyyar, 10 Sivan, 11 Tammuz, 12 Av, 13 Elul",
+                french_republican =
+                    "1 Vendémiaire, 2 Brumaire, 3 Frimaire, 4 Nivôse, 5 Pluviôse, 6 Ventôse, 7 Germinal, 8 Floréal, " +
+                    "9 Prairial, 10 Messidor, 11 Thermidor, 12 Fructidor, 13 Extra (complementary days)",
+                persian =
+                    "1 Farvardin, 2 Ordibehesht, 3 Khordad, 4 Tir, 5 Mordad, 6 Shahrivar, 7 Mehr, 8 Aban, 9 Azar, " +
+                    "10 Dey, 11 Bahman, 12 Esfand",
+                islamic =
+                    "1 Muharram, 2 Safar, 3 Rabi`al-Awwal, 4 Rabi`ath-Thani, 5 Jumada l-Ula, 6 Jumada t-Tania, 7 Rajab, " +
+                    "8 Sha`ban, 9 Ramadan, 10 Shawwal, 11 Dhu l-Qa`da, 12 Dhu l-Hijja"
+            },
+            years =
+                "French Republican years are years of the Republic and may be short: 12-03-15 (French Republican) is " +
+                "15 Frimaire an XII. Other calendars need the full year in day-first or month-first dates.",
+            examples = new[]
+            {
+                "1856-07-20 (Julian)", "1735-03-10 (Julian, Mar25)", "5600-01-15 (Hebrew)",
+                "12-03-15 (French Republican)", "1300-01-15 (Persian)", "1250-09-01 (Islamic)", "1712-02-30 (Swedish)"
+            },
+            validation =
+                "A date that doesn't exist in its calendar fails validation: 1900-02-29 in the Gregorian calendar " +
+                "(1900-02-29 (Julian) exists), AdarII in a common Hebrew year, Esfand 30 outside a Persian leap year."
+        },
         english_months = new
         {
             forms = new[] { "1 Jul 1919", "5 July 1944", "1 July, 1919", "Jul 1919", "October 1929" },
