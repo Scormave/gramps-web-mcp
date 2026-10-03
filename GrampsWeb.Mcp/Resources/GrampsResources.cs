@@ -699,7 +699,13 @@ public sealed class GrampsResources
             prefixes = new[] { "before ", "after ", "about ", "circa " },
             example = "before 1 Apr 1920",
             qualities = new[] { "estimated ", "calculated " },
-            quality_example = "estimated about 1930-08"
+            quality_example = "estimated about 1930-08",
+            abbreviations =
+                "Gramps and GEDCOM abbreviations work in any case: bef., aft., abt., c., ca., around, est., calc., " +
+                "cal., and bet. 1850 and 1860.",
+            single_date =
+                "Before, after, and about take a single date, not a range, span, or open-ended date. For an " +
+                "uncertain range write estimated between 1850 and 1860."
         },
         year_ranges = new
         {
@@ -717,7 +723,10 @@ public sealed class GrampsResources
                 "1991- / from 1991 (From for places; After for events/citations/media dashes); -1722 / to 1722 (To vs Before)",
             open_ended_iso = "1924-01-26- or from 1924-01-26; -1914-08-31 or to 1914-08-31",
             open_ended_english = "5 Jul 1944- or from 5 Jul 1944; -1 Apr 1920 or to 1 Apr 1920",
-            explicit_from_to = "from DATE and to DATE always map to Gramps From/To modifiers"
+            explicit_from_to = "from DATE and to DATE always map to Gramps From/To modifiers",
+            order =
+                "Put the earlier date first: between 1860 and 1850 fails validation. Ends are compared to the " +
+                "precision both have, so between 1850-05 and 1850 is accepted."
         },
         tools = new
         {

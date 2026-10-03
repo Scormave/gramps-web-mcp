@@ -346,11 +346,19 @@ events, citations, media, composites, place enclosure, and place alternate names
 - Slash/dot triplets: `15/03/2024` (order controlled by `DateComponentOrder`; rejected under default `Iso`)
 - Modifiers: `about 1950`, `before 1 Apr 1920`, `after 2000`, `circa 1850`
 - Qualities before the date: `estimated 1850`, `calculated about 1930-08` → Gramps quality 1 / 2
+- Gramps and GEDCOM abbreviations, any case: `bef.`, `aft.`, `abt.`, `c.`, `ca.`, `around`, `est.`, `calc.`,
+  `cal.`, `bet. A and B`
 - Explicit open span: `from 1991`, `to 1917`, `from 5 Jul 1944` → Gramps From (7) / To (8)
 - Closed dashes (`1800-1850`, `1914-08-31-1924-01-26`, mixed `1703-1914-08-31`, English `1 Oct 1929-5 Jul 1944`):
   default **span** (5); events/citations/media pass **range** (4) via `DateIntervalPreference`
 - Open dashes (`1991-`, `-1722`, `5 Jul 1944-`): default **From/To** (7/8); with Range preference → After/Before (2/1)
 - `between A and B` → always range (4); `from A to B` → always span (5)
+- Before, after, or about in front of a range, span, open-ended date, or another modifier → **validation error**
+  (`about between 1850 and 1860`, `about 1850-`): Gramps keeps one modifier per date. A quality is fine:
+  `estimated between 1850 and 1860`.
+- A range or span that ends before it starts → **validation error** (`between 1860 and 1850`). The ends are
+  compared to the precision both have (`between 1850-05 and 1850` passes); with a new year, dates from the new
+  year day on open the written year.
 - Unrecognized input → **validation error** (agents never create text-only modifier-6 dates). Existing tree text dates still format on read.
 - A calendar and new-year suffix at the end, as Gramps writes it: `1856-07-20 (Julian)`,
   `between 1850 and 1860 (Julian)`, `1735-03-10 (Julian, Mar25)`, `1735-03-10 (Mar25)` (Gregorian).

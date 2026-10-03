@@ -604,4 +604,98 @@ public class AgentDateParserTests
         Assert.Equal(1914, d.Year);
         Assert.Equal(1924, d.EndYear);
     }
+
+    [Theory]
+    [InlineData("bef 1850", 0, 1)]
+    [InlineData("BEF. 1850", 0, 1)]
+    [InlineData("aft 1850", 0, 2)]
+    [InlineData("abt 1850", 0, 3)]
+    [InlineData("abt. 1850", 0, 3)]
+    [InlineData("c. 1850", 0, 3)]
+    [InlineData("ca. 1850", 0, 3)]
+    [InlineData("ca 1850", 0, 3)]
+    [InlineData("around 1850", 0, 3)]
+    [InlineData("est 1850", 1, 0)]
+    [InlineData("est. abt 1850", 1, 3)]
+    [InlineData("calc 1850", 2, 0)]
+    [InlineData("CAL 1850", 2, 0)]
+    [InlineData("cal. aft 1850", 2, 2)]
+    public void Gramps_And_Gedcom_Abbreviations_Set_Quality_And_Modifier(string input, int quality, int modifier)
+    {
+        var d = AgentDateParser.ToDateRequestOrNull(input);
+
+        Assert.NotNull(d);
+        Assert.Equal((quality, modifier, 1850), (d!.Quality, d.Modifier, d.Year));
+    }
+
+    [Theory]
+    [InlineData("bet 1850 and 1860")]
+    [InlineData("BET 1850 AND 1860")]
+    [InlineData("bet. 1850 and 1860")]
+    public void Between_Abbreviation_IsRange(string input)
+    {
+        var d = AgentDateParser.ToDateRequestOrNull(input);
+
+        Assert.NotNull(d);
+        Assert.Equal((4, 1850, 1860), (d!.Modifier, d.Year, d.EndYear));
+    }
+
+    [Theory]
+    [InlineData("about between 1850 and 1860", "about")]
+    [InlineData("before 1850-1860", "before")]
+    [InlineData("about from 1850 to 1860", "about")]
+    [InlineData("before from 1850", "before")]
+    [InlineData("after to 1860", "after")]
+    [InlineData("about 1850-", "about")]
+    [InlineData("abt -1860", "abt")]
+    [InlineData("about before 1850", "about")]
+    [InlineData("before 1850-03-01-1860-04-02", "before")]
+    [InlineData("estimated about between 1850 and 1860", "about")]
+    public void Modifier_Before_An_Interval_Or_Another_Modifier_ThrowsValidationError(string input, string prefix)
+    {
+        var ex = Assert.Throws<McpException>(() =>
+            AgentDateParser.ToDateRequestOrNull(input, DateComponentOrder.Iso, DateIntervalPreference.Range));
+
+        Assert.Contains($"puts \"{prefix}\" before a range", ex.Message);
+        Assert.Contains("Before, after, and about take a single date", ex.Message);
+    }
+
+    [Fact]
+    public void Quality_On_A_Range_Is_Accepted()
+    {
+        var d = AgentDateParser.ToDateRequestOrNull("estimated between 1850 and 1860");
+
+        Assert.NotNull(d);
+        Assert.Equal((1, 4, 1850, 1860), (d!.Quality, d.Modifier, d.Year, d.EndYear));
+    }
+
+    [Theory]
+    [InlineData("between 1860 and 1850")]
+    [InlineData("1860-1850")]
+    [InlineData("from 1860 to 1850")]
+    [InlineData("between 1850-05-01 and 1850-03-01")]
+    [InlineData("between 1850-05 and 1850-03-31")]
+    [InlineData("between 1735-01-10 and 1735-04-01 (Julian, Mar25)")]
+    public void Range_Or_Span_Ending_Before_It_Starts_ThrowsValidationError(string input)
+    {
+        var ex = Assert.Throws<McpException>(() => AgentDateParser.ToDateRequestOrNull(input));
+
+        Assert.Contains("ends before it starts", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("between 1850-05 and 1850")]
+    [InlineData("between 1850 and 1850-03")]
+    [InlineData("between 1850-03-15 and 1850-03")]
+    [InlineData("between 1850-03 and 1850-03-01")]
+    [InlineData("between 1850 and 1850")]
+    [InlineData("between 1735-01-10 and 1736-04-01 (Julian, Mar25)")]
+    [InlineData("from 1735-02-01 to 1735-02-28 (Mar1)")]
+    public void Range_Or_Span_In_Order_At_The_Shared_Precision_Is_Accepted(string input)
+    {
+        var d = AgentDateParser.ToDateRequestOrNull(input);
+
+        Assert.NotNull(d);
+        Assert.True(d!.Modifier is 4 or 5);
+    }
 }

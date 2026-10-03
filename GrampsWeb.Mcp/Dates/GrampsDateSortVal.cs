@@ -108,7 +108,8 @@ internal static class GrampsDateSortVal
         return ZeroAdjustedSdn(calendar, year, month, day);
     }
 
-    private static (int Month, int Day)? NewYearSplit(int newYear) => newYear switch
+    /// <summary>The month and day the year opens on for new year Mar1, Mar25, or Sep1; <c>null</c> for 1 January.</summary>
+    internal static (int Month, int Day)? NewYearSplit(int newYear) => newYear switch
     {
         1 => (3, 1),
         2 => (3, 25),

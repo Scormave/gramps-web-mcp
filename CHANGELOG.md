@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   sorts on the right day. Hebrew, French Republican, Persian, and Islamic
   dates take numeric months; `get_reference(topic: "input-guide", section:
   "dates")` lists the months of each calendar
+- Accept the date abbreviations Gramps and GEDCOM write, in any case:
+  `bef.`, `aft.`, `abt.`, `c.`, `ca.`, `around`, `est.`, `calc.`, `cal.`, and
+  `bet. 1850 and 1860`; they were rejected as unrecognized dates
 
 ### Changed
 
@@ -26,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   error suggests `(Julian)` when the date exists there), Adar II in a common
   Hebrew year, and a range or span with a new year that starts on or after
   the new year day, which Gramps can't store
+- Reject a range or span that ends before it starts (`between 1860 and 1850`,
+  `1860-1850`); it was stored and sorted by the later date. The ends are
+  compared to the precision both have, so `between 1850-05 and 1850` still
+  works
 
 ### Fixed
 
@@ -33,6 +40,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   update tool writes back unchanged; it was left out. A stored dual-dated year
   (`1735/6`) or a date with a new year such as Mar25 got a sort value computed
   as a Gregorian date, and now gets the one Gramps computes
+- Before, after, or about in front of a range, span, or open-ended date was
+  dropped silently: `about between 1850 and 1860` was stored as the bare
+  range, and `about 1850-` on an event as `after 1850`. It's now a validation
+  error that suggests `estimated between 1850 and 1860`
 
 ## [2.1.1] - 2026-10-02
 

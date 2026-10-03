@@ -15,6 +15,7 @@ public static class AgentDateParser
 {
     private const int ModBefore = 1;
     private const int ModAfter = 2;
+    private const int ModAbout = 3;
     private const int ModRange = 4;
     private const int ModSpan = 5;
     private const int ModFrom = 7;
@@ -51,7 +52,23 @@ public static class AgentDateParser
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex BetweenParts = new(
-        @"^between\s+(?<a>.+?)\s+and\s+(?<b>.+)$",
+        @"^(?:between|bet\.?)\s+(?<a>.+?)\s+and\s+(?<b>.+)$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// The quality before a date, as Gramps writes it or abbreviated as Gramps and GEDCOM do:
+    /// <c>estimated</c>, <c>est.</c>, <c>calculated</c>, <c>calc</c>, <c>CAL</c>.
+    /// </summary>
+    private static readonly Regex QualityPrefix = new(
+        @"^(?:(?<estimated>estimated|est\.?)|(?<calculated>calculated|calc\.?|cal\.?))\s+(?<rest>.+)$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Before, after, or about, as Gramps writes them or abbreviated as Gramps and GEDCOM do:
+    /// <c>bef.</c>, <c>AFT</c>, <c>abt</c>, <c>circa</c>, <c>c.</c>, <c>ca.</c>, <c>around</c>.
+    /// </summary>
+    private static readonly Regex ModifierPrefix = new(
+        @"^(?:(?<before>before|bef\.?)|(?<after>after|aft\.?)|(?<about>about|abt\.?|circa|c\.|ca\.?|around))\s+(?<rest>.+)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex FromToParts = new(
@@ -160,8 +177,35 @@ public static class AgentDateParser
         request.Calendar = calendar;
         request.NewYear = newYear;
         ValidateInCalendar(raw, dated, request);
+        if (request.Modifier is ModRange or ModSpan && EndsBeforeStart(request))
+            throw McpToolErrors.ValidationError(
+                $"Date \"{raw}\" ends before it starts. Put the earlier date first; Gramps sorts a range or span by " +
+                "its first date.");
         return request;
     }
+
+    /// <summary>
+    /// Compares the ends of a range or span to the precision both have, so <c>between 1850-05 and 1850</c> is in
+    /// order. With a new year, dates from the new year day on open the written year; months alone can't be placed
+    /// then, so only full dates compare beyond the year.
+    /// </summary>
+    private static bool EndsBeforeStart(DateRequest d)
+    {
+        if (d.Month == 0 || d.EndMonth == 0 || (d.NewYear != 0 && (d.Day == 0 || d.EndDay == 0)))
+            return d.EndYear < d.Year;
+        if (d.Day == 0 || d.EndDay == 0)
+            return (d.EndYear, d.EndMonth).CompareTo((d.Year, d.Month)) < 0;
+
+        var split = GrampsDateSortVal.NewYearSplit(d.NewYear);
+        var start = OrderInYear(d.Year, d.Month, d.Day, split);
+        var end = OrderInYear(d.EndYear, d.EndMonth, d.EndDay, split);
+        return end.CompareTo(start) < 0;
+    }
+
+    /// <summary>Orders a full date in its written year; dates on or after the new year day come first.</summary>
+    private static (int Year, int Part, int Month, int Day) OrderInYear(
+        int year, int month, int day, (int Month, int Day)? split) =>
+        (year, split is { } s && (month, day).CompareTo(s) >= 0 ? 0 : 1, month, day);
 
     /// <summary>
     /// Splits the trailing <c>(Julian)</c>, <c>(Julian, Mar25)</c>, or <c>(Mar25)</c> off a date, as the Gramps date
@@ -282,86 +326,17 @@ public static class AgentDateParser
         DateIntervalPreference intervalPreference,
         int calendar)
     {
-        var (working, modifier) = StripModifierPrefix(unqualified);
+        var (working, modifier, prefix) = StripModifierPrefix(unqualified);
 
-        var betweenMatch = BetweenParts.Match(working);
-        if (betweenMatch.Success
-            && TryParseSingleCalendarSide(betweenMatch.Groups["a"].Value.Trim(), calendar, out var betweenStart)
-            && TryParseSingleCalendarSide(betweenMatch.Groups["b"].Value.Trim(), calendar, out var betweenEnd))
+        if (TryParseInterval(working, intervalPreference, calendar, out var interval))
         {
-            return IntervalCalendar(betweenStart, betweenEnd, DateIntervalPreference.Range);
+            if (modifier != 0)
+                throw ModifierBeforeInterval(raw, prefix);
+            return interval;
         }
 
-        var fromToMatch = FromToParts.Match(working);
-        if (fromToMatch.Success
-            && TryParseSingleCalendarSide(fromToMatch.Groups["a"].Value.Trim(), calendar, out var spanStart)
-            && TryParseSingleCalendarSide(fromToMatch.Groups["b"].Value.Trim(), calendar, out var spanEnd))
-        {
-            return IntervalCalendar(spanStart, spanEnd, DateIntervalPreference.Span);
-        }
-
-        var fromOnly = FromOnly.Match(working);
-        if (fromOnly.Success
-            && TryParseSingleCalendarSide(fromOnly.Groups["a"].Value.Trim(), calendar, out var fromSide))
-        {
-            return CalendarSideDate(ModFrom, fromSide);
-        }
-
-        var toOnly = ToOnly.Match(working);
-        if (toOnly.Success
-            && TryParseSingleCalendarSide(toOnly.Groups["a"].Value.Trim(), calendar, out var toSide))
-        {
-            return CalendarSideDate(ModTo, toSide);
-        }
-
-        var isoFullRange = IsoFullDashRange.Match(working);
-        if (isoFullRange.Success)
-        {
-            var d1 = int.Parse(isoFullRange.Groups["d1"].Value, CultureInfo.InvariantCulture);
-            var m1 = int.Parse(isoFullRange.Groups["m1"].Value, CultureInfo.InvariantCulture);
-            var y1 = int.Parse(isoFullRange.Groups["y1"].Value, CultureInfo.InvariantCulture);
-            var d2 = int.Parse(isoFullRange.Groups["d2"].Value, CultureInfo.InvariantCulture);
-            var m2 = int.Parse(isoFullRange.Groups["m2"].Value, CultureInfo.InvariantCulture);
-            var y2 = int.Parse(isoFullRange.Groups["y2"].Value, CultureInfo.InvariantCulture);
-            ValidateDayMonth(d1, m1, calendar);
-            ValidateDayMonth(d2, m2, calendar);
-            return IntervalCalendar(
-                new CalendarSide(d1, m1, y1),
-                new CalendarSide(d2, m2, y2),
-                intervalPreference);
-        }
-
-        var isoMonthRange = IsoMonthDashRange.Match(working);
-        if (isoMonthRange.Success)
-        {
-            var m1 = int.Parse(isoMonthRange.Groups["m1"].Value, CultureInfo.InvariantCulture);
-            var y1 = int.Parse(isoMonthRange.Groups["y1"].Value, CultureInfo.InvariantCulture);
-            var m2 = int.Parse(isoMonthRange.Groups["m2"].Value, CultureInfo.InvariantCulture);
-            var y2 = int.Parse(isoMonthRange.Groups["y2"].Value, CultureInfo.InvariantCulture);
-            ValidateMonth(m1, calendar);
-            ValidateMonth(m2, calendar);
-            return IntervalCalendar(
-                new CalendarSide(0, m1, y1),
-                new CalendarSide(0, m2, y2),
-                intervalPreference);
-        }
-
-        var dash = YearDashYear.Match(working);
-        if (dash.Success)
-        {
-            var y1 = int.Parse(dash.Groups["a"].Value, CultureInfo.InvariantCulture);
-            var y2 = int.Parse(dash.Groups["b"].Value, CultureInfo.InvariantCulture);
-            return IntervalCalendar(
-                new CalendarSide(0, 0, y1),
-                new CalendarSide(0, 0, y2),
-                intervalPreference);
-        }
-
-        if (TryParseMixedPrecisionDash(working, intervalPreference, calendar, out var mixed))
-            return mixed;
-
-        if (TryParseOpenEnded(working, intervalPreference, calendar, out var openEnded))
-            return openEnded;
+        if (modifier != 0 && StripModifierPrefix(working).modifier != 0)
+            throw ModifierBeforeInterval(raw, prefix);
 
         if (TryParseIso(working, modifier, calendar, out var iso))
             return iso;
@@ -388,6 +363,112 @@ public static class AgentDateParser
         }
 
         throw McpToolErrors.ValidationError($"Unrecognized date \"{raw}\". {UnrecognizedDateGuidance}");
+    }
+
+    /// <summary>
+    /// Before, after, and about take a single date: Gramps keeps one modifier per date, so it has no
+    /// <c>about between</c>.
+    /// </summary>
+    private static Exception ModifierBeforeInterval(string raw, string prefix) =>
+        McpToolErrors.ValidationError(
+            $"Date \"{raw}\" puts \"{prefix}\" before a range, span, open-ended date, or another modifier. Before, " +
+            "after, and about take a single date: before 1850, about 1850-03. For an uncertain range write " +
+            "estimated between 1850 and 1860.");
+
+    /// <summary>
+    /// Ranges, spans, and open-ended dates: <c>between … and …</c>, <c>from … to …</c>, <c>from …</c>, <c>to …</c>,
+    /// and dashes, which follow <paramref name="intervalPreference"/>.
+    /// </summary>
+    private static bool TryParseInterval(
+        string working,
+        DateIntervalPreference intervalPreference,
+        int calendar,
+        [NotNullWhen(true)] out DateRequest? req)
+    {
+        req = null;
+
+        var betweenMatch = BetweenParts.Match(working);
+        if (betweenMatch.Success
+            && TryParseSingleCalendarSide(betweenMatch.Groups["a"].Value.Trim(), calendar, out var betweenStart)
+            && TryParseSingleCalendarSide(betweenMatch.Groups["b"].Value.Trim(), calendar, out var betweenEnd))
+        {
+            req = IntervalCalendar(betweenStart, betweenEnd, DateIntervalPreference.Range);
+            return true;
+        }
+
+        var fromToMatch = FromToParts.Match(working);
+        if (fromToMatch.Success
+            && TryParseSingleCalendarSide(fromToMatch.Groups["a"].Value.Trim(), calendar, out var spanStart)
+            && TryParseSingleCalendarSide(fromToMatch.Groups["b"].Value.Trim(), calendar, out var spanEnd))
+        {
+            req = IntervalCalendar(spanStart, spanEnd, DateIntervalPreference.Span);
+            return true;
+        }
+
+        var fromOnly = FromOnly.Match(working);
+        if (fromOnly.Success
+            && TryParseSingleCalendarSide(fromOnly.Groups["a"].Value.Trim(), calendar, out var fromSide))
+        {
+            req = CalendarSideDate(ModFrom, fromSide);
+            return true;
+        }
+
+        var toOnly = ToOnly.Match(working);
+        if (toOnly.Success
+            && TryParseSingleCalendarSide(toOnly.Groups["a"].Value.Trim(), calendar, out var toSide))
+        {
+            req = CalendarSideDate(ModTo, toSide);
+            return true;
+        }
+
+        var isoFullRange = IsoFullDashRange.Match(working);
+        if (isoFullRange.Success)
+        {
+            var d1 = int.Parse(isoFullRange.Groups["d1"].Value, CultureInfo.InvariantCulture);
+            var m1 = int.Parse(isoFullRange.Groups["m1"].Value, CultureInfo.InvariantCulture);
+            var y1 = int.Parse(isoFullRange.Groups["y1"].Value, CultureInfo.InvariantCulture);
+            var d2 = int.Parse(isoFullRange.Groups["d2"].Value, CultureInfo.InvariantCulture);
+            var m2 = int.Parse(isoFullRange.Groups["m2"].Value, CultureInfo.InvariantCulture);
+            var y2 = int.Parse(isoFullRange.Groups["y2"].Value, CultureInfo.InvariantCulture);
+            ValidateDayMonth(d1, m1, calendar);
+            ValidateDayMonth(d2, m2, calendar);
+            req = IntervalCalendar(
+                new CalendarSide(d1, m1, y1),
+                new CalendarSide(d2, m2, y2),
+                intervalPreference);
+            return true;
+        }
+
+        var isoMonthRange = IsoMonthDashRange.Match(working);
+        if (isoMonthRange.Success)
+        {
+            var m1 = int.Parse(isoMonthRange.Groups["m1"].Value, CultureInfo.InvariantCulture);
+            var y1 = int.Parse(isoMonthRange.Groups["y1"].Value, CultureInfo.InvariantCulture);
+            var m2 = int.Parse(isoMonthRange.Groups["m2"].Value, CultureInfo.InvariantCulture);
+            var y2 = int.Parse(isoMonthRange.Groups["y2"].Value, CultureInfo.InvariantCulture);
+            ValidateMonth(m1, calendar);
+            ValidateMonth(m2, calendar);
+            req = IntervalCalendar(
+                new CalendarSide(0, m1, y1),
+                new CalendarSide(0, m2, y2),
+                intervalPreference);
+            return true;
+        }
+
+        var dash = YearDashYear.Match(working);
+        if (dash.Success)
+        {
+            var y1 = int.Parse(dash.Groups["a"].Value, CultureInfo.InvariantCulture);
+            var y2 = int.Parse(dash.Groups["b"].Value, CultureInfo.InvariantCulture);
+            req = IntervalCalendar(
+                new CalendarSide(0, 0, y1),
+                new CalendarSide(0, 0, y2),
+                intervalPreference);
+            return true;
+        }
+
+        return TryParseMixedPrecisionDash(working, intervalPreference, calendar, out req)
+            || TryParseOpenEnded(working, intervalPreference, calendar, out req);
     }
 
     private static bool TryParseMixedPrecisionDash(
@@ -566,25 +647,20 @@ public static class AgentDateParser
     /// <summary>Strips the quality Gramps writes before a date: <c>estimated about 1930</c>.</summary>
     private static (string working, int quality) StripQualityPrefix(string raw)
     {
-        if (raw.StartsWith("estimated ", StringComparison.OrdinalIgnoreCase))
-            return (raw.Substring(10).Trim(), 1);
-        if (raw.StartsWith("calculated ", StringComparison.OrdinalIgnoreCase))
-            return (raw.Substring(11).Trim(), 2);
-        return (raw, 0);
+        var m = QualityPrefix.Match(raw);
+        if (!m.Success)
+            return (raw, 0);
+        return (m.Groups["rest"].Value.Trim(), m.Groups["estimated"].Success ? 1 : 2);
     }
 
-    private static (string working, int modifier) StripModifierPrefix(string raw)
+    private static (string working, int modifier, string prefix) StripModifierPrefix(string raw)
     {
-        var lower = raw;
-        if (lower.StartsWith("before ", StringComparison.OrdinalIgnoreCase))
-            return (raw.Substring(7).Trim(), ModBefore);
-        if (lower.StartsWith("after ", StringComparison.OrdinalIgnoreCase))
-            return (raw.Substring(6).Trim(), ModAfter);
-        if (lower.StartsWith("about ", StringComparison.OrdinalIgnoreCase))
-            return (raw.Substring(6).Trim(), 3);
-        if (lower.StartsWith("circa ", StringComparison.OrdinalIgnoreCase))
-            return (raw.Substring(6).Trim(), 3);
-        return (raw, 0);
+        var m = ModifierPrefix.Match(raw);
+        if (!m.Success)
+            return (raw, 0, "");
+
+        var modifier = m.Groups["before"].Success ? ModBefore : m.Groups["after"].Success ? ModAfter : ModAbout;
+        return (m.Groups["rest"].Value.Trim(), modifier, raw[..m.Groups["rest"].Index].Trim());
     }
 
     private static bool TryParseIso(string working, int modifier, int calendar, [NotNullWhen(true)] out DateRequest? req)
