@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-03
+
 ### Added
 
 - Enter dates in every Gramps calendar: date parameters take the calendar at
@@ -506,7 +508,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.0...v2.0.1

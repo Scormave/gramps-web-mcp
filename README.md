@@ -21,6 +21,8 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 - **Search and browse** — full-text search and paginated object listing
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
 - **Composite workflows** — quick-add person and add event to person
+- **Dates as Gramps writes them** — ranges, before/after/about, and every Gramps
+  calendar (`1856-07-20 (Julian)`), stored with the sort value Gramps computes
 - **6 MCP resources** — type vocabularies, input guide, tree metadata, name
   settings, and opt-in media previews/files for vision-capable agents
 - **Media safeguards** — size limits, private-record defaults, and previews with

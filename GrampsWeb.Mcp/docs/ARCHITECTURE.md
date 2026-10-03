@@ -407,6 +407,8 @@ Convert models into human-readable text for MCP tool responses.  Strategy:
 - `GrampsCalendars`: Gramps calendar conversions to and from serial day numbers
 - `GrampsDateSortVal`: computes Gramps `sortval` for every calendar and new year, and the date check from Gramps
   `Date.set`
+- `TimelineDateFilter`: turns the `get_timeline` `dates` filter into Gregorian `y/m/d` bounds for Gramps Web and the
+  same bounds as serial days for place timelines; approximate dates fail validation
 
 ## Error handling
 
