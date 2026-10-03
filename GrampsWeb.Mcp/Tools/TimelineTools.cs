@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Models;
 using ModelContextProtocol.Server;
@@ -30,7 +31,11 @@ public static class TimelineTools
         string[]? relatives = null,
         [Description("For person only: event categories for the listed relatives.")]
         string[]? relativeEvents = null,
-        [Description("Date range; e.g. 1999/1/1-2010/12/31. Leading zeros are normalized for the Gramps Web API.")]
+        [Description(
+            "Only events in these dates, written like any date: a year (1850), month (1850-03), day, or range " +
+            "(1850-1860, between 1850-03 and 1851). from and to include the date, before and after leave it out: " +
+            "from 1850, before 1900-05-01. Other calendars are converted: 1856-07-20 (Julian). " +
+            "The Gramps Web form 1850/1/1-1860/12/31 also works. Approximate dates (about, estimated) are rejected.")]
         string? dates = null,
         GrampsApiClient client = null!)
     {
@@ -46,11 +51,12 @@ public static class TimelineTools
                     "relatives and relativeEvents are supported only for objectType person.");
             }
 
+            var filter = TimelineDateFilter.Parse(dates);
             return normalizedType switch
             {
-                "person" => await GetPersonTimelineAsync(identifier, events, relatives, relativeEvents, dates, client),
-                "family" => await GetFamilyTimelineAsync(identifier, events, dates, client),
-                "place" => await GetPlaceTimelineAsync(identifier, events, dates, client),
+                "person" => await GetPersonTimelineAsync(identifier, events, relatives, relativeEvents, filter, client),
+                "family" => await GetFamilyTimelineAsync(identifier, events, filter, client),
+                "place" => await GetPlaceTimelineAsync(identifier, events, filter, client),
                 _ => throw new InvalidOperationException("Validated timeline object type was not dispatched.")
             };
         }
@@ -62,10 +68,10 @@ public static class TimelineTools
 
     private static async Task<string> GetPersonTimelineAsync(
         string identifier, string[]? events, string[]? relatives, string[]? relativeEvents,
-        string? dates, GrampsApiClient client)
+        TimelineDates? dates, GrampsApiClient client)
     {
         var handle = await HandleResolver.ResolveToHandleAsync(identifier, client, "people");
-        var query = BuildQueryString(events, relatives, relativeEvents, dates, includeUndated: true, personTimeline: true);
+        var query = BuildQueryString(events, relatives, relativeEvents, dates?.ApiDates, includeUndated: true, personTimeline: true);
         var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
             $"/api/people/{Uri.EscapeDataString(handle)}/timeline{query}");
         if (timeline is null)
@@ -86,10 +92,10 @@ public static class TimelineTools
     }
 
     private static async Task<string> GetFamilyTimelineAsync(
-        string identifier, string[]? events, string? dates, GrampsApiClient client)
+        string identifier, string[]? events, TimelineDates? dates, GrampsApiClient client)
     {
         var handle = await HandleResolver.ResolveToHandleAsync(identifier, client, "families");
-        var query = BuildQueryString(events, null, null, dates, includeUndated: true);
+        var query = BuildQueryString(events, null, null, dates?.ApiDates, includeUndated: true);
         var timeline = await client.GetOrNullIfNotFoundAsync<GrampsTimelineEntry[]>(
             $"/api/families/{Uri.EscapeDataString(handle)}/timeline{query}");
         if (timeline is null)
@@ -100,7 +106,7 @@ public static class TimelineTools
     }
 
     private static async Task<string> GetPlaceTimelineAsync(
-        string identifier, string[]? events, string? dates, GrampsApiClient client)
+        string identifier, string[]? events, TimelineDates? dates, GrampsApiClient client)
     {
         var handle = await HandleResolver.ResolveToHandleAsync(identifier, client, "places");
         // Same route as the backlinks read in CollectAsync, so the read scope serves both from one request.
@@ -109,8 +115,7 @@ public static class TimelineTools
         if (place is null)
             return NotFoundHelper.NotFoundMessage("Place", identifier);
 
-        var datesNormalized = NormalizeDatesForGrampsApi(dates);
-        var outcome = await PlaceTimelineFallback.CollectAsync(client, handle, events, datesNormalized, true);
+        var outcome = await PlaceTimelineFallback.CollectAsync(client, handle, events, dates?.Range, true);
         if (outcome.MatchedPlaceCount == 0)
         {
             return $"No events linked directly to place {identifier}. " +
@@ -130,14 +135,15 @@ public static class TimelineTools
             outcome.Entries, $"Place: {GrampsValueFormatter.FormatPlace(place)}{id}");
     }
 
+    /// <param name="apiDates">Bounds as Gramps Web takes them, from <see cref="TimelineDateFilter"/>.</param>
     /// <param name="personTimeline">
-    /// Without <paramref name="dates"/>, keep relatives' events outside the person's first and last event.
+    /// Without <paramref name="apiDates"/>, keep relatives' events outside the person's first and last event.
     /// Gramps Web otherwise drops them with Gramps' fuzzy date matching, where an "about 1876" birth spans
     /// 1826 to 1926: every relative's event before 1926 was left out, the person's own marriage too.
     /// </param>
     internal static string BuildQueryString(
         string[]? events, string[]? relatives, string[]? relativeEvents,
-        string? dates, bool includeUndated = true, bool personTimeline = false)
+        string? apiDates, bool includeUndated = true, bool personTimeline = false)
     {
         var queryParams = new List<string>();
         if (events?.Length > 0)
@@ -146,10 +152,9 @@ public static class TimelineTools
             queryParams.Add($"relatives={Uri.EscapeDataString(string.Join(",", relatives))}");
         if (relativeEvents?.Length > 0)
             queryParams.Add($"relative_event_classes={Uri.EscapeDataString(string.Join(",", relativeEvents))}");
-        var normalizedDates = NormalizeDatesForGrampsApi(dates);
-        if (!string.IsNullOrEmpty(normalizedDates))
+        if (!string.IsNullOrEmpty(apiDates))
         {
-            queryParams.Add($"dates={Uri.EscapeDataString(normalizedDates)}");
+            queryParams.Add($"dates={Uri.EscapeDataString(apiDates)}");
         }
         else if (personTimeline)
         {
@@ -160,36 +165,5 @@ public static class TimelineTools
         if (includeUndated)
             queryParams.Add("discard_empty=false");
         return queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-    }
-
-    internal static string? NormalizeDatesForGrampsApi(string? dates)
-    {
-        if (string.IsNullOrWhiteSpace(dates))
-            return dates;
-
-        var value = dates.Trim();
-        if (value.StartsWith("-", StringComparison.Ordinal))
-            return "-" + NormalizeYmdSegment(value[1..]);
-        if (value.EndsWith("-", StringComparison.Ordinal) && !value[..^1].Contains('-', StringComparison.Ordinal))
-            return NormalizeYmdSegment(value[..^1]) + "-";
-
-        var dash = value.IndexOf('-', StringComparison.Ordinal);
-        if (dash > 0 && dash < value.Length - 1)
-            return $"{NormalizeYmdSegment(value[..dash])}-{NormalizeYmdSegment(value[(dash + 1)..])}";
-
-        return NormalizeYmdSegment(value);
-    }
-
-    private static string NormalizeYmdSegment(string segment)
-    {
-        var parts = segment.Split('/');
-        if (parts.Length != 3 || parts.Any(part => part.Contains('*', StringComparison.Ordinal)))
-            return segment;
-
-        return int.TryParse(parts[0], out var year)
-               && int.TryParse(parts[1], out var month)
-               && int.TryParse(parts[2], out var day)
-            ? $"{year}/{month}/{day}"
-            : segment;
     }
 }

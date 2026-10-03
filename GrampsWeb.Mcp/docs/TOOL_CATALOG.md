@@ -200,7 +200,13 @@ event's participants with their roles; child places are not included.
 | `events` | `string[]?` | no | all | Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom |
 | `relatives` | `string[]?` | no | none | Person only: father, mother, brother, sister, wife, husband, son, daughter |
 | `relativeEvents` | `string[]?` | no | none | Person only: event categories for relatives |
-| `dates` | `string?` | no | — | `Y/M/D-Y/M/D` range, `-Y/M/D` (up to), `Y/M/D-` (from), or a single `Y/M/D`; leading zeros are normalized |
+| `dates` | `string?` | no | — | Any date the date parser takes: a year (`1850`), month (`1850-03`), day, range (`1850-1860`, `between 1850-03 and 1851`), `from`/`to` (inclusive), or `before`/`after` (exclusive), in any Gramps calendar; Gramps Web's `1850/1/1-1860/12/31` also works |
+
+A year or month in `dates` covers all its days, so `1850-1860` runs from
+1 January 1850 to 31 December 1860. MCP converts the bounds to the Gregorian
+`y/m/d` form Gramps Web takes, so `1856-07-20 (Julian)` asks for 1856/8/1.
+Approximate dates (`about`, `estimated`, `calculated`) are rejected, since a
+filter needs exact bounds, and so is a new year on a year or month alone.
 
 Without `dates`, undated events are included and listed after the dated ones.
 A place timeline with `dates` leaves out undated events.
@@ -328,7 +334,8 @@ Link to persons/families via their create/update tools' `eventRefs`.
 ### U — `UpdateEvent`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update an existing event (same field set, all optional).
+Update an existing event (same field set, all optional). Omit `date` to keep
+the current date; an empty string removes it.
 
 ---
 
@@ -402,7 +409,8 @@ Attach to persons/events/places via their `citationHandles`.
 ### U — `UpdateCitation`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a citation (same field set, all optional).
+Update a citation (same field set, all optional). Omit `date` to keep the
+current date; an empty string removes it.
 
 ---
 
@@ -465,7 +473,7 @@ Update media metadata (no binary upload).
 |-----------|------|----------|---------|-------------|
 | `handle` | `string` | yes | — | Media handle |
 | `description` | `string?` | no | — | Description |
-| `date` | `string?` | no | — | Date text |
+| `date` | `string?` | no | — | Date text; omit to keep the current date, an empty string removes it |
 | `noteHandles`, `tagHandles`, `citationHandles` | `FlexibleHandleList?` | no | — | Linked handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
 | `isPrivate` | `bool?` | no | — | Private flag |

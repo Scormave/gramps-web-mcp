@@ -45,13 +45,10 @@ internal static class GrampsDateSortVal
         return TryCompute(d.Calendar, d.NewYear, d.Slash, d.Year, d.Month, d.Day, out _);
     }
 
-    /// <summary>Gregorian serial day for a calendar date (after Gramps zero-adjust).</summary>
-    internal static int? TryGregorianSdnYmd(int year, int month, int day)
-    {
-        if (year == 0 && month == 0 && day == 0)
-            return null;
-        return ZeroAdjustedSdn(GrampsCalendars.Gregorian, year, month, day);
-    }
+    /// <summary>The sort value of a full date in a known calendar, moved into the previous year as its new year says.</summary>
+    internal static int SortValueOf(int calendar, int newYear, int year, int month, int day) =>
+        TryCompute(calendar, newYear, slash: false, year, month, day, out _)
+        ?? throw new ArgumentOutOfRangeException(nameof(calendar), calendar, "Unknown Gramps calendar.");
 
     /// <summary>
     /// Port of the round trip at the end of Gramps <c>Date.set</c>, which rejects dates that don't exist in their

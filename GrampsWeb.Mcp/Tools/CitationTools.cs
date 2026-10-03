@@ -119,7 +119,7 @@ public static class CitationTools
         FlexibleString? page = null,
         [Description("Confidence: Very Low, Low, Normal, High, Very High. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? confidence = null,
-        [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
+        [Description("Date text. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
         [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,

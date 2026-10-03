@@ -1,3 +1,4 @@
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Tools;
 using Xunit;
@@ -28,20 +29,9 @@ public class PlaceTimelineFiltersTests
     }
 
     [Fact]
-    public void TryParseDateRange_Closed_BothBounds()
-    {
-        var r = PlaceTimelineFilters.TryParseDateRange("1999/1/1-2010/12/31");
-        Assert.NotNull(r);
-        Assert.NotNull(r.Value.MinInclusive);
-        Assert.NotNull(r.Value.MaxInclusive);
-        Assert.True(r.Value.MinInclusive <= r.Value.MaxInclusive);
-    }
-
-    [Fact]
     public void Passes_DateRange_ExcludesOutside()
     {
-        var range = PlaceTimelineFilters.TryParseDateRange("2000/1/1-2000/12/31");
-        Assert.NotNull(range);
+        var range = TimelineDateFilter.Parse("2000")!.Range;
         var opts = new PlaceTimelineCollectOptions(null, true);
         var inRange = new GrampsEvent
         {

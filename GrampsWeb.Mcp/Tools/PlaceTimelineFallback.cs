@@ -1,5 +1,6 @@
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Models;
 
@@ -16,7 +17,7 @@ internal static class PlaceTimelineFallback
         GrampsApiClient client,
         string placeHandle,
         string[]? eventClasses,
-        string? datesNormalized,
+        TimelineSdnRange? range,
         bool includeUndated)
     {
         var raw = await client.GetJsonOrNullIfNotFoundAsync(
@@ -32,7 +33,6 @@ internal static class PlaceTimelineFallback
         if (eventHandles.Count == 0)
             return new PlaceTimelineCollectOutcome([], 0);
 
-        var range = PlaceTimelineFilters.TryParseDateRange(datesNormalized);
         var options = new PlaceTimelineCollectOptions(eventClasses, includeUndated);
 
         // The participants profile names the people and families in the same response.

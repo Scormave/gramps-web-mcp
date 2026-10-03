@@ -76,52 +76,6 @@ internal static class PlaceTimelineFilters
         return true;
     }
 
-    internal static TimelineSdnRange? TryParseDateRange(string? normalizedDates)
-    {
-        if (string.IsNullOrWhiteSpace(normalizedDates))
-            return null;
-
-        var s = normalizedDates.Trim();
-
-        if (s.StartsWith("-", StringComparison.Ordinal) && s.Length > 1)
-        {
-            var end = TryParseYmdToSdn(s[1..]);
-            return end.HasValue ? new TimelineSdnRange(null, end.Value) : null;
-        }
-
-        if (s.EndsWith("-", StringComparison.Ordinal) && s.Length > 1
-            && !s[..^1].Contains("-", StringComparison.Ordinal))
-        {
-            var start = TryParseYmdToSdn(s[..^1]);
-            return start.HasValue ? new TimelineSdnRange(start.Value, null) : null;
-        }
-
-        var dash = s.IndexOf("-", StringComparison.Ordinal);
-        if (dash > 0 && dash < s.Length - 1)
-        {
-            var start = TryParseYmdToSdn(s[..dash]);
-            var end = TryParseYmdToSdn(s[(dash + 1)..]);
-            if (start.HasValue && end.HasValue)
-                return new TimelineSdnRange(start.Value, end.Value);
-            return null;
-        }
-
-        var single = TryParseYmdToSdn(s);
-        return single.HasValue ? new TimelineSdnRange(single.Value, single.Value) : null;
-    }
-
-    private static int? TryParseYmdToSdn(string segment)
-    {
-        var parts = segment.Split('/');
-        if (parts.Length != 3)
-            return null;
-        if (!int.TryParse(parts[0], out var y)
-            || !int.TryParse(parts[1], out var m)
-            || !int.TryParse(parts[2], out var d))
-            return null;
-        return GrampsDateSortVal.TryGregorianSdnYmd(y, m, d);
-    }
-
     internal static bool MatchesEventClasses(string? eventType, string[]? requestedClasses)
     {
         if (requestedClasses == null || requestedClasses.Length == 0)
@@ -162,19 +116,3 @@ internal readonly record struct PlaceTimelineCollectOptions(
 internal readonly record struct PlaceTimelineCollectOutcome(
     GrampsTimelineEntry[] Entries,
     int MatchedPlaceCount);
-
-/// <summary>Inclusive SDN range; null bound means open.</summary>
-internal readonly struct TimelineSdnRange(int? MinInclusive, int? MaxInclusive)
-{
-    public int? MinInclusive { get; } = MinInclusive;
-    public int? MaxInclusive { get; } = MaxInclusive;
-
-    public bool Contains(int sortKey)
-    {
-        if (MinInclusive is { } lo && sortKey < lo)
-            return false;
-        if (MaxInclusive is { } hi && sortKey > hi)
-            return false;
-        return true;
-    }
-}

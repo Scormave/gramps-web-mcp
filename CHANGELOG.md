@@ -44,6 +44,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   dropped silently: `about between 1850 and 1860` was stored as the bare
   range, and `about 1850-` on an event as `after 1850`. It's now a validation
   error that suggests `estimated between 1850 and 1860`
+- `get_timeline` `dates` took only the Gramps Web form `1850/1/1-1860/12/31`:
+  an ISO date, a year range, a single day, or a Julian date got a 422 from
+  Gramps Web for person and family timelines. It now takes dates as the other
+  date parameters do (`1850-1860`, `between 1850-03 and 1851`, `from 1850`,
+  `before 1900-05-01`, `1856-07-20 (Julian)`): a year or month covers all its
+  days, from and to include the date, before and after leave it out, and
+  other calendars are converted to Gregorian. Approximate dates are rejected,
+  since a filter needs exact bounds
+- Say in the `update_event`, `update_media`, and `update_citation` date
+  descriptions that an empty string removes the date; `update_event` said it
+  "may clear per parser rules", the others didn't say
 
 ## [2.1.1] - 2026-10-02
 

@@ -410,6 +410,18 @@ calendar conversions (`gramps.gen.lib.gcalendar`) to and from serial day numbers
 A dual-dated year sorts as Julian, and a date on or after a March or September
 new year day sorts with the previous year, as in Gramps.
 
+### Timeline filter
+
+`TimelineDateFilter` turns the `get_timeline` `dates` parameter into the
+Gregorian `y/m/d-y/m/d`, `y/m/d-`, or `-y/m/d` bounds Gramps Web takes, and the
+same bounds as serial days for place timelines, which MCP filters itself. It
+parses with `AgentDateParser` and the Span preference: a year or month covers
+all its days, from and to include the date, before and after leave it out, and
+a date in another calendar is converted to Gregorian. The Gramps Web `y/m/d`
+form is rewritten as ISO first, so older calls keep working. Approximate dates
+and a new year on a year or month alone are rejected, since the bounds must be
+exact.
+
 ---
 
 ## Extended entity enrichment

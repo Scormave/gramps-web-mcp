@@ -190,7 +190,7 @@ public static class EventTools
         string handle,
         [Description("Event type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? eventType = null,
-        [Description("Event date text. Omit to keep current. Empty string may clear per parser rules. " + ToolDescriptionFragments.CallGetDateInputGuide)]
+        [Description("Event date text. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
         [Description("Place handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,

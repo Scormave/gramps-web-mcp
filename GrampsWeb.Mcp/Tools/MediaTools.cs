@@ -102,7 +102,7 @@ public static class MediaTools
         string handle,
         [Description("Description. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? description = null,
-        [Description("Date text. Omit to keep. " + ToolDescriptionFragments.CallGetDateInputGuide)]
+        [Description("Date text. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.CallGetDateInputGuide)]
         string? date = null,
         [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,

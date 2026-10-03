@@ -29,14 +29,6 @@ public class TimelineQueryStringTests
     }
 
     [Fact]
-    public void BuildTimelineQueryString_NormalizesPaddedDatesForApiRegex()
-    {
-        var qs = TimelineTools.BuildQueryString(
-            null, null, null, "1999/01/01-2010/01/01");
-        Assert.Equal("?dates=1999%2F1%2F1-2010%2F1%2F1&discard_empty=false", qs);
-    }
-
-    [Fact]
     public void BuildTimelineQueryString_Default_SendsDiscardEmptyFalse()
     {
         var qs = TimelineTools.BuildQueryString(null, null, null, null);
@@ -60,6 +52,8 @@ public class TimelineQueryStringTests
     [Theory]
     [InlineData("person", null, "/api/people/anchor-h/timeline?first=false&last=false&discard_empty=false")]
     [InlineData("person", "1850/01/01-1900/12/31", "/api/people/anchor-h/timeline?dates=1850%2F1%2F1-1900%2F12%2F31&discard_empty=false")]
+    [InlineData("person", "1850-1900", "/api/people/anchor-h/timeline?dates=1850%2F1%2F1-1900%2F12%2F31&discard_empty=false")]
+    [InlineData("family", "before 1900 (Julian)", "/api/families/anchor-h/timeline?dates=-1900%2F1%2F12&discard_empty=false")]
     [InlineData("family", null, "/api/families/anchor-h/timeline?discard_empty=false")]
     public async Task GetTimeline_Cuts_A_Person_Timeline_Only_To_The_Given_Dates(string objectType, string? dates, string request)
     {
@@ -89,17 +83,15 @@ public class TimelineQueryStringTests
     }
 
     [Fact]
-    public void NormalizeTimelineDatesForGrampsApi_OpenEndedEnd_StripsZeros()
+    public async Task GetTimeline_RejectsDatesItCantBound_BeforeAnyRequest()
     {
-        var n = TimelineTools.NormalizeDatesForGrampsApi("2000/03/05-");
-        Assert.Equal("2000/3/5-", n);
-    }
+        var handler = new RecordingHandler();
 
-    [Fact]
-    public void NormalizeTimelineDatesForGrampsApi_OpenEndedStart_StripsZeros()
-    {
-        var n = TimelineTools.NormalizeDatesForGrampsApi("-2000/03/05");
-        Assert.Equal("-2000/3/5", n);
+        var error = await Assert.ThrowsAsync<McpException>(
+            () => TimelineTools.GetTimeline("person", "anchor-h", dates: "about 1850", client: CreateClient(handler)));
+
+        Assert.Contains("approximate", error.Message);
+        Assert.Empty(handler.Requests);
     }
 
     [Fact]
