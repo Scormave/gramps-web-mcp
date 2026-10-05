@@ -58,12 +58,12 @@ gramps-web-mcp.sln
 | .NET SDK / Runtime | 10.0 |
 | `ModelContextProtocol` | 1.3.0 |
 | `ModelContextProtocol.AspNetCore` | 1.3.0 |
-| `Microsoft.Extensions.Hosting` | 10.0.5 |
-| `Microsoft.Extensions.Http` | 10.0.5 |
+| `Microsoft.Extensions.Hosting` | 10.0.12 |
+| `Microsoft.Extensions.Http` | 10.0.12 |
 | `SixLabors.ImageSharp` | 3.1.12 (media thumbnails; Six Labors Split License, Apache 2.0 terms for open-source use) |
 
 Test-only: xUnit 2.7, Moq 4.20, YamlDotNet 16.3 (for OpenAPI spec parsing),
-Microsoft.AspNetCore.TestHost 10.0.5 (in-process MCP server tests).
+Microsoft.AspNetCore.TestHost 10.0.12 (in-process MCP server tests).
 
 [`THIRD-PARTY-NOTICES.txt`](../../THIRD-PARTY-NOTICES.txt) lists every package the
 server restores, including transitive ones, with its license.

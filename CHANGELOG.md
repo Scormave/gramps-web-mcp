@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-10-05
+
 ### Added
 
 - `create_place` and `update_place` take `nameDate`, the date of the primary
@@ -37,6 +39,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   notes and tags, and the type Gramps stores when `repoType` is omitted;
   describe in `get_bookmarks` what it lists and when to use `search`,
   `list_objects`, or `get_recent_changes` instead
+- Update `Microsoft.Extensions.Hosting` and `Microsoft.Extensions.Http` to
+  10.0.12
 
 ### Removed
 
@@ -66,10 +70,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   trimmed, and one sent with its own double quotes (`"\"52.19\""`) is stored
   without them
 - Every text parameter accepts a JSON number as its text, so a year-only date
-  sent as `1877` (`date`, `nameDate`, `dates`, …) works; it was
-  rejected with "Argument date must be a string". A number given as the
-  `date` of an `alternateNames` or `enclosedBy` entry was silently dropped and
-  is now read as a year
+  sent as `1877` (`date`, `nameDate`, `dates`, …) works; it was rejected
+  with "Argument date must be a string". A number given as the `date` of an
+  `alternateNames` or `enclosedBy` entry was silently dropped and is now
+  read as a year
 - `create_place` and `create_repository` report the new record's name; the
   result showed its type (`name: "Hamlet"`, `name: "Archive"`) though the
   stored name was right
@@ -585,7 +589,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.0.1...v2.1.0

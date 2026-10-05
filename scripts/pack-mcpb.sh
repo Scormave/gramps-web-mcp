@@ -6,9 +6,9 @@
 #
 # Examples:
 #   ./scripts/pack-mcpb.sh osx-arm64
-#   ./scripts/pack-mcpb.sh win-x64 2.2.0
+#   ./scripts/pack-mcpb.sh win-x64 2.3.0
 #   ./scripts/pack-mcpb.sh linux-x64
-#   ./scripts/pack-mcpb.sh linux-arm64 2.2.0
+#   ./scripts/pack-mcpb.sh linux-arm64 2.3.0
 #
 # Requires: .NET 10 SDK. Optional: npm global @anthropic-ai/mcpb for validate/pack.
 
