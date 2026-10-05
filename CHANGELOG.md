@@ -29,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `create_place` and `create_repository` report the new record's name; the
   result showed its type (`name: "Hamlet"`, `name: "Archive"`) though the
   stored name was right
+- An `update_*` call with no field to change is refused with the tool's
+  parameter list. Clients such as Claude Code drop arguments a tool does not
+  have, so `update_event(place: …)` reached the server as an update of nothing,
+  answered "updated" and saved the event unchanged
 
 ## [2.2.0] - 2026-10-03
 

@@ -9,6 +9,7 @@ namespace GrampsWeb.Mcp.Hosting;
 /// argument or a value it cannot convert with a bare "An error occurred invoking", and ignores
 /// unknown names, so a misspelled optional argument would silently do nothing. The SDK also rejects
 /// a JSON number for a string parameter, which clients send for a year-only date such as 1877.
+/// An update with nothing to change is refused, as it usually means a misspelled argument.
 /// </summary>
 internal static class ToolArgumentValidator
 {
@@ -35,6 +36,20 @@ internal static class ToolArgumentValidator
             problems.Add($"Missing required argument{(missing.Count > 1 ? "s" : "")}: {string.Join(", ", missing)}.");
         problems.Add(DescribeParameters(schema, properties));
         return string.Join(" ", problems);
+    }
+
+    /// <summary>
+    /// An error for an update_* call that gives no field to change besides handle and linkMode;
+    /// null otherwise. Clients such as Claude Code drop arguments the schema does not list, so
+    /// update_event(place: …) arrives as update_event(handle) and would save the record unchanged.
+    /// </summary>
+    public static string? CheckSomethingToUpdate(string toolName, JsonElement schema, IDictionary<string, JsonElement>? arguments)
+    {
+        if (!toolName.StartsWith("update_", StringComparison.Ordinal)
+            || arguments?.Any(a => a.Key is not ("handle" or "linkMode") && a.Value.ValueKind != JsonValueKind.Null) == true)
+            return null;
+        return "Nothing to update: the call gives no field to change. If you passed one, check its name; " +
+               "clients drop arguments a tool does not have. " + DescribeParameters(schema, Properties(schema));
     }
 
     /// <summary>

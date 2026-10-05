@@ -92,6 +92,26 @@ public class ToolArgumentValidatorTests
         Assert.Null(ToolArgumentValidator.FindTypeMismatch(Schema, arguments));
     }
 
+    [Theory]
+    [InlineData("""{"handle":"E0001"}""")]
+    [InlineData("""{"handle":"E0001","linkMode":"add","objectType":null}""")]
+    public void CheckSomethingToUpdate_Refuses_An_Update_Without_A_Field(string arguments)
+    {
+        Assert.Equal(
+            "Nothing to update: the call gives no field to change. If you passed one, check its name; " +
+            $"clients drop arguments a tool does not have. {Parameters}",
+            ToolArgumentValidator.CheckSomethingToUpdate("update_event", Schema, Args(arguments)));
+    }
+
+    [Theory]
+    [InlineData("update_event", """{"handle":"E0001","extended":false}""")]
+    [InlineData("update_event", """{"handle":"E0001","objectType":""}""")]
+    [InlineData("get_object", """{"identifier":"E0001"}""")]
+    public void CheckSomethingToUpdate_Accepts_A_Field_Or_Another_Tool(string tool, string arguments)
+    {
+        Assert.Null(ToolArgumentValidator.CheckSomethingToUpdate(tool, Schema, Args(arguments)));
+    }
+
     [Fact]
     public void NumbersAsText_Turns_Numbers_For_String_Parameters_Into_Text()
     {

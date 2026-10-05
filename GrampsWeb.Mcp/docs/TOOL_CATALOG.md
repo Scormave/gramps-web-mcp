@@ -84,7 +84,11 @@ input schema. An unknown argument (with a suggestion for a close match, such as
 `extend` for `extended`), a missing required argument, or a value the server
 cannot convert to the parameter's type returns a tool error that names the
 argument and lists the tool's parameters, their types, and which are required.
-Numbers sent as strings are accepted.
+Numbers sent as strings are accepted, and a JSON number sent for a text
+parameter is read as its text. An `update_*` call that gives no field to change
+besides `handle` and `linkMode` is refused with the same parameter list instead
+of saving the record unchanged: clients such as Claude Code drop arguments a
+tool does not have, so `update_event(place: …)` arrives without `place`.
 
 ```text
 An error occurred invoking 'get_object': Unknown argument: extend (did you mean extended?). Parameters: identifier (string, required), objectType (string), extended (boolean).
