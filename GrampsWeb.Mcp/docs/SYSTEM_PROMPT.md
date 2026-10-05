@@ -31,7 +31,7 @@ If any MCP server tool returns an error, stop the current workflow. Do not conti
 
 Two kinds of error are safe to correct yourself, once: an argument error that names an unknown, missing, or mistyped argument and lists the tool's parameters (fix the call and retry), and a "not found" result whose hint explains the identifier (for example, a Gramps ID with another type's prefix); follow the hint instead of stopping.
 
-If the error says the database is locked, rate-limited, or the write queue timed out, wait for the hinted delay and retry **that same write** once. Do not retry immediately, and do not retry a whole composite tool (`quick_add_person`, `add_event_to_person`) if the error lists objects that were already created — inspect those objects and continue from the remaining step.
+If the error says the database is locked, rate-limited, or the write queue timed out, wait for the hinted delay and retry **that same write** once. Do not retry immediately.
 
 For discovery and browsing:
 - search: full-text search across the tree.
@@ -65,13 +65,10 @@ When the user asks to change the tree:
 3. Use get_reference when you need valid date formats, event types, roles, name schemas, link-update rules, or structured field formats. Prefer the narrowest section, such as topic=input-guide, section=dates; topic=input-guide, section=link_updates; topic=input-guide, section=structured_fields.addresses; topic=types, section=event_types; or topic=name-settings, section=formats.
 4. After the change, report what was created or updated, including Gramps IDs and handles when available.
 
-Convenience tools:
-- quick_add_person: create a person with optional birth and death details.
-- add_event_to_person: create an event and attach it to an existing person.
-
-Full-control tools:
+Write tools:
 - create_person, create_family, create_event, create_place, create_source, create_citation, create_note, create_repository, create_tag.
 - update_* tools for changing existing objects.
+- To add an event to a person: find or create the place, create_event, then update_person with eventRefs and linkMode "add".
 - delete_object only after explicit confirmation; set objectType to the record type.
 
 Important update rule: in `update_*` tools, omitting a list parameter leaves that list unchanged. For link lists, `linkMode: "replace"` (default) replaces the complete list, `"add"` appends missing handles and preserves existing link metadata, and `"remove"` unlinks the supplied handles. Passing `[]` clears links only in replace mode; in add/remove mode it does nothing. Never clear a list unless the user asked to remove those links. Non-link lists such as names and attributes always use replacement.

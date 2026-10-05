@@ -44,7 +44,11 @@ public sealed class GrampsPrompts
         }
 
         sb.AppendLine();
-        sb.AppendLine("Use quick_add_person to create the person with all provided details in a single call.");
+        sb.AppendLine("Steps:");
+        sb.AppendLine("1. Search for the person first. If a match exists, show it and ask before creating another.");
+        sb.AppendLine("2. Find each place with search; create it with create_place only if it is not in the tree.");
+        sb.AppendLine("3. Create the Birth and Death events that have a date or place with create_event, using the place handles.");
+        sb.AppendLine("4. Create the person with create_person: the name, gender, and those events in eventRefs with role Primary.");
         sb.AppendLine("After creation, confirm the result by showing the handle and Gramps ID.");
         return new ChatMessage(ChatRole.User, sb.ToString());
     }
@@ -130,10 +134,12 @@ public sealed class GrampsPrompts
         sb.AppendLine("Steps:");
         sb.AppendLine("1. Identify all people mentioned: extract names, dates, places, and relationships.");
         sb.AppendLine("2. For each person, check if they already exist: use search(name).");
-        sb.AppendLine("3. Create missing people using quick_add_person with any available birth/death info.");
-        sb.AppendLine("4. Create families to connect parents and children using create_family.");
-        sb.AppendLine("5. Add additional events (marriages, baptisms, etc.) using add_event_to_person.");
-        sb.AppendLine("6. Add sources and citations if the text mentions them.");
+        sb.AppendLine("3. Find each place with search; create it with create_place only if it is not in the tree.");
+        sb.AppendLine("4. Create the events (births, baptisms, marriages, deaths) with create_event, using the place handles.");
+        sb.AppendLine("5. Create missing people with create_person, passing their events in eventRefs with roles.");
+        sb.AppendLine("6. Create families to connect parents and children using create_family, with family events such as marriages.");
+        sb.AppendLine("7. Attach events to people who already existed with update_person (eventRefs, linkMode: \"add\").");
+        sb.AppendLine("8. Add sources and citations if the text mentions them.");
         sb.AppendLine("After importing, provide a summary:");
         sb.AppendLine("- How many people were created vs. already existed");
         sb.AppendLine("- Families created");

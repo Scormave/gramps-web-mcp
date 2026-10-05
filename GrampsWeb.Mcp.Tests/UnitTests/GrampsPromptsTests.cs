@@ -12,7 +12,9 @@ public class GrampsPromptsTests
 
         Assert.Contains("Birth: place: Birth City", text);
         Assert.Contains("Death: place: Death City", text);
-        Assert.Contains("quick_add_person", text);
+        Assert.Contains("create_event", text);
+        Assert.Contains("create_person", text);
+        Assert.DoesNotContain("quick_add_person", text);
     }
 
     [Fact]

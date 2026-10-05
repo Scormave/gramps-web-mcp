@@ -123,13 +123,13 @@ through `GRAMPS_READ_ONLY`.
   block create/update/delete mutation calls, including direct calls to a
   previously known write-tool name.
 - `GRAMPS_MUTATION_SERIALIZE`: serializes mutation HTTP calls in-process, plus
-  read/modify/write sequences of update tools and `add_event_to_person` against
-  each other using a separate lock. It does not coordinate with external clients.
+  read/modify/write sequences of update tools against each other using a
+  separate lock. It does not coordinate with external clients.
   Writes run in parallel only when this is `false` and
   `GRAMPS_MUTATION_MIN_INTERVAL_MS` is `0`; a minimum interval keeps the
   single-flight lock.
 - `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum milliseconds between mutation HTTP
-  calls, including steps inside composite tools.
+  calls.
 
 Runtime notes:
 
@@ -168,8 +168,9 @@ URLs contain genealogy data, so `GrampsApiClient` logs them only at `Debug` or
 
 Each file exposes a set of `[McpServerTool]` static methods grouped by Gramps
 entity type (Person, Family, Event, Place, Source, Citation, Note, Media, Tag,
-Repository) plus cross-cutting tools (Search, System, Reference, Object, Timeline) and
-multi-step convenience tools (Composite).
+Repository) plus cross-cutting tools (Search, System, Reference, Object, Timeline).
+There are no composite tools: each write tool changes one record, and
+multi-step workflows live in the MCP prompts and next-step hints.
 
 Tools are the **public API surface** of the MCP server.  They:
 - validate input parameters (with server-side type validation via `TypeCache`)
@@ -179,10 +180,6 @@ Tools are the **public API surface** of the MCP server.  They:
 - return typed media content for thumbnail/file tools (image, audio, or embedded blob resource)
 - return helpful context on not-found via `NotFoundHelper`
 - map errors to `McpException` via `McpToolErrors`
-
-`CompositeTools.cs` provides multi-step convenience tools (`QuickAddPerson`,
-`AddEventToPerson`) that combine multiple API calls into
-a single tool invocation.
 
 `TimelineTools.cs` provides `GetTimeline` for person, family, and place
 chronologies. It dispatches to the appropriate API route or place-backlink
@@ -430,9 +427,6 @@ Validation errors           →  McpToolErrors.ValidationError() →  McpExcepti
 Argument errors             →  ToolArgumentValidator           →  McpException
 (unknown or missing names,     (call-tool filter, input schema)
 values of the wrong type)
-
-Composite partial failure   →  McpToolErrors.ToMcpException(ex, createdObjects)
-(lock after some writes)       lists already-created IDs so the agent does not retry the whole tool
 ```
 
 All tool methods follow the same pattern: `try { ... } catch (Exception ex) { throw McpToolErrors.ToMcpException(ex); }`.

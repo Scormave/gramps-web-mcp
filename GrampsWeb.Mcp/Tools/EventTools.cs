@@ -116,8 +116,9 @@ public static class EventTools
     [Description(
         "Create a standalone event (Birth, Marriage, Residence, Census, …) with its date, place, description, citations, " +
         "notes and media. Returns the new handle, Gramps ID and type, with next steps. The event is linked to nobody yet: " +
-        "attach it with update_person or update_family (eventRefs, linkMode add). To create an event and attach it to one person " +
-        "in a single call use add_event_to_person; change an existing event with update_event. " +
+        "attach it with update_person or update_family (eventRefs, linkMode add), which keeps their other events; several people " +
+        "can share one event, each with their own role. The place must exist: find it with search or create it with create_place. " +
+        "Change an existing event with update_event. " +
         "An unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateEvent(
         [Description("Event type, e.g. Birth, Baptism, Death, Burial, Marriage, Residence, Occupation. " + ToolDescriptionFragments.KnownType)]

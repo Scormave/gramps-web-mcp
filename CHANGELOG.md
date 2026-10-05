@@ -17,9 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The server sends MCP instructions at initialization: start with `search`
   or `list_objects`, which tool answers which kinship question, the order to
   create linked records in, that links are stored on one side, how `linkMode`
-  works, that composite tools are not rolled back, and to delete only after
-  confirmation. Read-only mode leaves out the writing part, and `read_media`
-  is named only when media access is enabled
+  works, and to delete only after confirmation. Read-only mode leaves out
+  the writing part, and `read_media` is named only when media access is
+  enabled
 
 ### Changed
 
@@ -29,16 +29,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   "Read-only:" and "(write)" prefixes are gone, since the tool annotations
   already say so, and repeated pointers to the input guide are shortened to
   shared fragments. `get_reference` no longer calls itself "compatibility
-  access", and `delete_object`, `quick_add_person`, `add_event_to_person`,
-  `create_tag` and `update_repository` say what they return and what they
-  do not check
-
+  access", and `delete_object`, `create_tag` and `update_repository` say
+  what they return and what they do not check
 - Describe in `create_repository` what a repository is, to check
   `list_objects('repositories')` first, that sources link to it through
   `repositoryHandles`, that `noteHandles` and `tagHandles` only link existing
   notes and tags, and the type Gramps stores when `repoType` is omitted;
   describe in `get_bookmarks` what it lists and when to use `search`,
   `list_objects`, or `get_recent_changes` instead
+
+### Removed
+
+- `quick_add_person` and `add_event_to_person`. With `linkMode: "add"` they
+  only saved a call or two, and they did what no other write tool does:
+  they created a place from a bare name, without type or enclosing place,
+  whenever no place had exactly that name; they took no citations;
+  `add_event_to_person` saved an unknown event type as a new custom type; and
+  a failure halfway left the records already created. Use instead:
+  - `add_event_to_person(personHandle, eventType, date, place, role)` →
+    `create_event(eventType, date, placeHandle)`, then
+    `update_person(handle, eventRefs: [{ref: <event handle>, role}],
+    linkMode: "add")`
+  - `quick_add_person(name, gender, birthDate, birthPlace, deathDate,
+    deathPlace)` → `create_event` for the Birth and Death, then
+    `create_person(primaryName, gender, eventRefs)`
+  - a place given by name → find it with `search`, and create it with
+    `create_place` only if it is not in the tree
+
+  The `add-person` and `import-from-text` prompts and the next-step hints
+  after `create_person` and `create_place` now walk through these calls
 
 ### Fixed
 
@@ -47,7 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   trimmed, and one sent with its own double quotes (`"\"52.19\""`) is stored
   without them
 - Every text parameter accepts a JSON number as its text, so a year-only date
-  sent as `1877` (`date`, `nameDate`, `birthDate`, `dates`, …) works; it was
+  sent as `1877` (`date`, `nameDate`, `dates`, …) works; it was
   rejected with "Argument date must be a string". A number given as the
   `date` of an `alternateNames` or `enclosedBy` entry was silently dropped and
   is now read as a year
@@ -58,12 +77,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   parameter list. Clients such as Claude Code drop arguments a tool does not
   have, so `update_event(place: …)` reached the server as an update of nothing,
   answered "updated" and saved the event unchanged
-- `quick_add_person` and `add_event_to_person` look a place name up with a
-  Gramps QL filter instead of reading every place in the tree. A failed lookup
-  is reported; it used to create the place anyway, which could duplicate one
-- `add_event_to_person` answers "Place not found" for a `place` Gramps ID or
-  handle that matches no place, and creates nothing; it created a place named
-  after the ID (`P0099`)
 - `get_bookmarks` lists the bookmarked records by type, each with its summary
   and handle; it printed the server's reply as raw JSON, because it expected a
   list of bookmark objects that Gramps Web does not send. It no longer calls

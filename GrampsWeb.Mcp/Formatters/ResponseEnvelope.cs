@@ -61,23 +61,18 @@ public static class ResponseEnvelope
         return $"---\ntype: {objectType}\naction: deleted\nhandle: {handle}\n---";
     }
 
-    public static string[] PersonCreateNextSteps(string? handle, bool hasBirth = false,
-        bool hasDeath = false, bool hasEvents = false, bool hasFamily = false, bool hasNotes = false)
+    public static string[] PersonCreateNextSteps(string? handle,
+        bool hasEvents = false, bool hasFamily = false, bool hasNotes = false)
     {
         if (string.IsNullOrWhiteSpace(handle))
             return ["The person was created, but no handle was returned. Find the existing record with search before adding links; do not create it again."];
 
         var steps = new List<string>();
         // Existing references do not tell us their event types. Do not suggest duplicates.
-        if (hasEvents && (!hasBirth || !hasDeath))
+        if (hasEvents)
             steps.Add($"Check linked events before adding birth/death: get_object(objectType: \"person\", identifier: \"{handle}\", extended: true)");
         else
-        {
-            if (!hasBirth)
-                steps.Add($"If birth information is known: add_event_to_person(personHandle: \"{handle}\", eventType: \"Birth\", date: \"...\", place: \"...\")");
-            if (!hasDeath)
-                steps.Add($"If death information is known: add_event_to_person(personHandle: \"{handle}\", eventType: \"Death\", date: \"...\")");
-        }
+            steps.Add($"If birth or death is known: create_event(eventType: \"Birth\", date: \"...\", placeHandle: \"...\"), then update_person(handle: \"{handle}\", eventRefs: [{{ref: \"<event_handle>\", role: \"Primary\"}}], linkMode: \"add\")");
         if (!hasFamily)
             steps.Add($"If a parent/spouse family is needed, check for an existing family first; create_family(fatherHandle: \"{handle}\", ...) or create_family(motherHandle: \"{handle}\", ...) creates a new one.");
         if (!hasNotes)
@@ -104,7 +99,6 @@ public static class ResponseEnvelope
     public static string[] PlaceCreateNextSteps(string handle) => new[]
     {
         $"Use in event: create_event(eventType: \"...\", placeHandle: \"{handle}\", ...)",
-        $"Or use: add_event_to_person(personHandle: \"...\", eventType: \"...\", place: \"{handle}\")",
     };
 
     public static string[] TagCreateNextSteps(string handle) => new[]

@@ -84,7 +84,6 @@ Key rules:
 
 - API errors → `GrampsApiException` → `McpToolErrors.ToMcpException()` → `McpException`
 - SQLite lock / HTTP 429 on mutations → rewritten retryable `GrampsApiException` message, then the same mapping
-- Composite tools that already created objects → `McpToolErrors.ToMcpException(ex, createdObjects)`
 - Input validation → `McpToolErrors.ValidationError(message)` → `McpException`
 - Argument names and JSON types are checked against the input schema by
   `Hosting/ToolArgumentValidator.cs` before the tool runs; tools need no checks of their own
@@ -207,23 +206,14 @@ When you want agents to pass data in free-form text as well as structured JSON:
 
 ---
 
-## How to add a composite tool
+## Multi-step workflows
 
-Composite tools (`CompositeTools.cs`) combine multiple API calls into a single
-tool invocation, reducing the number of sequential tool calls an agent must
-make.  Examples: `QuickAddPerson`, `AddEventToPerson`.
-
-Pattern:
-1. Add a new `[McpServerTool]` method in `CompositeTools.cs`.
-2. Use `HandleResolver.ResolveToHandleAsync` for any handle parameter.
-3. Call the API client directly (not other tool methods) to create/fetch
-   sub-objects.
-4. Aggregate results into a single formatted response.
-5. Track created objects and list them in the output for transparency.
-
-Keep composite-only helpers (place resolution, vital-event creation) private
-in the same class. Reuse shared conversions from entity tool files instead of
-copying them; for example `QuickAddPerson` calls `PersonTools.ConvertNameToRequest`.
+There are no composite tools. Each write tool changes one record, so a failed
+step never leaves a half-done change behind, and every record goes through the
+same checks (known types, dates, place lookup by handle). Describe a workflow
+that needs several calls, such as finding the places, creating the events and
+then the person, in an MCP prompt in `Prompts/GrampsPrompts.cs` and in the
+next-step hints of `Formatters/ResponseEnvelope.cs`.
 
 ---
 
@@ -347,7 +337,7 @@ This means the tool must preserve all fields the agent didn't explicitly change.
 ### Agent → Gramps
 
 `AgentDateParser` converts free-text dates into `DateRequest` objects (used by
-events, citations, media, composites, place enclosure, and place names):
+events, citations, media, place enclosure, and place names):
 
 - ISO dates: `2024-03-15`, `2024-03`, `2024`
 - English months: `1 Jul 1919`, `5 July 1944`, `Jul 1919` (abbreviated or full; optional comma before year)
@@ -500,7 +490,7 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 |--------------|-----------|
 | Add/modify a tool | `Tools/{Entity}Tools.cs` |
 | Add/modify an MCP resource | `Resources/GrampsResources.cs` |
-| Add a multi-step convenience tool | `Tools/CompositeTools.cs` |
+| Add a multi-step workflow | `Prompts/GrampsPrompts.cs` |
 | Resolve Gramps ID → handle | `Client/HandleResolver.cs` |
 | Load many objects by handle | `Client/GrampsBatchFetch.cs` |
 | Validate type strings server-side | `Client/TypeCache.cs` |

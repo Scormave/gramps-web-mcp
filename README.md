@@ -16,11 +16,12 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 
 ## Features
 
-- **Up to 31 MCP tools** — read, create, update, and delete people, families, events, places,
+- **Up to 29 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
-- **Composite workflows** — quick-add person and add event to person
+- **Incremental links** — add or remove one event, child, citation, or note
+  with `linkMode`, keeping every other link
 - **Dates as Gramps writes them** — ranges, before/after/about, and every Gramps
   calendar (`1856-07-20 (Julian)`), stored with the sort value Gramps computes
 - **6 MCP resources** — type vocabularies, input guide, tree metadata, name
@@ -282,9 +283,8 @@ the user or rotating the Gramps Web secret key invalidates it.
   create, update, and delete calls.
 - `GRAMPS_MUTATION_SERIALIZE`: runs create/update/delete HTTP calls one at a
   time in this process. It also protects the complete read/modify/write sequence
-  of update tools and `add_event_to_person` against other such calls in this process.
-- `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum pause between mutation HTTP calls,
-  including steps inside composite tools.
+  of update tools against other such calls in this process.
+- `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum pause between mutation HTTP calls.
 
 Runtime notes:
 

@@ -31,11 +31,10 @@ internal static class GrampsServerInstructions
 
         Changing the tree:
         - Change data only when the user asked. Create tools do not check for duplicates: search for an existing record first.
-        - Create what a record links to before the record: repositories before sources, sources before citations, people and events before the families that link them.
+        - Create what a record links to before the record: repositories before sources, sources before citations, places before events, people and events before the families that link them.
         - Each link is stored on one side only. Attach events, citations, notes and media through the owning person, family, event or place, and children through the family's childRefs; backlinks shown on a record are read-only.
         - update_* tools change only the arguments passed. Link lists follow linkMode, and replace (the default) overwrites every link of that kind, so use add or remove to change one link.
         - Argument formats (dates, names, structured fields) and valid types: get_reference.
-        - quick_add_person and add_event_to_person are not rolled back: after an error, continue from the objects it lists as created.
         - Use delete_object only after the user confirmed that exact record, and force past backlinks only after a separate confirmation.
         """;
 

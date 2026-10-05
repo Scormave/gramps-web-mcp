@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 31 MCP tools exposed by the server.
+Complete catalog of up to 29 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -40,8 +40,7 @@ the writing guidance with one line saying no tool changes the tree, and
 Create/update/delete HTTP calls are serialized in-process by default
 (`GRAMPS_MUTATION_SERIALIZE=true`) and may wait
 `GRAMPS_MUTATION_MIN_INTERVAL_MS` between writes. That interval applies to
-**each** mutation, so composite tools such as `quick_add_person` and
-`add_event_to_person` can take several pauses in one call. The policy is
+**each** mutation. The policy is
 in-process only; it does not coordinate with the Gramps Web UI or other
 API clients. SQLite lock and upstream 429 failures return a retryable MCP
 error instead of a generic 500.
@@ -66,7 +65,7 @@ missing handles are harmless. Omitted lists stay unchanged; `[]` clears only
 in `replace` mode. To change existing link metadata, use `replace`. Adding and
 removing in the same workflow requires separate calls or one full replacement.
 
-When the mutation gate is enabled, updates and `add_event_to_person` serialize
+When the mutation gate is enabled, update tools serialize
 their entire read/modify/write sequence against each other. HTTP write throttling
 still applies. This is not a transaction or a lock against external API clients,
 other server processes, creates, or deletes.
@@ -146,11 +145,11 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 
 | Name | Parameters | Purpose |
 |------|------------|---------|
-| `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details; instructs use of `quick_add_person` and confirmation with handle and Gramps ID. |
+| `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details: search for the person, find or create the places, `create_event` for birth and death, `create_person` with those events, then confirm with handle and Gramps ID. |
 | `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Start with the person record; retrieve extended details, a timeline, or the requested tree branch only when relevant. |
 | `add-family` | optional `father`, `mother`, `relationship` (default Married), optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_object` for the family. |
 | `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_person_tree` if no direct link. |
-| `import-from-text` | `text` | Parse free-form genealogy text: search/create people with `quick_add_person`, `create_family`, `add_event_to_person`, sources/citations as needed, then report import summary and gaps. |
+| `import-from-text` | `text` | Parse free-form genealogy text: search for existing people and places, create places, events, people (`create_person` with `eventRefs`) and families, attach events to existing people with `linkMode: "add"`, add sources/citations as needed, then report import summary and gaps. |
 | `change-link` | `ownerType`, `owner`, `linkField`, `target`, optional `action` (`add` by default) | Resolve existing records, add or remove one link with `linkMode`, then verify the owner. |
 | `cite-fact` | `recordType`, `record`, `source`, optional `page` | Reuse or create a source and citation, attach it with `linkMode: "add"`, and verify the target. |
 
@@ -602,55 +601,6 @@ in this tree.`
 
 ---
 
-## Composite Tools (`CompositeTools.cs`) — 2 tools
-
-Multi-step convenience tools that combine several API calls into one.
-
-### C — `QuickAddPerson`
-Create a person with optional birth and death events in a single call.
-Automatically creates place and event objects as needed, then links them.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `name` | `string` | yes | — | Name as `"Given Surname"` or `"Given\|Surname"` |
-| `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
-| `birthDate` | `string?` | no | — | Birth date text |
-| `birthPlace` | `string?` | no | — | Birth place name |
-| `deathDate` | `string?` | no | — | Death date text |
-| `deathPlace` | `string?` | no | — | Death place name |
-
-A place name reuses the place whose name matches exactly, ignoring case, and
-otherwise creates a new place. The tool does not check for an existing person
-of the same name. Steps are not rolled back: if one fails, the error lists the
-objects already created.
-
-### C — `AddEventToPerson`
-Create an event and attach it to an existing person in one call, keeping the
-person's other events. Steps are not rolled back: if one fails, the error lists
-the objects already created. `eventType` is not checked against the tree's
-types, so an unknown type is saved as a new custom type. For an event shared by
-several people, or one with citations, use `create_event` and link it from each
-participant with `linkMode: add`.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `personHandle` | `string` | yes | — | Person handle or Gramps ID |
-| `eventType` | `string` | yes | — | Event type (e.g. Birth, Death, Baptism) |
-| `date` | `string?` | no | — | Event date text |
-| `place` | `string?` | no | — | Place Gramps ID, handle, or name |
-| `description` | `string?` | no | — | Event description |
-| `role` | `string` | no | `"Primary"` | Person's role in the event |
-
-`place` takes an existing place by Gramps ID or handle. A value that looks like
-one (a capital letter and digits such as `P0012`, or 16 or more letters,
-digits, `-` or `_` with at least one digit) must match a place: otherwise the
-tool answers "Place not found" and creates nothing. Any other value is a name:
-it reuses the place whose name matches exactly, ignoring case, or creates a new
-place. To give a new place a name of that shape, create it with `create_place`
-and pass its Gramps ID.
-
----
-
 ## Tool count summary
 
 | Domain | R | C | U | D | Total |
@@ -669,12 +619,11 @@ and pass its Gramps ID.
 | Object | 1 | 0 | 0 | 1 | 2 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
-| Composite | 0 | 2 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
-| **Total when media access is enabled** | **10** | **11** | **9** | **1** | **31** |
+| **Total when media access is enabled** | **10** | **9** | **9** | **1** | **29** |
 
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` is hidden
-and the catalog contains 30 tools in read/write mode. Read-only mode publishes
+and the catalog contains 28 tools in read/write mode. Read-only mode publishes
 10 tools with media access enabled, or 9 with it disabled.
 
 ## Prerequisites for write tools

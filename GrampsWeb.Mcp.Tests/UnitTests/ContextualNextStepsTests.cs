@@ -1,35 +1,18 @@
-using System.Net;
-using System.Text;
-using GrampsWeb.Mcp.Client;
-using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Formatters;
-using GrampsWeb.Mcp.Tools;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 public class ContextualNextStepsTests
 {
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    [InlineData(true, true)]
-    public async Task QuickAddPerson_OnlySuggestsMissingVitalEvents_WithoutExtraReads(bool birth, bool death)
+    [Fact]
+    public void PersonWithoutEvents_IsShownHowToAttachBirthOrDeath()
     {
-        var handler = new CreationHandler();
-        var config = new GrampsConfig("https://gramps.test", "user", "pass", "tree");
-        var http = new HttpClient(handler);
-        var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
-        var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
-
-        var result = await CompositeTools.QuickAddPerson("Test Person",
-            birthDate: birth ? "1900" : null, deathDate: death ? "1980" : null, client: client);
-
-        Assert.Equal(!birth, result.Contains("eventType: \"Birth\""));
-        Assert.Equal(!death, result.Contains("eventType: \"Death\""));
-        Assert.Equal(1 + (birth ? 1 : 0) + (death ? 1 : 0), handler.Writes);
+        var hints = ResponseEnvelope.PersonCreateNextSteps("person", hasFamily: true, hasNotes: true);
+        var hint = Assert.Single(hints);
+        Assert.Contains("create_event(eventType: \"Birth\"", hint);
+        Assert.Contains("update_person(handle: \"person\"", hint);
+        Assert.Contains("linkMode: \"add\"", hint);
     }
 
     [Fact]
@@ -75,27 +58,5 @@ public class ContextualNextStepsTests
         Assert.Contains("ref: \"event\"", text);
         Assert.Contains("Existing event references and roles are preserved", text);
         Assert.DoesNotContain("add_event_to_person", text);
-    }
-
-    private sealed class CreationHandler : HttpMessageHandler
-    {
-        public int Writes { get; private set; }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Assert.Equal(HttpMethod.Post, request.Method);
-            var path = request.RequestUri!.AbsolutePath;
-            var json = "{\"access_token\":\"token\",\"refresh_token\":\"refresh\",\"expires_in\":900}";
-            if (path != "/api/token/")
-            {
-                Assert.Contains(path, new[] { "/api/people/", "/api/events/" });
-                Writes++;
-                json = $"{{\"handle\":\"created-{Writes}\",\"gramps_id\":\"I0001\"}}";
-            }
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(json, Encoding.UTF8, "application/json")
-            });
-        }
     }
 }

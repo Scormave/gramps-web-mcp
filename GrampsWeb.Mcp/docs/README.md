@@ -5,7 +5,7 @@
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Contributors | System design, layers, transport modes, read-only mode, deployment |
 | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Contributors | How to add tools, models, tests, and conventions |
 | [RELEASING.md](RELEASING.md) | Maintainers and agents | Release checklist for changelog, version metadata, Docker, MCPB, GitHub Releases, and MCP Registry |
-| [TOOL_CATALOG.md](TOOL_CATALOG.md) | Users and agents | Catalog of up to 31 MCP tools, resources, prompts, and availability rules |
+| [TOOL_CATALOG.md](TOOL_CATALOG.md) | Users and agents | Catalog of up to 29 MCP tools, resources, prompts, and availability rules |
 | [MIGRATING_TO_2.md](MIGRATING_TO_2.md) | 1.x users | Old-to-new tool calls, changed parameters, link updates, and configuration checks |
 | [API_INVENTORY.md](API_INVENTORY.md) | Contributors | Gramps Web REST endpoints used by the server |
 | [DATA_MODEL.md](DATA_MODEL.md) | Contributors | Entity models, serialization, and Flexible* input types |
