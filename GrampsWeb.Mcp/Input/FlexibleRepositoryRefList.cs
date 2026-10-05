@@ -14,7 +14,7 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleRepositoryRefList
 {
     public const string DescriptionHint =
-        "Repository refs: JSON array of GrampsRepositoryRef objects, or strings \"Ref : CallNumber : MediaType\". " +
+        "Repository refs (handles, not Gramps IDs): JSON array of GrampsRepositoryRef objects, or strings \"Ref : CallNumber : MediaType\". " +
         "JSON objects accept Gramps snake_case (call_number, media_type) or camelCase (callNumber, mediaType). " +
         "Parts after Ref are optional: \"Ref : CallNumber\" and \"Ref :: MediaType\" are valid. " +
         "Multiple refs: JSON array or one multiline / |-separated string.";

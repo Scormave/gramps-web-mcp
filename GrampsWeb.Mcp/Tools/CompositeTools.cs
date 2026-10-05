@@ -25,21 +25,24 @@ public static class CompositeTools
 
     [McpServerTool(Title = "Quick Add Person", ReadOnly = false, Destructive = false)]
     [Description(
-        "Convenience: create a person with optional birth and death events in a single call. " +
-        "Automatically creates place and event objects as needed, then links them to the new person. " +
-        "For full control over all person fields, use create_person instead.")]
+        "Create a person with their birth and death in one call: makes the Birth and Death events, reuses each place " +
+        "whose name matches exactly (ignoring case) or creates it, and links the events to the new person. " +
+        "Returns the person's handle, Gramps ID, name and gender, the birth and death, every other object created, and next steps. " +
+        "Does not check for duplicate people: search for the person first. Steps are not rolled back: if one fails, " +
+        "the error lists the objects already created, so continue from those instead of calling again. " +
+        "For other names, events, families or citations use create_person, add_event_to_person and update_person.")]
     public static async Task<string> QuickAddPerson(
-        [Description("Person's name as 'Given Surname' or 'Given|Surname' (e.g. 'John Smith', 'Maria|Garcia')")]
+        [Description("Full name: 'Given Surname', where the last word is the surname, or 'Given|Surname' to split it yourself, e.g. 'John Smith', 'Mary Ann|Van Dyke'.")]
         string name,
-        [Description("Gender: Female, Male, or Unknown (default: Unknown)")]
+        [Description("Female, Male or Unknown (default Unknown); anything else is rejected.")]
         string gender = "Unknown",
-        [Description("Birth date as text (e.g. '1985-04-12', 'about 1920', 'before 1900'). Optional.")]
+        [Description("Birth date, optional. " + ToolDescriptionFragments.DateText)]
         string? birthDate = null,
-        [Description("Birth place name (e.g. 'Moscow', 'New York, USA'). Will search for existing place or create new. Optional.")]
+        [Description("Birth place name, e.g. London (optional). The place with exactly this name is reused, otherwise a new place without type or region is created.")]
         string? birthPlace = null,
-        [Description("Death date as text. Optional.")]
+        [Description("Death date, optional. " + ToolDescriptionFragments.DateText)]
         string? deathDate = null,
-        [Description("Death place name. Optional.")]
+        [Description("Death place name (optional), matched like birthPlace.")]
         string? deathPlace = null,
         GrampsApiClient client = null!)
     {
@@ -159,22 +162,25 @@ public static class CompositeTools
 
     [McpServerTool(Title = "Add Event To Person", ReadOnly = false, Destructive = false)]
     [Description(
-        "Convenience: create an event and attach it to an existing person in one call. " +
-        "Handles event creation + person update automatically. " +
-        "For full control, use create_event + update_person separately.")]
+        "Create an event and attach it to one existing person in one call, keeping their other events. " +
+        "The place may be an existing place's Gramps ID or handle, or a name: the place with exactly that name (ignoring case) is reused, otherwise it is created. " +
+        "Returns the event's handle, Gramps ID and type, the person it was attached to, and any place created. " +
+        "Steps are not rolled back: if attaching fails, the error lists the event and place already created, so attach those instead of calling again. " +
+        "For an event shared by several people (a marriage, a baptism with godparents) or with citations, use create_event, then " +
+        "update_person or update_family with linkMode add for each participant.")]
     public static async Task<string> AddEventToPerson(
-        [Description("Person handle or Gramps ID (e.g. I0001). " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The person the event belongs to. " + ToolDescriptionFragments.HandleDiscovery)]
         string personHandle,
-        [Description("Event type (e.g. 'Birth', 'Death', 'Baptism', 'Marriage', 'Burial', 'Immigration'). " +
-                     "See gramps://types for all options.")]
+        [Description("Event type, e.g. Birth, Baptism, Death, Burial, Residence, Occupation. " +
+                     "A type the tree does not know is saved as a new custom type, so take the spelling from get_reference(topic: \"types\", section: \"event_types\").")]
         string eventType,
-        [Description("Event date as text (e.g. '1985-04-12', 'about 1920'). Optional.")]
+        [Description("When it happened, optional. " + ToolDescriptionFragments.DateText)]
         string? date = null,
-        [Description("Place Gramps ID, handle, or name. A Gramps ID or handle must match an existing place. A name reuses the place with that exact name (ignoring case) or creates a new place. Optional.")]
+        [Description("Where it happened (optional): a place's Gramps ID or handle, which must exist, or a name, which reuses the place with exactly that name (ignoring case) or creates a new one.")]
         string? place = null,
-        [Description("Event description text. Optional.")]
+        [Description("Short description of the event (optional).")]
         string? description = null,
-        [Description("Person's role in this event (default: 'Primary'). Other options: Witness, Celebrant, etc.")]
+        [Description("The person's role in the event: Primary (default), Witness, Godparent, Informant, …")]
         string role = "Primary",
         GrampsApiClient client = null!)
     {

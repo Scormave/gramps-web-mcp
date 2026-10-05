@@ -47,7 +47,7 @@ static async Task RunStdioAsync(GrampsConfig config, McpAuthConfig auth)
         .AddGrampsMcpCore(config);
 
     builder.Services
-        .AddMcpServer()
+        .AddMcpServer(options => options.ServerInstructions = GrampsServerInstructions.For(config))
         .WithStdioServerTransport()
         .WithGrampsToolProfile(config)
         .WithResources<GrampsResources>()
@@ -76,7 +76,7 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
         .AddGrampsMcpAuth(auth);
 
     builder.Services
-        .AddMcpServer()
+        .AddMcpServer(options => options.ServerInstructions = GrampsServerInstructions.For(config))
         .WithHttpTransport(options =>
         {
             options.Stateless = transport.Stateless;

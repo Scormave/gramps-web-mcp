@@ -13,12 +13,15 @@ public static class ReferenceTools
 {
     [McpServerTool(Title = "Get Reference", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: compatibility access to one MCP reference resource. Choose input-guide, types, metadata, or name-settings. " +
-        "Use section to return one input-guide subsection (including link_updates), one type category such as event_types, or formats/groups from name-settings.")]
+        "Read the server's reference text before writing when a format or type is unclear. Topics: input-guide (how to " +
+        "write dates, names, link updates and structured fields such as attributes and addresses), types (the valid event, " +
+        "role, place, note and other types, including custom ones the tree uses), metadata (server and tree info), and " +
+        "name-settings (name display formats and surname groups). section narrows the reply to one part; an unknown topic " +
+        "or section is rejected with the valid ones. The same texts are MCP resources (gramps://input-guide and so on) for clients that read resources.")]
     public static async Task<string> GetReference(
-        [Description("Reference topic: input-guide | types | metadata | name-settings.")]
+        [Description("Which reference: input-guide, types, metadata or name-settings.")]
         string topic,
-        [Description("Optional section. input-guide: dates | name_schema | link_updates | structured_fields | structured_fields.names | structured_fields.attributes | structured_fields.urls | structured_fields.addresses | structured_fields.person_associations | structured_fields.repository_refs. types: a category key such as event_types. name-settings: formats | groups. Not supported for metadata.")]
+        [Description("One part only (optional; omit for the whole topic). input-guide: dates, name_schema, link_updates, structured_fields, or one of structured_fields.names, .attributes, .urls, .addresses, .person_associations, .repository_refs. types: a category such as event_types or place_types. name-settings: formats or groups. metadata has no sections.")]
         string? section = null,
         GrampsApiClient client = null!)
     {

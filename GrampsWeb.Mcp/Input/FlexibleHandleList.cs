@@ -15,8 +15,8 @@ public sealed class FlexibleHandleList
 {
     /// <summary>Human-readable hint for MCP tool parameter descriptions.</summary>
     public const string DescriptionHint =
-        "Handles: JSON array [\"h1\",\"h2\"], a single handle as a plain string, comma/semicolon/newline-separated list, " +
-        "or a JSON-array string. Array entries may be strings or objects {\"ref\":\"…\"} / {\"handle\":\"…\"}.";
+        "Handles, not Gramps IDs: JSON array [\"h1\",\"h2\"], one handle, or a comma/semicolon/newline-separated string; " +
+        "entries may also be objects {\"ref\":\"…\"}.";
 
     public required string[] Handles { get; init; }
 

@@ -41,16 +41,18 @@ public static class RepositoryTools
 
     [McpServerTool(Title = "Create Repository", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a repository (write): an archive, library, church, website or other holder of sources. " +
-        "Returns handle and Gramps ID. Check list_objects('repositories') first so one holder is not entered twice; " +
+        "Create a repository: an archive, library, church, website or other holder of sources. " +
+        "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: " +
+        "look through list_objects(objectType: \"repositories\") first so one holder is not entered twice; " +
         "change an existing repository with update_repository. Link sources to it afterwards through repositoryHandles " +
         "on create_source or update_source, which also carry the call number. noteHandles and tagHandles only link " +
-        "existing notes and tags (create_note, create_tag); nothing else is created or changed.")]
+        "existing notes and tags (create_note, create_tag); nothing else is created or changed. " +
+        "An unknown type is rejected before anything is saved.")]
     public static async Task<string> CreateRepository(
         [Description("Name, e.g. \"State Archive in Warsaw\" (required).")]
         string name,
         [Description("Repository type, e.g. Archive, Library, Church, Web site (optional; Gramps stores Library when omitted). " +
-                     ToolDescriptionFragments.CallGetTypes)]
+                     ToolDescriptionFragments.KnownType)]
         string? repoType = null,
         [Description("Postal address as one line, e.g. \"12 High Street, London\", stored as the street of the repository's address (optional).")]
         string? address = null,
@@ -99,25 +101,26 @@ public static class RepositoryTools
 
     [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = false)]
     [Description(
-        "Update a repository (write). Only pass fields to change. " +
-        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        ToolDescriptionFragments.CallGetTypes)]
+        "Change an existing repository: name, type, address, website, notes, tags or the private flag. " +
+        ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing repository returns a not-found message, and an unknown type is " +
+        "rejected before anything is saved. Which sources it holds is stored on the sources (their repositoryHandles), not here.")]
     public static async Task<string> UpdateRepository(
-        [Description("Repository handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The repository to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Name. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
-        [Description("Type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
+        [Description("New type, e.g. Archive, Library, Church. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? repoType = null,
-        [Description("Street line (replaces address list when set). " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New postal address as one line; replaces every stored address, and an empty string removes them. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? address = null,
-        [Description("Website URL (replaces url list when set). " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New website; replaces every stored link, and an empty string removes them. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? url = null,
-        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]

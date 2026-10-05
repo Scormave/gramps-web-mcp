@@ -5,37 +5,39 @@ namespace GrampsWeb.Mcp.Tools;
 /// </summary>
 public static class ToolDescriptionFragments
 {
-    /// <summary>Suffix for parameters that take a Gramps object handle (API opaque string).</summary>
+    /// <summary>Suffix for parameters that take one Gramps object handle.</summary>
     public const string HandleDiscovery =
-        "Handle or Gramps ID (e.g. I0001). Handles are opaque strings from the API. " +
-        "Gramps IDs (like I0001, F0023) are auto-resolved to handles. " +
-        "Find handles with search() or list_objects().";
+        "Handle or Gramps ID (e.g. I0001), resolved automatically; find it with search or list_objects.";
 
-    /// <summary>Tool-level warning for update tools that replace linked-object lists.</summary>
-    public const string UpdateEmptyListRemovesLinks =
-        "Link lists support linkMode: replace (default), add, remove. WARNING: In replace mode, an empty list [] REMOVES all links of that kind (e.g. empty tagHandles removes every tag). " +
-        "To leave a list unchanged, omit that parameter entirely—do not pass [] to mean 'no change'.";
+    /// <summary>Tool-level sentence for update tools: what omitting a value and linkMode do.</summary>
+    public const string UpdateSemantics =
+        "Pass only what changes; omitted arguments stay as they are. " +
+        "Link lists (…Handles, …Refs) follow linkMode: replace (default) sets the whole list, add appends, " +
+        "remove drops the given handles; in replace mode [] REMOVES every link of that kind.";
 
-    /// <summary>Short clause for optional update list parameters.</summary>
-    public const string OmitToKeepEmptyClears =
-        "Omit to leave unchanged. For link lists, linkMode controls replace/add/remove; [] clears in replace mode and does nothing in add/remove. Other lists always use replacement.";
+    /// <summary>For link-list parameters on update tools.</summary>
+    public const string LinkListOnUpdate =
+        "Omit to keep; applied per linkMode.";
+
+    /// <summary>For lists on update tools that linkMode does not apply to (names, attributes, addresses, URLs).</summary>
+    public const string ReplacedListOnUpdate =
+        "Omit to keep; a value replaces the whole list and [] clears it, whatever linkMode says.";
 
     /// <summary>For optional scalar/string fields on update.</summary>
     public const string OmitToKeepScalar =
         "Omit to leave unchanged.";
 
-    public const string CallGetTypes =
-        "Type values are validated by the server; see gramps://types resource or call get_reference(topic: \"types\") for available values.";
+    /// <summary>For type parameters checked by <see cref="Client.TypeCache.ValidateTypeAsync"/>.</summary>
+    public const string KnownType =
+        "Must be a standard Gramps type or a custom one the tree already uses; " +
+        "anything else is rejected with suggestions. List: get_reference(topic: \"types\").";
 
-    public const string CallGetDateInputGuide =
-        "Date format: use ISO dates (1990-03-15), year-only (1920), or modifiers (before 1920, about 1950). " +
-        "Add the calendar at the end for Old Style and other calendars: 1856-07-20 (Julian). " +
-        "See gramps://input-guide resource or call get_reference(topic: \"input-guide\", section: \"dates\") for full syntax.";
+    /// <summary>For date parameters parsed by <see cref="Dates.AgentDateParser"/>.</summary>
+    public const string DateText =
+        "Date text: 1856-07-20, 1920-05, 1920, 1 Jul 1919, about/before/after 1920, 1800-1850, between … and …; " +
+        "append the calendar for other calendars, e.g. 1856-07-20 (Julian). Unreadable dates are rejected.";
 
-    public const string CallGetNameSchema =
-        "Use shorthand 'Given Surname' or full JSON; see gramps://input-guide resource or call get_reference(topic: \"input-guide\", section: \"name_schema\") for the Name schema.";
-
-    public const string CallGetStructuredFieldInputGuide =
-        "Accepts JSON arrays or shorthand strings (e.g. 'Type: Value' for attributes). " +
-        "See gramps://input-guide resource or call get_reference(topic: \"input-guide\", section: \"structured_fields\") for all formats.";
+    /// <summary>One pointer to the input guide for tools with structured arguments.</summary>
+    public const string InputGuide =
+        "Formats of every argument: get_reference(topic: \"input-guide\").";
 }

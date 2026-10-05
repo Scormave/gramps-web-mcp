@@ -14,8 +14,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   or matches the event date, so dated alternate names never showed while the
   primary name had no date, and the tools had no way to give it one. The
   place card shows the primary name's language and date
+- The server sends MCP instructions at initialization: start with `search`
+  or `list_objects`, which tool answers which kinship question, the order to
+  create linked records in, that links are stored on one side, how `linkMode`
+  works, that composite tools are not rolled back, and to delete only after
+  confirmation. Read-only mode leaves out the writing part, and `read_media`
+  is named only when media access is enabled
 
 ### Changed
+
+- Every tool and parameter description is rewritten for agents: what the
+  tool does and returns, which sibling tool to use instead, prerequisites,
+  and what happens on duplicates, partial failure, or bad input. The
+  "Read-only:" and "(write)" prefixes are gone, since the tool annotations
+  already say so, and repeated pointers to the input guide are shortened to
+  shared fragments. `get_reference` no longer calls itself "compatibility
+  access", and `delete_object`, `quick_add_person`, `add_event_to_person`,
+  `create_tag` and `update_repository` say what they return and what they
+  do not check
 
 - Describe in `create_repository` what a repository is, to check
   `list_objects('repositories')` first, that sources link to it through

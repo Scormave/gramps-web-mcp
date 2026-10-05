@@ -8,7 +8,7 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleChildRefList
 {
     public const string DescriptionHint =
-        "Child references: JSON array of {ref, frel, mrel}, strings \"HANDLE::RelType\" " +
+        "Child references (handles, not Gramps IDs): JSON array of {ref, frel, mrel}, strings \"HANDLE::RelType\" " +
         "(sets both frel and mrel; default: Birth), comma/pipe/newline-separated, or a single handle. " +
         "JSON objects accept snake_case (frel, mrel, tag_list) or camelCase (fatherRel, tagList, etc.).";
 

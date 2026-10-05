@@ -47,14 +47,14 @@ public static class MediaTools
 
     [McpServerTool(Title = "Read Media", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: download media bytes. Default mode thumbnail renders a JPEG preview (PNG when transparent) from an image original " +
+        "Download a media file's bytes so you can see it. Default mode thumbnail renders a JPEG preview (PNG when transparent) from an image original " +
         "as MCP image content, 1568 pixels on the long edge unless size is given; EXIF and other metadata are stripped. " +
         "Prefer it for reading photos and document scans. Use mode file only when the original is needed: returns image, audio, " +
         "or embedded blob resource content according to MIME type. " +
         "Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects size and private-record safeguards. " +
-        "Use get_object with objectType media for metadata.")]
+        "For the media record itself (path, description, links) use get_object; to change it use update_media.")]
     public static async Task<CallToolResult> ReadMedia(
-        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The media object to show. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Download mode: thumbnail | file. Default thumbnail. Use file only when a preview is insufficient.")]
         string mode = "thumbnail",
@@ -94,25 +94,28 @@ public static class MediaTools
 
     [McpServerTool(Title = "Update Media", ReadOnly = false, Destructive = false)]
     [Description(
-        "Update media metadata (write). Binary upload is not supported here—only fields stored on the media record. " +
-        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
+        "Change an existing media record: description, date, attributes, notes, tags, citations or the private flag. " +
+        "The file itself cannot be uploaded or replaced here; media objects are created in Gramps Web. " +
+        ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing media object returns a not-found message, and an unreadable date is rejected before anything is saved. " +
+        "To show the media on a person, event or citation, add it to their mediaHandles (linkMode add). " +
+        ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateMedia(
-        [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The media object to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Description. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New description (caption). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? description = null,
-        [Description("Date text. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.CallGetDateInputGuide)]
+        [Description("New date. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.DateText)]
         string? date = null,
-        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Linked citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]

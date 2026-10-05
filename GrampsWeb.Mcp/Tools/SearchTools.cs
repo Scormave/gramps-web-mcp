@@ -17,16 +17,18 @@ public static class SearchTools
 {
     [McpServerTool(Title = "Search", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: full-text search across all object types (people, families, events, places, sources, citations, repositories, notes, media, tags). " +
-        "Use * wildcards (e.g. Smith*). " +
-        "Results include handles and Gramps IDs—pass one to get_object for full details. " +
-        "Paginate with page and pagesize.")]
+        "Find records by words in them: one query across people, families, events, places, sources, citations, repositories, " +
+        "notes, media and tags. Start here when you have a name, place, title or other text but no Gramps ID. " +
+        "Returns one line per hit (type, Gramps ID, summary, handle) with the page and total count; " +
+        "pass a Gramps ID or handle to get_object for the full record. " +
+        "To browse or filter one type by its fields (all people, citations of one source, sorted by change) use list_objects. " +
+        "Very long queries can fail on the server; use a shorter term then.")]
     public static async Task<string> Search(
-        [Description("Query string; * is wildcard. Examples: Smith*, John, Dublin*")]
+        [Description("Words to find; * matches any ending. Examples: Smith*, John, Dublin*, a register title.")]
         string query,
-        [Description("1-based page index. Default 1.")]
+        [Description("Page number, from 1 (default 1).")]
         int page = 1,
-        [Description("Page size. Default 20, maximum 100.")]
+        [Description("Hits per page, 1–100 (default 20).")]
         int pagesize = 20,
         GrampsApiClient client = null!)
     {
@@ -70,25 +72,24 @@ public static class SearchTools
 
     [McpServerTool(Title = "List Objects", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: paginated list of one object type. Primary way to browse the tree when you know the type. " +
-        "objectType must be exactly: people, families, events, places, sources, citations, repositories, notes, media, or tags (lowercase). " +
-        "For citations only, optional sourceHandle limits rows to one source (combined with gql using and). " +
-        "Advanced: gql is Gramps Query Language (e.g. media_list.length >= 1, gender == 1). sort is a field name; prefix with - for descending (gramps_id, -change). " +
-        "Maximum pagesize 100—advance page for more.")]
+        "List the records of one type, a page at a time, optionally filtered and sorted: one line per record " +
+        "(Gramps ID, summary, handle) with the page and total count. Use it to browse a type, look up one Gramps ID, " +
+        "list the citations of a source, or filter by fields with Gramps Query Language; to find records by text use search, " +
+        "and to read one record in full use get_object.")]
     public static async Task<string> ListObjects(
-        [Description("Object collection: people | families | events | places | sources | citations | repositories | notes | media | tags (exact spelling, case-insensitive).")]
+        [Description("Which records to list: people, families, events, places, sources, citations, repositories, notes, media or tags.")]
         string objectType,
-        [Description("1-based page. Default 1.")]
+        [Description("Page number, from 1 (default 1).")]
         int page = 1,
-        [Description("Page size. Default 20, max 100.")]
+        [Description("Records per page, 1–100 (default 20).")]
         int pagesize = 20,
-        [Description("Optional. Filter by numeric/string Gramps ID (I0001-style), NOT the opaque handle.")]
+        [Description("Only the record with this Gramps ID, e.g. I0001 (not a handle; optional).")]
         string? grampsId = null,
-        [Description("Optional. When objectType is citations, limit to citations of this source handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("With objectType citations only: list just the citations of this source; combined with gql by and (optional). " + ToolDescriptionFragments.HandleDiscovery)]
         string? sourceHandle = null,
-        [Description("Optional. Gramps QL expression executed server-side for filtering.")]
+        [Description("Filter in Gramps Query Language, run on the server, e.g. gender == 1 or media_list.length >= 1 (optional).")]
         string? gql = null,
-        [Description("Optional. Sort field; leading - means descending.")]
+        [Description("Field to sort by, e.g. gramps_id; a leading - sorts descending, e.g. -change for latest edits first (optional).")]
         string? sort = null,
         GrampsApiClient client = null!)
     {

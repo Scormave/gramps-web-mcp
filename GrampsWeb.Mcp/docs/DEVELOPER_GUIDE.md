@@ -33,7 +33,7 @@ to `demo.grampsweb.org`.
 
 ```csharp
 [McpServerTool(Title = "Get person", ReadOnly = true, Destructive = false)]
-[Description("Read-only: ... OR Create/Update/Delete ...")]
+[Description("What it does. What it returns. When to use a sibling tool instead. Duplicates, partial failure, bad input.")]
 public static async Task<string> ToolName(
     [Description("Handle or Gramps ID. " + ToolDescriptionFragments.HandleDiscovery)]
     string handle,
@@ -68,7 +68,12 @@ Key rules:
   instead of committing binary fixtures.
 - `GrampsApiClient client` is the **last** parameter, injected by the MCP host.
 - Every tool wraps its body in `try/catch` and rethrows via `McpToolErrors`.
-- `[Description]` must clearly state read-only vs write and prerequisites.
+- `[Description]` states what the tool does, what it returns, which sibling
+  tool to use instead and when, prerequisites, and what happens on duplicates,
+  partial failure, or bad input. Leave read-only vs write to the
+  `ReadOnly`/`Destructive` annotations; do not prefix "Read-only:" or "(write)".
+  Each parameter description says what the value is, its format or allowed
+  values, and the default.
 - Use constants from `ToolDescriptionFragments` for consistent documentation.
 - Handle parameters should accept both handles and Gramps IDs — use
   `HandleResolver.ResolveToHandleAsync` to normalize.
@@ -145,6 +150,9 @@ objects and return formatted strings.
 7. For handle parameters, use `HandleResolver.ResolveToHandleAsync` so
    agents can pass either handles or Gramps IDs.
 8. For not-found cases, return `NotFoundHelper.NotFoundMessage(type, id)`.
+9. If the tool changes how an agent should work through the tree, update
+   `Hosting/GrampsServerInstructions.cs`; name a write tool only in its
+   `Writing` section, so read-only mode does not mention it.
 
 ### Step 6: Add tests
 

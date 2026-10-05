@@ -114,30 +114,31 @@ public static class EventTools
 
     [McpServerTool(Title = "Create Event", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create an event (write). Returns handle and Gramps ID. " +
-        ToolDescriptionFragments.CallGetTypes + " " + ToolDescriptionFragments.CallGetDateInputGuide + " " +
-        ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
-        "Link to people/families afterward via create_person / update_person / create_family / update_family event reference lists.")]
+        "Create a standalone event (Birth, Marriage, Residence, Census, …) with its date, place, description, citations, " +
+        "notes and media. Returns the new handle, Gramps ID and type, with next steps. The event is linked to nobody yet: " +
+        "attach it with update_person or update_family (eventRefs, linkMode add). To create an event and attach it to one person " +
+        "in a single call use add_event_to_person; change an existing event with update_event. " +
+        "An unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateEvent(
-        [Description("Event type key from the tree. " + ToolDescriptionFragments.CallGetTypes)]
+        [Description("Event type, e.g. Birth, Baptism, Death, Burial, Marriage, Residence, Occupation. " + ToolDescriptionFragments.KnownType)]
         string eventType,
-        [Description("Optional event date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
+        [Description("When it happened, optional. " + ToolDescriptionFragments.DateText)]
         string? date = null,
-        [Description("Place handle for this event. Optional. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("Where it happened, optional; the place must exist (create_place). " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,
-        [Description("Event description (optional)")]
+        [Description("Short description, optional.")]
         string? description = null,
-        [Description("Citation handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations supporting the event. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
         [Description(FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Mark record private (default: false)")]
+        [Description("Mark the event private (default false).")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
     {
@@ -182,31 +183,32 @@ public static class EventTools
 
     [McpServerTool(Title = "Update Event", ReadOnly = false, Destructive = false)]
     [Description(
-        "Update an event (write). Only pass fields to change. " +
-        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
+        "Change an existing event: type, date, place, description, citations, notes, media, tags, attributes or the private flag. " +
+        ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing event returns a not-found message, " +
+        "and an unknown type or unreadable date is rejected before anything is saved. Who takes part is stored on the people " +
+        "and families (their eventRefs), not on the event. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateEvent(
-        [Description("Event handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The event to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Event type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
+        [Description("New event type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? eventType = null,
-        [Description("Event date text. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.CallGetDateInputGuide)]
+        [Description("New date. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.DateText)]
         string? date = null,
-        [Description("Place handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("New place. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? placeHandle = null,
-        [Description("Description text. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New description. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? description = null,
-        [Description("Linked citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Linked media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]

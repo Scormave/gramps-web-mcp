@@ -14,12 +14,13 @@ public static class SystemTools
 {
     [McpServerTool(Title = "Get Recent Changes", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: recent transaction history, newest first: commit time (UTC), description, user, " +
+        "Show the tree's recent edit history, newest first: commit time (UTC), description, user, " +
         "an undo marker, and each changed object's class, change kind (added/updated/deleted) and handle, " +
         "up to 10 objects per transaction. A link added or removed between objects appears as Reference from one handle to the other. " +
-        "Use for sync auditing or 'what changed last' workflows.")]
+        "Use it to see what was changed last and by whom, or to check that your own writes landed; " +
+        "for the dated events of one person use get_timeline, and read a changed record with get_object.")]
     public static async Task<string> GetRecentChanges(
-        [Description("How many history rows (clamped 1–100). Default 20.")]
+        [Description("How many transactions to show, 1–100 (default 20); other values are clamped.")]
         int limit = 20,
         GrampsApiClient client = null!)
     {
@@ -40,7 +41,7 @@ public static class SystemTools
 
     [McpServerTool(Title = "Get Bookmarks", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: list the records bookmarked in this tree, grouped by type (people, families, events, places, " +
+        "List the records bookmarked in this tree, grouped by type (people, families, events, places, " +
         "sources, citations, repositories, media, notes), each as a one-line summary with its handle. " +
         "Bookmarks belong to the tree and are shared by all its users; they are set in Gramps Web or Gramps desktop, " +
         "not through this server, and a tree may have none. Use it to start from the records the tree's users marked; " +

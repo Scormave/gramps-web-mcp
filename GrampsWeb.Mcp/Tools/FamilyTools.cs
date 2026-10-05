@@ -62,31 +62,33 @@ public static class FamilyTools
 
     [McpServerTool(Title = "Create Family", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a family unit (write). Returns family handle and Gramps ID. " +
-        ToolDescriptionFragments.CallGetTypes + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
-        "Provide childRefs and eventRefs to include handle + relationship metadata in one field.")]
+        "Create a family: a couple (father and mother, each optional) with their relationship type, children and family events " +
+        "such as Marriage. Returns the new handle, Gramps ID and a label, with next steps. People and events must already exist " +
+        "(create_person, create_event). Does not check for duplicates: look at the parents' families first, " +
+        "and change an existing family with update_family. Children are added here through childRefs, " +
+        "not through the child's parentFamilyHandles. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateFamily(
-        [Description("Father person handle. Optional. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The father, optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? fatherHandle = null,
-        [Description("Mother person handle. Optional. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The mother, optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? motherHandle = null,
-        [Description("Relationship type: Married, Unmarried, Civil Union, Unknown (default: Married)")]
+        [Description("Relationship type: Married (default), Unmarried, Civil Union or Unknown. " + ToolDescriptionFragments.KnownType)]
         string? relationshipType = "Married",
-        [Description("Child links for this family. " + FlexibleChildRefList.DescriptionHint)]
+        [Description("Children, each with its relation to the father and mother (Birth by default; Adopted, Stepchild, …). " + FlexibleChildRefList.DescriptionHint)]
         FlexibleChildRefList? childRefs = null,
-        [Description("Events to link to this family. " + FlexibleEventRefList.DescriptionHint)]
+        [Description("Existing family events such as Marriage or Divorce. " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Media handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Citation handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description(FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Mark record private (default: false)")]
+        [Description("Mark the family private (default false).")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
     {
@@ -139,34 +141,34 @@ public static class FamilyTools
 
     [McpServerTool(Title = "Update Family", ReadOnly = false, Destructive = false)]
     [Description(
-        "Update an existing family (write). Only pass fields you want to change. " +
-        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        "Replacing childRefs or eventRefs replaces the full corresponding list. " +
-        ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
+        "Change an existing family: father, mother, relationship type, children, family events, citations, notes, media, tags, " +
+        "attributes or the private flag. " + ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing family returns a not-found message. " +
+        "To add one child, pass it in childRefs with linkMode add. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateFamily(
-        [Description("Family handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The family to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Father person handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("New father. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? fatherHandle = null,
-        [Description("Mother person handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("New mother. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? motherHandle = null,
-        [Description("Relationship type string. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
+        [Description("Relationship type (Married, Unmarried, Civil Union, Unknown). " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? relationshipType = null,
-        [Description("Linked all children. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleChildRefList.DescriptionHint)]
+        [Description("Children with their relations to the parents. In replace mode the list must hold every child the family keeps. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleChildRefList.DescriptionHint)]
         FlexibleChildRefList? childRefs = null,
-        [Description("Linked family–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleEventRefList.DescriptionHint)]
+        [Description("Family events (Marriage, Divorce, …). " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Linked media links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Linked citation links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Linked note links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Linked tag links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]

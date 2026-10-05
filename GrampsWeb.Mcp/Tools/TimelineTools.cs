@@ -15,21 +15,22 @@ public static class TimelineTools
 {
     [McpServerTool(Title = "Get Timeline", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: chronological timeline for one person, family, or place. " +
-        "objectType must be person, family, or place. Events can be filtered by category and date range. " +
-        "relatives and relativeEvents are supported only for person timelines. Without dates, a person timeline lists relatives' events " +
+        "List the dated events around one person, family or place in date order: date, event type, place, " +
+        "and whose event it is, with Gramps IDs. Use it to check a life's sequence or gaps; for the full record use get_object, " +
+        "for ancestors or descendants use get_person_tree, for how two people are related use get_relations. " +
+        "Filter by event category and dates. Without dates, a person timeline lists relatives' events " +
         "from their whole lives, also before the person's birth and after their death; pass dates to narrow it. " +
         "Place timelines are computed from direct event backlinks; child places are not included.")]
     public static async Task<string> GetTimeline(
-        [Description("Timeline owner type: person | family | place.")]
+        [Description("Whose timeline: person, family or place.")]
         string objectType,
-        [Description("Person, family, or place handle or Gramps ID.")]
+        [Description("The person, family or place. " + ToolDescriptionFragments.HandleDiscovery)]
         string identifier,
-        [Description("Event categories: vital, family, religious, vocational, academic, travel, legal, residence, other, custom.")]
+        [Description("Only these event categories (omit for all): vital, family, religious, vocational, academic, travel, legal, residence, other, custom.")]
         string[]? events = null,
-        [Description("For person only: include events of father, mother, brother, sister, wife, husband, son, or daughter.")]
+        [Description("Person timelines only: whose events to add: father, mother, brother, sister, wife, husband, son, daughter.")]
         string[]? relatives = null,
-        [Description("For person only: event categories for the listed relatives.")]
+        [Description("Person timelines only: event categories to show for those relatives, same values as events.")]
         string[]? relativeEvents = null,
         [Description(
             "Only events in these dates, written like any date: a year (1850), month (1850-03), day, or range " +

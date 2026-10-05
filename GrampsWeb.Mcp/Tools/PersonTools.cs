@@ -61,15 +61,17 @@ public static class PersonTools
 
     [McpServerTool(Title = "Get Person Tree", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: list a person's ancestors or descendants up to N generations, with names and vital dates/places. " +
-        "Set direction to ancestors or descendants. Each row includes a generation and optional kinship labels. " +
-        "Ancestors follow parent-family links; descendants follow children on families where the person is a parent.")]
+        "List a person's ancestors or descendants up to 10 generations deep: one row per relative with the generation, " +
+        "an optional kinship label (Father's mother, Granddaughter), name, Gramps ID, birth and death with places, and handle. " +
+        "Ancestors follow the person's parent families; descendants follow the children of families where the person is a parent, " +
+        "so relatives not linked that way are missing. For how two given people are related use get_relations; " +
+        "for dated events around one person use get_timeline; for one full record use get_object.")]
     public static async Task<string> GetPersonTree(
-        [Description("Root person handle or Gramps ID. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The person to start from. " + ToolDescriptionFragments.HandleDiscovery)]
         string person,
-        [Description("Tree direction: ancestors | descendants.")]
+        [Description("ancestors (parents, grandparents, …) or descendants (children, grandchildren, …).")]
         string direction,
-        [Description("Number of generations to include (default: 3, max: 10)")]
+        [Description("How many generations to walk, 1–10 (default 3); other values are clamped.")]
         int generations = 3,
         [Description("When true (default), add kinship text such as Father's mother or Granddaughter. When false, show only generation numbers.")]
         bool kinshipLabels = true,
@@ -110,14 +112,15 @@ public static class PersonTools
 
     [McpServerTool(Title = "Get Relations", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: how two people are related, read as 'person 2 is the X of person 1' " +
-        "(e.g. 'third cousin twice removed', 'husband'), with generations to the common ancestor " +
-        "and every relationship found with its common ancestors by name; or a clear message if unrelated. " +
-        "Searches blood relatives up to 15 generations, plus spouses.")]
+        "Explain how two people are related, read as 'person 2 is the X of person 1' " +
+        "(e.g. 'third cousin twice removed', 'husband'): the closest relationship with generations to the common ancestor, " +
+        "then every relationship found with its common ancestors by name. Searches blood relatives up to 15 generations " +
+        "plus spouses; unrelated people get a clear message. Find both people first with search. " +
+        "To list a whole line of ancestors or descendants use get_person_tree.")]
     public static async Task<string> GetRelations(
-        [Description("First person handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("Person 1, the one the relationship is told from. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle1,
-        [Description("Second person handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("Person 2, the one whose relationship to person 1 is named. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle2,
         GrampsApiClient client)
     {
@@ -186,10 +189,12 @@ public static class PersonTools
 
     [McpServerTool(Title = "Create Person", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a new person (write). Returns handle and Gramps ID. " +
-        ToolDescriptionFragments.CallGetNameSchema + " " + ToolDescriptionFragments.CallGetTypes + " " +
-        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide + " " +
-        "Link events in one call with eventRefs, including per-link role metadata.")]
+        "Create one person with full control: names, gender, links to existing events (with roles), families, " +
+        "citations, notes, media and tags, plus attributes, addresses, URLs and associations. " +
+        "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: search for the person first, " +
+        "and change an existing person with update_person. quick_add_person is simpler when only birth and death are known; " +
+        "it also creates the events and places. To make the person a child of a family, add them to the family's childRefs " +
+        "(create_family or update_family). " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreatePerson(
         [Description(FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName,
@@ -197,19 +202,19 @@ public static class PersonTools
         string gender = "Unknown",
         [Description(FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Event links to attach to this person. " + FlexibleEventRefList.DescriptionHint)]
+        [Description("Existing events this person takes part in, each with a role (Primary by default; Witness, Godparent, …). " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Family handles (where this person is parent/spouse). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Families where this person is a parent or spouse. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
-        [Description("Parent family handles (where this person is child). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Families where this person is a child. Does not add the person to the family's children: use childRefs on the family for that. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? parentFamilyHandles = null,
-        [Description("Media object handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Citation handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description(FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
@@ -219,7 +224,7 @@ public static class PersonTools
         FlexibleUrlList? urls = null,
         [Description(FlexiblePersonRefList.DescriptionHint)]
         FlexiblePersonRefList? personAssociations = null,
-        [Description("Mark record as private (default: false)")]
+        [Description("Mark the person private (default false).")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
     {
@@ -273,42 +278,43 @@ public static class PersonTools
 
     [McpServerTool(Title = "Update Person", ReadOnly = false, Destructive = false)]
     [Description(
-        "Update an existing person (write). Only include arguments you want to change. " +
-        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        "With linkMode=replace, eventRefs replaces the full event list. " +
-        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
+        "Change an existing person: names, gender, links to events, families, citations, notes, media and tags, " +
+        "attributes, addresses, URLs, associations or the private flag. " + ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing person returns a not-found message. " +
+        "Links live on one side: to link an event to this person, update the person (linkMode add), not the event. " +
+        ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdatePerson(
-        [Description("Person handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The person to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Replace primary name. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleGrampsName.DescriptionHint)]
+        [Description("New primary name; replaces the whole current one. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName = null,
         [Description("Gender: Female, Male, or Unknown. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? gender = null,
-        [Description("Replace all alternate names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAlternateNameList.DescriptionHint)]
+        [Description("Alternate names. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Linked all person–event links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleEventRefList.DescriptionHint)]
+        [Description("Events this person takes part in, with roles. In replace mode the list must hold every event the person keeps. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Linked families where this person is parent/spouse. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Families where this person is a parent or spouse. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
-        [Description("Linked parent (child-of) families. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Families where this person is a child. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? parentFamilyHandles = null,
-        [Description("Linked media links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Linked citation links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Linked note links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Linked tag links. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Replace addresses. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAddressList.DescriptionHint)]
+        [Description("Addresses. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAddressList.DescriptionHint)]
         FlexibleAddressList? addresses = null,
-        [Description("Replace URLs. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleUrlList.DescriptionHint)]
+        [Description("URLs. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleUrlList.DescriptionHint)]
         FlexibleUrlList? urls = null,
-        [Description("Linked person associations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePersonRefList.DescriptionHint)]
+        [Description("Associations with other people (godfather, friend, …). " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexiblePersonRefList.DescriptionHint)]
         FlexiblePersonRefList? personAssociations = null,
-        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]

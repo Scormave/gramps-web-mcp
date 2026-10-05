@@ -19,8 +19,7 @@ public static class PlaceTools
     private const string NameDateHint =
         "Gramps shows the first name, primary first, whose date is empty or matches the event date, so an undated " +
         "primary name hides dated alternate names: date the primary name too (\"from 1937-02-10\"). " +
-        "Dashes are spans; open \"1991-\" / \"from 1991\" are From. " +
-        ToolDescriptionFragments.CallGetDateInputGuide;
+        "Dashes are spans; open \"1991-\" / \"from 1991\" are From. Unreadable dates are rejected.";
 
     private const string LatHint = "Latitude in decimal degrees, north positive (52.2297). " + FlexibleString.DescriptionHint;
     private const string LonHint = "Longitude in decimal degrees, east positive (21.0122). " + FlexibleString.DescriptionHint;
@@ -52,37 +51,39 @@ public static class PlaceTools
 
     [McpServerTool(Title = "Create Place", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a place (write). Returns handle and Gramps ID. " +
-        ToolDescriptionFragments.CallGetTypes + " " +
-        "Parent places go in enclosedBy (smaller region → larger region order as in your tree).")]
+        "Create a place (village, town, parish, county, country, …) with its name, type, coordinates, enclosing places, " +
+        "historical or other-language names, and links to notes, media, citations and tags. " +
+        "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: search for the place first, " +
+        "and change an existing one with update_place. Enclosing places must already exist: create the larger region first " +
+        "and pass it in enclosedBy, with dates when the place changed hands. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreatePlace(
-        [Description("Primary display name (required).")]
+        [Description("Primary name (required).")]
         string name,
-        [Description("Place type key. " + ToolDescriptionFragments.CallGetTypes)]
+        [Description("Place type, e.g. Country, Province, County, City, Town, Village, Hamlet, Parish. " + ToolDescriptionFragments.KnownType)]
         string? placeType = null,
         [Description(LatHint)]
         FlexibleString? lat = null,
         [Description(LonHint)]
         FlexibleString? lon = null,
-        [Description("Parent place refs (enclosure hierarchy). " + FlexiblePlaceRefList.DescriptionHint)]
+        [Description("Places that contain this one. " + FlexiblePlaceRefList.DescriptionHint)]
         FlexiblePlaceRefList? enclosedBy = null,
-        [Description("Language code for primary name (default: omitted)")]
+        [Description("Language code of the primary name, e.g. pl or de (optional).")]
         string? nameLang = null,
         [Description("When the primary name applies (default: always). " + NameDateHint)]
         string? nameDate = null,
-        [Description("Alternate place names. " + FlexiblePlaceNameList.DescriptionHint)]
+        [Description("Other names: historical, other languages. " + FlexiblePlaceNameList.DescriptionHint)]
         FlexiblePlaceNameList? alternateNames = null,
-        [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Place code / postal reference (optional)")]
+        [Description("Place code or postal code (optional).")]
         string? code = null,
-        [Description("Media handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Citation handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Tag handles. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Mark record private (default: false)")]
+        [Description("Mark the place private (default false).")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
     {
@@ -135,38 +136,39 @@ public static class PlaceTools
 
     [McpServerTool(Title = "Update Place", ReadOnly = false, Destructive = false)]
     [Description(
-        "Update a place (write). Only pass fields to change. " +
-        ToolDescriptionFragments.UpdateEmptyListRemovesLinks)]
+        "Change an existing place: name with its language and date, type, coordinates, enclosing places, alternate names, code, " +
+        "and links to notes, media, citations and tags. " + ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing place returns a not-found message. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdatePlace(
-        [Description("Place handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The place to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Name text. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New primary name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
-        [Description("Place type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
+        [Description("New place type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? placeType = null,
         [Description(LatHint + " " + OmitToKeepEmptyRemoves)]
         FlexibleString? lat = null,
         [Description(LonHint + " " + OmitToKeepEmptyRemoves)]
         FlexibleString? lon = null,
-        [Description("Linked parent place chain. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceRefList.DescriptionHint)]
+        [Description("Places that contain this one. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexiblePlaceRefList.DescriptionHint)]
         FlexiblePlaceRefList? enclosedBy = null,
-        [Description("Language code for primary name. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("Language code of the primary name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? nameLang = null,
         [Description("When the primary name applies. Omit to keep the current date; pass an empty string to remove it. " + NameDateHint)]
         string? nameDate = null,
-        [Description("Replace alternate place names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceNameList.DescriptionHint)]
+        [Description("Alternate names. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexiblePlaceNameList.DescriptionHint)]
         FlexiblePlaceNameList? alternateNames = null,
-        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Place code. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New place code. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? code = null,
-        [Description("Linked media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Linked citations. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]

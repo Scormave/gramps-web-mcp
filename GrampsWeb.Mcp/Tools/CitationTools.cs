@@ -44,30 +44,31 @@ public static class CitationTools
 
     [McpServerTool(Title = "Create Citation", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a citation (write). Returns handle and Gramps ID. " +
-        "sourceHandle must be an existing source (create_source first). " +
-        "Attach to people/events/places via their citationHandles on create/update. " +
-        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
+        "Create a citation: one specific spot in an existing source (page, act or entry number) with its date, confidence, " +
+        "notes and media such as the scan. Returns the new handle, Gramps ID and page, with next steps. " +
+        "The source must already exist (search, or create_source). The citation supports nothing until it is attached: " +
+        "add it to each person, family, event or place it names (citationHandles, linkMode add, on their update tool). " +
+        "Does not check for duplicates; change an existing citation with update_citation. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateCitation(
-        [Description("Source handle (required). " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The source being cited (required). " + ToolDescriptionFragments.HandleDiscovery)]
         string sourceHandle,
-        [Description("Page reference within source (optional). " + FlexibleString.DescriptionHint)]
+        [Description("Where in the source: page, act or entry number (optional). " + FlexibleString.DescriptionHint)]
         FlexibleString? page = null,
-        [Description("Confidence: Very Low, Low, Normal, High, or Very High (default: Normal)")]
+        [Description("How reliable the cited record is: Very Low, Low, Normal (default), High or Very High.")]
         string confidence = "Normal",
-        [Description("Access or reference date text. " + ToolDescriptionFragments.CallGetDateInputGuide)]
+        [Description("Date of the cited entry, optional. " + ToolDescriptionFragments.DateText)]
         string? date = null,
-        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes, e.g. a transcription. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Citation text / transcript (optional)")]
+        [Description("Citation text or transcript (optional).")]
         string? text = null,
-        [Description("Media handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media such as the scan of the page. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description(FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Mark record private (default: false)")]
+        [Description("Mark the citation private (default false).")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
     {
@@ -107,31 +108,31 @@ public static class CitationTools
 
     [McpServerTool(Title = "Update Citation", ReadOnly = false, Destructive = false)]
     [Description(
-        "Update a citation (write). Only pass fields to change. " +
-        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        ToolDescriptionFragments.CallGetDateInputGuide + " " + ToolDescriptionFragments.CallGetStructuredFieldInputGuide)]
+        "Change an existing citation: its source, page, confidence, date, text, notes, media, tags, attributes or the private flag. " +
+        ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing citation returns a not-found message. " +
+        "Which people and events it supports is stored on them (their citationHandles), not here. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateCitation(
-        [Description("Citation handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The citation to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Source handle. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("Another source to cite instead. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? sourceHandle = null,
-        [Description("Page within source. " + FlexibleString.DescriptionHint + " " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New page, act or entry number. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleString.DescriptionHint)]
         FlexibleString? page = null,
-        [Description("Confidence: Very Low, Low, Normal, High, Very High. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New confidence: Very Low, Low, Normal, High or Very High. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? confidence = null,
-        [Description("Date text. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.CallGetDateInputGuide)]
+        [Description("New date. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.DateText)]
         string? date = null,
-        [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Transcript or citation text. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New citation text or transcript. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? text = null,
-        [Description("Linked media. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
-        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Replace attributes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
-        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]

@@ -39,16 +39,16 @@ public static class TagTools
 
     [McpServerTool(Title = "Create Tag", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a tag (write). Returns handle and Gramps ID. " +
-        "color is six hex digits without # (e.g. FF5733). " +
-        "Call list_objects('tags') first to avoid duplicate names. " +
-        "Attach to objects via that object's tagHandles on create/update.")]
+        "Create a tag: a colored label such as \"To check\" or \"Line of John Smith\" for grouping records. " +
+        "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicate names: " +
+        "look through list_objects(objectType: \"tags\") first. The tag labels nothing yet: add its handle to the " +
+        "tagHandles of each record (their create or update tool, linkMode add on update). Tags cannot be renamed here.")]
     public static async Task<string> CreateTag(
-        [Description("Display name (required).")]
+        [Description("Tag name shown on records (required).")]
         string name,
-        [Description("Color as six hex digits RRGGBB without #. Default 000000 (black).")]
+        [Description("Color as six hex digits RRGGBB without #, e.g. FF5733; stored as given. Default 000000 (black).")]
         string color = "000000",
-        [Description("Sort priority; lower often sorts first (default 0).")]
+        [Description("Sort priority among tags in Gramps (default 0).")]
         int priority = 0,
         GrampsApiClient client = null!)
     {

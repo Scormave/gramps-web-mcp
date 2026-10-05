@@ -29,15 +29,16 @@ public static class ObjectTools
 
     [McpServerTool(Title = "Get Object", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read-only: fetch one object by handle or Gramps ID. For a Gramps ID, objectType is inferred from its prefix. " +
-        "For an opaque handle, objectType must be person, family, event, place, source, citation, note, media, repository, or tag. " +
-        "extended=true resolves linked details for people and families only; it is not supported for other object types.")]
+        "Read one record: its fields, its links to other records, and the records that point to it (backlinks, read-only here). " +
+        "Use it once you know the Gramps ID or handle; " +
+        "to find a record by text use search, to browse a type use list_objects. A missing record returns a not-found " +
+        "message with a hint. For a person's relatives or dated events, get_person_tree and get_timeline are shorter.")]
     public static async Task<string> GetObject(
-        [Description("Object handle or Gramps ID (e.g. I0001). Gramps ID prefixes: I person, F family, E event, P place, S source, C citation, N note, O media, R repository, T tag.")]
+        [Description("Gramps ID (e.g. I0001) or handle. ID prefixes give the type: I person, F family, E event, P place, S source, C citation, N note, O media, R repository, T tag.")]
         string identifier,
-        [Description("Optional for a Gramps ID, whose prefix determines the type. Required for an opaque handle: person | family | event | place | source | citation | note | media | repository | tag.")]
+        [Description("Record type: person, family, event, place, source, citation, note, media, repository or tag. Omit for a Gramps ID; required for a handle.")]
         string? objectType = null,
-        [Description("For person and family only: resolve linked objects inline. Default: false.")]
+        [Description("People and families only: also resolve the linked records (event dates and places, note text, tag names, citations, media) in the same call; default false is faster. Rejected for other types.")]
         bool extended = false,
         GrampsApiClient client = null!)
     {
@@ -116,14 +117,16 @@ public static class ObjectTools
 
     [McpServerTool(Title = "Delete Object", ReadOnly = false, Destructive = true)]
     [Description(
-        "Delete one Gramps object (destructive). Select its singular objectType: person, family, event, place, source, citation, note, media, repository, or tag. " +
-        "The server checks backlinks and blocks deletion by default. Pass force=true only when you accept that remaining records may have dangling references.")]
+        "Permanently delete one record; it cannot be undone through this server. Call it only after the user confirmed " +
+        "this exact record. If other records still point to it, nothing is deleted and the reply lists those backlinks " +
+        "by type; unlink them first with the owners' update tools, or pass force=true after a separate confirmation. " +
+        "On success returns the type, action: deleted and the handle; a missing record returns a not-found message.")]
     public static async Task<string> DeleteObject(
-        [Description("Object type: person | family | event | place | source | citation | note | media | repository | tag.")]
+        [Description("Record type: person, family, event, place, source, citation, note, media, repository or tag.")]
         string objectType,
-        [Description("Object handle or Gramps ID (for example I0001). Handles are opaque API strings; Gramps IDs are resolved automatically.")]
+        [Description("The record to delete. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("If true, delete despite backlinks. This may leave dangling references. Default false.")]
+        [Description("true deletes even when other records still point to it, leaving those links dangling (default false).")]
         bool force = false,
         GrampsApiClient client = null!)
     {

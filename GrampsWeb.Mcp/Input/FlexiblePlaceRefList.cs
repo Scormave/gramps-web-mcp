@@ -12,7 +12,7 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexiblePlaceRefList
 {
     public const string DescriptionHint =
-        "Parent place refs via enclosedBy (not enclosedByHandles): handle string, array of handles, " +
+        "Parent place refs via enclosedBy (not enclosedByHandles): handle or Gramps ID, array of them, " +
         "JSON array of {ref, date?}, or shorthand \"HANDLE::1920-1950\" (date optional). " +
         "Place dashes are spans (from…to); open \"1991-\" / \"from 1991\" are From. " +
         "English months OK: \"HANDLE::from 1 Oct 1929 to 27 Sep 1937\". " +

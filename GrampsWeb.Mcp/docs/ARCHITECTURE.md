@@ -197,6 +197,12 @@ read-only mode removes write tools, and disabled media access removes
 `read_media`. Hidden tools remain registered so direct calls still receive
 the normal read-only or configuration error.
 
+`Program.cs` sets `McpServerOptions.ServerInstructions` from
+`Hosting/GrampsServerInstructions.cs` in both transports. The instructions
+tell the client how the tools fit together and follow the same profile: no
+write guidance in read-only mode, and no `read_media` while media access is
+disabled.
+
 ### 1b. Resources (`Resources/`)
 
 `GrampsResources.cs` exposes read-only reference payloads as MCP resources:

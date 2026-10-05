@@ -42,19 +42,20 @@ public static class NoteTools
 
     [McpServerTool(Title = "Create Note", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a note (write). Returns handle and Gramps ID. " +
-        ToolDescriptionFragments.CallGetTypes + " " +
-        "Link the note to people/events/etc. by passing its handle in that object's noteHandles on create/update.")]
+        "Create a free-text note (research notes, transcriptions, comments) of a given type. " +
+        "Returns the new handle, Gramps ID and type, with next steps. The note is attached to nothing yet: add its handle " +
+        "to the noteHandles of each person, family, event, place, source or citation it belongs to (their update tool, linkMode add). " +
+        "Change an existing note with update_note. An unknown type is rejected before anything is saved.")]
     public static async Task<string> CreateNote(
-        [Description("Note body text (required).")]
+        [Description("The note text (required).")]
         string text,
-        [Description("Note type key. " + ToolDescriptionFragments.CallGetTypes + " Default General.")]
+        [Description("Note type, default General; e.g. Research, Transcript, Person Note, Event Note, Citation. " + ToolDescriptionFragments.KnownType)]
         string noteType = "General",
-        [Description("Text format: Plain or Html (default: Plain)")]
+        [Description("Text format: Plain (default) or Html.")]
         string format = "Plain",
-        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Mark as private (optional)")]
+        [Description("Mark the note private (default false).")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
     {
@@ -93,21 +94,21 @@ public static class NoteTools
 
     [McpServerTool(Title = "Update Note", ReadOnly = false, Destructive = false)]
     [Description(
-        "Update a note (write). Only pass fields to change. " +
-        ToolDescriptionFragments.UpdateEmptyListRemovesLinks + " " +
-        ToolDescriptionFragments.CallGetTypes)]
+        "Change an existing note: its text, type, format, tags or private flag; new text replaces the whole body. " +
+        ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing note returns a not-found message. " +
+        "Which records the note is attached to is stored on them (their noteHandles), not here.")]
     public static async Task<string> UpdateNote(
-        [Description("Note handle. " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("The note to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("Body text. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New text, replacing the whole body. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? text = null,
-        [Description("Note type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
+        [Description("New note type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? noteType = null,
         [Description("Plain or Html. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? format = null,
-        [Description("Linked tags. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Private flag. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]

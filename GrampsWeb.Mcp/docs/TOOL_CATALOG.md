@@ -23,6 +23,20 @@ is also omitted from the catalog; `get_object` still reads
 media metadata.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
 
+Tool descriptions state what a tool does, what it returns, when to use a
+sibling tool instead, and what happens on duplicates, partial failure, or bad
+input. Whether a tool writes is carried by its `readOnlyHint` and
+`destructiveHint` annotations, not by the description text. Shared wording
+(handle lookup, update semantics, date text, known types) comes from
+`ToolDescriptionFragments`.
+
+The server also sends **instructions** at initialization
+(`Hosting/GrampsServerInstructions.cs`): which tool to start with, how links
+and `linkMode` work, the order to create linked records in, and when to delete.
+They name only the tools the configuration publishes: read-only mode replaces
+the writing guidance with one line saying no tool changes the tree, and
+`read_media` is mentioned only when media access is enabled.
+
 Create/update/delete HTTP calls are serialized in-process by default
 (`GRAMPS_MUTATION_SERIALIZE=true`) and may wait
 `GRAMPS_MUTATION_MIN_INTERVAL_MS` between writes. That interval applies to
@@ -115,8 +129,11 @@ such as Open WebUI that handle tool images better than MCP resources.
 ## Reference (`ReferenceTools.cs`) — 1 tool
 
 ### R — `GetReference`
-Read-only compatibility access to one reference resource. `topic` selects the
-payload; `section` reduces the response when only one part is needed.
+Read the server's reference text before writing when a format or type is
+unclear: the same payloads as the MCP resources, for clients that do not read
+resources. `topic` selects the payload; `section` reduces the response when
+only one part is needed. An unknown topic or section is rejected with the valid
+ones.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -174,8 +191,10 @@ other than person or family.
 ### D — `DeleteObject`
 Delete a person, family, event, place, source, citation, note, media record,
 repository, or tag. The server checks backlinks and blocks deletion unless
-`force=true`; forcing may leave dangling references. Deleting a media record
-does not necessarily delete its file on disk.
+`force=true`; the refusal lists the backlinks by type. Forcing may leave
+dangling references. On success the reply gives the type, `action: deleted`,
+and the handle. Deleting a media record does not necessarily delete its file on
+disk.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -601,11 +620,17 @@ Automatically creates place and event objects as needed, then links them.
 | `deathPlace` | `string?` | no | — | Death place name |
 
 A place name reuses the place whose name matches exactly, ignoring case, and
-otherwise creates a new place.
+otherwise creates a new place. The tool does not check for an existing person
+of the same name. Steps are not rolled back: if one fails, the error lists the
+objects already created.
 
 ### C — `AddEventToPerson`
-Create an event and attach it to an existing person in one call.
-Handles event creation + person update automatically.
+Create an event and attach it to an existing person in one call, keeping the
+person's other events. Steps are not rolled back: if one fails, the error lists
+the objects already created. `eventType` is not checked against the tree's
+types, so an unknown type is saved as a new custom type. For an event shared by
+several people, or one with citations, use `create_event` and link it from each
+participant with `linkMode: add`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
