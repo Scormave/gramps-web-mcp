@@ -734,7 +734,7 @@ public sealed class GrampsResources
             citations = "create_citation / update_citation - date (dashes → range/After)",
             media = "update_media - date (dashes → range/After)",
             places =
-                "create_place / update_place - enclosedBy / alternateNames dates (dashes → span/From; parameter is enclosedBy, not enclosedByHandles)",
+                "create_place / update_place - nameDate / enclosedBy / alternateNames dates (dashes → span/From; parameter is enclosedBy, not enclosedByHandles)",
             persons =
                 "create_person / update_person - gender: Female, Male, or Unknown"
         },

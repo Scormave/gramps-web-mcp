@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
@@ -15,6 +16,12 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class PlaceTools
 {
+    private const string NameDateHint =
+        "Gramps shows the first name, primary first, whose date is empty or matches the event date, so an undated " +
+        "primary name hides dated alternate names: date the primary name too (\"from 1937-02-10\"). " +
+        "Dashes are spans; open \"1991-\" / \"from 1991\" are From. " +
+        ToolDescriptionFragments.CallGetDateInputGuide;
+
     [Description(
         "Read-only: one place by handle (name, type, coordinates, enclosing places and full hierarchy by name). " +
         "Use when resolving place handles from events or building geographic context.")]
@@ -57,6 +64,8 @@ public static class PlaceTools
         FlexiblePlaceRefList? enclosedBy = null,
         [Description("Language code for primary name (default: omitted)")]
         string? nameLang = null,
+        [Description("When the primary name applies (default: always). " + NameDateHint)]
+        string? nameDate = null,
         [Description("Alternate place names. " + FlexiblePlaceNameList.DescriptionHint)]
         FlexiblePlaceNameList? alternateNames = null,
         [Description("Note handles. " + FlexibleHandleList.DescriptionHint)]
@@ -78,6 +87,8 @@ public static class PlaceTools
             if (string.IsNullOrWhiteSpace(name))
                 throw McpToolErrors.ValidationError("Error: name is required");
 
+            var nameDateRequest = AgentDateParser.ToDateRequestOrNull(nameDate, DateComponentOrder.Iso);
+
             if (placeType != null)
             {
                 var typeError = await TypeCache.ValidateTypeAsync(placeType, "place_types", client);
@@ -91,7 +102,8 @@ public static class PlaceTools
                 Name = new PlaceNameRequest
                 {
                     Value = name.Trim(),
-                    Lang = string.IsNullOrWhiteSpace(nameLang) ? null : nameLang.Trim()
+                    Lang = string.IsNullOrWhiteSpace(nameLang) ? null : nameLang.Trim(),
+                    Date = nameDateRequest
                 },
                 Type = placeType,
                 Code = code,
@@ -137,6 +149,8 @@ public static class PlaceTools
         FlexiblePlaceRefList? enclosedBy = null,
         [Description("Language code for primary name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? nameLang = null,
+        [Description("When the primary name applies. Omit to keep the current date; pass an empty string to remove it. " + NameDateHint)]
+        string? nameDate = null,
         [Description("Replace alternate place names. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceNameList.DescriptionHint)]
         FlexiblePlaceNameList? alternateNames = null,
         [Description("Linked notes. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexibleHandleList.DescriptionHint)]
@@ -181,7 +195,7 @@ public static class PlaceTools
                 Handle = place.Handle,
                 GrampsId = place.GrampsId,
                 Change = place.Change,
-                Name = GrampsRequestMapping.ToPrimaryPlaceNameRequest(name, nameLang, place.PrimaryName),
+                Name = GrampsRequestMapping.ToPrimaryPlaceNameRequest(name, nameLang, nameDate, place.PrimaryName),
                 Type = placeType ?? place.Type,
                 Code = code ?? place.Code,
                 Latitude = lat ?? place.Latitude,

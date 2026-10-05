@@ -227,9 +227,14 @@ internal static class GrampsRequestMapping
             Date = ToDateRequestOrNull(n.Date)
         }).ToArray();
 
+    /// <summary>
+    /// Primary place name for an update: a <c>null</c> argument keeps the stored part, an empty
+    /// <paramref name="lang"/> or <paramref name="date"/> removes it.
+    /// </summary>
     public static PlaceNameRequest ToPrimaryPlaceNameRequest(
         string? value,
         string? lang,
+        string? date,
         GrampsPlaceName? existing)
     {
         var resolvedValue = (value ?? existing?.Value)?.Trim() ?? "";
@@ -238,7 +243,9 @@ internal static class GrampsRequestMapping
         {
             Value = resolvedValue,
             Lang = string.IsNullOrWhiteSpace(resolvedLang) ? null : resolvedLang.Trim(),
-            Date = ToDateRequestOrNull(existing?.Date)
+            Date = date != null
+                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
+                : ToDateRequestOrNull(existing?.Date)
         };
     }
 

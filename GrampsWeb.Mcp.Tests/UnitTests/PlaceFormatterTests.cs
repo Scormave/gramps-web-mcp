@@ -180,6 +180,39 @@ public class PlaceFormatterTests
         Assert.DoesNotContain("Ada", result);
     }
 
+    [Fact]
+    public async Task FormatPlaceFull_Shows_Primary_Name_Lang_And_Date()
+    {
+        const string json = """
+            {
+              "handle": "pushkin-h",
+              "gramps_id": "P7",
+              "name": { "value": "Pushkin", "lang": "ru", "date": { "modifier": 7, "dateval": [10, 2, 1937, false] } },
+              "place_type": "City",
+              "alt_names": [
+                { "value": "Detskoye Selo", "lang": "ru", "date": { "modifier": 5, "dateval": [0, 0, 1918, false, 0, 0, 1937, false] } }
+              ]
+            }
+            """;
+        var place = JsonSerializer.Deserialize<GrampsPlace>(json, GrampsJson.Options)!;
+
+        var result = await PlaceFormatter.FormatPlaceFull(place, CreateClient(new PlaceHandler([])));
+
+        Assert.Contains("PLACE: Pushkin [handle: pushkin-h]", result);
+        Assert.Contains("Primary name: Pushkin (ru) [from 1937-02-10]", result);
+        Assert.Contains("  - Detskoye Selo (ru) [from 1918 to 1937]", result);
+    }
+
+    [Fact]
+    public async Task FormatPlaceFull_Omits_Primary_Name_Line_Without_Lang_Or_Date()
+    {
+        var place = new GrampsPlace { Handle = "city-h", Name = "City", Type = "City" };
+
+        var result = await PlaceFormatter.FormatPlaceFull(place, CreateClient(new PlaceHandler([])));
+
+        Assert.DoesNotContain("Primary name:", result);
+    }
+
     private static string GetHierarchyLine(string result)
     {
         foreach (var line in result.Split('\n'))

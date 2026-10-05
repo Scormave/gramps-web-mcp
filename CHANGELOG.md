@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `create_place` and `update_place` take `nameDate`, the date of the primary
+  place name (`from 1937-02-10`, `1918-1937`); on update an empty string
+  removes it. Gramps shows the first name, primary first, whose date is empty
+  or matches the event date, so dated alternate names never showed while the
+  primary name had no date, and the tools had no way to give it one. The
+  place card shows the primary name's language and date
+
 ## [2.2.0] - 2026-10-03
 
 ### Added

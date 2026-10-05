@@ -55,6 +55,7 @@ public static class PlaceFormatter
 
         var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, place.Type);
         sb.AppendLine($"Type: {typeLabel}");
+        AppendPrimaryNameDetails(sb, place);
 
         var hierarchy = place.Profile?.ParentPlaces is { } parentPlaces
             ? string.Join(", ", parentPlaces.Select(FormatProfilePlace))
@@ -202,6 +203,16 @@ public static class PlaceFormatter
         return details.Length == 0 ? name : $"{name} ({string.Join(", ", details)})";
     }
 
+    /// <summary>The header names the place; its language and date get a line only when set.</summary>
+    private static void AppendPrimaryNameDetails(StringBuilder sb, GrampsPlace place)
+    {
+        var name = place.PrimaryName;
+        if (name == null || (string.IsNullOrWhiteSpace(name.Lang) && FormatOptionalDate(name.Date) == null))
+            return;
+
+        sb.AppendLine($"Primary name: {FormatPlaceName(name)}");
+    }
+
     private static void AppendAlternateNamesSection(StringBuilder sb, GrampsPlace place)
     {
         if (place.AlternateNames is not { Length: > 0 })
@@ -209,18 +220,19 @@ public static class PlaceFormatter
 
         sb.AppendLine($"Alternate names ({place.AlternateNames.Length}):");
         foreach (var alt in place.AlternateNames)
-        {
-            var value = alt.Value ?? "—";
-            var lang = string.IsNullOrWhiteSpace(alt.Lang) ? null : alt.Lang;
-            var dateText = FormatOptionalDate(alt.Date);
+            sb.AppendLine($"  - {FormatPlaceName(alt)}");
+    }
 
-            var line = $"  - {value}";
-            if (lang != null)
-                line += $" ({lang})";
-            if (dateText != null)
-                line += $" [{dateText}]";
-            sb.AppendLine(line);
-        }
+    /// <summary>"Leningrad (ru) [from 1924-01-26 to 1991-09-06]".</summary>
+    private static string FormatPlaceName(GrampsPlaceName name)
+    {
+        var text = name.Value ?? "—";
+        if (!string.IsNullOrWhiteSpace(name.Lang))
+            text += $" ({name.Lang})";
+        var dateText = FormatOptionalDate(name.Date);
+        if (dateText != null)
+            text += $" [{dateText}]";
+        return text;
     }
 
     private static string? FormatOptionalDate(GrampsDate? date)

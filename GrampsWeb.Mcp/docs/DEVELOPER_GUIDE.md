@@ -339,7 +339,7 @@ This means the tool must preserve all fields the agent didn't explicitly change.
 ### Agent → Gramps
 
 `AgentDateParser` converts free-text dates into `DateRequest` objects (used by
-events, citations, media, composites, place enclosure, and place alternate names):
+events, citations, media, composites, place enclosure, and place names):
 
 - ISO dates: `2024-03-15`, `2024-03`, `2024`
 - English months: `1 Jul 1919`, `5 July 1944`, `Jul 1919` (abbreviated or full; optional comma before year)
