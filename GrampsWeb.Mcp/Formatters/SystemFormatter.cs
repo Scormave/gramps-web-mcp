@@ -5,7 +5,7 @@ using GrampsWeb.Mcp.Models;
 namespace GrampsWeb.Mcp.Formatters;
 
 /// <summary>
-/// Formats system-level JSON API responses (metadata, transactions, bookmarks).
+/// Formats system-level API responses (metadata, transactions, bookmarks).
 /// </summary>
 public static class SystemFormatter
 {
@@ -214,53 +214,42 @@ public static class SystemFormatter
         return string.IsNullOrWhiteSpace(user?.Name) ? null : user.Name.Trim();
     }
 
-    public static string FormatBookmarks(JsonElement bookmarks)
+    /// <summary>Bookmark collections in the order they are listed; others follow by name.</summary>
+    private static readonly string[] BookmarkCollections =
+        ["people", "families", "events", "places", "sources", "citations", "repositories", "media", "notes"];
+
+    /// <summary>
+    /// The tree's bookmarks from <c>GET /api/bookmarks/</c>, which answers <c>{"people": [handles], "families": [], …}</c>:
+    /// one section per collection that has any, each bookmark named from <paramref name="labels"/>
+    /// (<see cref="LinkedObjectLabels"/>) when it has the handle.
+    /// </summary>
+    public static string FormatBookmarks(
+        IReadOnlyDictionary<string, string[]?> bookmarks,
+        IReadOnlyDictionary<string, string>? labels = null)
     {
+        var sections = bookmarks
+            .Select(pair => (Collection: pair.Key, Handles: (pair.Value ?? [])
+                .Where(h => !string.IsNullOrWhiteSpace(h))
+                .Select(h => h.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToArray()))
+            .Where(section => section.Handles.Length > 0)
+            .OrderBy(section => Array.IndexOf(BookmarkCollections, section.Collection) is var i and >= 0 ? i : BookmarkCollections.Length)
+            .ThenBy(section => section.Collection, StringComparer.Ordinal)
+            .ToList();
+        var count = sections.Sum(section => section.Handles.Length);
+
         var sb = new StringBuilder();
-        sb.AppendLine("USER BOOKMARKS");
+        sb.AppendLine(count == 0 ? "BOOKMARKS" : $"BOOKMARKS ({count})");
         sb.AppendLine(new string('=', 60));
-        sb.AppendLine();
-
-        try
+        if (count == 0)
         {
-            if (bookmarks.ValueKind == JsonValueKind.Array)
-            {
-                var items = bookmarks.EnumerateArray().ToList();
-                if (items.Count == 0)
-                {
-                    sb.AppendLine("No bookmarks found.");
-                }
-                else
-                {
-                    for (int i = 0; i < items.Count; i++)
-                    {
-                        var bm = items[i];
-                        var handle = "";
-                        var objectType = "";
-                        var name = "";
-
-                        foreach (var prop in bm.EnumerateObject())
-                        {
-                            if (prop.Name == "handle" && prop.Value.ValueKind == JsonValueKind.String)
-                                handle = prop.Value.GetString() ?? "";
-                            if (prop.Name == "object_type" && prop.Value.ValueKind == JsonValueKind.String)
-                                objectType = prop.Value.GetString() ?? "";
-                            if (prop.Name == "name" && prop.Value.ValueKind == JsonValueKind.String)
-                                name = prop.Value.GetString() ?? "";
-                        }
-
-                        sb.AppendLine($"{i + 1}. [{objectType}] {name}");
-                        sb.AppendLine($"   Handle: {handle}");
-                    }
-                }
-            }
-            else
-            {
-                sb.AppendLine(JsonSerializer.Serialize(bookmarks, new JsonSerializerOptions { WriteIndented = true }));
-            }
+            sb.AppendLine();
+            sb.AppendLine("No bookmarks in this tree.");
         }
-        catch { }
 
+        foreach (var (collection, handles) in sections)
+            HandleListFormatter.AppendHandleBulletSection(sb, TextInfo.ToTitleCase(collection), handles, labels);
         return sb.ToString();
     }
 }

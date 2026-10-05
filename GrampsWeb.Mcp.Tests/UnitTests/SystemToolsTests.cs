@@ -6,6 +6,7 @@ using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
+using ModelContextProtocol;
 using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
@@ -92,6 +93,90 @@ public class SystemToolsTests
                         "   Added Reference to [handle: e2]\n" +
                         "   Added Reference from [handle: p1]\n" +
                         "   Updated Person [handle: p1]\n", result);
+    }
+
+    [Fact]
+    public async Task GetBookmarks_Lists_Each_Type_With_The_Names_Of_Its_Records()
+    {
+        using var handler = new BookmarksHandler("""
+            {
+              "citations": [], "events": [], "families": ["f1"], "media": [], "notes": [],
+              "people": ["p1", "p2"], "places": [], "repositories": [], "sources": ["gone"], "tags": ["t1"]
+            }
+            """);
+
+        var result = (await SystemTools.GetBookmarks(CreateClient(handler))).Replace("\r\n", "\n");
+
+        Assert.Equal(
+            "BOOKMARKS (5)\n" + new string('=', 60) + "\n" +
+            "\nPeople (2):\n  • Smith, John [handle: p1]\n  • Brown, Mary [handle: p2]\n" +
+            "\nFamilies (1):\n  • Smith, John and Brown, Mary [handle: f1]\n" +
+            "\nSources (1):\n  • [handle: gone]\n" +
+            "\nTags (1):\n  • To do [handle: t1]\n",
+            result);
+    }
+
+    [Fact]
+    public async Task GetBookmarks_Says_So_When_The_Tree_Has_None()
+    {
+        using var handler = new BookmarksHandler("""{"people": [], "families": [], "events": []}""");
+
+        var result = (await SystemTools.GetBookmarks(CreateClient(handler))).Replace("\r\n", "\n");
+
+        Assert.Equal("BOOKMARKS\n" + new string('=', 60) + "\n\nNo bookmarks in this tree.\n", result);
+        Assert.Equal(["/api/bookmarks/"], handler.Paths);
+    }
+
+    [Fact]
+    public async Task GetBookmarks_Reports_A_Reply_It_Cannot_Read()
+    {
+        using var handler = new BookmarksHandler("""[{"handle": "p1"}]""");
+
+        await Assert.ThrowsAsync<McpException>(() => SystemTools.GetBookmarks(CreateClient(handler)));
+    }
+
+    private static GrampsApiClient CreateClient(HttpMessageHandler handler)
+    {
+        var http = new HttpClient(handler);
+        var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");
+        var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
+        return new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
+    }
+
+    /// <summary>Answers the bookmarks and the records they name, and records every GET path.</summary>
+    private sealed class BookmarksHandler(string bookmarks) : HttpMessageHandler
+    {
+        public List<string> Paths { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri!.PathAndQuery;
+            if (path == "/api/token/")
+                return Task.FromResult(JsonResponse("""{"access_token":"token","refresh_token":"refresh","expires_in":900}"""));
+
+            Paths.Add(path);
+            return Task.FromResult(path switch
+            {
+                "/api/bookmarks/" => JsonResponse(bookmarks),
+                "/api/people/?handles=p1,p2&profile=self&page=1&pagesize=2" => JsonResponse("""
+                    [
+                      {"handle": "p1", "gramps_id": "I0001", "profile": {"handle": "p1", "name_display": "Smith, John"}},
+                      {"handle": "p2", "gramps_id": "I0002", "profile": {"handle": "p2", "name_display": "Brown, Mary"}}
+                    ]
+                    """),
+                "/api/families/f1?profile=self" => JsonResponse("""
+                    {"handle": "f1", "gramps_id": "F0001",
+                     "profile": {"father": {"name_display": "Smith, John"}, "mother": {"name_display": "Brown, Mary"}}}
+                    """),
+                "/api/tags/t1" => JsonResponse("""{"handle": "t1", "name": "To do"}"""),
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+            });
+        }
+
+        private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
     }
 
     private sealed class HistoryHandler(string body = """[{"id":1,"description":"Edit Person"}]""", int? total = null) : HttpMessageHandler

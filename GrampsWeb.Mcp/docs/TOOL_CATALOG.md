@@ -488,15 +488,20 @@ Update media metadata (no binary upload).
 ## Repository (`RepositoryTools.cs`) — 2 tools
 
 ### C — `CreateRepository`
-Create a repository.  **Prerequisites:** `gramps://types`.
+Create a repository: an archive, library, church, website, or other holder of
+sources.  **Prerequisites:** `gramps://types`.  Call `list_objects('repositories')`
+first to avoid entering one holder twice, and change an existing repository with
+`UpdateRepository`. Sources link to the repository afterwards through
+`repositoryHandles` on `CreateSource` or `UpdateSource`, which also carry the
+call number. `noteHandles` and `tagHandles` only link existing notes and tags.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `name` | `string` | yes | — | Name |
-| `repoType` | `string?` | no | — | Repository type key |
-| `address` | `string?` | no | — | Street address |
-| `url` | `string?` | no | — | Website URL |
-| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `repoType` | `string?` | no | — | Repository type, such as `Archive`, `Library`, `Church`, or `Web site`; Gramps stores `Library` when omitted |
+| `address` | `string?` | no | — | Postal address as one line, stored as the street of the repository's address |
+| `url` | `string?` | no | — | Website, stored as the repository's web home link |
+| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Existing notes and tags to link |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateRepository`
@@ -569,7 +574,12 @@ removes, which Gramps records as a reference change, appears as
 | `limit` | `int` | no | `20` | Number of transactions (clamped 1–100) |
 
 ### R — `GetBookmarks`
-Gramps Web user bookmarks (saved shortcuts).
+The records bookmarked in the tree, under the header `BOOKMARKS (5)`, with
+one section per type that has any (`People (2):`, `Families (1):`, …) and each
+record as its one-line summary with `[handle: …]`. Bookmarks belong to the
+tree and are shared by all its users; they are set in Gramps Web or Gramps
+desktop, not through this server. A tree without bookmarks gets `No bookmarks
+in this tree.`
 
 ---
 

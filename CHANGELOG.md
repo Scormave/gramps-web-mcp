@@ -15,6 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   primary name had no date, and the tools had no way to give it one. The
   place card shows the primary name's language and date
 
+### Changed
+
+- Describe in `create_repository` what a repository is, to check
+  `list_objects('repositories')` first, that sources link to it through
+  `repositoryHandles`, that `noteHandles` and `tagHandles` only link existing
+  notes and tags, and the type Gramps stores when `repoType` is omitted;
+  describe in `get_bookmarks` what it lists and when to use `search`,
+  `list_objects`, or `get_recent_changes` instead
+
 ### Fixed
 
 - `create_place` and `update_place` accept `lat` and `lon` as JSON numbers;
@@ -39,6 +48,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `add_event_to_person` answers "Place not found" for a `place` Gramps ID or
   handle that matches no place, and creates nothing; it created a place named
   after the ID (`P0099`)
+- `get_bookmarks` lists the bookmarked records by type, each with its summary
+  and handle; it printed the server's reply as raw JSON, because it expected a
+  list of bookmark objects that Gramps Web does not send. It no longer calls
+  them user bookmarks: bookmarks belong to the tree and are shared by all its
+  users
 
 ## [2.2.0] - 2026-10-03
 

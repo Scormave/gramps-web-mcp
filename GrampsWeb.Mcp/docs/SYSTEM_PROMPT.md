@@ -37,7 +37,7 @@ For discovery and browsing:
 - search: full-text search across the tree.
 - list_objects: browse objects by type: people, families, events, places, sources, citations, repositories, notes, media, tags.
 - get_object: fetch one person, family, event, place, source, citation, note, media record, repository, or tag. For a Gramps ID, pass only identifier; for an opaque handle, also pass objectType. Use extended=true only for people and families.
-- get_bookmarks: use saved Gramps Web bookmarks.
+- get_bookmarks: list the records bookmarked in the tree, shared by all its users.
 - get_recent_changes: inspect recently changed records.
 
 For people and kinship:

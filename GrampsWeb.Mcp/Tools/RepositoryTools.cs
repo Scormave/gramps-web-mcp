@@ -41,22 +41,26 @@ public static class RepositoryTools
 
     [McpServerTool(Title = "Create Repository", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a repository (write). Returns handle and Gramps ID. " +
-        ToolDescriptionFragments.CallGetTypes)]
+        "Create a repository (write): an archive, library, church, website or other holder of sources. " +
+        "Returns handle and Gramps ID. Check list_objects('repositories') first so one holder is not entered twice; " +
+        "change an existing repository with update_repository. Link sources to it afterwards through repositoryHandles " +
+        "on create_source or update_source, which also carry the call number. noteHandles and tagHandles only link " +
+        "existing notes and tags (create_note, create_tag); nothing else is created or changed.")]
     public static async Task<string> CreateRepository(
-        [Description("Name (required).")]
+        [Description("Name, e.g. \"State Archive in Warsaw\" (required).")]
         string name,
-        [Description("Repository type key. " + ToolDescriptionFragments.CallGetTypes)]
+        [Description("Repository type, e.g. Archive, Library, Church, Web site (optional; Gramps stores Library when omitted). " +
+                     ToolDescriptionFragments.CallGetTypes)]
         string? repoType = null,
-        [Description("Street address (optional)")]
+        [Description("Postal address as one line, e.g. \"12 High Street, London\", stored as the street of the repository's address (optional).")]
         string? address = null,
-        [Description("Website URL (optional)")]
+        [Description("Website, e.g. https://archive.example.org, stored as the repository's web home link (optional).")]
         string? url = null,
-        [Description("Note handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Existing notes to link (optional); create them first with create_note. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tag handles (optional). " + FlexibleHandleList.DescriptionHint)]
+        [Description("Existing tags to link (optional); create them first with create_tag. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Mark record private (default: false)")]
+        [Description("Mark the repository private (default: false); Gramps Web hides private records from users not allowed to see them.")]
         bool isPrivate = false,
         GrampsApiClient client = null!)
     {
