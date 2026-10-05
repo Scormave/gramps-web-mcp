@@ -7,7 +7,8 @@ namespace GrampsWeb.Mcp.Hosting;
 /// <summary>
 /// Checks tool call arguments against the tool's input schema. The SDK answers a missing required
 /// argument or a value it cannot convert with a bare "An error occurred invoking", and ignores
-/// unknown names, so a misspelled optional argument would silently do nothing.
+/// unknown names, so a misspelled optional argument would silently do nothing. The SDK also rejects
+/// a JSON number for a string parameter, which clients send for a year-only date such as 1877.
 /// </summary>
 internal static class ToolArgumentValidator
 {
@@ -34,6 +35,29 @@ internal static class ToolArgumentValidator
             problems.Add($"Missing required argument{(missing.Count > 1 ? "s" : "")}: {string.Join(", ", missing)}.");
         problems.Add(DescribeParameters(schema, properties));
         return string.Join(" ", problems);
+    }
+
+    /// <summary>
+    /// The arguments with each JSON number given for a string parameter turned into its text
+    /// (1877 → "1877"); null when there is none.
+    /// </summary>
+    public static Dictionary<string, JsonElement>? NumbersAsText(JsonElement schema, IDictionary<string, JsonElement>? arguments)
+    {
+        if (arguments == null)
+            return null;
+        var properties = Properties(schema);
+        Dictionary<string, JsonElement>? converted = null;
+        foreach (var (name, value) in arguments)
+        {
+            if (value.ValueKind != JsonValueKind.Number
+                || !properties.TryGetValue(name, out var property)
+                || !Types(property).Contains("string"))
+                continue;
+            converted ??= new Dictionary<string, JsonElement>(arguments);
+            converted[name] = JsonSerializer.SerializeToElement(value.GetRawText());
+        }
+
+        return converted;
     }
 
     /// <summary>

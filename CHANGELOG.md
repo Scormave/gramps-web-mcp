@@ -21,6 +21,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `52.19` was rejected with "Argument lat must be a string". Coordinates are
   trimmed, and one sent with its own double quotes (`"\"52.19\""`) is stored
   without them
+- Every text parameter accepts a JSON number as its text, so a year-only date
+  sent as `1877` (`date`, `nameDate`, `birthDate`, `dates`, …) works; it was
+  rejected with "Argument date must be a string". A number given as the
+  `date` of an `alternateNames` or `enclosedBy` entry was silently dropped and
+  is now read as a year
 
 ## [2.2.0] - 2026-10-03
 

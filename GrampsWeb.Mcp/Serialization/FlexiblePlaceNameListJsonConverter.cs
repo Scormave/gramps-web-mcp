@@ -166,6 +166,8 @@ public sealed class FlexiblePlaceNameListJsonConverter : JsonConverter<FlexibleP
         {
             if (dateEl.ValueKind == JsonValueKind.String)
                 date = AgentDateParser.ToDateRequestOrNull(dateEl.GetString(), DateComponentOrder.Iso);
+            else if (dateEl.ValueKind == JsonValueKind.Number)
+                date = AgentDateParser.ToDateRequestOrNull(dateEl.GetRawText(), DateComponentOrder.Iso);
             else if (dateEl.ValueKind == JsonValueKind.Object)
                 date = dateEl.Deserialize<DateRequest>(options);
         }

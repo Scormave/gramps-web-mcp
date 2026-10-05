@@ -17,13 +17,17 @@ public class McpToolArgumentTests
     [Theory]
     [InlineData("""{"identifier":"I0001","extended":true}""", false, "probe I0001 True")]
     [InlineData("""{"identifier":"I0001","pagesize":"5"}""", false, "probe I0001 False 5")]
+    [InlineData("""{"identifier":"I0001","date":1877}""", false, "probe I0001 False date 1877")]
+    [InlineData("""{"identifier":1877}""", false, "probe 1877 False")]
     [InlineData("""{"id":"I0001"}""", true,
         "An error occurred invoking 'argument_probe': Unknown argument: id. Missing required argument: identifier. " +
-        "Parameters: identifier (string, required), extended (boolean), pagesize (integer).")]
+        "Parameters: identifier (string, required), extended (boolean), pagesize (integer), date (string).")]
     [InlineData("""{"identifier":"I0001","extend":true}""", true,
         "An error occurred invoking 'argument_probe': Unknown argument: extend (did you mean extended?).")]
     [InlineData("""{"identifier":"I0001","extended":"yes"}""", true,
         "An error occurred invoking 'argument_probe': Argument extended must be a boolean, not the string")]
+    [InlineData("""{"identifier":"I0001","extended":1}""", true,
+        "An error occurred invoking 'argument_probe': Argument extended must be a boolean, not the number 1.")]
     public async Task McpPipeline_Explains_Wrong_Arguments(string arguments, bool isError, string text)
     {
         var config = new GrampsConfig("https://gramps.test", "user", "pass", "tree");
@@ -61,7 +65,7 @@ public class McpToolArgumentTests
     {
         [McpServerTool(Name = "argument_probe", ReadOnly = true)]
         [Description("Echoes its arguments.")]
-        public static string Probe(string identifier, bool extended = false, int? pagesize = null) =>
-            $"probe {identifier} {extended} {pagesize}".TrimEnd();
+        public static string Probe(string identifier, bool extended = false, int? pagesize = null, string? date = null) =>
+            $"probe {identifier} {extended} {pagesize}".TrimEnd() + (date == null ? "" : $" date {date}");
     }
 }

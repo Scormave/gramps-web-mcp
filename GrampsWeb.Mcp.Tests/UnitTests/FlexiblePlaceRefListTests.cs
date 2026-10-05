@@ -46,6 +46,15 @@ public class FlexiblePlaceRefListTests
     }
 
     [Fact]
+    public void Json_Object_Array_With_Number_Date_Parses_As_Year()
+    {
+        var v = Deserialize("""[{"ref":"h1","date":1920}]""");
+        Assert.NotNull(v);
+        Assert.Equal(0, v!.Items[0].Date!.Modifier);
+        Assert.Equal(1920, v.Items[0].Date!.Year);
+    }
+
+    [Fact]
     public void Empty_Array_Yields_Empty_Items()
     {
         var v = Deserialize("[]");

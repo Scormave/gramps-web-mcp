@@ -92,6 +92,29 @@ public class ToolArgumentValidatorTests
         Assert.Null(ToolArgumentValidator.FindTypeMismatch(Schema, arguments));
     }
 
+    [Fact]
+    public void NumbersAsText_Turns_Numbers_For_String_Parameters_Into_Text()
+    {
+        var converted = ToolArgumentValidator.NumbersAsText(Schema, Args("""
+            {"identifier":1877,"objectType":52.19,"extended":true,"pagesize":5,"primaryName":7,"unknown":1}
+            """));
+
+        Assert.NotNull(converted);
+        Assert.Equal("1877", converted["identifier"].GetString());
+        Assert.Equal("52.19", converted["objectType"].GetString());
+        Assert.Equal(JsonValueKind.True, converted["extended"].ValueKind);
+        Assert.Equal(JsonValueKind.Number, converted["pagesize"].ValueKind);
+        Assert.Equal(JsonValueKind.Number, converted["primaryName"].ValueKind);
+        Assert.Equal(JsonValueKind.Number, converted["unknown"].ValueKind);
+    }
+
+    [Fact]
+    public void NumbersAsText_Returns_Null_When_Nothing_Changes()
+    {
+        Assert.Null(ToolArgumentValidator.NumbersAsText(Schema, Args("""{"identifier":"I0001","pagesize":5}""")));
+        Assert.Null(ToolArgumentValidator.NumbersAsText(Schema, null));
+    }
+
     private static Dictionary<string, JsonElement> Args(string json) =>
         JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)!;
 }

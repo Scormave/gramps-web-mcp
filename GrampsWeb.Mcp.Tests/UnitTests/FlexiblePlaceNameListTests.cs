@@ -46,6 +46,15 @@ public class FlexiblePlaceNameListTests
     }
 
     [Fact]
+    public void Json_Object_With_Number_Date_Parses_As_Year()
+    {
+        var v = Deserialize("""[{"value":"St. Petersburg","date":1914}]""");
+        Assert.NotNull(v);
+        Assert.Equal(0, v!.Items[0].Date!.Modifier);
+        Assert.Equal(1914, v.Items[0].Date!.Year);
+    }
+
+    [Fact]
     public void Multiline_String_Parses_Multiple()
     {
         var v = Deserialize("\"Name One\\nName Two::de\"");

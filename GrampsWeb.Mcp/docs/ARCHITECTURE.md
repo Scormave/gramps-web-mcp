@@ -434,6 +434,8 @@ Argument binding happens before the tool method runs, and the SDK reports its fa
 bare "An error occurred invoking", so `McpToolProfileExtensions` checks arguments in a
 call-tool filter: an unknown name (with a suggestion such as `extended` for `extend`), a
 missing required argument, or a value of the wrong type returns the tool's parameter list.
+The same filter turns a JSON number sent for a string parameter into its text before binding,
+so a year-only date such as `1877` works without quotes.
 
 ## Deployment
 

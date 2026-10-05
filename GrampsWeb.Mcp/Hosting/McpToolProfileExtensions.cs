@@ -33,6 +33,8 @@ internal static class McpToolProfileExtensions
                 var arguments = request.Params?.Arguments;
                 if (ToolArgumentValidator.CheckNames(schema, arguments) is { } nameError)
                     throw new McpException(nameError);
+                if (ToolArgumentValidator.NumbersAsText(schema, arguments) is { } converted)
+                    request.Params!.Arguments = arguments = converted;
                 try
                 {
                     return await next(request, cancellationToken);
