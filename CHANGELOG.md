@@ -15,6 +15,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   primary name had no date, and the tools had no way to give it one. The
   place card shows the primary name's language and date
 
+### Fixed
+
+- `create_place` and `update_place` accept `lat` and `lon` as JSON numbers;
+  `52.19` was rejected with "Argument lat must be a string". Coordinates are
+  trimmed, and one sent with its own double quotes (`"\"52.19\""`) is stored
+  without them
+
 ## [2.2.0] - 2026-10-03
 
 ### Added

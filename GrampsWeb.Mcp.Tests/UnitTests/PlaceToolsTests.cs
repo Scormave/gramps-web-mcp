@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol;
@@ -21,7 +22,9 @@ public class PlaceToolsTests
             "lang": "ru",
             "date": { "modifier": 7, "dateval": [10, 2, 1937, false], "sortval": 2428575 }
           },
-          "place_type": "City"
+          "place_type": "City",
+          "lat": "59.7225",
+          "long": "30.4167"
         }
         """;
 
@@ -97,6 +100,59 @@ public class PlaceToolsTests
         var name = handler.Body!.Value.GetProperty("name");
         Assert.Equal("ru", name.GetProperty("lang").GetString());
         Assert.False(name.TryGetProperty("date", out _));
+    }
+
+    [Fact]
+    public async Task CreatePlace_Sends_Numeric_Coordinates_As_Text()
+    {
+        var handler = new PlaceHandler();
+
+        await PlaceTools.CreatePlace(
+            "London",
+            lat: JsonSerializer.Deserialize<FlexibleString>("51.5072"),
+            lon: JsonSerializer.Deserialize<FlexibleString>("-0.1276"),
+            client: CreateClient(handler));
+
+        Assert.Equal(JsonValueKind.String, handler.Body!.Value.GetProperty("lat").ValueKind);
+        Assert.Equal("51.5072", handler.Body!.Value.GetProperty("lat").GetString());
+        Assert.Equal("-0.1276", handler.Body!.Value.GetProperty("long").GetString());
+    }
+
+    [Theory]
+    [InlineData("\"52.2297\"", "52.2297")]
+    [InlineData(" 52.2297 ", "52.2297")]
+    [InlineData("\" +52.2297 \"", "+52.2297")]
+    [InlineData("52°13'47\"N", "52°13'47\"N")]
+    public async Task CreatePlace_Trims_Coordinates_And_Drops_Wrapping_Quotes(string lat, string stored)
+    {
+        var handler = new PlaceHandler();
+
+        await PlaceTools.CreatePlace("Warsaw", lat: new FlexibleString { Value = lat }, client: CreateClient(handler));
+
+        Assert.Equal(stored, handler.Body!.Value.GetProperty("lat").GetString());
+    }
+
+    [Fact]
+    public async Task UpdatePlace_Sets_Numeric_Latitude_And_Keeps_Longitude()
+    {
+        var handler = new PlaceHandler(StoredPlace);
+
+        await PlaceTools.UpdatePlace(
+            "place-h", lat: JsonSerializer.Deserialize<FlexibleString>("59.7144"), client: CreateClient(handler));
+
+        Assert.Equal("59.7144", handler.Body!.Value.GetProperty("lat").GetString());
+        Assert.Equal("30.4167", handler.Body!.Value.GetProperty("long").GetString());
+    }
+
+    [Fact]
+    public async Task UpdatePlace_Empty_Coordinate_Removes_It()
+    {
+        var handler = new PlaceHandler(StoredPlace);
+
+        await PlaceTools.UpdatePlace("place-h", lon: new FlexibleString { Value = "" }, client: CreateClient(handler));
+
+        Assert.Equal("59.7225", handler.Body!.Value.GetProperty("lat").GetString());
+        Assert.Equal("", handler.Body!.Value.GetProperty("long").GetString());
     }
 
     private static void AssertDate(JsonElement date, int modifier, int day, int month, int year)

@@ -22,6 +22,10 @@ public static class PlaceTools
         "Dashes are spans; open \"1991-\" / \"from 1991\" are From. " +
         ToolDescriptionFragments.CallGetDateInputGuide;
 
+    private const string LatHint = "Latitude in decimal degrees, north positive (52.2297). " + FlexibleString.DescriptionHint;
+    private const string LonHint = "Longitude in decimal degrees, east positive (21.0122). " + FlexibleString.DescriptionHint;
+    private const string OmitToKeepEmptyRemoves = "Omit to keep the current value; pass an empty string to remove it.";
+
     [Description(
         "Read-only: one place by handle (name, type, coordinates, enclosing places and full hierarchy by name). " +
         "Use when resolving place handles from events or building geographic context.")]
@@ -56,10 +60,10 @@ public static class PlaceTools
         string name,
         [Description("Place type key. " + ToolDescriptionFragments.CallGetTypes)]
         string? placeType = null,
-        [Description("Latitude coordinate")]
-        string? lat = null,
-        [Description("Longitude coordinate")]
-        string? lon = null,
+        [Description(LatHint)]
+        FlexibleString? lat = null,
+        [Description(LonHint)]
+        FlexibleString? lon = null,
         [Description("Parent place refs (enclosure hierarchy). " + FlexiblePlaceRefList.DescriptionHint)]
         FlexiblePlaceRefList? enclosedBy = null,
         [Description("Language code for primary name (default: omitted)")]
@@ -107,8 +111,8 @@ public static class PlaceTools
                 },
                 Type = placeType,
                 Code = code,
-                Latitude = lat,
-                Longitude = lon,
+                Latitude = ToCoordinate(lat),
+                Longitude = ToCoordinate(lon),
                 MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
@@ -141,10 +145,10 @@ public static class PlaceTools
         string? name = null,
         [Description("Place type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.CallGetTypes)]
         string? placeType = null,
-        [Description("Latitude string. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string? lat = null,
-        [Description("Longitude string. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string? lon = null,
+        [Description(LatHint + " " + OmitToKeepEmptyRemoves)]
+        FlexibleString? lat = null,
+        [Description(LonHint + " " + OmitToKeepEmptyRemoves)]
+        FlexibleString? lon = null,
         [Description("Linked parent place chain. " + ToolDescriptionFragments.OmitToKeepEmptyClears + " " + FlexiblePlaceRefList.DescriptionHint)]
         FlexiblePlaceRefList? enclosedBy = null,
         [Description("Language code for primary name. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -198,8 +202,8 @@ public static class PlaceTools
                 Name = GrampsRequestMapping.ToPrimaryPlaceNameRequest(name, nameLang, nameDate, place.PrimaryName),
                 Type = placeType ?? place.Type,
                 Code = code ?? place.Code,
-                Latitude = lat ?? place.Latitude,
-                Longitude = lon ?? place.Longitude,
+                Latitude = ToCoordinate(lat) ?? place.Latitude,
+                Longitude = ToCoordinate(lon) ?? place.Longitude,
                 MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(place.MediaList),
                     mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, place.MediaList) ?? []), linkMode, x => x.Ref),
                 NoteList = LinkUpdates.Apply(place.NoteList, (string[]?)noteHandles, linkMode, x => x),
@@ -221,6 +225,20 @@ public static class PlaceTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>
+    /// The coordinate text Gramps stores, trimmed and without double quotes a client wrapped around
+    /// the number to make it a string; <c>null</c> when the argument was omitted.
+    /// </summary>
+    private static string? ToCoordinate(FlexibleString? value)
+    {
+        if (value is null)
+            return null;
+        var text = value.Value.Trim();
+        if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
+            text = text[1..^1].Trim();
+        return text;
     }
 
     private static async Task<PlaceRefRequest[]?> ResolvePlaceRefListAsync(

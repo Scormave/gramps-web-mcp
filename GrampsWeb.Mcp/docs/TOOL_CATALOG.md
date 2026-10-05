@@ -348,8 +348,8 @@ Create a place.  **Prerequisites:** `gramps://types`.
 |-----------|------|----------|---------|-------------|
 | `name` | `string` | yes | — | Primary display name |
 | `placeType` | `string?` | no | — | Place type key |
-| `lat` | `string?` | no | — | Latitude |
-| `lon` | `string?` | no | — | Longitude |
+| `lat` | `FlexibleString?` | no | — | Latitude in decimal degrees, north positive (JSON string or number, coerced to text) |
+| `lon` | `FlexibleString?` | no | — | Longitude in decimal degrees, east positive (JSON string or number, coerced to text) |
 | `enclosedBy` | `FlexiblePlaceRefList?` | no | — | Parent place refs + optional dates (`enclosedBy`, not `enclosedByHandles`). Dashes → span (`from…to`); open `1991-` → From. English months OK (`from 1 Oct 1929 to 27 Sep 1937`). Unrecognized dates fail validation. Examples: `[{ref, date:"1708-1927"}]`, `HANDLE::1991-` |
 | `nameLang` | `string?` | no | — | Language code for primary name |
 | `nameDate` | `string?` | no | — | When the primary name applies, same date rules as `alternateNames` (`from 1937-02-10`, `1918-1937`). Gramps shows the first name, primary first, whose date is empty or matches the event date, so an undated primary name hides dated alternate names |
@@ -361,7 +361,7 @@ Create a place.  **Prerequisites:** `gramps://types`.
 ### U — `UpdatePlace`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a place. Same fields as create (all optional). `enclosedBy` is a link list and follows `linkMode`; `alternateNames` always uses replacement. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates. Omit `nameDate` or `nameLang` to keep the primary name's date or language; an empty string removes it.
+Update a place. Same fields as create (all optional). `enclosedBy` is a link list and follows `linkMode`; `alternateNames` always uses replacement. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates. Omit `nameDate` or `nameLang` to keep the primary name's date or language; an empty string removes it. The same goes for `lat` and `lon`.
 
 ---
 
