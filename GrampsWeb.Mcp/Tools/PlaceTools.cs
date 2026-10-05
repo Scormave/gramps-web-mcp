@@ -123,10 +123,9 @@ public static class PlaceTools
             };
 
             var (handle, grampsId) = await client.PostMutationAsync("/api/places/", request, "Place");
-            var typeLabel = await PlaceTypeDisplayFormatter.FormatStoredPlaceTypeAsync(client, placeType);
             return ResponseEnvelope.CreateSuccess(
                 "Place", handle, grampsId,
-                typeLabel, ResponseEnvelope.PlaceCreateNextSteps(handle!));
+                request.Name.Value, ResponseEnvelope.PlaceCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {

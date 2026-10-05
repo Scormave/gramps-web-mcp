@@ -83,10 +83,9 @@ public static class RepositoryTools
             };
 
             var (handle, grampsId) = await client.PostMutationAsync("/api/repositories/", request, "Repository");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, repoType);
             return ResponseEnvelope.CreateSuccess(
                 "Repository", handle, grampsId,
-                typeLabel, ResponseEnvelope.RepositoryCreateNextSteps(handle!));
+                name, ResponseEnvelope.RepositoryCreateNextSteps(handle!));
         }
         catch (Exception ex)
         {

@@ -155,6 +155,17 @@ public class PlaceToolsTests
         Assert.Equal("", handler.Body!.Value.GetProperty("long").GetString());
     }
 
+    [Fact]
+    public async Task CreatePlace_Result_Shows_The_Name_Not_The_Type()
+    {
+        var handler = new PlaceHandler();
+
+        var result = await PlaceTools.CreatePlace(" Warsaw ", placeType: "City", client: CreateClient(handler));
+
+        Assert.Contains("name: \"Warsaw\"", result);
+        Assert.DoesNotContain("City", result);
+    }
+
     private static void AssertDate(JsonElement date, int modifier, int day, int month, int year)
     {
         Assert.Equal(modifier, date.GetProperty("modifier").GetInt32());
@@ -172,7 +183,7 @@ public class PlaceToolsTests
         return new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
     }
 
-    /// <summary>Answers the token route, one stored place, and records the mutation body.</summary>
+    /// <summary>Answers the token and type routes, one stored place, and records the mutation body.</summary>
     private sealed class PlaceHandler(string? storedPlace = null) : HttpMessageHandler
     {
         public JsonElement? Body { get; private set; }
@@ -182,6 +193,10 @@ public class PlaceToolsTests
             string json;
             if (request.RequestUri!.AbsolutePath.StartsWith("/api/token/"))
                 json = """{"access_token":"token","refresh_token":"refresh","expires_in":900}""";
+            else if (request.RequestUri.AbsolutePath == "/api/types/default/")
+                json = """{"place_types":["City"]}""";
+            else if (request.RequestUri.AbsolutePath.StartsWith("/api/types/"))
+                json = "{}";
             else if (request.Method == HttpMethod.Get && storedPlace != null)
                 json = storedPlace;
             else if (request.Method == HttpMethod.Post || request.Method == HttpMethod.Put)

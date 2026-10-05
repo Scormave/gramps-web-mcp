@@ -26,6 +26,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   rejected with "Argument date must be a string". A number given as the
   `date` of an `alternateNames` or `enclosedBy` entry was silently dropped and
   is now read as a year
+- `create_place` and `create_repository` report the new record's name; the
+  result showed its type (`name: "Hamlet"`, `name: "Archive"`) though the
+  stored name was right
 
 ## [2.2.0] - 2026-10-03
 
