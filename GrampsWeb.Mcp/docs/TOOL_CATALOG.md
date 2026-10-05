@@ -606,10 +606,13 @@ Handles event creation + person update automatically.
 | `description` | `string?` | no | — | Event description |
 | `role` | `string` | no | `"Primary"` | Person's role in the event |
 
-`place` takes an existing place by Gramps ID or handle. Any other value is a
-name: it reuses the place whose name matches exactly, ignoring case, or creates
-a new place, so an ID or handle that matches no place creates a place with
-that text as its name.
+`place` takes an existing place by Gramps ID or handle. A value that looks like
+one (a capital letter and digits such as `P0012`, or 16 or more letters,
+digits, `-` or `_` with at least one digit) must match a place: otherwise the
+tool answers "Place not found" and creates nothing. Any other value is a name:
+it reuses the place whose name matches exactly, ignoring case, or creates a new
+place. To give a new place a name of that shape, create it with `create_place`
+and pass its Gramps ID.
 
 ---
 

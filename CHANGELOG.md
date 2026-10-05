@@ -33,6 +33,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   parameter list. Clients such as Claude Code drop arguments a tool does not
   have, so `update_event(place: …)` reached the server as an update of nothing,
   answered "updated" and saved the event unchanged
+- `quick_add_person` and `add_event_to_person` look a place name up with a
+  Gramps QL filter instead of reading every place in the tree. A failed lookup
+  is reported; it used to create the place anyway, which could duplicate one
+- `add_event_to_person` answers "Place not found" for a `place` Gramps ID or
+  handle that matches no place, and creates nothing; it created a place named
+  after the ID (`P0099`)
 
 ## [2.2.0] - 2026-10-03
 

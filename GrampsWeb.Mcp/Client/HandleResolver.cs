@@ -34,6 +34,16 @@ public static class HandleResolver
     }
 
     /// <summary>
+    /// Returns <c>true</c> if the value looks like a handle rather than a name: 16 or more ASCII
+    /// letters, digits, <c>'-'</c> or <c>'_'</c>, at least one of them a digit
+    /// (e.g. <c>102a49c11b31375183b9ad45a991</c>).
+    /// </summary>
+    public static bool LooksLikeHandle(string value) =>
+        value.Length >= 16
+        && value.Any(char.IsAsciiDigit)
+        && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
+
+    /// <summary>
     /// Maps a single-letter Gramps ID prefix to the API object type used in list endpoints.
     /// Prefixes follow the Gramps defaults; media objects use <c>'O'</c>, not <c>'M'</c>.
     /// </summary>

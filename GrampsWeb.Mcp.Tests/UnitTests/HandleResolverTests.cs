@@ -42,6 +42,21 @@ public class HandleResolverTests
     }
 
     [Theory]
+    [InlineData("102a49c11b31375183b9ad45a991", true)]
+    [InlineData("9d11cde4-53e4-4248-a627-ba38e55f051f", true)]
+    [InlineData("GNUJQCL9MD64AM56OH", true)]
+    [InlineData("0123456789abcde", false)] // 15 chars
+    [InlineData("Konstantynopolis", false)] // no digit
+    [InlineData("St. Petersburg 1918", false)]
+    [InlineData("Warszawa-Śródmieście", false)]
+    [InlineData("P0001", false)]
+    [InlineData("", false)]
+    public void LooksLikeHandle_DetectsCorrectly(string value, bool expected)
+    {
+        Assert.Equal(expected, HandleResolver.LooksLikeHandle(value));
+    }
+
+    [Theory]
     [InlineData('I', "people")]
     [InlineData('F', "families")]
     [InlineData('E', "events")]

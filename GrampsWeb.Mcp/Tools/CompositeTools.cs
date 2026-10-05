@@ -170,7 +170,7 @@ public static class CompositeTools
         string eventType,
         [Description("Event date as text (e.g. '1985-04-12', 'about 1920'). Optional.")]
         string? date = null,
-        [Description("Place Gramps ID, handle, or name. A name reuses the place with that exact name (ignoring case) or creates a new place; an ID or handle that matches no place is treated as a name. Optional.")]
+        [Description("Place Gramps ID, handle, or name. A Gramps ID or handle must match an existing place. A name reuses the place with that exact name (ignoring case) or creates a new place. Optional.")]
         string? place = null,
         [Description("Event description text. Optional.")]
         string? description = null,
@@ -194,28 +194,25 @@ public static class CompositeTools
             if (person is null)
                 return NotFoundHelper.NotFoundMessage("Person", personHandle);
 
-            // Resolve or create place
+            // Resolve or create place. A Gramps ID or handle must name an existing place, so a
+            // mistyped one is reported instead of becoming the name of a new place.
             PlaceResult? placeResult = null;
             if (!string.IsNullOrWhiteSpace(place))
             {
-                if (HandleResolver.LooksLikeGrampsId(place))
+                place = place.Trim();
+                if (HandleResolver.LooksLikeGrampsId(place) || HandleResolver.LooksLikeHandle(place))
                 {
                     var placeHandle = await HandleResolver.ResolveToHandleAsync(place, client, "places");
                     var existingPlace = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
                         $"/api/places/{Uri.EscapeDataString(placeHandle)}");
-                    if (existingPlace != null)
-                        placeResult = new PlaceResult(existingPlace.Handle!, existingPlace.GrampsId, existingPlace.Name, true);
+                    if (existingPlace is null)
+                        return NotFoundHelper.NotFoundMessage("Place", place);
+                    placeResult = new PlaceResult(existingPlace.Handle!, existingPlace.GrampsId, existingPlace.Name, true);
                 }
-                else if (place.Length > 10)
+                else
                 {
-                    // Looks like a handle (long string), try to use directly
-                    var existingPlace = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
-                        $"/api/places/{Uri.EscapeDataString(place)}");
-                    if (existingPlace != null)
-                        placeResult = new PlaceResult(existingPlace.Handle!, existingPlace.GrampsId, existingPlace.Name, true);
+                    placeResult = await ResolveOrCreatePlaceAsync(place, client);
                 }
-
-                placeResult ??= await ResolveOrCreatePlaceAsync(place, client);
 
                 if (placeResult != null)
                     createdObjects.Add(FormatPlaceCreationNote(placeResult));
@@ -321,36 +318,10 @@ public static class CompositeTools
 
         var trimmed = placeName.Trim();
 
-        // Search for existing place by name
-        try
-        {
-            var searchPath = $"/api/places/?pagesize=5&keys=handle,gramps_id,name";
-            var results = await client.GetAsync<JsonElement>(searchPath);
-
-            var items = results.ValueKind == JsonValueKind.Array
-                ? results
-                : results.TryGetProperty("objects", out var objArr) ? objArr : results;
-
-            if (items.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var item in items.EnumerateArray())
-                {
-                    var itemName = ExtractPlaceName(item);
-                    if (itemName != null &&
-                        string.Equals(itemName.Trim(), trimmed, StringComparison.OrdinalIgnoreCase))
-                    {
-                        var h = item.TryGetProperty("handle", out var hp) ? hp.GetString() : null;
-                        var gid = item.TryGetProperty("gramps_id", out var gp) ? gp.GetString() : null;
-                        if (!string.IsNullOrEmpty(h))
-                            return new PlaceResult(h, gid, itemName.Trim(), Existing: true);
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Fall through to create
-        }
+        // A failed lookup propagates: creating the place anyway could duplicate an existing one.
+        var existing = await FindPlaceByNameAsync(trimmed, client);
+        if (existing != null)
+            return existing;
 
         // Create new place
         var request = new CreatePlaceRequest
@@ -360,6 +331,41 @@ public static class CompositeTools
 
         var (placeHandle, placeGrampsId) = await client.PostMutationAsync("/api/places/", request, "Place");
         return new PlaceResult(placeHandle!, placeGrampsId, trimmed, Existing: false);
+    }
+
+    /// <summary>
+    /// Finds the place whose primary name equals <paramref name="name"/>, ignoring case and surrounding
+    /// spaces. Gramps QL narrows the list on the server with a case-insensitive substring match, and the
+    /// exact match is checked here. A name Gramps QL cannot quote (double quote, backslash, line break)
+    /// is matched against every place.
+    /// </summary>
+    private static async Task<PlaceResult?> FindPlaceByNameAsync(string name, GrampsApiClient client)
+    {
+        var filter = name.IndexOfAny(['"', '\\', '\n', '\r']) < 0
+            ? $"gql={Uri.EscapeDataString($"name.value ~ \"{name}\"")}&"
+            : "";
+        var results = await client.GetAsync<JsonElement>($"/api/places/?{filter}keys=handle,gramps_id,name");
+
+        var items = results.ValueKind == JsonValueKind.Array
+            ? results
+            : results.TryGetProperty("objects", out var objArr) ? objArr : results;
+        if (items.ValueKind != JsonValueKind.Array)
+            return null;
+
+        foreach (var item in items.EnumerateArray())
+        {
+            var itemName = ExtractPlaceName(item);
+            if (itemName != null &&
+                string.Equals(itemName.Trim(), name, StringComparison.OrdinalIgnoreCase))
+            {
+                var h = item.TryGetProperty("handle", out var hp) ? hp.GetString() : null;
+                var gid = item.TryGetProperty("gramps_id", out var gp) ? gp.GetString() : null;
+                if (!string.IsNullOrEmpty(h))
+                    return new PlaceResult(h, gid, itemName.Trim(), Existing: true);
+            }
+        }
+
+        return null;
     }
 
     private static string? ExtractPlaceName(JsonElement item)
