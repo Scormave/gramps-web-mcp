@@ -23,7 +23,7 @@ Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 ./scripts/pack-mcpb.sh osx-x64
 
 # Windows x64 (run on Windows or cross-publish from CI)
-./scripts/pack-mcpb.sh win-x64 2.3.0
+./scripts/pack-mcpb.sh win-x64 2.3.1
 
 # Linux x64 / ARM64
 ./scripts/pack-mcpb.sh linux-x64

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-10-07
+
 ### Removed
 
 - The `text` parameter of `create_citation` and `update_citation`. Gramps
@@ -621,7 +623,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.1...HEAD
+[2.3.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.0...v2.1.1
