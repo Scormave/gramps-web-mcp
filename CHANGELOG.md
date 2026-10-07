@@ -15,6 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   update removed, and says whether the record still lacks it. It only
   reads; `--user`, `--since` and `--until` narrow the scan to the server's
   account and the time before the upgrade
+- `sortEvents` on `update_person` and `update_family` sorts the event list by
+  event date after the other changes. An event added with `linkMode: "add"`
+  used to land at the end, and putting it in place meant sending the whole
+  list again in `replace` mode. The references are only moved, so their roles,
+  notes, citations and privacy stay. Undated Birth, Baptism and Christening go
+  first, other undated events last with Death and Burial at the end. On the
+  same date: "before" dates, then Residence and Occupation, Birth, Baptism,
+  other events, Death and Burial, then "after" dates
 
 ## [2.3.1] - 2026-10-07
 

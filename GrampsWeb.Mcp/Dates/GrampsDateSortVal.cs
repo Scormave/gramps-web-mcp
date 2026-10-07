@@ -45,6 +45,21 @@ internal static class GrampsDateSortVal
         return TryCompute(d.Calendar, d.NewYear, d.Slash, d.Year, d.Month, d.Day, out _);
     }
 
+    /// <summary>
+    /// Sort key of a dated event for ordering: the wire <see cref="GrampsDate.SortVal"/> when positive, else computed.
+    /// Returns <c>null</c> for a missing, empty or text-only date.
+    /// </summary>
+    internal static int? TryGetDatedSortKey(GrampsDate? d)
+    {
+        if (d == null || d.Modifier == ModTextOnly)
+            return null;
+        if (d.SortVal is > 0)
+            return d.SortVal;
+
+        var computed = TryCompute(d.Calendar, d.NewYear, d.Slash, d.Year, d.Month, d.Day, out _);
+        return computed > 0 ? computed : null;
+    }
+
     /// <summary>The sort value of a full date in a known calendar, moved into the previous year as its new year says.</summary>
     internal static int SortValueOf(int calendar, int newYear, int year, int month, int day) =>
         TryCompute(calendar, newYear, slash: false, year, month, day, out _)

@@ -69,6 +69,19 @@ to change existing link metadata. An attribute with the same type and value as
 a stored one keeps its citations, notes and privacy. Adding and removing in the
 same workflow requires separate calls or one full replacement.
 
+`update_person` and `update_family` also take `sortEvents: true`, which sorts
+the whole event list by event date after the link lists are applied, so an
+event added with `linkMode: "add"` lands in its place instead of at the end.
+It only moves the stored references, so their roles and metadata stay, and it
+works alone to sort an existing list. Undated Birth, Baptism and Christening go
+first; other undated events go last, ending with Death, then Burial and
+Cremation. On the same date: "before" dates, then Residence and Occupation,
+Birth, Baptism, other events, Death and Burial, then "after" dates.
+
+```text
+update_person(handle: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"], linkMode: "add", sortEvents: true)
+```
+
 Every update tool sends back the stored object with only the supplied fields
 changed, including data the tools cannot show or edit (styled note text, LDS
 ordinances, fields from newer Gramps versions). `update_note` keeps the styling
@@ -320,6 +333,7 @@ Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
 |-----------|------|----------|-------------|
 | `handle` | `string` | yes | Person handle |
 | All fields from `CreatePerson` | — | no | Same as create (all optional) |
+| `sortEvents` | `bool` | no | Sort the event list by date after the changes (default `false`); see [Incremental link updates](#incremental-link-updates) |
 
 ---
 
@@ -342,7 +356,8 @@ Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guid
 ### U — `UpdateFamily`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update an existing family.  Same field set as create (all optional).
+Update an existing family.  Same field set as create (all optional), plus
+`sortEvents` (default `false`) to sort the family events by date.
 
 ---
 

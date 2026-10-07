@@ -318,7 +318,9 @@ public static class PersonTools
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
-        string linkMode = "replace")
+        string linkMode = "replace",
+        [Description(EventRefOrder.Description)]
+        bool sortEvents = false)
     {
         try
         {
@@ -334,6 +336,8 @@ public static class PersonTools
             person.Set("gender", GrampsGenderParser.ParseOptional(gender));
             person.Set("alternate_names", ((GrampsName[]?)alternateNames)?.Select(ConvertNameToRequest).ToArray());
             person.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
+            if (sortEvents)
+                await EventRefOrder.SortAsync(client, person.Root);
             person.ApplyHandles("family_list", familyHandles, linkMode);
             person.ApplyHandles("parent_family_list", parentFamilyHandles, linkMode);
             person.ApplyMediaHandles(mediaHandles, linkMode);

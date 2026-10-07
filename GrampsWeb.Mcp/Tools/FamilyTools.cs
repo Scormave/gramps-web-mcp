@@ -172,7 +172,9 @@ public static class FamilyTools
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
-        string linkMode = "replace")
+        string linkMode = "replace",
+        [Description(EventRefOrder.Description)]
+        bool sortEvents = false)
     {
         try
         {
@@ -200,6 +202,8 @@ public static class FamilyTools
             family.Set("type", relationshipType);
             family.ApplyRefs("child_ref_list", (GrampsChildRef[]?)childRefs, linkMode);
             family.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
+            if (sortEvents)
+                await EventRefOrder.SortAsync(client, family.Root);
             family.ApplyMediaHandles(mediaHandles, linkMode);
             family.ReplaceAttributes(attributes);
             family.ApplyHandles("citation_list", citationHandles, linkMode);
