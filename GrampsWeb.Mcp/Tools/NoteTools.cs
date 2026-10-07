@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
 using GrampsWeb.Mcp.Input;
@@ -100,7 +101,7 @@ public static class NoteTools
     public static async Task<string> UpdateNote(
         [Description("The note to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("New text, replacing the whole body. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New text, replacing the whole body; changed text loses the styling and links of the old one, the same text keeps them. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? text = null,
         [Description("New note type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? noteType = null,
@@ -125,29 +126,22 @@ public static class NoteTools
             }
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "notes");
-            var note = await client.GetOrNullIfNotFoundAsync<GrampsNote>(
-                $"/api/notes/{Uri.EscapeDataString(resolvedHandle)}");
+            var note = await GrampsObjectPatch.LoadAsync(client, $"/api/notes/{Uri.EscapeDataString(resolvedHandle)}");
             if (note == null)
                 return NotFoundHelper.NotFoundMessage("Note", handle);
 
-            var updateRequest = new CreateNoteRequest
-            {
-                Class = "Note",
-                Handle = note.Handle,
-                GrampsId = note.GrampsId,
-                Change = note.Change,
-                Text = new StyledTextRequest
-                {
-                    Text = text ?? note.Text ?? "",
-                    Tags = []
-                },
-                Type = noteType ?? note.Type,
-                Format = NoteTextFormatParser.ParseOptional(format) ?? note.Format,
-                TagList = LinkUpdates.Apply(note.TagList, (string[]?)tagHandles, linkMode, x => x),
-                Private = isPrivate ?? note.Private
-            };
+            // The stored text carries styling and links (StyledText tags); keep it unless the text really changes.
+            var storedText = note.Root["text"] is JsonObject styled
+                ? GrampsObjectPatch.StringValue(styled["string"])
+                : GrampsObjectPatch.StringValue(note.Root["text"]);
+            if (text != null && !string.Equals(text, storedText, StringComparison.Ordinal))
+                note.Set("text", new StyledTextRequest { Text = text, Tags = [] });
+            note.Set("type", noteType);
+            note.Set("format", NoteTextFormatParser.ParseOptional(format));
+            note.ApplyHandles("tag_list", tagHandles, linkMode);
+            note.Set("private", isPrivate);
 
-            await client.PutMutationAsync($"/api/notes/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            await note.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Note", note.Handle, note.GrampsId);
         }
         catch (Exception ex)

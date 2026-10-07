@@ -229,37 +229,23 @@ public static class EventTools
             var resolvedPlaceHandle = placeHandle is null
                 ? null
                 : await HandleResolver.ResolveToHandleAsync(placeHandle, client, "places");
-            var evt = await client.GetOrNullIfNotFoundAsync<GrampsEvent>(
-                $"/api/events/{Uri.EscapeDataString(resolvedHandle)}");
+            var evt = await GrampsObjectPatch.LoadAsync(client, $"/api/events/{Uri.EscapeDataString(resolvedHandle)}");
             if (evt is null)
                 return NotFoundHelper.NotFoundMessage("Event", handle);
 
-            var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range)
-                : GrampsRequestMapping.ToDateRequestOrNull(evt.Date);
+            evt.Set("type", eventType);
+            if (date != null)
+                evt.SetOrRemove("date", AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range));
+            evt.Set("place", resolvedPlaceHandle);
+            evt.Set("description", description);
+            evt.ApplyMediaHandles(mediaHandles, linkMode);
+            evt.ReplaceAttributes(attributes);
+            evt.ApplyHandles("citation_list", citationHandles, linkMode);
+            evt.ApplyHandles("note_list", noteHandles, linkMode);
+            evt.ApplyHandles("tag_list", tagHandles, linkMode);
+            evt.Set("private", isPrivate);
 
-            var updateRequest = new CreateEventRequest
-            {
-                Class = "Event",
-                Handle = evt.Handle,
-                GrampsId = evt.GrampsId,
-                Change = evt.Change,
-                Type = eventType ?? evt.Type,
-                Date = dateRequest,
-                Place = resolvedPlaceHandle ?? evt.Place,
-                Description = description ?? evt.Description,
-                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(evt.MediaList),
-                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, evt.MediaList) ?? []), linkMode, x => x.Ref),
-                AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
-                    : GrampsRequestMapping.ToAttributeRequests(evt.AttributeList),
-                CitationList = LinkUpdates.Apply(evt.CitationList, (string[]?)citationHandles, linkMode, x => x),
-                NoteList = LinkUpdates.Apply(evt.NoteList, (string[]?)noteHandles, linkMode, x => x),
-                TagList = LinkUpdates.Apply(evt.TagList, (string[]?)tagHandles, linkMode, x => x),
-                Private = isPrivate ?? evt.Private
-            };
-
-            await client.PutMutationAsync($"/api/events/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            await evt.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Event", evt.Handle, evt.GrampsId);
         }
         catch (Exception ex)

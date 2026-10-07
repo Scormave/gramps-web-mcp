@@ -137,28 +137,21 @@ public static class RepositoryTools
             }
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "repositories");
-            var repo = await client.GetOrNullIfNotFoundAsync<GrampsRepository>(
-                $"/api/repositories/{Uri.EscapeDataString(resolvedHandle)}");
+            var repo = await GrampsObjectPatch.LoadAsync(client, $"/api/repositories/{Uri.EscapeDataString(resolvedHandle)}");
             if (repo == null)
                 return NotFoundHelper.NotFoundMessage("Repository", handle);
 
-            var updateRequest = new CreateRepositoryRequest
-            {
-                Class = "Repository",
-                Handle = repo.Handle,
-                GrampsId = repo.GrampsId,
-                Change = repo.Change,
-                Name = name ?? repo.Name,
-                Type = repoType ?? repo.Type,
-                EmailList = repo.EmailList,
-                AddressList = address != null ? RepositoryAddressListFromStreet(address) : repo.AddressList,
-                UrlList = url != null ? RepositoryUrlListFromPath(url) : repo.UrlList,
-                NoteList = LinkUpdates.Apply(repo.NoteList, (string[]?)noteHandles, linkMode, x => x),
-                TagList = LinkUpdates.Apply(repo.TagList, (string[]?)tagHandles, linkMode, x => x),
-                Private = isPrivate ?? repo.Private
-            };
+            repo.Set("name", name);
+            repo.Set("type", repoType);
+            if (address != null)
+                repo.Root["address_list"] = GrampsObjectPatch.ToNode(RepositoryAddressListFromStreet(address));
+            if (url != null)
+                repo.Root["urls"] = GrampsObjectPatch.ToNode(RepositoryUrlListFromPath(url));
+            repo.ApplyHandles("note_list", noteHandles, linkMode);
+            repo.ApplyHandles("tag_list", tagHandles, linkMode);
+            repo.Set("private", isPrivate);
 
-            await client.PutMutationAsync($"/api/repositories/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            await repo.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Repository", repo.Handle, repo.GrampsId);
         }
         catch (Exception ex)

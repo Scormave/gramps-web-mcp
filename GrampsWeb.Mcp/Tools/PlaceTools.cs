@@ -185,41 +185,44 @@ public static class PlaceTools
             }
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
-            var place = await client.GetOrNullIfNotFoundAsync<GrampsPlace>(
-                $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");
+            var place = await GrampsObjectPatch.LoadAsync(client, $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");
             if (place == null)
                 return NotFoundHelper.NotFoundMessage("Place", handle);
 
-            var placeRefList = enclosedBy != null
-                ? await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client)
-                : GrampsRequestMapping.ToPlaceRefRequests(place.PlaceRefList);
-
-            var updateRequest = new CreatePlaceRequest
+            if (name != null || nameLang != null || nameDate != null)
             {
-                Class = "Place",
-                Handle = place.Handle,
-                GrampsId = place.GrampsId,
-                Change = place.Change,
-                Name = GrampsRequestMapping.ToPrimaryPlaceNameRequest(name, nameLang, nameDate, place.PrimaryName),
-                Type = placeType ?? place.Type,
-                Code = code ?? place.Code,
-                Latitude = ToCoordinate(lat) ?? place.Latitude,
-                Longitude = ToCoordinate(lon) ?? place.Longitude,
-                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(place.MediaList),
-                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, place.MediaList) ?? []), linkMode, x => x.Ref),
-                NoteList = LinkUpdates.Apply(place.NoteList, (string[]?)noteHandles, linkMode, x => x),
-                CitationList = LinkUpdates.Apply(place.CitationList, (string[]?)citationHandles, linkMode, x => x),
-                TagList = LinkUpdates.Apply(place.TagList, (string[]?)tagHandles, linkMode, x => x),
-                PlaceRefList = LinkUpdates.Apply(GrampsRequestMapping.ToPlaceRefRequests(place.PlaceRefList),
-                    enclosedBy is null ? null : (placeRefList ?? []), linkMode, x => x.Ref),
-                AltNames = alternateNames != null
-                    ? (PlaceNameRequest[]?)alternateNames
-                    : GrampsRequestMapping.ToPlaceNameRequests(place.AlternateNames),
-                AlternateLocations = place.AlternateLocations,
-                Private = isPrivate ?? place.Private
-            };
+                var storedName = GrampsObjectPatch.StringValue(place.Root["name"]);
+                var primary = place.Object("name");
+                if (name != null)
+                    primary["value"] = name.Trim();
+                else if (primary["value"] is null)
+                    primary["value"] = storedName ?? "";
+                if (nameLang != null)
+                    primary["lang"] = nameLang.Trim();
+                if (nameDate != null)
+                {
+                    var dateRequest = AgentDateParser.ToDateRequestOrNull(nameDate, DateComponentOrder.Iso);
+                    if (dateRequest is null)
+                        primary.Remove("date");
+                    else
+                        primary["date"] = GrampsObjectPatch.ToNode(dateRequest);
+                }
+            }
 
-            await client.PutMutationAsync($"/api/places/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            place.Set("place_type", placeType);
+            place.Set("code", code);
+            place.Set("lat", ToCoordinate(lat));
+            place.Set("long", ToCoordinate(lon));
+            if (enclosedBy != null)
+                place.ApplyRefs("placeref_list", await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client) ?? [], linkMode);
+            place.Set("alt_names", (PlaceNameRequest[]?)alternateNames);
+            place.ApplyMediaHandles(mediaHandles, linkMode);
+            place.ApplyHandles("note_list", noteHandles, linkMode);
+            place.ApplyHandles("citation_list", citationHandles, linkMode);
+            place.ApplyHandles("tag_list", tagHandles, linkMode);
+            place.Set("private", isPrivate);
+
+            await place.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Place", place.Handle, place.GrampsId);
         }
         catch (Exception ex)

@@ -126,35 +126,20 @@ public static class MediaTools
             LinkUpdates.Validate(linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
-            var media = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(
-                $"/api/media/{Uri.EscapeDataString(resolvedHandle)}");
+            var media = await GrampsObjectPatch.LoadAsync(client, $"/api/media/{Uri.EscapeDataString(resolvedHandle)}");
             if (media == null)
                 return NotFoundHelper.NotFoundMessage("Media", handle);
 
-            var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range)
-                : GrampsRequestMapping.ToDateRequestOrNull(media.Date);
+            media.Set("desc", description);
+            if (date != null)
+                media.SetOrRemove("date", AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range));
+            media.ReplaceAttributes(attributes);
+            media.ApplyHandles("citation_list", citationHandles, linkMode);
+            media.ApplyHandles("note_list", noteHandles, linkMode);
+            media.ApplyHandles("tag_list", tagHandles, linkMode);
+            media.Set("private", isPrivate);
 
-            var updateRequest = new CreateMediaRequest
-            {
-                Class = "Media",
-                Handle = media.Handle,
-                GrampsId = media.GrampsId,
-                Change = media.Change,
-                Path = media.Path,
-                Mime = media.Mime,
-                Description = description ?? media.Description,
-                Date = dateRequest,
-                AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
-                    : GrampsRequestMapping.ToAttributeRequests(media.AttributeList),
-                CitationList = LinkUpdates.Apply(media.CitationList, (string[]?)citationHandles, linkMode, x => x),
-                NoteList = LinkUpdates.Apply(media.NoteList, (string[]?)noteHandles, linkMode, x => x),
-                TagList = LinkUpdates.Apply(media.TagList, (string[]?)tagHandles, linkMode, x => x),
-                Private = isPrivate ?? media.Private
-            };
-
-            await client.PutMutationAsync($"/api/media/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            await media.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Media", media.Handle, media.GrampsId);
         }
         catch (Exception ex)

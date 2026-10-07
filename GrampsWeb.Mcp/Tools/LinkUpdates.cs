@@ -2,7 +2,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 internal static class LinkUpdates
 {
-    public const string Description = "How to apply all supplied link lists: replace (default) replaces each full list; add appends missing handles and preserves existing link metadata; remove removes all links matching supplied handles (reference metadata is ignored). Omitted lists stay unchanged; empty lists clear only in replace mode. Does not affect attributes, names, addresses or URLs. Use separate calls to add and remove, or replace to edit existing link metadata.";
+    public const string Description = "How to apply all supplied link lists: replace (default) replaces each full list, and a link it keeps keeps its stored privacy, citations, notes and crop unless the call sends new values; add appends missing handles and preserves existing link metadata; remove removes all links matching supplied handles (reference metadata is ignored). Omitted lists stay unchanged; empty lists clear only in replace mode. Does not affect attributes, names, addresses or URLs. Use separate calls to add and remove, or replace to edit existing link metadata.";
 
     public static void Validate(string mode)
     {

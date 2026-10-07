@@ -62,8 +62,17 @@ Use actual handles in link lists. `add` appends missing handles in input order
 and leaves existing links and their metadata unchanged. `remove` removes all
 references matching a supplied handle, regardless of role or other metadata;
 missing handles are harmless. Omitted lists stay unchanged; `[]` clears only
-in `replace` mode. To change existing link metadata, use `replace`. Adding and
-removing in the same workflow requires separate calls or one full replacement.
+in `replace` mode. In `replace` mode a reference that stays keeps its stored
+privacy, citations, notes and crop; fields the call sends (including the
+default role or relationship of a bare handle) overwrite them, so use `replace`
+to change existing link metadata. An attribute with the same type and value as
+a stored one keeps its citations, notes and privacy. Adding and removing in the
+same workflow requires separate calls or one full replacement.
+
+Every update tool sends back the stored object with only the supplied fields
+changed, including data the tools cannot show or edit (styled note text, LDS
+ordinances, fields from newer Gramps versions). `update_note` keeps the styling
+and links of a note when `text` is omitted or unchanged; changed text loses them.
 
 When the mutation gate is enabled, update tools serialize
 their entire read/modify/write sequence against each other. HTTP write throttling

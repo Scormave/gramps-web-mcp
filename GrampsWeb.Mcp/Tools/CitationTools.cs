@@ -141,41 +141,23 @@ public static class CitationTools
             var resolvedSourceHandle = sourceHandle is null
                 ? null
                 : await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
-            var citation = await client.GetOrNullIfNotFoundAsync<GrampsCitation>(
-                $"/api/citations/{Uri.EscapeDataString(resolvedHandle)}");
+            var citation = await GrampsObjectPatch.LoadAsync(client, $"/api/citations/{Uri.EscapeDataString(resolvedHandle)}");
             if (citation == null)
                 return NotFoundHelper.NotFoundMessage("Citation", handle);
 
-            var finalConfidence = Math.Clamp(
-                CitationConfidenceParser.ParseOptional(confidence) ?? citation.Confidence,
-                0,
-                4);
+            citation.Set("source_handle", resolvedSourceHandle);
+            citation.Set("page", (string?)page);
+            if (CitationConfidenceParser.ParseOptional(confidence) is { } confidenceLevel)
+                citation.Set("confidence", Math.Clamp(confidenceLevel, 0, 4));
+            if (date != null)
+                citation.SetOrRemove("date", AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range));
+            citation.ApplyMediaHandles(mediaHandles, linkMode);
+            citation.ReplaceAttributes(attributes);
+            citation.ApplyHandles("note_list", noteHandles, linkMode);
+            citation.ApplyHandles("tag_list", tagHandles, linkMode);
+            citation.Set("private", isPrivate);
 
-            var dateRequest = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range)
-                : GrampsRequestMapping.ToDateRequestOrNull(citation.Date);
-
-            var updateRequest = new CreateCitationRequest
-            {
-                Class = "Citation",
-                Handle = citation.Handle,
-                GrampsId = citation.GrampsId,
-                Change = citation.Change,
-                Source = resolvedSourceHandle ?? citation.Source,
-                Page = (string?)page ?? citation.Page,
-                Confidence = finalConfidence,
-                Date = dateRequest,
-                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(citation.MediaList),
-                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, citation.MediaList) ?? []), linkMode, x => x.Ref),
-                AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
-                    : GrampsRequestMapping.ToAttributeRequests(citation.AttributeList),
-                NoteList = LinkUpdates.Apply(citation.NoteList, (string[]?)noteHandles, linkMode, x => x),
-                TagList = LinkUpdates.Apply(citation.TagList, (string[]?)tagHandles, linkMode, x => x),
-                Private = isPrivate ?? citation.Private
-            };
-
-            await client.PutMutationAsync($"/api/citations/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            await citation.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Citation", citation.Handle, citation.GrampsId);
         }
         catch (Exception ex)

@@ -383,7 +383,10 @@ model type and an `implicit operator` cast.
 
 DTOs for POST/PUT operations.  Mirror the Gramps Web JSON schema with
 `_class`, optional `handle`/`gramps_id`/`change`, and snake_case naming.
-`GrampsRequestMapping` converts GET models → request DTOs.
+`GrampsRequestMapping` maps tool input to create request DTOs. Update tools
+do not use them for the whole body: `GrampsObjectPatch` (in `Tools/`) GETs
+the stored JSON, changes only the supplied fields and PUTs it back, because
+Gramps Web replaces the whole object on `PUT`.
 
 ### 7. Formatters (`Formatters/`)
 

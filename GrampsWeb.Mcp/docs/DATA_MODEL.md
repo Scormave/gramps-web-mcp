@@ -220,18 +220,17 @@ Common pattern:
 
 ### Mapping: `GrampsRequestMapping`
 
-`GrampsRequestMapping` converts GET-response models into request DTOs for
-updates (read-modify-write pattern):
+`GrampsRequestMapping` maps tool input to request DTOs for creating objects:
 - `GrampsDate` → `DateRequest` (via `ToDateRequestOrNull`)
 - `GrampsAttribute[]` → `AttributeRequest[]`
-- Event refs → `EventRefRequest[]` (`ToEventRefRequests`)
-- Parent family refs → handle strings (`ToParentFamilyHandles`)
-- Media refs → `MediaRefRequest[]` (`ToMediaRefRequests`), keeping crop and
-  other metadata of existing refs
-- Repository refs → `GrampsRepositoryRef[]` payloads (`ToRepositoryRefRequests`),
-  filling missing fields from existing refs
-- Place refs → `PlaceRefRequest[]`; place names → `PlaceNameRequest[]`
+- Media handles → `MediaRefRequest[]` (`ToMediaRefRequests`)
 - Parallel handle/role arrays → `EventRefRequest[]` (`BuildEventRefList`)
+
+Update tools do not map GET models back into request DTOs. Gramps Web
+replaces the whole object on `PUT`, and the models skip fields they do not
+carry (attribute citations, styled note text, LDS ordinances, …), so updates
+patch the raw stored JSON instead (`Tools/GrampsObjectPatch.cs`, see
+[Developer guide](DEVELOPER_GUIDE.md#read-modify-write-pattern)).
 
 ### Tool response helpers
 

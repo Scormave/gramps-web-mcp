@@ -323,12 +323,19 @@ Update tools follow this pattern:
    while the mutation gate is enabled (`GRAMPS_MUTATION_SERIALIZE=true` or a
    nonzero `GRAMPS_MUTATION_MIN_INTERVAL_MS`), it keeps other updates in this
    process from interleaving with the sequence
-2. `GET` the current entity
-3. Build a request DTO merging current values with provided changes; link
-   lists go through `LinkUpdates.Apply(existing, supplied, linkMode, key)`
-4. `PUT` the merged request (`PutMutationAsync`)
+2. `GrampsObjectPatch.LoadAsync` GETs the stored object as raw JSON
+3. Change only the keys the agent passed: `Set` for values (null keeps the
+   stored one), `SetOrRemove` for values an empty argument removes,
+   `ApplyHandles` / `ApplyMediaHandles` / `ApplyRefs` for link lists (through
+   `LinkUpdates.Apply`), `ReplaceAttributes` for attributes
+4. `SaveAsync` PUTs the patched object back (`PutMutationAsync`)
 
-This means the tool must preserve all fields the agent didn't explicitly change.
+Gramps Web replaces the whole object on `PUT`, so the body must carry every
+field the agent did not change, including the ones the typed models skip.
+Never rebuild an update body from a typed model or a create request DTO. In
+replace mode, a supplied reference whose handle matches a stored one is laid
+over that entry, so its privacy, citations, notes and crop stay; attributes
+with the same type and value keep their stored entry the same way.
 
 ---
 
@@ -500,9 +507,10 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Handle a new wire format quirk | `Serialization/` (new converter) |
 | Format tool output | `Formatters/{Entity}Formatter.cs` |
 | Add agent-friendly input parsing | `Input/Flexible{Thing}.cs` + `Serialization/Flexible{Thing}JsonConverter.cs` |
-| Build request DTOs for POST/PUT | `Requests/Create{Entity}Request.cs` |
+| Build request DTOs (create bodies, nested update values) | `Requests/Create{Entity}Request.cs` |
 | Add shared tool description text | `Tools/ToolDescriptionFragments.cs` |
-| Map models to request DTOs | `Requests/GrampsRequestMapping.cs` |
+| Map tool input to create request DTOs | `Requests/GrampsRequestMapping.cs` |
+| Patch stored JSON in update tools | `Tools/GrampsObjectPatch.cs` |
 | Configure API connection | `Config/GrampsConfig.cs` (env vars) |
 | Configure media resource safeguards | `Config/GrampsConfig.cs` (`GRAMPS_MEDIA_*`) |
 | Configure transport | `Config/McpTransportConfig.cs` (env vars) |

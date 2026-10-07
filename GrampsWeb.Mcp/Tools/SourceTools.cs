@@ -138,36 +138,29 @@ public static class SourceTools
             LinkUpdates.Validate(linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
-            var source = await client.GetOrNullIfNotFoundAsync<GrampsSource>(
-                $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}");
+            var source = await GrampsObjectPatch.LoadAsync(client, $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}");
             if (source == null)
                 return NotFoundHelper.NotFoundMessage("Source", handle);
 
-            var repoHandlesUpdate = (GrampsRepositoryRef[]?)repositoryHandles;
-
-            var updateRequest = new CreateSourceRequest
+            source.Set("title", title);
+            source.Set("author", author);
+            source.Set("pubinfo", pubinfo);
+            source.Set("abbrev", abbrev);
+            source.ApplyRefs("reporef_list", ((GrampsRepositoryRef[]?)repositoryHandles)?.Select(r => new GrampsRepositoryRef
             {
-                Class = "Source",
-                Handle = source.Handle,
-                GrampsId = source.GrampsId,
-                Change = source.Change,
-                Title = title ?? source.Title,
-                Author = author ?? source.Author,
-                PubInfo = pubinfo ?? source.PubInfo,
-                Abbrev = abbrev ?? source.Abbrev,
-                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(source.MediaList),
-                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, source.MediaList) ?? []), linkMode, x => x.Ref),
-                RepositoryRefList = LinkUpdates.Apply(GrampsRequestMapping.ToRepositoryRefRequests(source.RepositoryRefList),
-                    repositoryHandles is null ? null : (GrampsRequestMapping.ToRepositoryRefRequests(repoHandlesUpdate, source.RepositoryRefList) ?? []), linkMode, x => x.Ref),
-                AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
-                    : GrampsRequestMapping.ToAttributeRequests(source.AttributeList),
-                NoteList = LinkUpdates.Apply(source.NoteList, (string[]?)noteHandles, linkMode, x => x),
-                TagList = LinkUpdates.Apply(source.TagList, (string[]?)tagHandles, linkMode, x => x),
-                Private = isPrivate ?? source.Private
-            };
+                Ref = r.Ref?.Trim(),
+                CallNumber = r.CallNumber?.Trim(),
+                MediaType = r.MediaType?.Trim(),
+                Private = r.Private,
+                NoteList = r.NoteList
+            }).ToArray(), linkMode);
+            source.ApplyMediaHandles(mediaHandles, linkMode);
+            source.ReplaceAttributes(attributes);
+            source.ApplyHandles("note_list", noteHandles, linkMode);
+            source.ApplyHandles("tag_list", tagHandles, linkMode);
+            source.Set("private", isPrivate);
 
-            await client.PutMutationAsync($"/api/sources/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            await source.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Source", source.Handle, source.GrampsId);
         }
         catch (Exception ex)

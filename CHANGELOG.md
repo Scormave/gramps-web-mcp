@@ -14,6 +14,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   transcript in a note (`create_note` with type Transcript) linked through
   `noteHandles`
 
+### Fixed
+
+- Update tools no longer drop data they were not asked to change
+  ([#5](https://github.com/Scormave/gramps-web-mcp/issues/5), reported by
+  @hcirlu). Gramps Web replaces the whole object on save, and the tools
+  rebuilt it from the fields they knew, so any update, even one that only
+  added a note, lost the rest: citations, notes and privacy of attributes,
+  the styling and links of note text, LDS ordinances, privacy and citations
+  of event and child references, place URLs and alternate locations, media
+  checksums, and fields of newer Gramps versions. The tools now change the
+  stored object in place and send everything else back as it was
+- In `replace` mode a reference that stays keeps its stored privacy,
+  citations, notes and crop, matched in order when the same handle is linked
+  more than once, and an attribute with the same type and value as a stored
+  one keeps its citations, notes and privacy. `update_note` keeps the styling
+  and links of the text when `text` is omitted or unchanged
+
 ## [2.3.0] - 2026-10-05
 
 ### Added

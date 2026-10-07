@@ -3,7 +3,7 @@ using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Requests;
 
-/// <summary>Maps Gramps GET models to request DTOs for PUT round-trips.</summary>
+/// <summary>Maps tool input to request DTOs for creating objects.</summary>
 internal static class GrampsRequestMapping
 {
     public static DateRequest? ToDateRequestOrNull(GrampsDate? date)
@@ -33,167 +33,14 @@ internal static class GrampsRequestMapping
     public static AttributeRequest[]? ToAttributeRequests(GrampsAttribute[]? list) =>
         list == null ? null : list.Select(a => new AttributeRequest { Type = a.Type, Value = a.Value }).ToArray();
 
-    public static EventRefRequest[]? ToEventRefRequests(GrampsEventRef[]? list) =>
-        list == null ? null : list.Select(er => new EventRefRequest
-        {
-            Ref = er.Ref,
-            Role = er.Role,
-            NoteList = er.NoteList,
-            AttributeList = er.AttributeList
-        }).ToArray();
-
-    /// <summary>
-    /// Extracts plain handle strings from <see cref="GrampsFamilyRef"/> items for use in
-    /// <c>parent_family_list</c> request bodies. Gramps Web API expects plain handles here,
-    /// not objects — <c>_get_class_name</c> has no mapping for <c>parent_family_list</c>.
-    /// </summary>
-    public static string[]? ToParentFamilyHandles(GrampsFamilyRef[]? list) =>
-        list == null ? null : list.Select(fr => fr.Ref ?? "").Where(r => r.Length > 0).ToArray();
-
     /// <summary>
     /// Gramps <c>get_schema()</c> for Person, Family, Event, etc. expects <c>media_list</c> items to match
     /// <c>MediaRef</c>, not bare handle strings (Gramps Web API <c>fix_object_dict</c> does not coerce them).
     /// </summary>
     public static MediaRefRequest[]? ToMediaRefRequests(string[]? handles) =>
-        ToMediaRefRequests(handles, existingMedia: null);
-
-    /// <summary>
-    /// Builds <see cref="MediaRefRequest"/> from tool handle lists. When <paramref name="existingMedia"/> is provided,
-    /// entries whose ref matches a handle (case-insensitive) reuse <c>rect</c>, notes, and other fields from the GET payload.
-    /// </summary>
-    public static MediaRefRequest[]? ToMediaRefRequests(string[]? handles, GrampsMediaRef[]? existingMedia)
-    {
-        if (handles is null || handles.Length == 0)
-            return null;
-
-        if (existingMedia is null || existingMedia.Length == 0)
-            return handles.Select(static h => new MediaRefRequest { Ref = string.IsNullOrWhiteSpace(h) ? h : h.Trim() }).ToArray();
-
-        var byRef = new Dictionary<string, GrampsMediaRef>(StringComparer.OrdinalIgnoreCase);
-        foreach (var m in existingMedia)
-        {
-            var key = m.ResolvedRef;
-            if (string.IsNullOrEmpty(key))
-                continue;
-            if (!byRef.ContainsKey(key))
-                byRef[key] = m;
-        }
-
-        return handles.Select(h =>
-        {
-            var trimmed = h?.Trim() ?? "";
-            if (trimmed.Length == 0)
-                return new MediaRefRequest { Ref = h };
-
-            if (!byRef.TryGetValue(trimmed, out var m))
-                return new MediaRefRequest { Ref = trimmed };
-
-            return new MediaRefRequest
-            {
-                Ref = trimmed,
-                Private = m.Private,
-                Rect = m.Rect,
-                CitationList = m.CitationList,
-                NoteList = m.NoteList,
-                AttributeList = m.AttributeList
-            };
-        }).ToArray();
-    }
-
-    /// <summary>
-    /// Maps GET <see cref="GrampsMediaRef"/> items to mutation bodies so crop <c>rect</c>, notes, etc. are preserved on PUT.
-    /// </summary>
-    public static MediaRefRequest[]? ToMediaRefRequests(GrampsMediaRef[]? list)
-    {
-        if (list is null || list.Length == 0)
-            return null;
-
-        return list.Select(static m => new MediaRefRequest
-        {
-            Ref = m.ResolvedRef,
-            Private = m.Private,
-            Rect = m.Rect,
-            CitationList = m.CitationList,
-            NoteList = m.NoteList,
-            AttributeList = m.AttributeList
-        }).ToArray();
-    }
-
-    /// <summary>Maps repository refs to request payload shape.</summary>
-    public static GrampsRepositoryRef[]? ToRepositoryRefRequests(GrampsRepositoryRef[]? refs) =>
-        ToRepositoryRefRequests(refs, existingRepositoryRefs: null);
-
-    /// <summary>
-    /// Builds repository ref list from tool input and preserves existing fields for overlapping refs.
-    /// For overlapping refs, explicit input values win; missing values are copied from existing.
-    /// </summary>
-    public static GrampsRepositoryRef[]? ToRepositoryRefRequests(
-        GrampsRepositoryRef[]? refs,
-        GrampsRepositoryRef[]? existingRepositoryRefs)
-    {
-        if (refs is null || refs.Length == 0)
-            return null;
-
-        if (existingRepositoryRefs is null || existingRepositoryRefs.Length == 0)
-        {
-            return refs.Select(static rr => new GrampsRepositoryRef
-            {
-                Ref = rr.Ref,
-                CallNumber = rr.CallNumber,
-                MediaType = rr.MediaType,
-                NoteList = rr.NoteList,
-                Private = rr.Private
-            }).ToArray();
-        }
-
-        var byRef = new Dictionary<string, GrampsRepositoryRef>(StringComparer.OrdinalIgnoreCase);
-        foreach (var rr in existingRepositoryRefs)
-        {
-            var key = rr.Ref?.Trim();
-            if (string.IsNullOrEmpty(key))
-                continue;
-            if (!byRef.ContainsKey(key))
-                byRef[key] = rr;
-        }
-
-        return refs.Select(input =>
-        {
-            var trimmed = input.Ref?.Trim() ?? "";
-            if (trimmed.Length == 0)
-                return new GrampsRepositoryRef
-                {
-                    Ref = input.Ref,
-                    CallNumber = input.CallNumber,
-                    MediaType = input.MediaType,
-                    NoteList = input.NoteList,
-                    Private = input.Private
-                };
-
-            if (!byRef.TryGetValue(trimmed, out var existing))
-                return new GrampsRepositoryRef
-                {
-                    Ref = trimmed,
-                    CallNumber = string.IsNullOrWhiteSpace(input.CallNumber) ? null : input.CallNumber.Trim(),
-                    MediaType = string.IsNullOrWhiteSpace(input.MediaType) ? null : input.MediaType.Trim(),
-                    NoteList = input.NoteList,
-                    Private = input.Private
-                };
-
-            return new GrampsRepositoryRef
-            {
-                Ref = trimmed,
-                CallNumber = string.IsNullOrWhiteSpace(input.CallNumber)
-                    ? existing.CallNumber
-                    : input.CallNumber.Trim(),
-                MediaType = string.IsNullOrWhiteSpace(input.MediaType)
-                    ? existing.MediaType
-                    : input.MediaType.Trim(),
-                NoteList = input.NoteList ?? existing.NoteList,
-                // bool is not nullable here, so keep existing for overlap to avoid accidental reset from shorthand input.
-                Private = existing.Private
-            };
-        }).ToArray();
-    }
+        handles is null || handles.Length == 0
+            ? null
+            : handles.Select(static h => new MediaRefRequest { Ref = string.IsNullOrWhiteSpace(h) ? h : h.Trim() }).ToArray();
 
     /// <summary>Builds event_ref_list from parallel handle/role arrays (default role Primary).</summary>
     public static EventRefRequest[] BuildEventRefList(string[]? handles, string[]? roles)
@@ -211,42 +58,4 @@ internal static class GrampsRequestMapping
         }
         return list.ToArray();
     }
-
-    public static PlaceRefRequest[]? ToPlaceRefRequests(GrampsPlaceRef[]? list) =>
-        list == null ? null : list.Select(pr => new PlaceRefRequest
-        {
-            Ref = pr.Ref,
-            Date = ToDateRequestOrNull(pr.Date)
-        }).ToArray();
-
-    public static PlaceNameRequest[]? ToPlaceNameRequests(GrampsPlaceName[]? list) =>
-        list == null ? null : list.Select(n => new PlaceNameRequest
-        {
-            Value = n.Value ?? "",
-            Lang = string.IsNullOrWhiteSpace(n.Lang) ? null : n.Lang,
-            Date = ToDateRequestOrNull(n.Date)
-        }).ToArray();
-
-    /// <summary>
-    /// Primary place name for an update: a <c>null</c> argument keeps the stored part, an empty
-    /// <paramref name="lang"/> or <paramref name="date"/> removes it.
-    /// </summary>
-    public static PlaceNameRequest ToPrimaryPlaceNameRequest(
-        string? value,
-        string? lang,
-        string? date,
-        GrampsPlaceName? existing)
-    {
-        var resolvedValue = (value ?? existing?.Value)?.Trim() ?? "";
-        var resolvedLang = lang ?? existing?.Lang;
-        return new PlaceNameRequest
-        {
-            Value = resolvedValue,
-            Lang = string.IsNullOrWhiteSpace(resolvedLang) ? null : resolvedLang.Trim(),
-            Date = date != null
-                ? AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso)
-                : ToDateRequestOrNull(existing?.Date)
-        };
-    }
-
 }

@@ -324,48 +324,29 @@ public static class PersonTools
         {
             LinkUpdates.Validate(linkMode);
             using var updateLease = await client.BeginUpdateAsync();
-            // Get current person first
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
-            var person = await client.GetOrNullIfNotFoundAsync<GrampsPerson>(
-                $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");
+            var person = await GrampsObjectPatch.LoadAsync(client, $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");
             if (person == null)
                 return NotFoundHelper.NotFoundMessage("Person", handle);
 
-            var primaryReq = primaryName?.Name != null
-                ? ConvertNameToRequest(primaryName.Name)
-                : person.PrimaryName != null ? ConvertNameToRequest(person.PrimaryName) : null;
+            if (primaryName?.Name != null)
+                person.Set("primary_name", ConvertNameToRequest(primaryName.Name));
+            person.Set("gender", GrampsGenderParser.ParseOptional(gender));
+            person.Set("alternate_names", ((GrampsName[]?)alternateNames)?.Select(ConvertNameToRequest).ToArray());
+            person.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
+            person.ApplyHandles("family_list", familyHandles, linkMode);
+            person.ApplyHandles("parent_family_list", parentFamilyHandles, linkMode);
+            person.ApplyMediaHandles(mediaHandles, linkMode);
+            person.Set("address_list", (GrampsAddress[]?)addresses);
+            person.ReplaceAttributes(attributes);
+            person.ApplyHandles("citation_list", citationHandles, linkMode);
+            person.ApplyHandles("note_list", noteHandles, linkMode);
+            person.ApplyHandles("tag_list", tagHandles, linkMode);
+            person.Set("urls", (GrampsUrl[]?)urls);
+            person.ApplyRefs("person_ref_list", (GrampsPersonRef[]?)personAssociations, linkMode);
+            person.Set("private", isPrivate);
 
-            // Build update request with provided fields or existing values
-            var updateRequest = new CreatePersonRequest
-            {
-                Class = "Person",
-                Handle = person.Handle,
-                GrampsId = person.GrampsId,
-                Change = person.Change,
-                Gender = GrampsGenderParser.ParseOptional(gender) ?? person.Gender,
-                PrimaryName = primaryReq,
-                AlternateNames = alternateNames != null
-                    ? ((GrampsName[]?)alternateNames)!.Select(ConvertNameToRequest).ToArray()
-                    : person.AlternateNames?.Select(ConvertNameToRequest).ToArray(),
-                EventRefList = LinkUpdates.Apply(GrampsRequestMapping.ToEventRefRequests(person.EventRefList),
-                    (EventRefRequest[]?)eventRefs, linkMode, x => x.Ref),
-                FamilyList = LinkUpdates.Apply(person.FamilyList, (string[]?)familyHandles, linkMode, x => x),
-                ParentFamilyList = LinkUpdates.Apply(GrampsRequestMapping.ToParentFamilyHandles(person.ParentFamilyList), (string[]?)parentFamilyHandles, linkMode, x => x),
-                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(person.MediaList),
-                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, person.MediaList) ?? []), linkMode, x => x.Ref),
-                AddressList = addresses is null ? person.AddressList : (GrampsAddress[]?)addresses,
-                AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
-                    : GrampsRequestMapping.ToAttributeRequests(person.AttributeList),
-                CitationList = LinkUpdates.Apply(person.CitationList, (string[]?)citationHandles, linkMode, x => x),
-                NoteList = LinkUpdates.Apply(person.NoteList, (string[]?)noteHandles, linkMode, x => x),
-                TagList = LinkUpdates.Apply(person.TagList, (string[]?)tagHandles, linkMode, x => x),
-                UrlList = urls is null ? person.UrlList : (GrampsUrl[]?)urls,
-                PersonRefList = LinkUpdates.Apply(person.PersonRefList, (GrampsPersonRef[]?)personAssociations, linkMode, x => x.Ref),
-                Private = isPrivate ?? person.Private
-            };
-
-            await client.PutMutationAsync($"/api/people/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            await person.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Person", person.Handle, person.GrampsId);
         }
         catch (Exception ex)

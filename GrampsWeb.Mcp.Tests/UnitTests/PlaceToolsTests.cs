@@ -87,6 +87,7 @@ public class PlaceToolsTests
 
         var name = handler.Body!.Value.GetProperty("name");
         Assert.Equal("Pushkin City", name.GetProperty("value").GetString());
+        Assert.Equal("ru", name.GetProperty("lang").GetString());
         AssertDate(name.GetProperty("date"), modifier: 7, day: 10, month: 2, year: 1937);
     }
 

@@ -191,35 +191,23 @@ public static class FamilyTools
             var resolvedMotherHandle = motherHandle is null
                 ? null
                 : await HandleResolver.ResolveToHandleAsync(motherHandle, client, "people");
-            var family = await client.GetOrNullIfNotFoundAsync<GrampsFamily>(
-                $"/api/families/{Uri.EscapeDataString(resolvedHandle)}");
+            var family = await GrampsObjectPatch.LoadAsync(client, $"/api/families/{Uri.EscapeDataString(resolvedHandle)}");
             if (family == null)
                 return NotFoundHelper.NotFoundMessage("Family", handle);
 
-            var updateRequest = new CreateFamilyRequest
-            {
-                Class = "Family",
-                Handle = family.Handle,
-                GrampsId = family.GrampsId,
-                Change = family.Change,
-                FatherHandle = resolvedFatherHandle ?? family.FatherHandle,
-                MotherHandle = resolvedMotherHandle ?? family.MotherHandle,
-                ChildRefList = LinkUpdates.Apply(family.ChildRefList, (GrampsChildRef[]?)childRefs, linkMode, x => x.Ref),
-                EventRefList = LinkUpdates.Apply(GrampsRequestMapping.ToEventRefRequests(family.EventRefList),
-                    (EventRefRequest[]?)eventRefs, linkMode, x => x.Ref),
-                MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(family.MediaList),
-                    mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, family.MediaList) ?? []), linkMode, x => x.Ref),
-                AttributeList = attributes != null
-                    ? GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes)
-                    : GrampsRequestMapping.ToAttributeRequests(family.AttributeList),
-                CitationList = LinkUpdates.Apply(family.CitationList, (string[]?)citationHandles, linkMode, x => x),
-                NoteList = LinkUpdates.Apply(family.NoteList, (string[]?)noteHandles, linkMode, x => x),
-                TagList = LinkUpdates.Apply(family.TagList, (string[]?)tagHandles, linkMode, x => x),
-                Private = isPrivate ?? family.Private,
-                Relationship = relationshipType ?? family.Relationship
-            };
+            family.Set("father_handle", resolvedFatherHandle);
+            family.Set("mother_handle", resolvedMotherHandle);
+            family.Set("type", relationshipType);
+            family.ApplyRefs("child_ref_list", (GrampsChildRef[]?)childRefs, linkMode);
+            family.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
+            family.ApplyMediaHandles(mediaHandles, linkMode);
+            family.ReplaceAttributes(attributes);
+            family.ApplyHandles("citation_list", citationHandles, linkMode);
+            family.ApplyHandles("note_list", noteHandles, linkMode);
+            family.ApplyHandles("tag_list", tagHandles, linkMode);
+            family.Set("private", isPrivate);
 
-            await client.PutMutationAsync($"/api/families/{Uri.EscapeDataString(resolvedHandle)}", updateRequest);
+            await family.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Family", family.Handle, family.GrampsId);
         }
         catch (Exception ex)
