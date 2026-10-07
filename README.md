@@ -314,6 +314,25 @@ Existing link metadata is preserved by `add`; use `replace` to change that
 metadata. See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md#incremental-link-updates)
 for supported lists and concurrency limits.
 
+### Data dropped by updates before 2.3.1
+
+Before 2.3.1 the `update_*` tools could drop stored data the call did not
+mention ([#5](https://github.com/Scormave/gramps-web-mcp/issues/5)). If you
+edited a tree with an earlier version,
+[`scripts/find-update-losses.py`](scripts/find-update-losses.py) reads the
+Gramps Web transaction history and lists every value an update emptied, with
+the value it had and whether the record still lacks it:
+
+```bash
+GRAMPS_API_URL=https://gramps.example.com GRAMPS_USERNAME=me GRAMPS_PASSWORD=... \
+  python3 scripts/find-update-losses.py --user MCP_ACCOUNT --until 2026-10-07 --json losses.json
+```
+
+It needs Python 3.9 or later and an account that may see private records, and
+it only reads. The history also holds edits made in the Gramps Web interface,
+and a value cleared on purpose looks the same as a dropped one, so check each
+finding before you restore it.
+
 ### Media file access
 
 Media byte tools/resources are disabled by default. `get_object` with

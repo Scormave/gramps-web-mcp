@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/find-update-losses.py` finds data that update tools before 2.3.1
+  dropped ([#5](https://github.com/Scormave/gramps-web-mcp/issues/5)). It
+  reads the Gramps Web transaction history, lists every value an update
+  emptied, with the value it had, and with `--removed` every list entry an
+  update removed, and says whether the record still lacks it. It only
+  reads; `--user`, `--since` and `--until` narrow the scan to the server's
+  account and the time before the upgrade
+
 ## [2.3.1] - 2026-10-07
 
 ### Removed
