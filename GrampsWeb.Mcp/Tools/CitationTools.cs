@@ -58,10 +58,8 @@ public static class CitationTools
         string confidence = "Normal",
         [Description("Date of the cited entry, optional. " + ToolDescriptionFragments.DateText)]
         string? date = null,
-        [Description("Notes, e.g. a transcription. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Notes, e.g. a transcript of the entry (create_note with type Transcript). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Citation text or transcript (optional).")]
-        string? text = null,
         [Description("Media such as the scan of the page. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
         [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
@@ -88,7 +86,6 @@ public static class CitationTools
                 Page = page,
                 Confidence = confidenceLevel,
                 Date = dateRequest,
-                Text = text,
                 MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
                 NoteList = noteHandles,
                 TagList = tagHandles,
@@ -108,7 +105,7 @@ public static class CitationTools
 
     [McpServerTool(Title = "Update Citation", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing citation: its source, page, confidence, date, text, notes, media, tags, attributes or the private flag. " +
+        "Change an existing citation: its source, page, confidence, date, notes, media, tags, attributes or the private flag. " +
         ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing citation returns a not-found message. " +
         "Which people and events it supports is stored on them (their citationHandles), not here. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateCitation(
@@ -124,8 +121,6 @@ public static class CitationTools
         string? date = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("New citation text or transcript. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string? text = null,
         [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? mediaHandles = null,
         [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
@@ -170,7 +165,6 @@ public static class CitationTools
                 Page = (string?)page ?? citation.Page,
                 Confidence = finalConfidence,
                 Date = dateRequest,
-                Text = text ?? citation.Text,
                 MediaList = LinkUpdates.Apply(GrampsRequestMapping.ToMediaRefRequests(citation.MediaList),
                     mediaHandles is null ? null : (GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles, citation.MediaList) ?? []), linkMode, x => x.Ref),
                 AttributeList = attributes != null

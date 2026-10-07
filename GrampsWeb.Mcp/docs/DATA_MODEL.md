@@ -38,7 +38,7 @@ polymorphic wire shapes.
 | `GrampsEvent` | `GrampsEvent.cs` | `Handle`, `GrampsId`, `Type`, `Date` → `GrampsDate`, `Place` (handle), `Description`, `MediaList`, `NoteList`, `CitationList`, `TagList`, `Change`, `Private` |
 | `GrampsPlace` | `GrampsPlace.cs` | `Handle`, `GrampsId`, `PrimaryName` → `GrampsPlaceName`, `Name` (display), `Type` (`place_type`), `Code`, `Longitude`, `Latitude`, `PlaceRefList` → `GrampsPlaceRef[]`, `AlternateNames` → `GrampsPlaceName[]`, `AlternateLocations`, `MediaList`, `NoteList`, `CitationList`, `TagList`, `Change`, `Private` |
 | `GrampsSource` | `GrampsSource.cs` | `Handle`, `GrampsId`, `Title`, `Author`, `PubInfo`, `Abbrev`, `RepositoryRefList`, `MediaList`, `NoteList`, `AttributeList`, `TagList`, `Change`, `Private` |
-| `GrampsCitation` | `GrampsCitation.cs` | `Handle`, `GrampsId`, `Source` (`source_handle`), `Page`, `Confidence`, `Date`, `Text`, `MediaList`, `NoteList`, `AttributeList`, `TagList`, `Change`, `Private` |
+| `GrampsCitation` | `GrampsCitation.cs` | `Handle`, `GrampsId`, `Source` (`source_handle`), `Page`, `Confidence`, `Date`, `MediaList`, `NoteList`, `AttributeList`, `TagList`, `Change`, `Private` |
 | `GrampsNote` | `GrampsNote.cs` | `Handle`, `GrampsId`, `Text`, `Type`, `Format`, `TagList`, `Change`, `Private` |
 | `GrampsMedia` | `GrampsMedia.cs` | `Handle`, `GrampsId`, `Path`, `Mime`, `Description`, `Date`, `AttributeList`, `CitationList`, `NoteList`, `TagList`, `Change`, `Private` |
 | `GrampsRepository` | `GrampsRepository.cs` | `Handle`, `GrampsId`, `Name`, `Type`, `EmailList`, `AddressList`, `UrlList`, `NoteList`, `TagList`, `Change`, `Private` |

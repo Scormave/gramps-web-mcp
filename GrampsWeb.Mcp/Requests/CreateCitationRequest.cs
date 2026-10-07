@@ -31,9 +31,6 @@ public class CreateCitationRequest
     [JsonPropertyName("date")]
     public DateRequest? Date { get; set; }
 
-    [JsonPropertyName("text")]
-    public string? Text { get; set; }
-
     [JsonPropertyName("media_list")]
     public MediaRefRequest[]? MediaList { get; set; }
 

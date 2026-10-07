@@ -423,7 +423,6 @@ Attach to persons/events/places via their `citationHandles`.
 | `confidence` | `string` | no | `"Normal"` | Very Low / Low / Normal / High / Very High |
 | `date` | `string?` | no | — | Access or reference date |
 | `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
-| `text` | `string?` | no | — | Transcript text |
 | `mediaHandles` | `FlexibleHandleList?` | no | — | Media handles |
 | `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes |

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- The `text` parameter of `create_citation` and `update_citation`. Gramps
+  citations have no text field, so the transcript was never stored, and
+  Gramps Web 3.23 and later refuse a citation that carries one. Keep a
+  transcript in a note (`create_note` with type Transcript) linked through
+  `noteHandles`
+
 ## [2.3.0] - 2026-10-05
 
 ### Added

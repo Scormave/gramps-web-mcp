@@ -26,9 +26,6 @@ public class GrampsCitation
     [JsonPropertyName("date")]
     public GrampsDate? Date { get; set; }
 
-    [JsonPropertyName("text")]
-    public string? Text { get; set; }
-
     [JsonPropertyName("media_list")]
     [JsonConverter(typeof(GrampsMediaRefArrayConverter))]
     public GrampsMediaRef[]? MediaList { get; set; }
