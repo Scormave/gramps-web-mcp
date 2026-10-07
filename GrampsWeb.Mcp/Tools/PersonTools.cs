@@ -237,6 +237,7 @@ public static class PersonTools
             var genderCode = GrampsGenderParser.ParseRequired(gender);
 
             var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
+            await EventRoles.CheckAsync(eventRefArr, client);
 
             var parentFamilyHandleArray = (string[]?)parentFamilyHandles;
 
@@ -327,6 +328,7 @@ public static class PersonTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            await EventRoles.CheckAsync(eventRefs, client, linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
             var person = await GrampsObjectPatch.LoadAsync(client, $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");

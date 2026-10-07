@@ -31,6 +31,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   does. Gramps Web sets them only when a person is saved with PUT, so a person
   created with a Birth or Death had no birth or death of record (in Gramps
   Web lists, charts and sorting by birth date) until their next update
+- `create_person`, `update_person`, `create_family` and `update_family` check
+  the role of each event link. A misspelt role such as `Witnes` used to be
+  saved, and Gramps stored it as a new custom role that the person's events
+  then showed instead of Witness. A role that is neither a standard Gramps
+  role nor a custom one the tree already uses is now rejected with
+  suggestions before anything is saved, and a role sent in another case, such
+  as `witness`, is stored in its known spelling. `linkMode: "remove"` matches
+  links by handle only, so its roles are not checked
 
 ## [2.3.1] - 2026-10-07
 

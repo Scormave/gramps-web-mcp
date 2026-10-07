@@ -125,6 +125,14 @@ besides `handle` and `linkMode` is refused with the same parameter list instead
 of saving the record unchanged: clients such as Claude Code drop arguments a
 tool does not have, so `update_event(place: …)` arrives without `place`.
 
+Type values (event, place, note, repository and family relationship types) are
+checked against the tree's vocabularies from `gramps://types` before anything
+is saved, and an unknown value is refused with suggestions. Event link roles in
+`eventRefs` of `create_person`, `update_person`, `create_family` and
+`update_family` are checked the same way and stored in the vocabulary's
+spelling (`witness` becomes `Witness`); an empty role stays Primary, and
+`linkMode: "remove"` does not check roles.
+
 ```text
 An error occurred invoking 'get_object': Unknown argument: extend (did you mean extended?). Parameters: identifier (string, required), objectType (string), extended (boolean).
 ```

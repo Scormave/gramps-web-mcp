@@ -92,7 +92,10 @@ polymorphic wire shapes.
 of the process, custom types for 10 minutes.  Write tools call
 `TypeCache.ValidateTypeAsync` to check type strings before sending requests,
 providing fuzzy-match suggestions on invalid values; an unknown value reads
-custom types again before it is rejected.
+custom types again before it is rejected.  `TypeCache.ResolveTypeAsync` checks a
+value the same way and returns the vocabulary's own spelling; the person and
+family tools use it through `Tools/EventRoles.cs` to check event link roles
+(`event_role_types`) and store them in that spelling.
 
 ### HandleResolver (`Client/HandleResolver.cs`)
 

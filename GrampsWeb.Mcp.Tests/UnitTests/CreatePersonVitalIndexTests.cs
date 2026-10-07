@@ -84,7 +84,7 @@ public class CreatePersonVitalIndexTests
         return new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
     }
 
-    /// <summary>Serves bodies by path and query (404 otherwise) and records the POST body.</summary>
+    /// <summary>Serves the role vocabulary and bodies by path and query (404 otherwise) and records the POST body.</summary>
     private sealed class TreeHandler(IReadOnlyDictionary<string, string> bodies) : HttpMessageHandler
     {
         private readonly ConcurrentQueue<string> _requests = new();
@@ -106,6 +106,8 @@ public class CreatePersonVitalIndexTests
                 return Json("""[{ "_class": "Person", "type": "add", "old": null, "new": { "_class": "Person", "handle": "h-new", "gramps_id": "I0001" } }]""");
             }
 
+            if (path == "/api/types/default/")
+                return Json("""{ "event_role_types": ["Primary", "Father", "Witness"] }""");
             return bodies.TryGetValue(path, out var body) ? Json(body) : new HttpResponseMessage(HttpStatusCode.NotFound);
         }
 

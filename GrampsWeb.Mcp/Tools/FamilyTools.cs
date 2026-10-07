@@ -102,6 +102,7 @@ public static class FamilyTools
 
             var childRefArr = (GrampsChildRef[]?)childRefs;
             var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
+            await EventRoles.CheckAsync(eventRefArr, client);
             var resolvedFatherHandle = fatherHandle is null
                 ? null
                 : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
@@ -179,6 +180,7 @@ public static class FamilyTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            await EventRoles.CheckAsync(eventRefs, client, linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             if (relationshipType != null)
             {

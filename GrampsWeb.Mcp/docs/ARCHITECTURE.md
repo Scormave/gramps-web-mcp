@@ -305,7 +305,10 @@ instance, as in unit tests, gets its own.
 `TypeCache.ValidateTypeAsync` to check type strings before sending requests to
 the API, providing helpful error messages with suggestions on typos. A value
 missing from the cached vocabularies reads custom types again before it is
-rejected, so a type just added in Gramps is accepted. `gramps://types` and
+rejected, so a type just added in Gramps is accepted. `TypeCache.ResolveTypeAsync`
+also returns the vocabulary's spelling of the value; `EventRoles` uses it to
+check the event link roles of the person and family tools and store each role
+in that spelling. `gramps://types` and
 `get_reference(topic: "types")` read custom types each time.
 
 Read-only MCP tool calls also open a `GrampsReadScope`. Within that call,

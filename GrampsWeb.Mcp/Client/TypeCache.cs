@@ -50,14 +50,22 @@ public static class TypeCache
     /// Comparison is case-insensitive. An unknown value reloads custom types once, so a type
     /// just added in Gramps is accepted.
     /// </summary>
-    public static async Task<string?> ValidateTypeAsync(string value, string category, GrampsApiClient client)
+    public static async Task<string?> ValidateTypeAsync(string value, string category, GrampsApiClient client) =>
+        (await ResolveTypeAsync(value, category, client)).Error;
+
+    /// <summary>
+    /// Checks <paramref name="value"/> like <see cref="ValidateTypeAsync"/> and returns the vocabulary's own spelling
+    /// of it, so a value sent in another case is stored as the known type; <paramref name="value"/> itself when the
+    /// category is unknown or empty.
+    /// </summary>
+    public static async Task<(string? Label, string? Error)> ResolveTypeAsync(string value, string category, GrampsApiClient client)
     {
-        if (IsValid(await GetTypesAsync(client), value, category))
-            return null;
+        if (Find(await GetTypesAsync(client), value, category) is { } label)
+            return (label, null);
 
         var types = await GetTypesAsync(client, reloadCustom: true);
-        if (IsValid(types, value, category))
-            return null;
+        if (Find(types, value, category) is { } reloaded)
+            return (reloaded, null);
 
         var candidates = types[category];
         var suggestions = FindSimilar(value, candidates);
@@ -70,15 +78,15 @@ public static class TypeCache
             validPreview += ", …";
 
         var categoryLabel = category.Replace("_", " ");
-        return $"Invalid {categoryLabel} '{value}'.{suggestionText} " +
-               $"Valid values from gramps://types: {validPreview}";
+        return (null, $"Invalid {categoryLabel} '{value}'.{suggestionText} " +
+                      $"Valid values from gramps://types: {validPreview}");
     }
 
     // An unknown category skips validation rather than blocking the write.
-    private static bool IsValid(Dictionary<string, IReadOnlyList<string>> types, string value, string category) =>
-        !types.TryGetValue(category, out var candidates)
-        || candidates.Count == 0
-        || candidates.Any(c => string.Equals(c, value, StringComparison.OrdinalIgnoreCase));
+    private static string? Find(Dictionary<string, IReadOnlyList<string>> types, string value, string category) =>
+        !types.TryGetValue(category, out var candidates) || candidates.Count == 0
+            ? value
+            : candidates.FirstOrDefault(c => string.Equals(c, value, StringComparison.OrdinalIgnoreCase));
 
     private static List<string> FindSimilar(string input, IReadOnlyList<string> candidates, int maxResults = 5)
     {

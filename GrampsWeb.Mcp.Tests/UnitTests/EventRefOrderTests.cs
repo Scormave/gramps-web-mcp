@@ -78,6 +78,7 @@ public class EventRefOrderTests
                   ]
                 }
                 """,
+            ["/api/types/default/"] = """{ "event_role_types": ["Primary", "Family"] }""",
             ["/api/events/?handles=e-marriage,e-divorce,e-banns&page=1&pagesize=3"] = """
                 [
                   { "handle": "e-marriage", "type": "Marriage", "date": { "dateval": [11, 11, 1866, false] } },
