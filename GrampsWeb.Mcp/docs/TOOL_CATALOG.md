@@ -323,6 +323,9 @@ Create a new person.  Returns handle and Gramps ID.
 | `personAssociations` | `FlexiblePersonRefList?` | no | — | Person associations |
 | `isPrivate` | `bool` | no | `false` | Mark record private |
 
+The first Birth and the first Death in `eventRefs` with the Primary role become
+the person's birth and death (`birth_ref_index`, `death_ref_index`), as in Gramps.
+
 ### U — `UpdatePerson`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 

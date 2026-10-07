@@ -261,6 +261,8 @@ public static class PersonTools
                 Private = isPrivate
             };
 
+            await SetVitalEventIndexesAsync(client, request);
+
             var (handle, grampsId) = await client.PostMutationAsync("/api/people/", request, "Person");
             return ResponseEnvelope.CreateSuccess(
                 "Person", handle, grampsId,
@@ -356,6 +358,32 @@ public static class PersonTools
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    /// <summary>
+    /// Gramps Web sets birth_ref_index and death_ref_index when it saves a person with PUT but not with POST, so a
+    /// new person would show no birth or death until its next update. Like Gramps <c>set_birth_death_index</c>, takes
+    /// the first Birth and the first Death the person has the Primary role in; -1 when there is none.
+    /// </summary>
+    private static async Task SetVitalEventIndexesAsync(GrampsApiClient client, CreatePersonRequest request)
+    {
+        var refs = request.EventRefList ?? [];
+        var primary = refs.Where(r => PersonFormatter.IsPrimaryRole(r.Role)).Select(r => r.Ref).ToArray();
+        if (primary.Length == 0)
+            return;
+
+        var events = await client.GetByHandlesAsync<GrampsEvent>("events", primary, e => e.Handle);
+        for (var i = 0; i < refs.Length; i++)
+        {
+            if (!PersonFormatter.IsPrimaryRole(refs[i].Role)
+                || refs[i].Ref?.Trim() is not { } eventHandle
+                || !events.TryGetValue(eventHandle, out var evt))
+                continue;
+            if (evt.Type == "Birth" && request.BirthRefIndex < 0)
+                request.BirthRefIndex = i;
+            else if (evt.Type == "Death" && request.DeathRefIndex < 0)
+                request.DeathRefIndex = i;
         }
     }
 

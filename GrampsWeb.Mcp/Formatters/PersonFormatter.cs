@@ -497,7 +497,7 @@ public static class PersonFormatter
     }
 
     /// <summary>Empty roles default to Primary; <c>1</c> is the numeric value of EventRoleType.PRIMARY.</summary>
-    private static bool IsPrimaryRole(string? role) =>
+    internal static bool IsPrimaryRole(string? role) =>
         string.IsNullOrWhiteSpace(role) ||
         string.Equals(role.Trim(), "Primary", StringComparison.OrdinalIgnoreCase) ||
         role.Trim() == "1";

@@ -24,6 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   same date: "before" dates, then Residence and Occupation, Birth, Baptism,
   other events, Death and Burial, then "after" dates
 
+### Fixed
+
+- `create_person` sets `birth_ref_index` and `death_ref_index` to the first
+  Birth and the first Death the person has the Primary role in, as Gramps
+  does. Gramps Web sets them only when a person is saved with PUT, so a person
+  created with a Birth or Death had no birth or death of record (in Gramps
+  Web lists, charts and sorting by birth date) until their next update
+
 ## [2.3.1] - 2026-10-07
 
 ### Removed

@@ -33,6 +33,14 @@ public class CreatePersonRequest
     [JsonPropertyName("event_ref_list")]
     public EventRefRequest[]? EventRefList { get; set; }
 
+    /// <summary>Index into <see cref="EventRefList"/> of the birth event; -1 for none.</summary>
+    [JsonPropertyName("birth_ref_index")]
+    public int BirthRefIndex { get; set; } = -1;
+
+    /// <summary>Index into <see cref="EventRefList"/> of the death event; -1 for none.</summary>
+    [JsonPropertyName("death_ref_index")]
+    public int DeathRefIndex { get; set; } = -1;
+
     [JsonPropertyName("family_list")]
     public string[]? FamilyList { get; set; }
 
