@@ -6,6 +6,13 @@
 [![CI](https://github.com/Scormave/gramps-web-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Scormave/gramps-web-mcp/actions/workflows/ci.yml)
 [![Docker on GHCR](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/Scormave/gramps-web-mcp/pkgs/container/gramps-web-mcp)
 
+> [!WARNING]
+> **Update to 2.3.1 or later.** Before 2.3.1 the `update_*` tools could drop
+> stored data that the call did not mention
+> ([#5](https://github.com/Scormave/gramps-web-mcp/issues/5)). If you edited a
+> tree with an earlier version,
+> [check it for dropped data](#data-dropped-by-updates-before-231).
+
 Companion MCP server for the [Gramps Web](https://www.grampsweb.org/)
 open-source genealogy platform. It gives AI agents structured, tool-based
 access to family trees through the Model Context Protocol.
