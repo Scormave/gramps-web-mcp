@@ -554,10 +554,11 @@ public sealed class GrampsResources
             examples = new[] { "Nickname: Joe", "Occupation: Farmer" },
             forms = new[]
             {
-                "JSON array of objects {\"type\":\"T\",\"value\":\"V\",...}",
+                "JSON array of objects {\"type\":\"T\",\"value\":\"V\",\"citation_list\":[\"handle\"],\"note_list\":[\"handle\"],\"private\":true} (only type and value are required)",
                 "JSON array of strings [\"Nick: Joe\"]",
                 "One JSON string: \"Line1\\nLine2\" or \"A: 1|B: 2\""
             },
+            sources_and_citations = "Source and citation attributes take only type, value and private; citation_list or note_list on them is rejected.",
             tools = "create_person, update_person, create_event, update_event, create_family, update_family, create_source, update_source, create_citation, update_citation, update_media"
         },
         urls = new

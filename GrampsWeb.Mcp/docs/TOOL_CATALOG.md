@@ -304,7 +304,7 @@ Create a new person.  Returns handle and Gramps ID.
 | `citationHandles` | `FlexibleHandleList?` | no | — | Citation handles |
 | `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
 | `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `addresses` | `FlexibleAddressList?` | no | — | Addresses |
 | `urls` | `FlexibleUrlList?` | no | — | URLs |
 | `personAssociations` | `FlexiblePersonRefList?` | no | — | Person associations |
@@ -336,7 +336,7 @@ Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guid
 | `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`) |
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
 | `mediaHandles`, `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateFamily`
@@ -359,7 +359,7 @@ Link to persons/families via their create/update tools' `eventRefs`.
 | `placeHandle` | `string?` | no | — | Place handle |
 | `description` | `string?` | no | — | Event description |
 | `citationHandles`, `noteHandles`, `tagHandles`, `mediaHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateEvent`
@@ -409,7 +409,7 @@ Create a source.  Create sources **before** citations.
 | `abbrev` | `string?` | no | — | Abbreviation |
 | `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handle strings, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted) |
 | `noteHandles`, `mediaHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateSource`
@@ -434,7 +434,7 @@ Attach to persons/events/places via their `citationHandles`.
 | `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
 | `mediaHandles` | `FlexibleHandleList?` | no | — | Media handles |
 | `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateCitation`
@@ -506,7 +506,7 @@ Update media metadata (no binary upload).
 | `description` | `string?` | no | — | Description |
 | `date` | `string?` | no | — | Date text; omit to keep the current date, an empty string removes it |
 | `noteHandles`, `tagHandles`, `citationHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool?` | no | — | Private flag |
 
 ---

@@ -30,8 +30,26 @@ internal static class GrampsRequestMapping
         };
     }
 
+    /// <summary>Keeps each attribute's citations, notes and privacy (empty lists are left out on create).</summary>
     public static AttributeRequest[]? ToAttributeRequests(GrampsAttribute[]? list) =>
-        list == null ? null : list.Select(a => new AttributeRequest { Type = a.Type, Value = a.Value }).ToArray();
+        list?.Select(static a => new AttributeRequest
+        {
+            Type = a.Type,
+            Value = a.Value,
+            CitationList = a.CitationList,
+            NoteList = a.NoteList,
+            Private = a.Private
+        }).ToArray();
+
+    /// <summary>
+    /// Source and citation attributes are Gramps <c>SrcAttribute</c>s: only a type, a value and the private flag,
+    /// and the server rejects any other key. Returns an error for an attribute with citations or notes, otherwise null.
+    /// </summary>
+    public static string? SourceAttributeError(GrampsAttribute[]? list) =>
+        list?.FirstOrDefault(static a => a.CitationList is { Length: > 0 } || a.NoteList is { Length: > 0 }) is { } attribute
+            ? $"Error: attribute '{attribute.Type}: {attribute.Value}' has citations or notes, but source and citation " +
+              "attributes hold only a type, a value and the private flag. Link notes to the source or citation itself (noteHandles)."
+            : null;
 
     /// <summary>
     /// Gramps <c>get_schema()</c> for Person, Family, Event, etc. expects <c>media_list</c> items to match

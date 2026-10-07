@@ -106,6 +106,8 @@ internal sealed class GrampsObjectPatch
     /// <summary>
     /// Replaces <c>attribute_list</c> with the supplied attributes. An attribute whose type and value match a
     /// stored one keeps that entry, with its citations, notes and privacy, unless the caller sent new ones.
+    /// Source and citation tools check <see cref="Requests.GrampsRequestMapping.SourceAttributeError"/> first, since their
+    /// attributes have no citations or notes.
     /// </summary>
     public void ReplaceAttributes(GrampsAttribute[]? supplied)
     {

@@ -222,7 +222,9 @@ Common pattern:
 
 `GrampsRequestMapping` maps tool input to request DTOs for creating objects:
 - `GrampsDate` → `DateRequest` (via `ToDateRequestOrNull`)
-- `GrampsAttribute[]` → `AttributeRequest[]`
+- `GrampsAttribute[]` → `AttributeRequest[]`, with each attribute's citations,
+  notes and privacy; `SourceAttributeError` rejects citations and notes on
+  source and citation attributes (Gramps `SrcAttribute` has neither)
 - Media handles → `MediaRefRequest[]` (`ToMediaRefRequests`)
 - Parallel handle/role arrays → `EventRefRequest[]` (`BuildEventRefList`)
 

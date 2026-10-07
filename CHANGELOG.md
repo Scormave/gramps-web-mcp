@@ -30,6 +30,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   more than once, and an attribute with the same type and value as a stored
   one keeps its citations, notes and privacy. `update_note` keeps the styling
   and links of the text when `text` is omitted or unchanged
+- Create tools keep the private flag given with an attribute, and
+  `create_person`, `create_family` and `create_event` also keep its
+  citations and notes; they kept only the type and value
+- Source and citation attributes have no citations or notes in Gramps.
+  `create_source`, `update_source`, `create_citation` and `update_citation`
+  now refuse such an attribute before saving anything instead of dropping
+  them
 
 ## [2.3.0] - 2026-10-05
 

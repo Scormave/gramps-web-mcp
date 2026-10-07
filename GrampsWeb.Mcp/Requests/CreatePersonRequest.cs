@@ -187,4 +187,13 @@ public class AttributeRequest
 
     [JsonPropertyName("value")]
     public string? Value { get; set; }
+
+    [JsonPropertyName("citation_list")]
+    public string[]? CitationList { get; set; }
+
+    [JsonPropertyName("note_list")]
+    public string[]? NoteList { get; set; }
+
+    [JsonPropertyName("private")]
+    public bool Private { get; set; }
 }

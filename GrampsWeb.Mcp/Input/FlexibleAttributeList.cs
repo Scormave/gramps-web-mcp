@@ -16,6 +16,9 @@ public sealed class FlexibleAttributeList
         "Attributes: JSON array of objects {type,value,...}, or strings \"Type: Value\" (first colon), " +
         "or one string with lines or | between entries. Full grammar: gramps://input-guide.";
 
+    /// <summary>Gramps <c>SrcAttribute</c>: source and citation attributes have no citations or notes.</summary>
+    public const string SourceAttributesHint = "Each attribute takes only type, value and private.";
+
     public required GrampsAttribute[] Items { get; init; }
 
     public static implicit operator GrampsAttribute[]?(FlexibleAttributeList? value) => value?.Items;

@@ -64,7 +64,7 @@ public static class CitationTools
         FlexibleHandleList? mediaHandles = null,
         [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description(FlexibleAttributeList.DescriptionHint)]
+        [Description(FlexibleAttributeList.DescriptionHint + " " + FlexibleAttributeList.SourceAttributesHint)]
         FlexibleAttributeList? attributes = null,
         [Description("Mark the citation private (default false).")]
         bool isPrivate = false,
@@ -74,6 +74,8 @@ public static class CitationTools
         {
             if (string.IsNullOrWhiteSpace(sourceHandle))
                 throw McpToolErrors.ValidationError("Error: sourceHandle is required");
+            if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
+                throw McpToolErrors.ValidationError(attributeError);
             var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
 
             var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
@@ -125,7 +127,8 @@ public static class CitationTools
         FlexibleHandleList? mediaHandles = null,
         [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint + " " +
+                     FlexibleAttributeList.SourceAttributesHint)]
         FlexibleAttributeList? attributes = null,
         [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
@@ -136,6 +139,8 @@ public static class CitationTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
+                throw McpToolErrors.ValidationError(attributeError);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
             var resolvedSourceHandle = sourceHandle is null

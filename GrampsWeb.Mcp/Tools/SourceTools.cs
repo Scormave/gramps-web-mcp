@@ -64,7 +64,7 @@ public static class SourceTools
         FlexibleHandleList? mediaHandles = null,
         [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description(FlexibleAttributeList.DescriptionHint)]
+        [Description(FlexibleAttributeList.DescriptionHint + " " + FlexibleAttributeList.SourceAttributesHint)]
         FlexibleAttributeList? attributes = null,
         [Description("Mark the source private (default false).")]
         bool isPrivate = false,
@@ -74,6 +74,8 @@ public static class SourceTools
         {
             if (string.IsNullOrWhiteSpace(title))
                 throw McpToolErrors.ValidationError("Error: title is required");
+            if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
+                throw McpToolErrors.ValidationError(attributeError);
 
             var repoRefList = (GrampsRepositoryRef[]?)repositoryHandles;
 
@@ -125,7 +127,8 @@ public static class SourceTools
         FlexibleHandleList? mediaHandles = null,
         [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
+        [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint + " " +
+                     FlexibleAttributeList.SourceAttributesHint)]
         FlexibleAttributeList? attributes = null,
         [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
@@ -136,6 +139,8 @@ public static class SourceTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
+                throw McpToolErrors.ValidationError(attributeError);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
             var source = await GrampsObjectPatch.LoadAsync(client, $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}");
