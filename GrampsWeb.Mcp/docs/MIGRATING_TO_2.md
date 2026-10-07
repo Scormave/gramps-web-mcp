@@ -1,7 +1,9 @@
 # Migrating from 1.x to 2.0
 
 This guide compares the 1.0.8 tool catalog with the 2.0 catalog.
-The MCP tool catalog shrinks from 57 tools to at most 31. Existing Gramps Web
+The MCP tool catalog shrinks from 57 tools to at most 31 in 2.0, and to at
+most 29 since 2.3.0 removed `quick_add_person` and `add_event_to_person`
+([below](#replace-removed-tool-calls)). Existing Gramps Web
 trees and records need no migration: update your MCP server and then update
 saved tool calls, agent instructions, and client configurations that use the
 old tool names. Clients should refresh `tools/list` after the upgrade.
@@ -70,10 +72,21 @@ preview from the original, so pass `size: 256` to keep the smaller one.
 **Do not pass `size` in file mode**; it is now rejected. Timeline
 relative filters are valid only for `objectType: "person"`.
 
-All nine `create_*` tools, nine `update_*` tools, `quick_add_person`,
-`add_event_to_person`, `search`, `list_objects`, `get_relations`,
-`get_bookmarks`, and `get_recent_changes` keep their names. Their saved
-calls do not need renaming.
+All nine `create_*` tools, nine `update_*` tools, `search`, `list_objects`,
+`get_relations`, `get_bookmarks`, and `get_recent_changes` keep their names.
+Their saved calls do not need renaming.
+
+2.0 kept `quick_add_person` and `add_event_to_person`; 2.3.0 removed them.
+Make the same records with the single-record tools:
+
+| Up to 2.2 | 2.3.0 and later |
+|------------|----------|
+| `add_event_to_person(personHandle, eventType, date, place, role)` | `create_event(eventType, date, placeHandle)`, then `update_person(handle: personHandle, eventRefs: [{ref: EVENT_HANDLE, role}], linkMode: "add")` |
+| `quick_add_person(name, gender, birthDate, birthPlace, deathDate, deathPlace)` | `create_event` for the Birth and the Death, then `create_person(primaryName, gender, eventRefs)` |
+
+The removed tools took a place by name and created it when no place had
+exactly that name. Find the place with `search` instead, and create it with
+`create_place` only if it is not in the tree.
 
 ## Use smaller reference responses
 
