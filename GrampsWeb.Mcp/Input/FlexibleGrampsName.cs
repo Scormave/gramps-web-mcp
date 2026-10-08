@@ -21,12 +21,13 @@ public sealed class FlexibleGrampsName
         "connector/surname_connector (joins compound surnames: - or y), " +
         "origin_type/surname_origin (Gramps OriginType for the primary surname: " +
         "Inherited, Given, Taken, Patronymic, Matronymic, Feudal, Pseudonym, " +
-        "Patrilineal, Matrilineal, Occupation, Location, Custom, Unknown), " +
+        "Patrilineal, Matrilineal, Occupation, Location, Unknown), " +
         "patronymic (shortcut: stored as a separate Patronymic surname entry), " +
         "matronymic (shortcut: stored as a separate Matronymic surname entry), " +
         "title (Dr./Prof./Sir), suffix (Jr./Sr./III/PhD), " +
         "call (preferred call name), nick/nickname, famnick/family_nick, " +
         "type (name type: Birth Name/Married Name/Also Known As/…). " +
+        "Name types and origins must be standard Gramps ones or custom ones the tree already uses. " +
         "Plain full-name strings (name/text/full or \"Given Middle Surname\") only split into given + surname; " +
         "they cannot create structured name parts such as patronymic, matronymic, prefix, connector, origin_type, title, suffix, call, nick, or famnick. " +
         "Use object fields or native surname_list instead. " +

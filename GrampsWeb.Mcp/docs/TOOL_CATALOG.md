@@ -134,6 +134,23 @@ becomes `Village`). Event link roles in `eventRefs` of `create_person`,
 (`witness` becomes `Witness`); an empty role stays Primary, and
 `linkMode: "remove"` does not check roles.
 
+The types inside structured arguments are checked the same way, and the error
+names the argument:
+
+| Argument | Value | Vocabulary |
+|---|---|---|
+| `primaryName`, `alternateNames` of people | name `type`, surname `origintype` | `name_types`, `name_origin_types` |
+| `attributes` of people, families, events and media | `type` | `attribute_types` and the custom attribute types of all four |
+| `attributes` of sources and citations | `type` | `source_attribute_types` |
+| `urls` of people | `type` | `url_types` |
+| `childRefs` | `frel`, `mrel` | `child_reference_types` |
+| `repositoryHandles` | `media_type` | `source_media_types` |
+
+An empty name type or surname origin stays empty, which Gramps reads as Birth
+Name and no origin. The unknown surname origin is sent as Gramps spells it,
+with a trailing space. `linkMode: "remove"` does not check `childRefs` or
+`repositoryHandles`.
+
 ```text
 An error occurred invoking 'get_object': Unknown argument: extend (did you mean extended?). Parameters: identifier (string, required), objectType (string), extended (boolean).
 ```
@@ -359,7 +376,7 @@ Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guid
 | `fatherHandle` | `string?` | no | — | Father person handle |
 | `motherHandle` | `string?` | no | — | Mother person handle |
 | `relationshipType` | `string?` | no | `"Married"` | Married, Unmarried, Civil Union, Unknown |
-| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`) |
+| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
 | `mediaHandles`, `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
@@ -434,7 +451,7 @@ Create a source.  Create sources **before** citations.
 | `author` | `string?` | no | — | Author |
 | `pubinfo` | `string?` | no | — | Publication info |
 | `abbrev` | `string?` | no | — | Abbreviation |
-| `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handle strings, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted) |
+| `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handle strings, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted); media types are checked against `source_media_types` |
 | `noteHandles`, `mediaHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
 | `isPrivate` | `bool` | no | `false` | Mark private |

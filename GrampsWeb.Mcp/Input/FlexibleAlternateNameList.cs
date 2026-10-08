@@ -17,10 +17,11 @@ public sealed class FlexibleAlternateNameList
         "Object fields: given/first, surname/last, " +
         "prefix/surname_prefix (von/de/van), connector/surname_connector, " +
         "origin_type/surname_origin (Gramps OriginType: Inherited, Given, Taken, Patronymic, Matronymic, " +
-        "Feudal, Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Custom, Unknown), " +
+        "Feudal, Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown), " +
         "patronymic (→ separate Patronymic surname entry), " +
         "matronymic (→ separate Matronymic surname entry), " +
         "title, suffix (Jr./Sr./III), call, nick, famnick, type (name type). " +
+        "Name types and origins must be standard Gramps ones or custom ones the tree already uses. " +
         "For multi-surname names use native surname_list format. " +
         "Multiple names in one string: separate with newlines (not |).";
 

@@ -149,6 +149,7 @@ public static class EventTools
                 throw McpToolErrors.ValidationError("Error: eventType is required. See gramps://types for valid values.");
 
             eventType = await KnownTypes.ResolveAsync(eventType, "event_types", client);
+            await KnownTypes.CheckAttributesAsync(attributes, client);
 
             var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             var resolvedPlaceHandle = placeHandle is null
@@ -217,6 +218,7 @@ public static class EventTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            await KnownTypes.CheckAttributesAsync(attributes, client);
             using var updateLease = await client.BeginUpdateAsync();
             if (eventType != null)
                 eventType = await KnownTypes.ResolveAsync(eventType, "event_types", client);

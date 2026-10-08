@@ -509,7 +509,7 @@ public sealed class GrampsResources
                     connector   = "Connector between compound surnames: - or y (alias: surname_connector)",
                     origin_type = "Gramps OriginType of primary surname (alias: surname_origin). " +
                                   "Values: Inherited, Given, Taken, Patronymic, Matronymic, Feudal, " +
-                                  "Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Custom, Unknown",
+                                  "Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown",
                     patronymic  = "Shortcut: creates a separate surname entry with OriginType=Patronymic",
                     matronymic  = "Shortcut: creates a separate surname entry with OriginType=Matronymic",
                     title       = "Name title: Dr., Prof., Sir, Count…",
@@ -833,7 +833,7 @@ public sealed class GrampsResources
                     type = "string",
                     description = "Origin of surname. Standard Gramps values: " +
                                   "Inherited, Given, Taken, Patronymic, Matronymic, Feudal, " +
-                                  "Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Custom, Unknown",
+                                  "Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown",
                     examples = new[] { "Inherited", "Patronymic", "Matronymic", "Patrilineal", "Matrilineal", "Taken", "Occupation" }
                 },
                 primary = new

@@ -305,7 +305,9 @@ instance, as in unit tests, gets its own.
 `TypeCache.ResolveTypeAsync` (through `KnownTypes`, and `EventRoles` for the
 event link roles of the person and family tools) to check type strings before
 sending requests to the API, providing helpful error messages with suggestions
-on typos. The check ignores case and returns the vocabulary's spelling, which
+on typos. Besides type parameters, `KnownTypes` checks the types inside
+structured arguments: name types and surname origins, attribute and URL types,
+child link relations and repository link media types. The check ignores case and returns the vocabulary's spelling, which
 the tools store, since Gramps matches type names case-sensitively. A value
 missing from the cached vocabularies reads custom types again before it is
 rejected, so a type just added in Gramps is accepted. `gramps://types` and

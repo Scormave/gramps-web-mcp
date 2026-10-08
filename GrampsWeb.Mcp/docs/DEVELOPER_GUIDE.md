@@ -146,7 +146,9 @@ objects and return formatted strings.
 5. For write tools, create a request DTO in `Requests/` if needed.
 6. For write tools with type parameters, add server-side validation via
    `value = await KnownTypes.ResolveAsync(value, "category_name", client)`,
-   which also returns the type in its known spelling.
+   which also returns the type in its known spelling. Check names, attributes,
+   URLs, child links and repository links with the `KnownTypes.Check…Async`
+   methods, before `client.BeginUpdateAsync()` on update tools.
 7. For handle parameters, use `HandleResolver.ResolveToHandleAsync` so
    agents can pass either handles or Gramps IDs.
 8. For not-found cases, return `NotFoundHelper.NotFoundMessage(type, id)`.

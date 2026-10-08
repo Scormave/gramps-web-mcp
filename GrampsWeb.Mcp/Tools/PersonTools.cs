@@ -236,8 +236,12 @@ public static class PersonTools
             var primary = primaryName.Name;
             var genderCode = GrampsGenderParser.ParseRequired(gender);
 
+            await KnownTypes.CheckNameAsync(primary, "primaryName", client);
+            await KnownTypes.CheckNamesAsync(alternateNames, "alternateNames", client);
             var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
             await EventRoles.CheckAsync(eventRefArr, client);
+            await KnownTypes.CheckAttributesAsync(attributes, client);
+            await KnownTypes.CheckUrlsAsync(urls, client);
 
             var parentFamilyHandleArray = (string[]?)parentFamilyHandles;
 
@@ -328,7 +332,11 @@ public static class PersonTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            await KnownTypes.CheckNameAsync(primaryName?.Name, "primaryName", client);
+            await KnownTypes.CheckNamesAsync(alternateNames, "alternateNames", client);
             await EventRoles.CheckAsync(eventRefs, client, linkMode);
+            await KnownTypes.CheckAttributesAsync(attributes, client);
+            await KnownTypes.CheckUrlsAsync(urls, client);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
             var person = await GrampsObjectPatch.LoadAsync(client, $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");

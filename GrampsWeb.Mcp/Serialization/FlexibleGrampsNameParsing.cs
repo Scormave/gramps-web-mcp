@@ -153,7 +153,7 @@ public static class FlexibleGrampsNameParsing
 
         // Primary surname — value + optional prefix, connector, Gramps OriginType
         // Standard Gramps OriginType values: Inherited, Given, Taken, Patronymic, Matronymic,
-        //   Feudal, Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Custom, Unknown
+        //   Feudal, Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown
         var surname       = GetStringPropAny(el, "surname", "last", "family_name");
         var surnamePrefix = GetStringPropAny(el, "prefix", "surname_prefix"); // von, de, van, del…
         var surnameConn   = GetStringPropAny(el, "connector", "surname_connector"); // - or y

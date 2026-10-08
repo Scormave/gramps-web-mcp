@@ -124,6 +124,7 @@ public static class MediaTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            await KnownTypes.CheckAttributesAsync(attributes, client);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             var media = await GrampsObjectPatch.LoadAsync(client, $"/api/media/{Uri.EscapeDataString(resolvedHandle)}");

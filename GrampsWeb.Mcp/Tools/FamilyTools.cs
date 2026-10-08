@@ -98,8 +98,10 @@ public static class FamilyTools
                 relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);
 
             var childRefArr = (GrampsChildRef[]?)childRefs;
+            await KnownTypes.CheckChildRefsAsync(childRefArr, client);
             var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
             await EventRoles.CheckAsync(eventRefArr, client);
+            await KnownTypes.CheckAttributesAsync(attributes, client);
             var resolvedFatherHandle = fatherHandle is null
                 ? null
                 : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
@@ -177,7 +179,9 @@ public static class FamilyTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            await KnownTypes.CheckChildRefsAsync(childRefs, client, linkMode);
             await EventRoles.CheckAsync(eventRefs, client, linkMode);
+            await KnownTypes.CheckAttributesAsync(attributes, client);
             using var updateLease = await client.BeginUpdateAsync();
             if (relationshipType != null)
                 relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);

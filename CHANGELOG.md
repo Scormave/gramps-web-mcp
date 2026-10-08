@@ -43,6 +43,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   their known spelling. The check accepted a type in any case, but Gramps
   matches type names case-sensitively, so `birth` or `village` was saved as a
   new custom type next to Birth or Village
+- Name types, surname origins, attribute types, URL types, the relations of
+  child links (`frel`, `mrel`) and the media types of repository links are
+  checked the same way. A misspelt value or one sent in another case, such as
+  `married name`, `father age` or `adopted`, used to be saved as a new custom
+  type next to the standard one; now an unknown value is rejected with
+  suggestions before anything is saved, and a known one is stored in its
+  known spelling, including the unknown surname origin, which Gramps spells
+  with a trailing space. Person, family, event and media attributes accept an
+  attribute type the tree uses on any of them; source and citation
+  attributes have types of their own. The surname origin `Custom` is no
+  longer offered, since Gramps stored it as a custom origin named "Custom".
+  `linkMode: "remove"` does not check child or repository links
 
 ## [2.3.1] - 2026-10-07
 

@@ -14,7 +14,8 @@ public sealed class FlexibleUrlList
 {
     public const string DescriptionHint =
         "URLs: JSON array of {type,path,desc}, or strings \"Web Home: https://…\" with optional \" — note\" after URL, " +
-        "or lines/| separated. Grammar: gramps://input-guide.";
+        "or lines/| separated. A type must be a standard Gramps URL type (E-mail, Web Home, Web Search, FTP, Unknown) " +
+        "or a custom one the tree already uses. Grammar: gramps://input-guide.";
 
     public required GrampsUrl[] Items { get; init; }
 

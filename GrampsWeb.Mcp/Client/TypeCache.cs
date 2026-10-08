@@ -51,35 +51,54 @@ public static class TypeCache
     /// Comparison is case-insensitive. An unknown value reloads custom types once, so a type just added in Gramps is
     /// accepted.
     /// </summary>
-    public static async Task<(string? Label, string? Error)> ResolveTypeAsync(string value, string category, GrampsApiClient client)
+    public static Task<(string? Label, string? Error)> ResolveTypeAsync(string value, string category, GrampsApiClient client) =>
+        ResolveTypeAsync(value, [category], client);
+
+    /// <summary>
+    /// Like <see cref="ResolveTypeAsync(string, string, GrampsApiClient)"/> for a vocabulary that Gramps splits over
+    /// several categories, e.g. the standard <c>attribute_types</c> and the custom <c>person_attribute_types</c>.
+    /// The error names the first category.
+    /// </summary>
+    public static async Task<(string? Label, string? Error)> ResolveTypeAsync(
+        string value, IReadOnlyList<string> categories, GrampsApiClient client)
     {
-        if (Find(await GetTypesAsync(client), value, category) is { } label)
+        if (Find(await GetTypesAsync(client), value, categories) is { } label)
             return (label, null);
 
         var types = await GetTypesAsync(client, reloadCustom: true);
-        if (Find(types, value, category) is { } reloaded)
+        if (Find(types, value, categories) is { } reloaded)
             return (reloaded, null);
 
-        var candidates = types[category];
+        var candidates = Candidates(types, categories);
         var suggestions = FindSimilar(value, candidates);
         var suggestionText = suggestions.Count > 0
-            ? $" Did you mean: {string.Join(", ", suggestions)}?"
+            ? $" Did you mean: {string.Join(", ", suggestions.Select(s => s.Trim()))}?"
             : "";
 
-        var validPreview = string.Join(", ", candidates.Take(15));
+        var validPreview = string.Join(", ", candidates.Take(15).Select(c => c.Trim()));
         if (candidates.Count > 15)
             validPreview += ", …";
 
-        var categoryLabel = category.Replace("_", " ");
+        var categoryLabel = categories[0].Replace("_", " ");
         return (null, $"Invalid {categoryLabel} '{value}'.{suggestionText} " +
                       $"Valid values from gramps://types: {validPreview}");
     }
 
-    // An unknown category skips validation rather than blocking the write.
-    private static string? Find(Dictionary<string, IReadOnlyList<string>> types, string value, string category) =>
-        !types.TryGetValue(category, out var candidates) || candidates.Count == 0
+    // No known values (unknown or empty categories) skips validation rather than blocking the write. Values are
+    // compared trimmed, since Gramps spells the unknown surname origin "Unknown " and expects it back that way.
+    private static string? Find(Dictionary<string, IReadOnlyList<string>> types, string value, IReadOnlyList<string> categories)
+    {
+        var candidates = Candidates(types, categories);
+        return candidates.Count == 0
             ? value
-            : candidates.FirstOrDefault(c => string.Equals(c, value, StringComparison.OrdinalIgnoreCase));
+            : candidates.FirstOrDefault(c => string.Equals(c.Trim(), value.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static List<string> Candidates(Dictionary<string, IReadOnlyList<string>> types, IReadOnlyList<string> categories) =>
+        categories
+            .SelectMany(category => types.TryGetValue(category, out var values) ? values : [])
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
     private static List<string> FindSimilar(string input, IReadOnlyList<string> candidates, int maxResults = 5)
     {
@@ -88,7 +107,7 @@ public static class TypeCache
 
         foreach (var candidate in candidates)
         {
-            var candidateLower = candidate.ToLowerInvariant();
+            var candidateLower = candidate.Trim().ToLowerInvariant();
 
             if (candidateLower.Contains(inputLower) || inputLower.Contains(candidateLower))
             {

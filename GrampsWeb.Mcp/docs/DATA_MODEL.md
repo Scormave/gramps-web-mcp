@@ -93,9 +93,16 @@ of the process, custom types for 10 minutes.  `TypeCache.ResolveTypeAsync`
 checks a type string case-insensitively and returns the vocabulary's own
 spelling, since Gramps matches type names case-sensitively; an invalid value
 gets fuzzy-match suggestions instead, and an unknown value reads custom types
-again before it is rejected.  Write tools call it through `Tools/KnownTypes.cs`
-before sending requests, and the person and family tools through
-`Tools/EventRoles.cs` for event link roles (`event_role_types`).
+again before it is rejected.  An overload takes several categories for a
+vocabulary Gramps splits, such as the standard `attribute_types` and the custom
+`person_attribute_types`.  Values are compared trimmed, since Gramps spells the
+unknown surname origin `"Unknown "`.  Write tools call it through
+`Tools/KnownTypes.cs` before sending requests: `ResolveAsync` for type
+parameters, and `CheckNameAsync`, `CheckAttributesAsync`,
+`CheckSourceAttributesAsync`, `CheckUrlsAsync`, `CheckChildRefsAsync` and
+`CheckRepositoryRefsAsync` for the types inside names, attributes, URLs, child
+links and repository links.  The person and family tools check event link roles
+(`event_role_types`) through `Tools/EventRoles.cs`.
 
 ### HandleResolver (`Client/HandleResolver.cs`)
 

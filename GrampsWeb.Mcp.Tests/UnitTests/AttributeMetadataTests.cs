@@ -87,7 +87,10 @@ public class AttributeMetadataTests
         return new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
     }
 
-    /// <summary>Answers the token route, records every other request and answers a create with a new object of <paramref name="grampsClass"/>.</summary>
+    /// <summary>
+    /// Answers the token route and the type vocabularies (empty, so attribute types go unchecked), records every other
+    /// request and answers a create with a new object of <paramref name="grampsClass"/>.
+    /// </summary>
     private sealed class RecordingHandler(string grampsClass) : HttpMessageHandler
     {
         public List<string> Requests { get; } = [];
@@ -98,6 +101,8 @@ public class AttributeMetadataTests
         {
             if (request.RequestUri!.AbsolutePath.StartsWith("/api/token/"))
                 return Json("""{"access_token":"token","refresh_token":"refresh","expires_in":900}""");
+            if (request.RequestUri.AbsolutePath.StartsWith("/api/types/"))
+                return Json("{}");
 
             Requests.Add($"{request.Method} {request.RequestUri.AbsolutePath}");
             if (request.Method != HttpMethod.Post)
