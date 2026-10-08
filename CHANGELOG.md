@@ -55,6 +55,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   attributes have types of their own. The surname origin `Custom` is no
   longer offered, since Gramps stored it as a custom origin named "Custom".
   `linkMode: "remove"` does not check child or repository links
+- `create_place` and `update_place` show the place's type, coordinates and
+  enclosing places in their result, and `update_place` its name. Clients such
+  as Claude Code drop an argument a tool does not have before calling it, so
+  `type`, `latitude` or `longitude` in place of `placeType`, `lat` and `lon`
+  created a place of type Unknown without coordinates, or left an updated
+  place's type and coordinates as they were, and the result only said that
+  the place was saved. It now shows `placeType: "Unknown"` and `lat: none`
+- Create results show the new record's name in its own script. A name in
+  Cyrillic or with Polish letters was printed with `\u` escapes
 
 ## [2.3.1] - 2026-10-07
 

@@ -403,7 +403,9 @@ Convert models into human-readable text for MCP tool responses.  Strategy:
 - indented JSON fallback for dynamic payloads (`JsonResponseFormatter`)
 - `ResponseEnvelope` adds machine-readable YAML-like headers with type,
   handle, gramps_id, and action metadata to tool responses, plus suggested
-  next-step hints for create operations
+  next-step hints for create operations; place tools add the stored type,
+  coordinates and enclosing places, so an argument the client dropped shows
+  as a value that was not set
 
 ### 8. Dates (`Dates/`)
 

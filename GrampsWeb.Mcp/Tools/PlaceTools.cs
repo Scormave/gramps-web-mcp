@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json.Nodes;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Dates;
 using GrampsWeb.Mcp.Formatters;
@@ -53,7 +54,8 @@ public static class PlaceTools
     [Description(
         "Create a place (village, town, parish, county, country, …) with its name, type, coordinates, enclosing places, " +
         "historical or other-language names, and links to notes, media, citations and tags. " +
-        "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: search for the place first, " +
+        "Returns the new handle and Gramps ID with the stored name, type, coordinates and enclosing places, and next steps. " +
+        "Does not check for duplicates: search for the place first, " +
         "and change an existing one with update_place. Enclosing places must already exist: create the larger region first " +
         "and pass it in enclosedBy, with dates when the place changed hands. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreatePlace(
@@ -123,7 +125,8 @@ public static class PlaceTools
             var (handle, grampsId) = await client.PostMutationAsync("/api/places/", request, "Place");
             return ResponseEnvelope.CreateSuccess(
                 "Place", handle, grampsId,
-                request.Name.Value, ResponseEnvelope.PlaceCreateNextSteps(handle!));
+                request.Name.Value, ResponseEnvelope.PlaceCreateNextSteps(handle!),
+                StoredFields(request.Type, request.Latitude, request.Longitude, request.PlaceRefList?.Select(r => r.Ref)));
         }
         catch (Exception ex)
         {
@@ -135,7 +138,8 @@ public static class PlaceTools
     [Description(
         "Change an existing place: name with its language and date, type, coordinates, enclosing places, alternate names, code, " +
         "and links to notes, media, citations and tags. " + ToolDescriptionFragments.UpdateSemantics + " " +
-        "Returns the handle and Gramps ID; a missing place returns a not-found message. " + ToolDescriptionFragments.InputGuide)]
+        "Returns the handle and Gramps ID with the stored name, type, coordinates and enclosing places; " +
+        "a missing place returns a not-found message. " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdatePlace(
         [Description("The place to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
@@ -217,13 +221,40 @@ public static class PlaceTools
             place.Set("private", isPrivate);
 
             await place.SaveAsync(client);
-            return ResponseEnvelope.UpdateSuccess("Place", place.Handle, place.GrampsId);
+            var root = place.Root;
+            var savedName = root["name"] is JsonObject nameObject
+                ? GrampsObjectPatch.StringValue(nameObject["value"])
+                : GrampsObjectPatch.StringValue(root["name"]);
+            return ResponseEnvelope.UpdateSuccess("Place", place.Handle, place.GrampsId,
+            [
+                new("name", ResponseEnvelope.HeaderValue(savedName)),
+                .. StoredFields(
+                    GrampsObjectPatch.TypeString(root["place_type"]),
+                    GrampsObjectPatch.StringValue(root["lat"]),
+                    GrampsObjectPatch.StringValue(root["long"]),
+                    (root["placeref_list"] as JsonArray)?.Select(r => GrampsObjectPatch.StringValue(r?["ref"])))
+            ]);
         }
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
         }
     }
+
+    /// <summary>
+    /// The type, coordinates and enclosing places the place holds after a create or update, named as the tool's
+    /// arguments. Clients drop an argument the tool does not have, so a call with <c>type</c> or <c>latitude</c>
+    /// succeeds without them; the result then shows the type as Unknown or unchanged and the coordinates as none.
+    /// </summary>
+    private static KeyValuePair<string, string>[] StoredFields(
+        string? placeType, string? lat, string? lon, IEnumerable<string?>? enclosedBy) =>
+    [
+        // Gramps stores a place created without a type as Unknown.
+        new("placeType", ResponseEnvelope.HeaderValue(string.IsNullOrWhiteSpace(placeType) ? "Unknown" : placeType)),
+        new("lat", ResponseEnvelope.HeaderValue(lat)),
+        new("lon", ResponseEnvelope.HeaderValue(lon)),
+        new("enclosedBy", ResponseEnvelope.HeaderValue(enclosedBy))
+    ];
 
     /// <summary>
     /// The coordinate text Gramps stores, trimmed and without double quotes a client wrapped around

@@ -124,6 +124,10 @@ parameter is read as its text. An `update_*` call that gives no field to change
 besides `handle` and `linkMode` is refused with the same parameter list instead
 of saving the record unchanged: clients such as Claude Code drop arguments a
 tool does not have, so `update_event(place: …)` arrives without `place`.
+For the same reason `create_place` and `update_place` show the place's
+`placeType`, `lat`, `lon` and `enclosedBy` in their result (`none` when
+empty, Unknown for a place created without a type), so a misnamed argument
+shows up as a value that was not set.
 
 Type values (event, place, note, repository and family relationship types) are
 checked against the tree's vocabularies from `gramps://types` before anything
@@ -433,10 +437,14 @@ Create a place.  **Prerequisites:** `gramps://types`.
 | `code` | `string?` | no | — | Place code / postal reference |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
+The result's header gives the handle, Gramps ID and name, then the stored
+`placeType` (Unknown when none was given), `lat`, `lon` and `enclosedBy`
+handles, each `none` when empty.
+
 ### U — `UpdatePlace`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a place. Same fields as create (all optional). `enclosedBy` is a link list and follows `linkMode`; `alternateNames` always uses replacement. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates. Omit `nameDate` or `nameLang` to keep the primary name's date or language; an empty string removes it. The same goes for `lat` and `lon`.
+Update a place. Same fields as create (all optional). `enclosedBy` is a link list and follows `linkMode`; `alternateNames` always uses replacement. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates. Omit `nameDate` or `nameLang` to keep the primary name's date or language; an empty string removes it. The same goes for `lat` and `lon`. The result's header shows the place as saved: its name, `placeType`, `lat`, `lon` and `enclosedBy` handles, whether or not the call changed them.
 
 ---
 

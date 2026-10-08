@@ -164,7 +164,82 @@ public class PlaceToolsTests
         var result = await PlaceTools.CreatePlace(" Warsaw ", placeType: "City", client: CreateClient(handler));
 
         Assert.Contains("name: \"Warsaw\"", result);
-        Assert.DoesNotContain("City", result);
+        Assert.DoesNotContain("name: \"City\"", result);
+    }
+
+    [Fact]
+    public async Task CreatePlace_Result_Shows_The_Stored_Type_Coordinates_And_Enclosing_Places()
+    {
+        var handler = new PlaceHandler();
+
+        var result = await PlaceTools.CreatePlace(
+            "Москва",
+            placeType: "city",
+            lat: JsonSerializer.Deserialize<FlexibleString>("55.7558"),
+            lon: new FlexibleString { Value = "37.6173" },
+            enclosedBy: JsonSerializer.Deserialize<FlexiblePlaceRefList>("""["region-handle-0001"]"""),
+            client: CreateClient(handler));
+
+        Assert.Contains("""
+            name: "Москва"
+            placeType: "City"
+            lat: "55.7558"
+            lon: "37.6173"
+            enclosedBy: ["region-handle-0001"]
+            ---
+            """.ReplaceLineEndings(), result.ReplaceLineEndings());
+    }
+
+    [Fact]
+    public async Task CreatePlace_Result_Shows_What_A_Dropped_Argument_Left_Unset()
+    {
+        // A client drops type and latitude, which the tool does not have, so only the name arrives.
+        var handler = new PlaceHandler();
+
+        var result = await PlaceTools.CreatePlace("Kraków", client: CreateClient(handler));
+
+        Assert.Contains("""
+            placeType: "Unknown"
+            lat: none
+            lon: none
+            enclosedBy: none
+            """.ReplaceLineEndings(), result.ReplaceLineEndings());
+    }
+
+    [Fact]
+    public async Task UpdatePlace_Result_Shows_The_Stored_Name_Type_Coordinates_And_Enclosing_Places()
+    {
+        // A client drops type and latitude, so only the name changes and the rest shows as stored.
+        var handler = new PlaceHandler(StoredPlace.Replace(
+            "\"long\": \"30.4167\"",
+            "\"long\": \"30.4167\", \"placeref_list\": [{ \"ref\": \"region-handle-0001\", \"date\": null }]"));
+
+        var result = await PlaceTools.UpdatePlace("place-h", name: "Москва", client: CreateClient(handler));
+
+        Assert.Contains("""
+            action: updated
+            handle: place-h
+            gramps_id: P0007
+            name: "Москва"
+            placeType: "City"
+            lat: "59.7225"
+            lon: "30.4167"
+            enclosedBy: ["region-handle-0001"]
+            ---
+            """.ReplaceLineEndings(), result.ReplaceLineEndings());
+    }
+
+    [Fact]
+    public async Task UpdatePlace_Result_Shows_Removed_Coordinates_As_None()
+    {
+        var handler = new PlaceHandler(StoredPlace);
+
+        var result = await PlaceTools.UpdatePlace(
+            "place-h", lat: new FlexibleString { Value = "" }, lon: new FlexibleString { Value = "" }, client: CreateClient(handler));
+
+        Assert.Contains("lat: none", result);
+        Assert.Contains("lon: none", result);
+        Assert.Contains("enclosedBy: none", result);
     }
 
     [Fact]
