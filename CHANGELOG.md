@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-08
+
 ### Added
 
 - `scripts/find-update-losses.py` finds data that update tools before 2.3.1
@@ -682,7 +684,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.1.1...v2.2.0
