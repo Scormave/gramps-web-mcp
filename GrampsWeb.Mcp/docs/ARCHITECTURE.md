@@ -302,13 +302,13 @@ request, and failed reads are not kept. A client constructed without an
 instance, as in unit tests, gets its own.
 
 `TypeCache` merges the default and custom vocabularies. Write tools use
-`TypeCache.ValidateTypeAsync` to check type strings before sending requests to
-the API, providing helpful error messages with suggestions on typos. A value
+`TypeCache.ResolveTypeAsync` (through `KnownTypes`, and `EventRoles` for the
+event link roles of the person and family tools) to check type strings before
+sending requests to the API, providing helpful error messages with suggestions
+on typos. The check ignores case and returns the vocabulary's spelling, which
+the tools store, since Gramps matches type names case-sensitively. A value
 missing from the cached vocabularies reads custom types again before it is
-rejected, so a type just added in Gramps is accepted. `TypeCache.ResolveTypeAsync`
-also returns the vocabulary's spelling of the value; `EventRoles` uses it to
-check the event link roles of the person and family tools and store each role
-in that spelling. `gramps://types` and
+rejected, so a type just added in Gramps is accepted. `gramps://types` and
 `get_reference(topic: "types")` read custom types each time.
 
 Read-only MCP tool calls also open a `GrampsReadScope`. Within that call,

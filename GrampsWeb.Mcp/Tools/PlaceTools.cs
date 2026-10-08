@@ -95,10 +95,7 @@ public static class PlaceTools
             var nameDateRequest = AgentDateParser.ToDateRequestOrNull(nameDate, DateComponentOrder.Iso);
 
             if (placeType != null)
-            {
-                var typeError = await TypeCache.ValidateTypeAsync(placeType, "place_types", client);
-                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
-            }
+                placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
 
             var placeRefList = await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client);
 
@@ -179,10 +176,7 @@ public static class PlaceTools
             LinkUpdates.Validate(linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             if (placeType != null)
-            {
-                var typeError = await TypeCache.ValidateTypeAsync(placeType, "place_types", client);
-                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
-            }
+                placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
             var place = await GrampsObjectPatch.LoadAsync(client, $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");

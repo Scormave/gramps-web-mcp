@@ -44,7 +44,7 @@ public static async Task<string> ToolName(
     {
         // 1. Resolve Gramps ID → handle (if applicable)
         var resolved = await HandleResolver.ResolveToHandleAsync(handle, client);
-        // 2. Validate input (use TypeCache.ValidateTypeAsync for type strings)
+        // 2. Validate input (use KnownTypes.ResolveAsync for type strings)
         // 3. Call client
         // 4. Format and return (use NotFoundHelper for 404s)
     }
@@ -145,7 +145,8 @@ objects and return formatted strings.
    in the `[Description]`.
 5. For write tools, create a request DTO in `Requests/` if needed.
 6. For write tools with type parameters, add server-side validation via
-   `TypeCache.ValidateTypeAsync(value, "category_name", client)`.
+   `value = await KnownTypes.ResolveAsync(value, "category_name", client)`,
+   which also returns the type in its known spelling.
 7. For handle parameters, use `HandleResolver.ResolveToHandleAsync` so
    agents can pass either handles or Gramps IDs.
 8. For not-found cases, return `NotFoundHelper.NotFoundMessage(type, id)`.

@@ -27,7 +27,7 @@ public static class ToolDescriptionFragments
     public const string OmitToKeepScalar =
         "Omit to leave unchanged.";
 
-    /// <summary>For type parameters checked by <see cref="Client.TypeCache.ValidateTypeAsync"/>.</summary>
+    /// <summary>For type parameters checked by <see cref="KnownTypes.ResolveAsync"/>.</summary>
     public const string KnownType =
         "Must be a standard Gramps type or a custom one the tree already uses; " +
         "anything else is rejected with suggestions. List: get_reference(topic: \"types\").";

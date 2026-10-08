@@ -65,8 +65,7 @@ public static class NoteTools
             if (string.IsNullOrWhiteSpace(text))
                 throw McpToolErrors.ValidationError("Error: text is required");
 
-            var typeError = await TypeCache.ValidateTypeAsync(noteType, "note_types", client);
-            if (typeError != null) throw McpToolErrors.ValidationError(typeError);
+            noteType = await KnownTypes.ResolveAsync(noteType, "note_types", client);
 
             var formatCode = NoteTextFormatParser.ParseRequired(format);
 
@@ -120,10 +119,7 @@ public static class NoteTools
             LinkUpdates.Validate(linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             if (noteType != null)
-            {
-                var typeError = await TypeCache.ValidateTypeAsync(noteType, "note_types", client);
-                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
-            }
+                noteType = await KnownTypes.ResolveAsync(noteType, "note_types", client);
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "notes");
             var note = await GrampsObjectPatch.LoadAsync(client, $"/api/notes/{Uri.EscapeDataString(resolvedHandle)}");

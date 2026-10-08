@@ -72,10 +72,7 @@ public static class RepositoryTools
                 throw McpToolErrors.ValidationError("Error: name is required");
 
             if (repoType != null)
-            {
-                var typeError = await TypeCache.ValidateTypeAsync(repoType, "repository_types", client);
-                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
-            }
+                repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
 
             var request = new CreateRepositoryRequest
             {
@@ -131,10 +128,7 @@ public static class RepositoryTools
             LinkUpdates.Validate(linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             if (repoType != null)
-            {
-                var typeError = await TypeCache.ValidateTypeAsync(repoType, "repository_types", client);
-                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
-            }
+                repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "repositories");
             var repo = await GrampsObjectPatch.LoadAsync(client, $"/api/repositories/{Uri.EscapeDataString(resolvedHandle)}");

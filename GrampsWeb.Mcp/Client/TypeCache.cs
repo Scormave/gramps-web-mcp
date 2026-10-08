@@ -45,18 +45,11 @@ public static class TypeCache
     }
 
     /// <summary>
-    /// Validates a type string against a specific category (e.g. "event_types").
-    /// Returns <c>null</c> if valid, or an error message with suggestions if invalid.
-    /// Comparison is case-insensitive. An unknown value reloads custom types once, so a type
-    /// just added in Gramps is accepted.
-    /// </summary>
-    public static async Task<string?> ValidateTypeAsync(string value, string category, GrampsApiClient client) =>
-        (await ResolveTypeAsync(value, category, client)).Error;
-
-    /// <summary>
-    /// Checks <paramref name="value"/> like <see cref="ValidateTypeAsync"/> and returns the vocabulary's own spelling
-    /// of it, so a value sent in another case is stored as the known type; <paramref name="value"/> itself when the
-    /// category is unknown or empty.
+    /// Checks a type string against a specific category (e.g. "event_types") and returns the vocabulary's own
+    /// spelling of it, so a value sent in another case is stored as the known type; <paramref name="value"/> itself
+    /// when the category is unknown or empty. An invalid value gets an error message with suggestions instead.
+    /// Comparison is case-insensitive. An unknown value reloads custom types once, so a type just added in Gramps is
+    /// accepted.
     /// </summary>
     public static async Task<(string? Label, string? Error)> ResolveTypeAsync(string value, string category, GrampsApiClient client)
     {

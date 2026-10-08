@@ -127,10 +127,11 @@ tool does not have, so `update_event(place: …)` arrives without `place`.
 
 Type values (event, place, note, repository and family relationship types) are
 checked against the tree's vocabularies from `gramps://types` before anything
-is saved, and an unknown value is refused with suggestions. Event link roles in
-`eventRefs` of `create_person`, `update_person`, `create_family` and
-`update_family` are checked the same way and stored in the vocabulary's
-spelling (`witness` becomes `Witness`); an empty role stays Primary, and
+is saved, and an unknown value is refused with suggestions. Case does not
+matter: an accepted value is stored in the vocabulary's spelling (`village`
+becomes `Village`). Event link roles in `eventRefs` of `create_person`,
+`update_person`, `create_family` and `update_family` are checked the same way
+(`witness` becomes `Witness`); an empty role stays Primary, and
 `linkMode: "remove"` does not check roles.
 
 ```text

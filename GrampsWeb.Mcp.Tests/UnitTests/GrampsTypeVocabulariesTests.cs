@@ -95,15 +95,16 @@ public class GrampsTypeVocabulariesTests
         using var handler = new Handler { CustomTypes = "{}" };
         var client = Client(handler);
 
-        Assert.Null(await TypeCache.ValidateTypeAsync("birth", "event_types", client));
+        Assert.Equal(("Birth", null), await TypeCache.ResolveTypeAsync("birth", "event_types", client));
         Assert.Equal(1, handler.Count("/api/types/custom/"));
 
         // Added in Gramps after the cached read.
         handler.CustomTypes = """{"event_types":["Feast"]}""";
-        Assert.Null(await TypeCache.ValidateTypeAsync("Feast", "event_types", client));
+        Assert.Equal(("Feast", null), await TypeCache.ResolveTypeAsync("feast", "event_types", client));
         Assert.Equal(2, handler.Count("/api/types/custom/"));
 
-        var error = await TypeCache.ValidateTypeAsync("Fest", "event_types", client);
+        var (label, error) = await TypeCache.ResolveTypeAsync("Fest", "event_types", client);
+        Assert.Null(label);
         Assert.Contains("Did you mean: Feast?", error);
         Assert.Equal(3, handler.Count("/api/types/custom/"));
         Assert.Equal(1, handler.Count("/api/types/default/"));

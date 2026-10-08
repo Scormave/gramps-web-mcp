@@ -95,10 +95,7 @@ public static class FamilyTools
         try
         {
             if (relationshipType != null)
-            {
-                var typeError = await TypeCache.ValidateTypeAsync(relationshipType, "family_relation_types", client);
-                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
-            }
+                relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);
 
             var childRefArr = (GrampsChildRef[]?)childRefs;
             var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
@@ -183,10 +180,7 @@ public static class FamilyTools
             await EventRoles.CheckAsync(eventRefs, client, linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             if (relationshipType != null)
-            {
-                var typeError = await TypeCache.ValidateTypeAsync(relationshipType, "family_relation_types", client);
-                if (typeError != null) throw McpToolErrors.ValidationError(typeError);
-            }
+                relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
             var resolvedFatherHandle = fatherHandle is null

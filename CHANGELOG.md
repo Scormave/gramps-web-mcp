@@ -39,6 +39,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   suggestions before anything is saved, and a role sent in another case, such
   as `witness`, is stored in its known spelling. `linkMode: "remove"` matches
   links by handle only, so its roles are not checked
+- Event, place, note, repository and family relationship types are stored in
+  their known spelling. The check accepted a type in any case, but Gramps
+  matches type names case-sensitively, so `birth` or `village` was saved as a
+  new custom type next to Birth or Village
 
 ## [2.3.1] - 2026-10-07
 

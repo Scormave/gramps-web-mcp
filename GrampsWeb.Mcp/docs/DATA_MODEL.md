@@ -89,13 +89,13 @@ polymorphic wire shapes.
 
 `TypeCache` merges default + custom type vocabularies, which
 `GrampsTypeVocabularies` keeps between tool calls: default types for the life
-of the process, custom types for 10 minutes.  Write tools call
-`TypeCache.ValidateTypeAsync` to check type strings before sending requests,
-providing fuzzy-match suggestions on invalid values; an unknown value reads
-custom types again before it is rejected.  `TypeCache.ResolveTypeAsync` checks a
-value the same way and returns the vocabulary's own spelling; the person and
-family tools use it through `Tools/EventRoles.cs` to check event link roles
-(`event_role_types`) and store them in that spelling.
+of the process, custom types for 10 minutes.  `TypeCache.ResolveTypeAsync`
+checks a type string case-insensitively and returns the vocabulary's own
+spelling, since Gramps matches type names case-sensitively; an invalid value
+gets fuzzy-match suggestions instead, and an unknown value reads custom types
+again before it is rejected.  Write tools call it through `Tools/KnownTypes.cs`
+before sending requests, and the person and family tools through
+`Tools/EventRoles.cs` for event link roles (`event_role_types`).
 
 ### HandleResolver (`Client/HandleResolver.cs`)
 

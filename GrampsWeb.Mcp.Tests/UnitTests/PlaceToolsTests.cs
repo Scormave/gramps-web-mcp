@@ -167,6 +167,38 @@ public class PlaceToolsTests
         Assert.DoesNotContain("City", result);
     }
 
+    [Fact]
+    public async Task CreatePlace_Stores_The_Type_In_Its_Known_Spelling()
+    {
+        var handler = new PlaceHandler();
+
+        await PlaceTools.CreatePlace("Warsaw", placeType: "city", client: CreateClient(handler));
+
+        Assert.Equal("City", handler.Body!.Value.GetProperty("place_type").GetString());
+    }
+
+    [Fact]
+    public async Task UpdatePlace_Stores_The_Type_In_Its_Known_Spelling()
+    {
+        var handler = new PlaceHandler(StoredPlace);
+
+        await PlaceTools.UpdatePlace("place-h", placeType: "VILLAGE", client: CreateClient(handler));
+
+        Assert.Equal("Village", handler.Body!.Value.GetProperty("place_type").GetString());
+    }
+
+    [Fact]
+    public async Task UpdatePlace_Rejects_An_Unknown_Type_Before_Saving()
+    {
+        var handler = new PlaceHandler(StoredPlace);
+
+        var error = await Assert.ThrowsAsync<McpException>(() =>
+            PlaceTools.UpdatePlace("place-h", placeType: "Vilage", client: CreateClient(handler)));
+
+        Assert.Contains("Did you mean: Village?", error.Message);
+        Assert.Null(handler.Body);
+    }
+
     private static void AssertDate(JsonElement date, int modifier, int day, int month, int year)
     {
         Assert.Equal(modifier, date.GetProperty("modifier").GetInt32());
@@ -195,7 +227,7 @@ public class PlaceToolsTests
             if (request.RequestUri!.AbsolutePath.StartsWith("/api/token/"))
                 json = """{"access_token":"token","refresh_token":"refresh","expires_in":900}""";
             else if (request.RequestUri.AbsolutePath == "/api/types/default/")
-                json = """{"place_types":["City"]}""";
+                json = """{"place_types":["City","Village"]}""";
             else if (request.RequestUri.AbsolutePath.StartsWith("/api/types/"))
                 json = "{}";
             else if (request.Method == HttpMethod.Get && storedPlace != null)
