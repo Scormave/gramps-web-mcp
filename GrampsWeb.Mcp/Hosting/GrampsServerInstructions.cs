@@ -38,6 +38,12 @@ internal static class GrampsServerInstructions
         - Use delete_object only after the user confirmed that exact record, and force past backlinks only after a separate confirmation.
         """;
 
+    private const string MediaUpload =
+        """
+
+        - create_media uploads a photo, scan or PDF from the server's upload folder and shows it on records through attachTo; a file the tree already stores is reused, not uploaded twice.
+        """;
+
     private const string ReadOnlyNote =
         """
 
@@ -49,5 +55,5 @@ internal static class GrampsServerInstructions
     public static string For(GrampsConfig config) =>
         Reading
         + (config.MediaResourcesEnabled ? Media : "")
-        + (config.ReadOnly ? ReadOnlyNote : Writing);
+        + (config.ReadOnly ? ReadOnlyNote : Writing + (config.MediaUploadEnabled ? MediaUpload : ""));
 }

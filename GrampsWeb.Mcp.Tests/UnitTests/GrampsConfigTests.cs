@@ -173,6 +173,75 @@ public class GrampsConfigTests
         Assert.Null(config.RefreshToken);
     }
 
+    [Fact]
+    public void FromEnvironment_Leaves_Upload_Off_By_Default()
+    {
+        var config = LoadConfig(readOnlyEnv: null);
+
+        Assert.False(config.MediaUploadEnabled);
+        Assert.Null(config.MediaUploadDirs);
+        Assert.Equal(GrampsConfig.DefaultMediaUploadMaxBytes, config.MediaUploadMaxBytes);
+    }
+
+    [Fact]
+    public void FromEnvironment_Parses_Upload_Directories()
+    {
+        var first = Path.Combine(Path.GetTempPath(), "gramps-upload-a");
+        var second = Path.Combine(Path.GetTempPath(), "gramps-upload-b");
+        var value = string.Join(Path.PathSeparator, $" {first}{Path.DirectorySeparatorChar} ", "", second, first);
+
+        var config = LoadConfig(readOnlyEnv: null, mediaUploadDirs: value);
+
+        Assert.True(config.MediaUploadEnabled);
+        Assert.Equal([Path.GetFullPath(first), Path.GetFullPath(second)], config.MediaUploadDirs);
+    }
+
+    [Fact]
+    public void FromEnvironment_Expands_Home_In_Upload_Directories()
+    {
+        var config = LoadConfig(readOnlyEnv: null, mediaUploadDirs: "~/Downloads");
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        Assert.Equal([Path.Combine(home, "Downloads")], config.MediaUploadDirs);
+    }
+
+    [Fact]
+    public void FromEnvironment_Rejects_Relative_Upload_Directories()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, mediaUploadDirs: "scans"));
+
+        Assert.Contains("GRAMPS_MEDIA_UPLOAD_DIRS entries must be absolute paths", ex.Message);
+    }
+
+    [Fact]
+    public void FromEnvironment_Ignores_Unresolved_Upload_Directory_Placeholder()
+    {
+        var config = LoadConfig(readOnlyEnv: null, mediaUploadDirs: "${user_config.gramps_media_upload_dir}");
+
+        Assert.False(config.MediaUploadEnabled);
+    }
+
+    [Theory]
+    [InlineData("0", "must be a positive integer")]
+    [InlineData("big", "must be a valid integer")]
+    public void FromEnvironment_Rejects_Invalid_Upload_Size_Limit(string value, string message)
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, mediaUploadMaxBytes: value));
+
+        Assert.Contains("GRAMPS_MEDIA_UPLOAD_MAX_BYTES", ex.Message);
+        Assert.Contains(message, ex.Message);
+    }
+
+    [Fact]
+    public void FromEnvironment_Reads_Upload_Size_Limit()
+    {
+        var config = LoadConfig(readOnlyEnv: null, mediaUploadMaxBytes: "1048576");
+
+        Assert.Equal(1048576, config.MediaUploadMaxBytes);
+    }
+
     private static GrampsConfig LoadConfig(
         string? readOnlyEnv,
         string? username = "user",
@@ -183,7 +252,9 @@ public class GrampsConfigTests
         string? mediaAllowedMimeTypes = null,
         string? mediaAllowPrivate = null,
         string? mutationSerialize = null,
-        string? mutationMinIntervalMs = null) =>
+        string? mutationMinIntervalMs = null,
+        string? mediaUploadDirs = null,
+        string? mediaUploadMaxBytes = null) =>
         WithEnvironment(
             GrampsConfig.FromEnvironment,
             readOnlyEnv,
@@ -195,7 +266,9 @@ public class GrampsConfigTests
             mediaAllowedMimeTypes,
             mediaAllowPrivate,
             mutationSerialize,
-            mutationMinIntervalMs);
+            mutationMinIntervalMs,
+            mediaUploadDirs,
+            mediaUploadMaxBytes);
 
     private static T WithEnvironment<T>(
         Func<T> action,
@@ -208,7 +281,9 @@ public class GrampsConfigTests
         string? mediaAllowedMimeTypes = null,
         string? mediaAllowPrivate = null,
         string? mutationSerialize = null,
-        string? mutationMinIntervalMs = null)
+        string? mutationMinIntervalMs = null,
+        string? mediaUploadDirs = null,
+        string? mediaUploadMaxBytes = null)
     {
         lock (EnvironmentLock)
         {
@@ -227,6 +302,8 @@ public class GrampsConfigTests
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE", mediaAllowPrivate);
                 Environment.SetEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE", mutationSerialize);
                 Environment.SetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS", mutationMinIntervalMs);
+                Environment.SetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS", mediaUploadDirs);
+                Environment.SetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES", mediaUploadMaxBytes);
 
                 return action();
             }
@@ -252,7 +329,9 @@ public class GrampsConfigTests
             ["GRAMPS_MEDIA_ALLOWED_MIME_TYPES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOWED_MIME_TYPES"),
             ["GRAMPS_MEDIA_ALLOW_PRIVATE"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_ALLOW_PRIVATE"),
             ["GRAMPS_MUTATION_SERIALIZE"] = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE"),
-            ["GRAMPS_MUTATION_MIN_INTERVAL_MS"] = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS")
+            ["GRAMPS_MUTATION_MIN_INTERVAL_MS"] = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS"),
+            ["GRAMPS_MEDIA_UPLOAD_DIRS"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS"),
+            ["GRAMPS_MEDIA_UPLOAD_MAX_BYTES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES")
         };
     }
 

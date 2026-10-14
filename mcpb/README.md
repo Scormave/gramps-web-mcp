@@ -54,6 +54,8 @@ Claude Desktop shows a settings form generated from `user_config` in the manifes
 | Media file access | `GRAMPS_MEDIA_RESOURCES_ENABLED` |
 | Media max bytes | `GRAMPS_MEDIA_MAX_BYTES` |
 | Allow private media | `GRAMPS_MEDIA_ALLOW_PRIVATE` |
+| Media upload folder | `GRAMPS_MEDIA_UPLOAD_DIRS` |
+| Media upload max bytes | `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` |
 
 Authenticate with either a username and password, or a refresh token. The
 refresh-token option supports Gramps Web instances with local password login
@@ -64,6 +66,9 @@ The settings form does not expose `GRAMPS_LOG_LEVEL`, so the extension logs at
 `Information`: request metadata only, without genealogy data from API bodies.
 **Minimum write interval defaults to 250ms** (SQLite-friendly); the server-side
 env default remains `0` for Docker/registry installs.
+**Media upload folder defaults to `~/Downloads`**, so `create_media` can upload
+scans saved there once read-only mode is off; clear the field to turn uploading
+off. On macOS, Claude may ask for permission to read that folder.
 
 ## GitHub Releases
 

@@ -261,6 +261,59 @@ public class GrampsApiClient
     }
 
     /// <summary>
+    /// POST <c>/api/media/</c> with a file as the request body. Gramps Web stores the file under its MD5
+    /// checksum and creates a media record with that checksum, path and MIME type and an empty description.
+    /// Returns the new record's handle and Gramps ID, either of which may be null as for
+    /// <see cref="PostMutationAsync"/>.
+    /// </summary>
+    public async Task<(string? Handle, string? GrampsId)> PostMediaFileAsync(byte[] bytes, string mimeType)
+    {
+        EnsureWritable();
+
+        try
+        {
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Post, "/api/media/") { Content = FileContent(bytes, mimeType) },
+                SendUploadMutationAsync);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            ThrowIfMutationFailed(response, responseBody);
+
+            return GrampsMutationParser.ExtractHandleAndId(responseBody, "Media");
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// PUT <c>/api/media/{handle}/file</c>: replaces the file of an existing media record, which then takes
+    /// the new file's checksum, path and MIME type. Returns false when Gramps Web answers 409 because the
+    /// record already holds an identical file.
+    /// </summary>
+    public async Task<bool> PutMediaFileAsync(string handle, byte[] bytes, string mimeType)
+    {
+        EnsureWritable();
+        var path = $"/api/media/{Uri.EscapeDataString(handle)}/file";
+
+        try
+        {
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Put, path) { Content = FileContent(bytes, mimeType) },
+                SendUploadMutationAsync);
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                return false;
+            var responseBody = await response.Content.ReadAsStringAsync();
+            ThrowIfMutationFailed(response, responseBody);
+            return true;
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway, ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Performs a DELETE request.
     /// Adds Authorization header and executes request.
     /// </summary>
@@ -313,6 +366,13 @@ public class GrampsApiClient
 
     private static StringContent JsonContent(string json) => new(json, Encoding.UTF8, "application/json");
 
+    private static ByteArrayContent FileContent(byte[] bytes, string mimeType)
+    {
+        var content = new ByteArrayContent(bytes);
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+        return content;
+    }
+
     private void EnsureWritable()
     {
         if (_config.ReadOnly)
@@ -322,6 +382,9 @@ public class GrampsApiClient
 
     private Task<HttpResponseMessage> SendMutationAsync(HttpRequestMessage request) =>
         _mutationGate.RunAsync(() => SendWithLoggingAsync(request));
+
+    private Task<HttpResponseMessage> SendUploadMutationAsync(HttpRequestMessage request) =>
+        _mutationGate.RunAsync(() => SendUploadWithLoggingAsync(request));
 
     private static void ThrowIfMutationFailed(HttpResponseMessage response, string body)
     {
@@ -366,6 +429,28 @@ public class GrampsApiClient
                 skipRequestBodyLogging ? "<redacted>" : SanitizeAndLimitForLog(requestBody) ?? "<empty>");
         }
 
+        return await SendAndBufferResponseAsync(request);
+    }
+
+    /// <summary>
+    /// Like <see cref="SendWithLoggingAsync(HttpRequestMessage, bool)"/> for a request whose body is a file:
+    /// logs its MIME type and length, never the bytes.
+    /// </summary>
+    private async Task<HttpResponseMessage> SendUploadWithLoggingAsync(HttpRequestMessage request)
+    {
+        _logger.LogInformation(
+            "Gramps API upload: {Method} {Path} ContentType={ContentType} BodyLength={BodyLength}",
+            request.Method.Method,
+            PathForLog(request.RequestUri),
+            request.Content?.Headers.ContentType?.MediaType ?? "<none>",
+            request.Content?.Headers.ContentLength ?? 0);
+
+        return await SendAndBufferResponseAsync(request);
+    }
+
+    /// <summary>Sends the request, logs the response and buffers its body as text for the caller.</summary>
+    private async Task<HttpResponseMessage> SendAndBufferResponseAsync(HttpRequestMessage request)
+    {
         var startedAt = DateTime.UtcNow;
         var response = await _httpClient.SendAsync(request);
         var elapsedMs = (DateTime.UtcNow - startedAt).TotalMilliseconds;

@@ -36,14 +36,25 @@ public class GrampsServerInstructionsTests
         Assert.Contains("read_media", text);
     }
 
-    [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void For_NamesOnlyToolsTheServerPublishes(bool readOnly, bool mediaResourcesEnabled)
+    [Fact]
+    public void For_UploadEnabled_MentionsCreateMediaOnlyWhenWritable()
     {
-        var text = GrampsServerInstructions.For(Config(readOnly, mediaResourcesEnabled));
+        Assert.Contains("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: false, mediaUploadEnabled: true)));
+        Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: true, mediaResourcesEnabled: true, mediaUploadEnabled: true)));
+        Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: true, mediaUploadEnabled: false)));
+    }
+
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, true)]
+    [InlineData(true, true, true)]
+    public void For_NamesOnlyToolsTheServerPublishes(bool readOnly, bool mediaResourcesEnabled, bool mediaUploadEnabled)
+    {
+        var text = GrampsServerInstructions.For(Config(readOnly, mediaResourcesEnabled, mediaUploadEnabled));
         var published = typeof(GrampsServerInstructions).Assembly.GetTypes()
             .SelectMany(type => type.GetMethods())
             .Select(method => method.GetCustomAttributes(typeof(ModelContextProtocol.Server.McpServerToolAttribute), false)
@@ -55,7 +66,9 @@ public class GrampsServerInstructionsTests
 
         foreach (var (name, toolReadOnly) in published)
         {
-            var hidden = (readOnly && !toolReadOnly) || (!mediaResourcesEnabled && name == "read_media");
+            var hidden = (readOnly && !toolReadOnly)
+                         || (!mediaResourcesEnabled && name == "read_media")
+                         || (!mediaUploadEnabled && name == "create_media");
             if (hidden)
                 Assert.DoesNotContain(name, text);
         }
@@ -66,11 +79,12 @@ public class GrampsServerInstructionsTests
     private static string ToSnakeCase(string name) =>
         string.Concat(name.Select((c, i) => char.IsUpper(c) && i > 0 ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
 
-    private static GrampsConfig Config(bool readOnly, bool mediaResourcesEnabled) => new(
+    private static GrampsConfig Config(bool readOnly, bool mediaResourcesEnabled, bool mediaUploadEnabled = false) => new(
         ApiUrl: "https://gramps-web.test",
         Username: "user",
         Password: "pass",
         TreeId: "tree",
         ReadOnly: readOnly,
-        MediaResourcesEnabled: mediaResourcesEnabled);
+        MediaResourcesEnabled: mediaResourcesEnabled,
+        MediaUploadDirs: mediaUploadEnabled ? ["/srv/uploads"] : null);
 }

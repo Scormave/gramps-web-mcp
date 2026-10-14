@@ -4,7 +4,7 @@
   "display_name": "Gramps Web MCP",
   "version": "__VERSION__",
   "description": "Structured MCP access to your Gramps Web family tree",
-  "long_description": "Connect Claude Desktop to a self-hosted [Gramps Web](https://www.grampsweb.org/) instance. Browse, search, and optionally edit people, families, events, places, sources, citations, repositories, notes, media, and tags through up to 29 MCP tools.",
+  "long_description": "Connect Claude Desktop to a self-hosted [Gramps Web](https://www.grampsweb.org/) instance. Browse, search, and optionally edit people, families, events, places, sources, citations, repositories, notes, media, and tags through up to 30 MCP tools, and upload photos and document scans from a folder you choose.",
   "author": {
     "name": "Scormave",
     "url": "https://github.com/Scormave"
@@ -42,7 +42,9 @@
         "GRAMPS_MUTATION_MIN_INTERVAL_MS": "${user_config.gramps_mutation_min_interval_ms}",
         "GRAMPS_MEDIA_RESOURCES_ENABLED": "${user_config.gramps_media_resources_enabled}",
         "GRAMPS_MEDIA_MAX_BYTES": "${user_config.gramps_media_max_bytes}",
-        "GRAMPS_MEDIA_ALLOW_PRIVATE": "${user_config.gramps_media_allow_private}"
+        "GRAMPS_MEDIA_ALLOW_PRIVATE": "${user_config.gramps_media_allow_private}",
+        "GRAMPS_MEDIA_UPLOAD_DIRS": "${user_config.gramps_media_upload_dir}",
+        "GRAMPS_MEDIA_UPLOAD_MAX_BYTES": "${user_config.gramps_media_upload_max_bytes}"
       }
     }
   },
@@ -123,6 +125,22 @@
       "title": "Allow private media",
       "description": "Allow downloading media records marked private in Gramps",
       "default": false,
+      "required": false
+    },
+    "gramps_media_upload_dir": {
+      "type": "directory",
+      "title": "Media upload folder",
+      "description": "Folder create_media and update_media may upload photos, scans and PDFs from (files in its subfolders too). Clear it to turn uploading off; create_media is then hidden. On macOS, Claude may ask for access to this folder.",
+      "default": "${HOME}/Downloads",
+      "required": false
+    },
+    "gramps_media_upload_max_bytes": {
+      "type": "number",
+      "title": "Media upload max bytes",
+      "description": "Largest file create_media and update_media upload. Gramps Web must accept files this large, and an upload must finish within 30 seconds.",
+      "default": 52428800,
+      "min": 1,
+      "max": 524288000,
       "required": false
     }
   },

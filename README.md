@@ -23,7 +23,7 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 
 ## Features
 
-- **Up to 29 MCP tools** — read, create, update, and delete people, families, events, places,
+- **Up to 30 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
@@ -366,6 +366,22 @@ megapixels; only the preview is returned.
 
 `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer used. Remove it from your
 configuration; the server ignores it and logs a warning at startup if it is set.
+
+### Media upload
+
+`create_media` uploads a photo, document scan or PDF from a folder on the
+server and shows it on the records named in `attachTo`; `update_media` takes
+`filePath` to replace a record's file. Uploading is off until
+`GRAMPS_MEDIA_UPLOAD_DIRS` names a folder, and `create_media` is hidden until
+then. Only files inside those folders can be read, symbolic links included,
+and only JPEG, PNG, GIF, WebP, TIFF, BMP and PDF files, judged by content. A
+file the tree already stores is reused, not uploaded twice. In Docker, mount
+the folder into the container and set the path as seen inside it.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from | unset (off) |
+| `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
 
 ### Transports
 

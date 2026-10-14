@@ -20,6 +20,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   references keep their relationships, crops and other metadata. `sort`
   takes a JSON array or one string such as `"Events | Children"`, and rejects
   a list the tool does not have, naming the ones it does
+- `create_media` uploads a photo, document scan or PDF from an upload folder
+  as a new media record and shows it on the people, families, events, places,
+  sources or citations named in `attachTo`; `update_media` takes `filePath` to
+  replace a record's file. Set `GRAMPS_MEDIA_UPLOAD_DIRS` to the folders files
+  may come from (`create_media` stays hidden until then) and optionally
+  `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` (default 50 MiB); the MCPB extension offers
+  an upload folder setting that defaults to `~/Downloads`. Symbolic links are
+  resolved before the folder check, and the type is judged by content: JPEG,
+  PNG, GIF, WebP, TIFF, BMP or PDF. A file the tree already stores, by MD5
+  checksum, is reused instead of uploaded twice, so repeating a call is safe.
+  Unknown `attachTo` records and unreadable dates are rejected before upload
 
 ### Changed
 

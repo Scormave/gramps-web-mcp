@@ -15,9 +15,13 @@ public record GrampsConfig(
     bool MediaAllowPrivate = false,
     bool MutationSerialize = true,
     int MutationMinIntervalMs = 0,
-    string? RefreshToken = null)
+    string? RefreshToken = null,
+    IReadOnlyList<string>? MediaUploadDirs = null,
+    long MediaUploadMaxBytes = GrampsConfig.DefaultMediaUploadMaxBytes)
 {
     public const long DefaultMediaMaxBytes = 5 * 1024 * 1024;
+
+    public const long DefaultMediaUploadMaxBytes = 50 * 1024 * 1024;
 
     /// <summary>
     /// Variables that earlier versions read. They are ignored now; startup warns when one is still set.
@@ -32,6 +36,12 @@ public record GrampsConfig(
     /// a username and password, for Gramps Web instances with local login disabled.
     /// </summary>
     public bool UsesRefreshToken => !string.IsNullOrWhiteSpace(RefreshToken);
+
+    /// <summary>
+    /// True when <c>GRAMPS_MEDIA_UPLOAD_DIRS</c> names at least one folder that create_media and
+    /// update_media may upload files from.
+    /// </summary>
+    public bool MediaUploadEnabled => MediaUploadDirs is { Count: > 0 };
 
     /// <summary>
     /// Loads configuration from environment variables.
@@ -58,8 +68,12 @@ public record GrampsConfig(
             defaultValue: true);
         var rawMutationMinIntervalMs = ReadEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS");
         var mutationMinIntervalMs = ParseIntOrDefault(rawMutationMinIntervalMs, 0);
+        var rawMediaUploadMaxBytes = ReadEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES");
+        var mediaUploadMaxBytes = ParseLongOrDefault(rawMediaUploadMaxBytes, DefaultMediaUploadMaxBytes);
 
         var errors = new List<string>();
+        var mediaUploadDirs = ParseDirectoryList(ReadEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS"),
+            "GRAMPS_MEDIA_UPLOAD_DIRS", errors);
 
         if (string.IsNullOrWhiteSpace(apiUrl))
             errors.Add("GRAMPS_API_URL is not set or empty");
@@ -81,6 +95,10 @@ public record GrampsConfig(
             errors.Add("GRAMPS_MUTATION_MIN_INTERVAL_MS must be a valid integer");
         else if (mutationMinIntervalMs < 0)
             errors.Add("GRAMPS_MUTATION_MIN_INTERVAL_MS must be a non-negative integer");
+        if (!string.IsNullOrWhiteSpace(rawMediaUploadMaxBytes) && !long.TryParse(rawMediaUploadMaxBytes, out _))
+            errors.Add("GRAMPS_MEDIA_UPLOAD_MAX_BYTES must be a valid integer");
+        else if (mediaUploadMaxBytes <= 0)
+            errors.Add("GRAMPS_MEDIA_UPLOAD_MAX_BYTES must be a positive integer");
 
         if (errors.Count > 0)
         {
@@ -100,7 +118,9 @@ public record GrampsConfig(
             MediaAllowPrivate: mediaAllowPrivate,
             MutationSerialize: mutationSerialize,
             MutationMinIntervalMs: mutationMinIntervalMs,
-            RefreshToken: string.IsNullOrWhiteSpace(refreshToken) ? null : refreshToken.Trim());
+            RefreshToken: string.IsNullOrWhiteSpace(refreshToken) ? null : refreshToken.Trim(),
+            MediaUploadDirs: mediaUploadDirs,
+            MediaUploadMaxBytes: mediaUploadMaxBytes);
     }
 
     /// <summary>
@@ -126,6 +146,45 @@ public record GrampsConfig(
         return trimmed.StartsWith("${", StringComparison.Ordinal) && trimmed.EndsWith('}')
             ? null
             : value;
+    }
+
+    /// <summary>
+    /// Splits a folder list on the platform's path-list separator (<c>:</c>, or <c>;</c> on Windows),
+    /// expanding a leading <c>~</c> to the home folder. Each folder must be an absolute path; whether it
+    /// exists is checked when a file is uploaded, so a folder created later still works.
+    /// </summary>
+    private static IReadOnlyList<string>? ParseDirectoryList(string? value, string name, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var directories = new List<string>();
+        foreach (var entry in value.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var expanded = ExpandHome(entry);
+            if (!Path.IsPathFullyQualified(expanded))
+            {
+                errors.Add($"{name} entries must be absolute paths; \"{entry}\" is not");
+                continue;
+            }
+
+            var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(expanded));
+            if (!directories.Contains(full))
+                directories.Add(full);
+        }
+
+        return directories.Count > 0 ? directories : null;
+    }
+
+    /// <summary>Replaces a leading <c>~</c> (alone or before a separator) with the user's home folder.</summary>
+    internal static string ExpandHome(string path)
+    {
+        if (path == "~")
+            return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (path.StartsWith("~/", StringComparison.Ordinal)
+            || (Path.DirectorySeparatorChar == '\\' && path.StartsWith("~\\", StringComparison.Ordinal)))
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
+        return path;
     }
 
     private static bool ParseBoolOrDefault(string? value, bool defaultValue)

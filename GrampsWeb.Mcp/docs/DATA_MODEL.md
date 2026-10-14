@@ -216,9 +216,13 @@ Create/update request DTOs sent to the Gramps Web API via POST/PUT.
 | `CreateSourceRequest` | `POST /api/sources/` / `PUT /api/sources/{handle}` |
 | `CreateCitationRequest` | `POST /api/citations/` / `PUT /api/citations/{handle}` |
 | `CreateNoteRequest` | `POST /api/notes/` / `PUT /api/notes/{handle}` |
-| `CreateMediaRequest` | `PUT /api/media/{handle}` (no create via MCP) |
 | `CreateRepositoryRequest` | `POST /api/repositories/` / `PUT /api/repositories/{handle}` |
 | `CreateTagRequest` | `POST /api/tags/` |
+
+Media has no request DTO: `create_media` uploads the file bytes to
+`POST /api/media/`, which creates the record, and `update_media` replaces them
+through `PUT /api/media/{handle}/file`. Metadata is changed on the stored JSON
+record and sent back with `PUT /api/media/{handle}`.
 
 Common pattern:
 - `_class` field matches Gramps class name

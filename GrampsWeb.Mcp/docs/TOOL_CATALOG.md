@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 29 MCP tools exposed by the server.
+Complete catalog of up to 30 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -20,7 +20,8 @@ Direct calls to a previously known write-tool name still return an MCP error
 before any mutation request is sent to Gramps Web.
 When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media`
 is also omitted from the catalog; `get_object` still reads
-media metadata.
+media metadata. `create_media` is published only when
+`GRAMPS_MEDIA_UPLOAD_DIRS` names at least one upload folder.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
 
 Tool descriptions state what a tool does, what it returns, when to use a
@@ -34,8 +35,9 @@ The server also sends **instructions** at initialization
 (`Hosting/GrampsServerInstructions.cs`): which tool to start with, how links
 and `linkMode` work, the order to create linked records in, and when to delete.
 They name only the tools the configuration publishes: read-only mode replaces
-the writing guidance with one line saying no tool changes the tree, and
-`read_media` is mentioned only when media access is enabled.
+the writing guidance with one line saying no tool changes the tree,
+`read_media` is mentioned only when media access is enabled, and
+`create_media` only when an upload folder is set.
 
 Create/update/delete HTTP calls are serialized in-process by default
 (`GRAMPS_MUTATION_SERIALIZE=true`) and may wait
@@ -526,12 +528,14 @@ Update a note (same field set, all optional).
 
 ---
 
-## Media (`MediaTools.cs`) — 2 tools
+## Media (`MediaTools.cs`) — 3 tools
 
 Use `get_object(objectType: "media", ...)` for media metadata. It does not
 upload or download file bytes. Media byte tools/resources require
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect `GRAMPS_MEDIA_MAX_BYTES`, and
 block private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
+Uploading with `create_media` or `update_media(filePath)` requires
+`GRAMPS_MEDIA_UPLOAD_DIRS` and respects `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`.
 
 ### R — `ReadMedia`
 Download media bytes as typed MCP content. Default mode `thumbnail` returns a
@@ -555,10 +559,37 @@ Migration: replace `get_media_thumbnail(handle, size)` with
 `get_media_file(handle)` with `read_media(handle, mode: "file")`.
 The old tool names are no longer registered. Media resource URIs are unchanged.
 
+### C — `CreateMedia`
+Upload a photo, document scan or PDF from an upload folder as a new media
+record, and show it on people, families, events, places, sources or citations
+through `attachTo`. Only files inside `GRAMPS_MEDIA_UPLOAD_DIRS` (subfolders
+included) can be read; symbolic links are resolved first, so a link cannot lead
+outside. The type is judged from the file's first bytes: JPEG, PNG, GIF, WebP,
+TIFF, BMP or PDF. Gramps Web does not check uploads for duplicates, so the tool
+first looks for a media record with the same MD5 checksum: when one exists,
+nothing is uploaded, its fields stay as they are, only `attachTo` is applied,
+and the response says `action: existing`. Repeating a call is therefore safe.
+An unreadable date or an unknown `attachTo` record is rejected before anything
+is uploaded. Each `attachTo` record gets the media after its existing media,
+and a record that already shows it is left unchanged.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `filePath` | `string` | yes | — | Absolute path inside an upload folder, `~/…`, or a name relative to a folder, such as `scan.jpg` |
+| `description` | `string?` | no | file name without extension | Description (caption) |
+| `date` | `string?` | no | — | Date of the photo or document |
+| `attachTo` | `FlexibleHandleList?` | no | — | Records to show the media on: Gramps IDs (`I`, `F`, `E`, `P`, `S`, `C`) or handles |
+| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Links on the media record itself |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
+| `isPrivate` | `bool` | no | `false` | Mark private |
+
 ### U — `UpdateMedia`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update media metadata (no binary upload).
+Update media metadata, or replace the stored file with `filePath` from an
+upload folder. The new file is checked like in `CreateMedia`; a file identical
+to the stored one uploads nothing, and a file another media record already
+holds is rejected. The date and file are checked before anything is saved.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -568,6 +599,7 @@ Update media metadata (no binary upload).
 | `noteHandles`, `tagHandles`, `citationHandles` | `FlexibleHandleList?` | no | — | Linked handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool?` | no | — | Private flag |
+| `filePath` | `string?` | no | — | Replacement file inside an upload folder; omit to keep the file |
 
 ---
 
@@ -681,18 +713,19 @@ in this tree.`
 | Source | 0 | 1 | 1 | 0 | 2 |
 | Citation | 0 | 1 | 1 | 0 | 2 |
 | Note | 0 | 1 | 1 | 0 | 2 |
-| Media | 1 | 0 | 1 | 0 | 2 |
+| Media | 1 | 1 | 1 | 0 | 3 |
 | Repository | 0 | 1 | 1 | 0 | 2 |
 | Tag | 0 | 1 | 0 | 0 | 1 |
 | Object | 1 | 0 | 0 | 1 | 2 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
-| **Total when media access is enabled** | **10** | **9** | **9** | **1** | **29** |
+| **Total with media access and upload enabled** | **10** | **10** | **9** | **1** | **30** |
 
-With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` is hidden
-and the catalog contains 28 tools in read/write mode. Read-only mode publishes
-10 tools with media access enabled, or 9 with it disabled.
+With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` is hidden,
+and without `GRAMPS_MEDIA_UPLOAD_DIRS`, `create_media` is hidden: the default
+catalog contains 28 tools in read/write mode. Read-only mode publishes 10 tools
+with media access enabled, or 9 with it disabled.
 
 ## Prerequisites for write tools
 

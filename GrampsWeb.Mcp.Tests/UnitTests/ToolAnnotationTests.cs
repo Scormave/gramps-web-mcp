@@ -27,8 +27,9 @@ public class ToolAnnotationTests
                 Assert.False(attr.Destructive, $"Read-only tool {method.Name} must not be destructive");
         }
 
-        Assert.Equal(29, toolMethods.Count);
+        Assert.Equal(30, toolMethods.Count);
         Assert.Single(toolMethods.Where(method => method.Name == "ReadMedia"));
+        Assert.Single(toolMethods.Where(method => method.Name == "CreateMedia"));
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
         Assert.Single(toolMethods.Where(method => method.Name == "DeleteObject"));
         Assert.Single(toolMethods.Where(method => method.Name == "GetObject"));

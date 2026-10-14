@@ -159,6 +159,21 @@ media metadata remains available through `get_object`.
 `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig` lists it as
 retired, and startup logs a warning when it is still set.
 
+### Optional (media upload)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; `~` expands to the home folder | unset (off) |
+| `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
+
+When no upload folder is set, `tools/list` omits `create_media`, and
+`update_media` rejects `filePath`. `MediaUploadFile` resolves symbolic links
+before checking that a file lies inside a folder, then reads the resolved path,
+and judges the type from the file's first bytes (JPEG, PNG, GIF, WebP, TIFF,
+BMP, PDF). Gramps Web's `POST /api/media/` creates a record without checking
+for duplicates, so `create_media` first looks for a record with the file's MD5
+checksum and reuses it.
+
 ### Optional (logging)
 
 | Variable | Description | Default |
@@ -199,15 +214,16 @@ Tools are registered through `WithGrampsToolProfile()` in
 adds the call-tool filters for argument checks and read scopes, and, when
 needed, a `tools/list` filter that publishes only tools enabled by the current
 configuration:
-read-only mode removes write tools, and disabled media access removes
-`read_media`. Hidden tools remain registered so direct calls still receive
-the normal read-only or configuration error.
+read-only mode removes write tools, disabled media access removes
+`read_media`, and no upload folder removes `create_media`. Hidden tools remain
+registered so direct calls still receive the normal read-only or configuration
+error.
 
 `Program.cs` sets `McpServerOptions.ServerInstructions` from
 `Hosting/GrampsServerInstructions.cs` in both transports. The instructions
 tell the client how the tools fit together and follow the same profile: no
-write guidance in read-only mode, and no `read_media` while media access is
-disabled.
+write guidance in read-only mode, no `read_media` while media access is
+disabled, and no `create_media` without an upload folder.
 
 ### 1b. Resources (`Resources/`)
 
@@ -289,6 +305,8 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 - paged list support (`GetPagedListAsync<T>`)
 - binary GET support (`GetBytesAsync`) for media resources, with payload-free
   logging and configured maximum-size enforcement
+- media file upload (`PostMediaFileAsync`, `PutMediaFileAsync`) through the
+  mutation gate, logging content type and length but never the bytes
 
 `GrampsApiClientExtensions` adds null-on-404 helpers.
 `ExtendedEntityEnrichment` refetches nested objects for `?extend=all` responses

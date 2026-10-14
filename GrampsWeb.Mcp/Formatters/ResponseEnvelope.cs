@@ -44,6 +44,30 @@ public static class ResponseEnvelope
     }
 
     /// <summary>
+    /// Formats the response of a create tool that found the record already stored and created nothing:
+    /// <c>action: existing</c>, then <paramref name="message"/> saying what was and was not applied.
+    /// </summary>
+    public static string FoundExisting(string objectType, string? handle, string? grampsId, string? displayName,
+        string message, IEnumerable<KeyValuePair<string, string>>? stored = null)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("---");
+        sb.AppendLine($"type: {objectType}");
+        sb.AppendLine($"action: existing");
+        if (!string.IsNullOrWhiteSpace(handle))
+            sb.AppendLine($"handle: {handle}");
+        if (!string.IsNullOrWhiteSpace(grampsId))
+            sb.AppendLine($"gramps_id: {grampsId}");
+        if (!string.IsNullOrWhiteSpace(displayName))
+            sb.AppendLine($"name: {HeaderValue(displayName)}");
+        AppendStored(sb, stored);
+        sb.AppendLine("---");
+        sb.AppendLine();
+        sb.AppendLine(message);
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Formats a successful update response. <paramref name="stored"/> adds header lines with values the
     /// record now holds (see <see cref="HeaderValue"/>).
     /// </summary>
@@ -124,6 +148,11 @@ public static class ResponseEnvelope
     {
         $"Attach to person: update_person(handle: \"<person>\", noteHandles: [\"{handle}\"], linkMode: \"add\")",
         $"Attach to event: update_event(handle: \"<event>\", noteHandles: [\"{handle}\"], linkMode: \"add\")",
+    };
+
+    public static string[] MediaCreateNextSteps(string handle) => new[]
+    {
+        $"Show it on a person, family, event, place, source or citation: add it to that record's mediaHandles, e.g. update_person(handle: \"<person>\", mediaHandles: [\"{handle}\"], linkMode: \"add\"). Next time pass attachTo to create_media instead.",
     };
 
     public static string[] PlaceCreateNextSteps(string handle) => new[]

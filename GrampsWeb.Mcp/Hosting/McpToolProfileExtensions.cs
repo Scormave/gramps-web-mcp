@@ -15,8 +15,8 @@ internal static class McpToolProfileExtensions
 {
     /// <summary>
     /// Registers every tool while publishing only tools enabled by the current configuration.
-    /// Tools remain registered for compatibility, so direct calls to a hidden write or media-byte
-    /// tool still return its normal safety or configuration error. Call arguments are checked
+    /// Tools remain registered for compatibility, so direct calls to a hidden write, media-byte or
+    /// upload tool still return its normal safety or configuration error. Call arguments are checked
     /// against each tool's input schema by <see cref="ToolArgumentValidator"/>.
     /// </summary>
     public static IMcpServerBuilder WithGrampsToolProfile(
@@ -56,7 +56,7 @@ internal static class McpToolProfileExtensions
                 return await next(request, cancellationToken);
             }));
 
-        if (config.ReadOnly || !config.MediaResourcesEnabled)
+        if (config.ReadOnly || !config.MediaResourcesEnabled || !config.MediaUploadEnabled)
         {
             builder.WithRequestFilters(filters => filters.AddListToolsFilter(next =>
                 (request, cancellationToken) => FilterAvailableToolsAsync(next, request, cancellationToken, config)));
@@ -69,13 +69,17 @@ internal static class McpToolProfileExtensions
     {
         result.Tools = result.Tools
             .Where(tool => (!config.ReadOnly || tool.Annotations?.ReadOnlyHint == true)
-                           && (config.MediaResourcesEnabled || !IsMediaByteTool(tool)))
+                           && (config.MediaResourcesEnabled || !IsMediaByteTool(tool))
+                           && (config.MediaUploadEnabled || !IsMediaUploadTool(tool)))
             .ToList();
         return result;
     }
 
     private static bool IsMediaByteTool(Tool tool) =>
         tool.Name == "read_media";
+
+    private static bool IsMediaUploadTool(Tool tool) =>
+        tool.Name == "create_media";
 
     private static async ValueTask<ListToolsResult> FilterAvailableToolsAsync(
         McpRequestHandler<ListToolsRequestParams, ListToolsResult> next,

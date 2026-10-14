@@ -62,13 +62,46 @@ public class McpToolProfileTests
         Assert.Equal(["get_object"], filtered.Tools.Select(tool => tool.Name));
     }
 
-    private static GrampsWeb.Mcp.Config.GrampsConfig Config(bool readOnly, bool mediaResourcesEnabled) => new(
+    [Theory]
+    [InlineData(false, new[] { "get_object", "update_media" })]
+    [InlineData(true, new[] { "get_object", "create_media", "update_media" })]
+    public void KeepAvailableTools_PublishesCreateMediaOnlyWithUploadFolders(bool uploadEnabled, string[] expected)
+    {
+        var result = new ListToolsResult
+        {
+            Tools =
+            [
+                Tool("get_object", readOnly: true),
+                Tool("create_media", readOnly: false),
+                Tool("update_media", readOnly: false)
+            ]
+        };
+
+        var filtered = McpToolProfileExtensions.KeepAvailableTools(result,
+            Config(readOnly: false, mediaResourcesEnabled: true, mediaUploadEnabled: uploadEnabled));
+
+        Assert.Equal(expected, filtered.Tools.Select(tool => tool.Name));
+    }
+
+    [Fact]
+    public void KeepAvailableTools_ReadOnlyModeHidesCreateMediaEvenWithUploadFolders()
+    {
+        var result = new ListToolsResult { Tools = [Tool("get_object", readOnly: true), Tool("create_media", readOnly: false)] };
+
+        var filtered = McpToolProfileExtensions.KeepAvailableTools(result,
+            Config(readOnly: true, mediaResourcesEnabled: true, mediaUploadEnabled: true));
+
+        Assert.Equal(["get_object"], filtered.Tools.Select(tool => tool.Name));
+    }
+
+    private static GrampsWeb.Mcp.Config.GrampsConfig Config(bool readOnly, bool mediaResourcesEnabled, bool mediaUploadEnabled = false) => new(
         ApiUrl: "https://gramps-web.test",
         Username: "user",
         Password: "pass",
         TreeId: "tree",
         ReadOnly: readOnly,
-        MediaResourcesEnabled: mediaResourcesEnabled);
+        MediaResourcesEnabled: mediaResourcesEnabled,
+        MediaUploadDirs: mediaUploadEnabled ? ["/srv/uploads"] : null);
 
     private static Tool Tool(string name, bool? readOnly) => new()
     {

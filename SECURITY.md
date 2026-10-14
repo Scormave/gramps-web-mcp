@@ -48,6 +48,19 @@ available. End-to-end exposure also depends on the MCP client and model that
 receive the typed tool content (image, audio, or embedded resource) or binary
 resource content.
 
+## Media upload
+
+Uploading is off unless `GRAMPS_MEDIA_UPLOAD_DIRS` lists at least one folder;
+`create_media` is hidden from `tools/list` until then, and in read-only mode.
+`create_media` and `update_media` read files only from those folders and their
+subfolders: symbolic links are resolved before the check, so a link cannot lead
+outside, and `..` cannot climb out. The type is judged from the file's first
+bytes, and only JPEG, PNG, GIF, WebP, TIFF, BMP and PDF files are uploaded.
+Files larger than `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` (50 MiB by default) are
+refused. Point the setting at a folder that holds only files meant for the
+tree, such as a downloads or scan inbox, not at a home directory: any model
+connected to the server can upload whatever the folder holds.
+
 ## HTTP MCP exposure
 
 When running with `MCP_TRANSPORT=http` or `sse`, the MCP endpoints are reachable
