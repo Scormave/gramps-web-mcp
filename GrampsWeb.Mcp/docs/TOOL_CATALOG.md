@@ -95,6 +95,7 @@ Every update tool sends back the stored object with only the supplied fields
 changed, including data the tools cannot show or edit (styled note text, LDS
 ordinances, fields from newer Gramps versions). `update_note` keeps the styling
 and links of a note when `text` is omitted or unchanged; changed text loses them.
+`appendText` adds to the end of a note and keeps them.
 
 When the mutation gate is enabled, update tools serialize
 their entire read/modify/write sequence against each other. HTTP write throttling
@@ -524,7 +525,19 @@ Link via `noteHandles` on other objects.
 ### U — `UpdateNote`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a note (same field set, all optional).
+Update a note (same field set, all optional). `text` replaces the whole body;
+`appendText` adds to the end of the body as stored at the time of the call, so
+a long research note can grow without the caller sending it back in full.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `handle` | `string` | yes | — | Note handle or Gramps ID |
+| `text` | `string?` | no | — | New body; changed text loses the old styling and links |
+| `appendText` | `string?` | no | — | Text added on a new line at the end (a line break is put in between unless the body ends with one; start with a line break for an empty line). Keeps the rest of the body, styling and links included. Cannot be combined with `text` |
+| `noteType` | `string?` | no | — | Note type |
+| `format` | `string?` | no | — | Plain or Html |
+| `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
+| `isPrivate` | `bool?` | no | — | Private flag |
 
 ---
 

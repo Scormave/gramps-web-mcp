@@ -184,6 +184,48 @@ public class UpdateToolsPreserveStoredDataTests
     }
 
     [Fact]
+    public async Task UpdateNote_AppendText_Adds_A_Line_And_Keeps_Styling_And_Links()
+    {
+        var handler = new StoredObjectHandler(StoredNote);
+
+        await NoteTools.UpdateNote("h-note", appendText: "Also the 1850 revision", client: CreateClient(handler));
+
+        var expected = Parse(StoredNote);
+        expected["text"]!["string"] = "See the 1858 census\nAlso the 1850 revision";
+        AssertJsonEqual(expected, handler.Body);
+    }
+
+    [Theory]
+    [InlineData("Item 1.\n", "Item 2.", "Item 1.\nItem 2.")]
+    [InlineData("Item 1.", "\nItem 2.", "Item 1.\n\nItem 2.")]
+    [InlineData("", "Item 1.", "Item 1.")]
+    public async Task UpdateNote_AppendText_Adds_A_Line_Break_Only_When_Needed(string stored, string appended, string expected)
+    {
+        var note = Parse(StoredNote);
+        note["text"]!["string"] = stored;
+        note["text"]!["tags"] = new JsonArray();
+        var handler = new StoredObjectHandler(note.ToJsonString());
+
+        await NoteTools.UpdateNote("h-note", appendText: appended, client: CreateClient(handler));
+
+        Assert.Equal(expected, handler.Body!["text"]!["string"]!.GetValue<string>());
+    }
+
+    [Theory]
+    [InlineData("New body", "More", "not both")]
+    [InlineData(null, " \n", "appendText is empty")]
+    public async Task UpdateNote_AppendText_Rejects_Text_Too_Or_Blank_Before_Any_Request(string? text, string appended, string message)
+    {
+        var handler = new StoredObjectHandler(StoredNote);
+
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => NoteTools.UpdateNote("h-note", text: text, appendText: appended, client: CreateClient(handler)));
+
+        Assert.Contains(message, ex.Message);
+        Assert.Null(handler.PutPath);
+    }
+
+    [Fact]
     public async Task UpdateEvent_Empty_Date_Removes_Only_The_Date()
     {
         const string stored = """

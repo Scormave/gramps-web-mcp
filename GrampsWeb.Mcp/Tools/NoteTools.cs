@@ -94,7 +94,8 @@ public static class NoteTools
 
     [McpServerTool(Title = "Update Note", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing note: its text, type, format, tags or private flag; new text replaces the whole body. " +
+        "Change an existing note: its text, type, format, tags or private flag. text replaces the whole body; appendText adds to " +
+        "the end of the body as stored now, keeping the rest of it, styling and links included, so it suits adding a finding to a long note. " +
         ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing note returns a not-found message. " +
         "Which records the note is attached to is stored on them (their noteHandles), not here.")]
     public static async Task<string> UpdateNote(
@@ -102,6 +103,9 @@ public static class NoteTools
         string handle,
         [Description("New text, replacing the whole body; changed text loses the styling and links of the old one, the same text keeps them. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? text = null,
+        [Description("Text to add at the end of the body, on a new line: a line break is put in between unless the body already ends with one, " +
+                     "so start with a line break to leave an empty line. The rest of the body, styling and links included, is kept. Cannot be combined with text.")]
+        string? appendText = null,
         [Description("New note type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? noteType = null,
         [Description("Plain or Html. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -117,6 +121,15 @@ public static class NoteTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            if (appendText != null)
+            {
+                if (text != null)
+                    throw McpToolErrors.ValidationError(
+                        "Pass text to replace the whole body or appendText to add to its end, not both.");
+                if (string.IsNullOrWhiteSpace(appendText))
+                    throw McpToolErrors.ValidationError("appendText is empty: pass the text to add.");
+            }
+
             using var updateLease = await client.BeginUpdateAsync();
             if (noteType != null)
                 noteType = await KnownTypes.ResolveAsync(noteType, "note_types", client);
@@ -132,6 +145,17 @@ public static class NoteTools
                 : GrampsObjectPatch.StringValue(note.Root["text"]);
             if (text != null && !string.Equals(text, storedText, StringComparison.Ordinal))
                 note.Set("text", new StyledTextRequest { Text = text, Tags = [] });
+            if (appendText != null)
+            {
+                // Tag ranges index the old text, which stays at the start, so styling and links stay where they were.
+                var body = string.IsNullOrEmpty(storedText) || storedText.EndsWith('\n')
+                    ? storedText + appendText
+                    : storedText + "\n" + appendText;
+                if (note.Root["text"] is JsonObject storedStyled)
+                    storedStyled["string"] = body;
+                else
+                    note.Set("text", new StyledTextRequest { Text = body, Tags = [] });
+            }
             note.Set("type", noteType);
             note.Set("format", NoteTextFormatParser.ParseOptional(format));
             note.ApplyHandles("tag_list", tagHandles, linkMode);

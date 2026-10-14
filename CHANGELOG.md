@@ -31,6 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   PNG, GIF, WebP, TIFF, BMP or PDF. A file the tree already stores, by MD5
   checksum, is reused instead of uploaded twice, so repeating a call is safe.
   Unknown `attachTo` records and unreadable dates are rejected before upload
+- `appendText` on `update_note` adds text to the end of a note on a new line,
+  keeping the rest of the body with its styling and links. A long research
+  note no longer has to be sent back in full to add one finding, and text
+  saved meanwhile by someone else is kept, since the tool appends to the body
+  as stored at the time of the call
 
 ### Changed
 
