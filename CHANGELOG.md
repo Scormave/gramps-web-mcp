@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-10-14
+
 ### Added
 
 - `sort` on `update_person` and `update_family` puts the named lists in date
@@ -770,7 +772,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.2.0...v2.3.0
