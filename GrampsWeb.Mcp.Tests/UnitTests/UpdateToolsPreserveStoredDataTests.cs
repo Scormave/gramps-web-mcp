@@ -212,7 +212,7 @@ public class UpdateToolsPreserveStoredDataTests
     }
 
     [Theory]
-    [InlineData("New body", "More", "not both")]
+    [InlineData("New body", "More", "cannot be combined")]
     [InlineData(null, " \n", "appendText is empty")]
     public async Task UpdateNote_AppendText_Rejects_Text_Too_Or_Blank_Before_Any_Request(string? text, string appended, string message)
     {
@@ -220,6 +220,93 @@ public class UpdateToolsPreserveStoredDataTests
 
         var ex = await Assert.ThrowsAsync<McpException>(
             () => NoteTools.UpdateNote("h-note", text: text, appendText: appended, client: CreateClient(handler)));
+
+        Assert.Contains(message, ex.Message);
+        Assert.Null(handler.PutPath);
+    }
+
+    [Fact]
+    public async Task UpdateNote_ReplaceText_Changes_One_Fragment_And_Moves_Styling_And_Links_With_It()
+    {
+        var handler = new StoredObjectHandler(StoredNote);
+
+        await NoteTools.UpdateNote("h-note", replaceText: "See", withText: "Look at", client: CreateClient(handler));
+
+        var expected = Parse(StoredNote);
+        expected["text"]!["string"] = "Look at the 1858 census";
+        expected["text"]!["tags"]![0]!["ranges"] = JsonNode.Parse("[[8, 23]]");
+        expected["text"]!["tags"]![1]!["ranges"] = JsonNode.Parse("[[0, 7]]");
+        AssertJsonEqual(expected, handler.Body);
+    }
+
+    [Theory]
+    [InlineData("XY", "abcXYghij", "[[0, 3], [5, 9], [2, 6], [1, 3], [5, 7], [3, 5]]")]
+    [InlineData("", "abcghij", "[[0, 3], [3, 7], [2, 4], [1, 3], [3, 5]]")]
+    public async Task UpdateNote_ReplaceText_Moves_Each_Kind_Of_Range_And_Drops_What_Was_Inside(string with, string expectedText, string expectedRanges)
+    {
+        // Ranges before, after, around, running into, running out of, equal to and inside the replaced "def".
+        var note = Parse(StoredNote);
+        note["text"] = JsonNode.Parse("""
+            {
+              "_class": "StyledText", "string": "abcdefghij",
+              "tags": [{ "_class": "StyledTextTag", "name": "Bold", "value": null,
+                         "ranges": [[0, 3], [6, 10], [2, 7], [1, 4], [5, 8], [3, 6], [4, 5]] },
+                       { "_class": "StyledTextTag", "name": "Italic", "value": null, "ranges": [[4, 5]] }]
+            }
+            """);
+        var handler = new StoredObjectHandler(note.ToJsonString());
+
+        await NoteTools.UpdateNote("h-note", replaceText: "def", withText: with, client: CreateClient(handler));
+
+        var text = handler.Body!["text"]!;
+        Assert.Equal(expectedText, text["string"]!.GetValue<string>());
+        var tags = text["tags"]!.AsArray();
+        Assert.Equal("Bold", Assert.Single(tags)!["name"]!.GetValue<string>());
+        AssertJsonEqual(JsonNode.Parse(expectedRanges), tags[0]!["ranges"]);
+    }
+
+    [Fact]
+    public async Task UpdateNote_ReplaceText_Counts_Range_Positions_In_Code_Points_Like_Gramps()
+    {
+        var note = Parse(StoredNote);
+        note["text"] = JsonNode.Parse("""
+            { "_class": "StyledText", "string": "😀abc",
+              "tags": [{ "_class": "StyledTextTag", "name": "Bold", "value": null, "ranges": [[3, 4]] }] }
+            """);
+        var handler = new StoredObjectHandler(note.ToJsonString());
+
+        await NoteTools.UpdateNote("h-note", replaceText: "c", withText: "cde", client: CreateClient(handler));
+
+        Assert.Equal("😀abcde", handler.Body!["text"]!["string"]!.GetValue<string>());
+        AssertJsonEqual(JsonNode.Parse("[[3, 6]]"), handler.Body!["text"]!["tags"]![0]!["ranges"]);
+    }
+
+    [Fact]
+    public async Task UpdateNote_ReplaceText_Then_AppendText_In_One_Call()
+    {
+        var handler = new StoredObjectHandler(StoredNote);
+
+        await NoteTools.UpdateNote("h-note", replaceText: "1858", withText: "1850", appendText: "Also the 1858 census",
+            client: CreateClient(handler));
+
+        Assert.Equal("See the 1850 census\nAlso the 1858 census", handler.Body!["text"]!["string"]!.GetValue<string>());
+        AssertJsonEqual(Parse(StoredNote)["text"]!["tags"], handler.Body!["text"]!["tags"]);
+    }
+
+    [Theory]
+    [InlineData("New body", "See", "Look", "cannot be combined")]
+    [InlineData(null, "", "x", "replaceText is empty")]
+    [InlineData(null, "See", null, "withText is missing")]
+    [InlineData(null, null, "x", "withText needs replaceText")]
+    [InlineData(null, "1858 Census", "x", "was not found")]
+    [InlineData(null, "e", "x", "occurs 4 times")]
+    public async Task UpdateNote_ReplaceText_Rejects_A_Bad_Or_Ambiguous_Fragment_Without_Saving(
+        string? text, string? replace, string? with, string message)
+    {
+        var handler = new StoredObjectHandler(StoredNote);
+
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => NoteTools.UpdateNote("h-note", text: text, replaceText: replace, withText: with, client: CreateClient(handler)));
 
         Assert.Contains(message, ex.Message);
         Assert.Null(handler.PutPath);

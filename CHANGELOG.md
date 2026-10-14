@@ -36,6 +36,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   note no longer has to be sent back in full to add one finding, and text
   saved meanwhile by someone else is kept, since the tool appends to the body
   as stored at the time of the call
+- `replaceText` with `withText` on `update_note` changes one fragment of a
+  note, so a typo or a single item in a long research note is fixed without
+  sending the whole text back. The fragment must occur exactly once, else the
+  call is rejected and nothing is saved; an empty `withText` deletes it.
+  Styling and links after the fragment move with the text, and those around
+  it stretch or shrink with it
 
 ### Changed
 

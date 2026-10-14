@@ -95,7 +95,8 @@ Every update tool sends back the stored object with only the supplied fields
 changed, including data the tools cannot show or edit (styled note text, LDS
 ordinances, fields from newer Gramps versions). `update_note` keeps the styling
 and links of a note when `text` is omitted or unchanged; changed text loses them.
-`appendText` adds to the end of a note and keeps them.
+`replaceText` with `withText` changes one fragment of a note and `appendText`
+adds to its end; both keep them.
 
 When the mutation gate is enabled, update tools serialize
 their entire read/modify/write sequence against each other. HTTP write throttling
@@ -526,14 +527,19 @@ Link via `noteHandles` on other objects.
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update a note (same field set, all optional). `text` replaces the whole body;
-`appendText` adds to the end of the body as stored at the time of the call, so
-a long research note can grow without the caller sending it back in full.
+`replaceText` with `withText` changes one fragment and `appendText` adds to the
+end, both working on the body as stored at the time of the call, so a long
+research note can be corrected or extended without the caller sending it back
+in full. When both are passed, the fragment is replaced first. A fragment that
+is not found, or found more than once, is rejected and nothing is saved.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `handle` | `string` | yes | — | Note handle or Gramps ID |
 | `text` | `string?` | no | — | New body; changed text loses the old styling and links |
 | `appendText` | `string?` | no | — | Text added on a new line at the end (a line break is put in between unless the body ends with one; start with a line break for an empty line). Keeps the rest of the body, styling and links included. Cannot be combined with `text` |
+| `replaceText` | `string?` | no | — | Fragment of the body to replace, exactly as stored (spaces, line breaks, letter case); must occur once. Styling and links after it move with the text, those around it stretch or shrink, those wholly inside it are dropped. Cannot be combined with `text` |
+| `withText` | `string?` | no | — | Text put in place of `replaceText`; required with it, an empty string deletes the fragment |
 | `noteType` | `string?` | no | — | Note type |
 | `format` | `string?` | no | — | Plain or Html |
 | `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
