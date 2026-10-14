@@ -39,6 +39,10 @@ Registry publishing, so keep the version metadata aligned before tagging.
   - Confirm `THIRD-PARTY-NOTICES.txt` lists each new package with its license
     and copyright, and that its upstream notice links point at the versions in
     use; the test suite checks only the package names.
+- Check that the Six Labors license key in `GrampsWeb.Mcp/sixlabors.lic` is not
+  due for renewal (see [Six Labors License Key](#six-labors-license-key)): Release
+  builds fail once it expires, so the tag would publish no Docker image and no
+  MCPB bundles.
 - Check whether MCP Registry metadata changed:
   - Confirm `server.json` still matches the current schema and package layout.
   - Confirm the Docker image name in `server.json` matches the tag that will be
@@ -126,3 +130,32 @@ the equivalent tagged image to the configured container registry.
 - If a workflow failed before publishing public artifacts, fix the branch and
   re-run the failed workflow or push a replacement tag only after confirming the
   failed tag was not used externally.
+
+## Six Labors License Key
+
+ImageSharp 4 refuses to compile `GrampsWeb.Mcp` in Release without a valid Six
+Labors license key; a Debug build only warns. The repository commits a free
+community key, scoped to the `GrampsWeb.Mcp` and `GrampsWeb.Mcp.Tests`
+assemblies, as `GrampsWeb.Mcp/sixlabors.lic`, and the build finds it on its own.
+The key stops working after its `ExpiryDateUtc`. Binaries built before then keep
+running, because the check happens only at build time.
+
+Renewal opens 90 days before the expiry date. From then on
+`.github/workflows/license-key.yml`, which runs every Monday, keeps an issue
+titled "Renew the Six Labors license key" open, and in the last 30 days the
+workflow and `SixLaborsLicenseTests` fail. GitHub turns off scheduled workflows
+after 60 days without repository activity, so the test is the backstop.
+
+To renew:
+
+- Apply again at <https://licensing.sixlabors.com/> with the same email as
+  before, for the assemblies `GrampsWeb.Mcp` and `GrampsWeb.Mcp.Tests`.
+  Open-source projects are approved automatically.
+- Replace `GrampsWeb.Mcp/sixlabors.lic` with the new key; keep the file name and
+  location.
+- Run `dotnet build gramps-web-mcp.sln -c Release`. The detailed build log
+  (`-v detailed`) shows `Six Labors license validated` with the new key's ID.
+- Commit the file and close the reminder issue.
+
+Renaming the `GrampsWeb.Mcp` assembly, or referencing ImageSharp directly from
+another project, needs a key that names that assembly.

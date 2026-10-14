@@ -478,8 +478,21 @@ Default environment in the image:
   pack MCPB bundles for five platforms and attach them to the GitHub Release.
 - **GitHub Actions** (`.github/workflows/pages.yml`): deploy `site/` to GitHub
   Pages when it changes on `main`.
+- **GitHub Actions** (`.github/workflows/license-key.yml`): every Monday, open
+  an issue when the Six Labors license key is due for renewal (see below).
 - **Gitea Actions** (`.gitea/workflows/docker.yml`): build and publish the
   Docker image to a private Gitea container registry.
+
+### Six Labors license key
+
+ImageSharp 4 checks for a Six Labors license key before it compiles
+`GrampsWeb.Mcp`. The free community key committed as
+`GrampsWeb.Mcp/sixlabors.lic` covers the `GrampsWeb.Mcp` and
+`GrampsWeb.Mcp.Tests` assemblies, and every build finds it on its own: local
+builds, CI, the Docker build stage and `scripts/pack-mcpb.sh`. Without it a
+Release build fails with "No Six Labors license found" and a Debug build only
+warns. The key expires; [RELEASING.md](RELEASING.md#six-labors-license-key)
+describes the reminders and how to renew it.
 
 ### Local development
 

@@ -21,6 +21,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   takes a JSON array or one string such as `"Events | Children"`, and rejects
   a list the tool does not have, naming the ones it does
 
+### Changed
+
+- Building `GrampsWeb.Mcp` in Release now needs a Six Labors license key, which
+  ImageSharp 4 checks before it compiles the project. The repository commits a
+  free community key for the project's assemblies as
+  `GrampsWeb.Mcp/sixlabors.lic`, so builds, the Docker image and MCPB bundles
+  need no setup. The key expires on 2028-01-12; a weekly workflow opens an issue
+  when it is due for renewal, and a test fails 30 days before it expires.
+  Built binaries do not check the key
+
 ### Removed
 
 - `sortEvents` on `update_person` and `update_family`. Use `sort: "Events"`;
@@ -34,6 +44,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `create_citation` and `update_citation` describe it, so a date such as the
   year of a register entry read as the day the source was consulted. The card
   now shows it as `Date:`
+
+### Security
+
+- Update SixLabors.ImageSharp from 3.1.12 to 4.1.3. Two advisories fixed in
+  4.1.2 affect the thumbnails that `read_media` and the media thumbnail
+  resource render from originals: an ICC profile with forged lookup-table
+  dimensions could make the decoder allocate far more memory than the image
+  needs
+  ([GHSA-gwg2-r3hj-4w44](https://github.com/advisories/GHSA-gwg2-r3hj-4w44)),
+  and a BigTIFF file with a forged directory count could keep a decoder thread
+  looping ([GHSA-wmxv-xphr-5c9g](https://github.com/advisories/GHSA-wmxv-xphr-5c9g)).
+  The other three advisories of that release concern the TIFF CCITT encoders
+  and histogram equalization, which the server does not use
 
 ## [2.4.0] - 2026-10-08
 

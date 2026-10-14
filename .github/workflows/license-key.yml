@@ -1,0 +1,51 @@
+name: License key expiry
+
+# ImageSharp 4 refuses to compile the server in Release without a valid Six Labors
+# license key, so CI, Docker and MCPB builds stop when GrampsWeb.Mcp/sixlabors.lic
+# expires. Renewal opens 90 days before the expiry date: from then on this workflow
+# keeps one open issue as a reminder, and in the last 30 days it also fails.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the Six Labors license key
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          expiry=$(tr ';' '\n' < GrampsWeb.Mcp/sixlabors.lic | sed -n 's/^ExpiryDateUtc=//p')
+          if [ -z "$expiry" ]; then
+            echo "::error::GrampsWeb.Mcp/sixlabors.lic has no ExpiryDateUtc"
+            exit 1
+          fi
+          expiry_date=${expiry%%T*}
+          days_left=$(( ($(date -u -d "$expiry_date" +%s) - $(date -u +%s)) / 86400 ))
+          echo "The Six Labors license key expires on $expiry_date, in $days_left days."
+          if [ "$days_left" -gt 90 ]; then
+            exit 0
+          fi
+
+          title="Renew the Six Labors license key"
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 200 --json title \
+            --jq "map(select(.title == \"$title\")) | length")
+          if [ "$open" -eq 0 ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "\
+          \`GrampsWeb.Mcp/sixlabors.lic\` expires on $expiry_date. After that, Release builds in CI, Docker and the MCPB workflow fail; binaries already built keep working.
+
+          To renew, apply again at https://licensing.sixlabors.com/ with the same email, for the assemblies \`GrampsWeb.Mcp\` and \`GrampsWeb.Mcp.Tests\`, and replace \`GrampsWeb.Mcp/sixlabors.lic\` with the new key. See \`GrampsWeb.Mcp/docs/RELEASING.md\`."
+          fi
+
+          if [ "$days_left" -le 30 ]; then
+            echo "::error::The Six Labors license key expires on $expiry_date, in $days_left days. Renew it as GrampsWeb.Mcp/docs/RELEASING.md describes."
+            exit 1
+          fi

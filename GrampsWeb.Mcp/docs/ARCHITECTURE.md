@@ -60,7 +60,7 @@ gramps-web-mcp.sln
 | `ModelContextProtocol.AspNetCore` | 1.3.0 |
 | `Microsoft.Extensions.Hosting` | 10.0.12 |
 | `Microsoft.Extensions.Http` | 10.0.12 |
-| `SixLabors.ImageSharp` | 3.1.12 (media thumbnails; Six Labors Split License, Apache 2.0 terms for open-source use) |
+| `SixLabors.ImageSharp` | 4.1.3 (media thumbnails; Six Labors Split License, Apache 2.0 terms for open-source use) |
 
 Test-only: xUnit 2.7, Moq 4.20, YamlDotNet 16.3 (for OpenAPI spec parsing),
 Microsoft.AspNetCore.TestHost 10.0.12 (in-process MCP server tests).
@@ -68,6 +68,15 @@ Microsoft.AspNetCore.TestHost 10.0.12 (in-process MCP server tests).
 [`THIRD-PARTY-NOTICES.txt`](../../THIRD-PARTY-NOTICES.txt) lists every package the
 server restores, including transitive ones, with its license.
 `ThirdPartyNoticesTests` fails when that list and `obj/project.assets.json` differ.
+
+ImageSharp 4 checks for a Six Labors license key before it compiles a project
+that references it directly. The repository commits a free community key for
+the `GrampsWeb.Mcp` and `GrampsWeb.Mcp.Tests` assemblies as
+[`GrampsWeb.Mcp/sixlabors.lic`](../sixlabors.lic), which the build finds on its
+own. Without it a Release build fails and a Debug build only warns. The check
+runs offline at build time; built binaries contain no license code and keep
+working after the key expires. Renewing the key is part of
+[RELEASING.md](RELEASING.md).
 
 ## Transport modes
 
