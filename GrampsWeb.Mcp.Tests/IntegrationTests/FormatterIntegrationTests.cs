@@ -14,7 +14,7 @@ public class FormatterIntegrationTests
 {
     [Fact]
     [Trait("Category", "Unit")]
-    public void FormatPlaceHierarchy_WithSimplePlace_ReturnsNameAndType()
+    public async Task FormatPlaceHierarchy_WithSimplePlace_ReturnsNameAndType()
     {
         // Arrange
         var place = new GrampsPlace
@@ -24,7 +24,7 @@ public class FormatterIntegrationTests
         };
 
         // Act  
-        var result = PlaceFormatter.FormatPlaceHierarchy(place, null, 6).Result;
+        var result = await PlaceFormatter.FormatPlaceHierarchy(place, null, 6);
 
         // Assert
         Assert.Contains("Cork", result);
