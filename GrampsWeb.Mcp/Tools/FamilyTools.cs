@@ -173,12 +173,13 @@ public static class FamilyTools
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
         string linkMode = "replace",
-        [Description(EventRefOrder.Description)]
-        bool sortEvents = false)
+        [Description(LinkOrder.FamilyDescription)]
+        FlexibleSortList? sort = null)
     {
         try
         {
             LinkUpdates.Validate(linkMode);
+            var sortedLists = LinkOrder.Parse(sort, LinkOrder.FamilyLists);
             await KnownTypes.CheckChildRefsAsync(childRefs, client, linkMode);
             await EventRoles.CheckAsync(eventRefs, client, linkMode);
             await KnownTypes.CheckAttributesAsync(attributes, client);
@@ -202,14 +203,13 @@ public static class FamilyTools
             family.Set("type", relationshipType);
             family.ApplyRefs("child_ref_list", (GrampsChildRef[]?)childRefs, linkMode);
             family.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
-            if (sortEvents)
-                await EventRefOrder.SortAsync(client, family.Root);
             family.ApplyMediaHandles(mediaHandles, linkMode);
             family.ReplaceAttributes(attributes);
             family.ApplyHandles("citation_list", citationHandles, linkMode);
             family.ApplyHandles("note_list", noteHandles, linkMode);
             family.ApplyHandles("tag_list", tagHandles, linkMode);
             family.Set("private", isPrivate);
+            await LinkOrder.SortAsync(client, family.Root, sortedLists);
 
             await family.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Family", family.Handle, family.GrampsId);

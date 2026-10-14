@@ -6,17 +6,17 @@ using GrampsWeb.Mcp.Models;
 namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
-/// Puts the event references of a person or family in date order (the <c>sortEvents</c> argument of the update tools).
+/// Puts the event references of a person or family in date order (<c>Events</c> in the <c>sort</c> argument of the
+/// update tools, see <see cref="LinkOrder"/>).
 /// The stored reference entries are only moved, so their roles, notes, citations and privacy stay.
 /// </summary>
 internal static class EventRefOrder
 {
-    public const string Description =
-        "true sorts all event links by event date after the other changes, keeping each link's role and metadata; " +
-        "alone it sorts the stored list. Undated Birth, Baptism and Christening go first and other undated events last, " +
-        "ending with Death, then Burial and Cremation. On the same date: \"before\" dates, then Residence and Occupation, " +
-        "Birth, Baptism, other events, Death, Burial, then \"after\" dates. Default false keeps the order " +
-        "(linkMode add appends at the end).";
+    /// <summary>The event order, for the descriptions of the <c>sort</c> argument.</summary>
+    public const string Order =
+        "Events: by event date; undated Birth, Baptism and Christening go first and other undated events last, " +
+        "ending with Death, then Burial and Cremation. On the same date: \"before\" dates, then Residence and " +
+        "Occupation, Birth, Baptism, other events, Death, Burial, then \"after\" dates.";
 
     private const int ModBefore = 1;
     private const int ModAfter = 2;
@@ -30,7 +30,7 @@ internal static class EventRefOrder
             return;
 
         var refs = list.ToArray();
-        var handles = refs.Select(RefHandle).ToArray();
+        var handles = refs.Select(LinkOrder.RefHandle).ToArray();
         var events = await client.GetByHandlesAsync<GrampsEvent>("events", handles, e => e.Handle);
         var keys = handles
             .Select(h => SortKey(h is not null && events.TryGetValue(h, out var evt) ? evt : null))
@@ -70,7 +70,4 @@ internal static class EventRefOrder
         "burial" or "cremation" => 5,
         _ => 3
     };
-
-    private static string? RefHandle(JsonNode? node) =>
-        GrampsObjectPatch.StringValue(node is JsonObject o ? o["ref"] : node)?.Trim();
 }

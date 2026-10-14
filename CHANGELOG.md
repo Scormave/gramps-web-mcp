@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `sort` on `update_person` and `update_family` puts the named lists in date
+  order after the other changes: `Events` as `sortEvents` did, and now also
+  `Children` (`update_family`), `Families` (`update_person`), `Citations` and
+  `Media`. A child or family added with `linkMode: "add"` used to land at the
+  end, and putting it in place meant sending the whole list again in `replace`
+  mode. Children go by birth date, else baptism or christening date; a
+  person's families by the marriage date, else another marriage event such as
+  banns, else the birth of the first child; citations and media by their own
+  date. Undated entries go last, equal dates keep their order, and the
+  references keep their relationships, crops and other metadata. `sort`
+  takes a JSON array or one string such as `"Events | Children"`, and rejects
+  a list the tool does not have, naming the ones it does
+
+### Removed
+
+- `sortEvents` on `update_person` and `update_family`. Use `sort: "Events"`;
+  a call that still passes `sortEvents` fails with an unknown-argument error
+  that suggests `sort`
+
 ### Fixed
 
 - The citation card that `get_object` returns labelled the citation's date

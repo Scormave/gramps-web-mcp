@@ -69,17 +69,24 @@ to change existing link metadata. An attribute with the same type and value as
 a stored one keeps its citations, notes and privacy. Adding and removing in the
 same workflow requires separate calls or one full replacement.
 
-`update_person` and `update_family` also take `sortEvents: true`, which sorts
-the whole event list by event date after the link lists are applied, so an
-event added with `linkMode: "add"` lands in its place instead of at the end.
-It only moves the stored references, so their roles and metadata stay, and it
-works alone to sort an existing list. Undated Birth, Baptism and Christening go
-first; other undated events go last, ending with Death, then Burial and
-Cremation. On the same date: "before" dates, then Residence and Occupation,
-Birth, Baptism, other events, Death and Burial, then "after" dates.
+`update_person` and `update_family` also take `sort`, which names the lists
+to put in date order after the link lists are applied, so a link added with
+`linkMode: "add"` lands in its place instead of at the end. It takes a JSON
+array (`["Events", "Citations"]`) or one string (`"Events | Citations"`);
+names are case-insensitive. It only moves the stored references, so their
+roles, relationships, crops and other metadata stay, and it works alone to
+sort an existing list. Equal dates keep their stored order.
+
+| List | Tool | Order |
+|------|------|-------|
+| `Events` | both | Event date. Undated Birth, Baptism and Christening go first; other undated events go last, ending with Death, then Burial and Cremation. On the same date: "before" dates, then Residence and Occupation, Birth, Baptism, other events, Death and Burial, then "after" dates |
+| `Children` | `update_family` | Birth date, else baptism or christening date; undated children last |
+| `Families` | `update_person` | The person's marriages and other unions: Marriage date, else another marriage event (Engagement, Marriage Banns, …), else the earliest birth of a child; undated families last |
+| `Citations`, `Media` | both | The citation's or media object's own date; undated ones last. Gramps shows the first media as the person's picture, so sorting `Media` can change it |
 
 ```text
-update_person(handle: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"], linkMode: "add", sortEvents: true)
+update_person(handle: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"], linkMode: "add", sort: "Events")
+update_family(handle: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "add", sort: ["Children"])
 ```
 
 Every update tool sends back the stored object with only the supplied fields
@@ -366,7 +373,7 @@ Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
 |-----------|------|----------|-------------|
 | `handle` | `string` | yes | Person handle |
 | All fields from `CreatePerson` | — | no | Same as create (all optional) |
-| `sortEvents` | `bool` | no | Sort the event list by date after the changes (default `false`); see [Incremental link updates](#incremental-link-updates) |
+| `sort` | `FlexibleSortList?` | no | Lists to put in date order after the changes: `Events`, `Families`, `Citations`, `Media`; see [Incremental link updates](#incremental-link-updates) |
 
 ---
 
@@ -390,7 +397,8 @@ Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guid
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update an existing family.  Same field set as create (all optional), plus
-`sortEvents` (default `false`) to sort the family events by date.
+`sort` to put `Events`, `Children`, `Citations` or `Media` in date order; see
+[Incremental link updates](#incremental-link-updates).
 
 ---
 

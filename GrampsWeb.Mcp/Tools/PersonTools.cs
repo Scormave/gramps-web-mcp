@@ -326,12 +326,13 @@ public static class PersonTools
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
         string linkMode = "replace",
-        [Description(EventRefOrder.Description)]
-        bool sortEvents = false)
+        [Description(LinkOrder.PersonDescription)]
+        FlexibleSortList? sort = null)
     {
         try
         {
             LinkUpdates.Validate(linkMode);
+            var sortedLists = LinkOrder.Parse(sort, LinkOrder.PersonLists);
             await KnownTypes.CheckNameAsync(primaryName?.Name, "primaryName", client);
             await KnownTypes.CheckNamesAsync(alternateNames, "alternateNames", client);
             await EventRoles.CheckAsync(eventRefs, client, linkMode);
@@ -348,8 +349,6 @@ public static class PersonTools
             person.Set("gender", GrampsGenderParser.ParseOptional(gender));
             person.Set("alternate_names", ((GrampsName[]?)alternateNames)?.Select(ConvertNameToRequest).ToArray());
             person.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
-            if (sortEvents)
-                await EventRefOrder.SortAsync(client, person.Root);
             person.ApplyHandles("family_list", familyHandles, linkMode);
             person.ApplyHandles("parent_family_list", parentFamilyHandles, linkMode);
             person.ApplyMediaHandles(mediaHandles, linkMode);
@@ -361,6 +360,7 @@ public static class PersonTools
             person.Set("urls", (GrampsUrl[]?)urls);
             person.ApplyRefs("person_ref_list", (GrampsPersonRef[]?)personAssociations, linkMode);
             person.Set("private", isPrivate);
+            await LinkOrder.SortAsync(client, person.Root, sortedLists);
 
             await person.SaveAsync(client);
             return ResponseEnvelope.UpdateSuccess("Person", person.Handle, person.GrampsId);

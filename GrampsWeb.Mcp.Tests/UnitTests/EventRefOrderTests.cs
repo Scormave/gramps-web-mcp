@@ -14,11 +14,11 @@ using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
-/// <summary>The <c>sortEvents</c> argument of update_person and update_family.</summary>
+/// <summary>Events in the <c>sort</c> argument of update_person and update_family.</summary>
 public class EventRefOrderTests
 {
     [Fact]
-    public async Task UpdatePerson_SortEvents_Orders_Links_By_Date_And_Keeps_Their_Metadata()
+    public async Task UpdatePerson_Sort_Events_Orders_Links_By_Date_And_Keeps_Their_Metadata()
     {
         var marriageSortVal = GrampsDateSortVal.SortValueOf(GrampsCalendars.Gregorian, 0, 1866, 11, 11);
         var handler = new TreeHandler(new Dictionary<string, string>
@@ -53,7 +53,7 @@ public class EventRefOrderTests
         });
         var stored = JsonNode.Parse(handler.Bodies["/api/people/h-person"])!;
 
-        await PersonTools.UpdatePerson("h-person", client: CreateClient(handler), sortEvents: true);
+        await PersonTools.UpdatePerson("h-person", client: CreateClient(handler), sort: Sort("events"));
 
         var refs = handler.Body!["event_ref_list"]!.AsArray();
         Assert.Equal(
@@ -65,7 +65,7 @@ public class EventRefOrderTests
     }
 
     [Fact]
-    public async Task UpdateFamily_SortEvents_Places_An_Added_Link_By_Its_Date()
+    public async Task UpdateFamily_Sort_Events_Places_An_Added_Link_By_Its_Date()
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
@@ -90,7 +90,7 @@ public class EventRefOrderTests
 
         await FamilyTools.UpdateFamily("h-family",
             eventRefs: JsonSerializer.Deserialize<FlexibleEventRefList>("""["e-banns::Family"]"""),
-            client: CreateClient(handler), linkMode: "add", sortEvents: true);
+            client: CreateClient(handler), linkMode: "add", sort: Sort("Events"));
 
         Assert.Equal(
             ["e-banns", "e-marriage", "e-divorce"],
@@ -98,7 +98,7 @@ public class EventRefOrderTests
     }
 
     [Fact]
-    public async Task UpdatePerson_Without_SortEvents_Does_Not_Read_Events()
+    public async Task UpdatePerson_Without_Sort_Does_Not_Read_Events()
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
@@ -142,6 +142,9 @@ public class EventRefOrderTests
 
         Assert.Equal(2, EventRefOrder.SortKey(textOnly).Position);
     }
+
+    private static FlexibleSortList Sort(string names) =>
+        JsonSerializer.Deserialize<FlexibleSortList>(JsonSerializer.Serialize(names))!;
 
     private static void AssertJsonEqual(JsonNode? expected, JsonNode? actual) =>
         Assert.True(JsonNode.DeepEquals(expected, actual), $"Expected:\n{expected}\nActual:\n{actual}");
