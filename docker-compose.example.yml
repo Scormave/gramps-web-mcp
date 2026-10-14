@@ -81,7 +81,8 @@ services:
       MCP_PATH: ${MCP_PATH:-/mcp}
       MCP_STATELESS: ${MCP_STATELESS:-true}
       MCP_ENABLE_LEGACY_SSE: ${MCP_ENABLE_LEGACY_SSE:-false}
-    # For create_media: mount a folder of scans and set GRAMPS_MEDIA_UPLOAD_DIRS=/uploads.
+    # For create_media: set GRAMPS_MEDIA_RESOURCES_ENABLED=true, mount a folder of scans
+    # and set GRAMPS_MEDIA_UPLOAD_DIRS=/uploads.
     # volumes:
     #   - ./media-inbox:/uploads:ro
     depends_on:

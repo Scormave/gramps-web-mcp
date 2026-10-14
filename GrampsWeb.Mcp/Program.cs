@@ -60,6 +60,7 @@ static async Task RunStdioAsync(GrampsConfig config, McpAuthConfig auth)
         host.LogIgnoredApiKeyInStdio();
     }
     host.LogRetiredEnvironmentVariables();
+    host.LogUploadWithoutMediaAccess(config);
 
     await host.RunAsync();
 }
@@ -95,6 +96,7 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
     app.MapGrampsMcpEndpoints(transport, auth);
     app.LogAuthStartupStatus(auth);
     app.LogRetiredEnvironmentVariables();
+    app.LogUploadWithoutMediaAccess(config);
     await app.RunAsync();
 }
 

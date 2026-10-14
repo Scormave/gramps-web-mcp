@@ -28,10 +28,10 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # GRAMPS_MUTATION_SERIALIZE  true|false — serialize mutation HTTP calls in-process (default true).
 # GRAMPS_MUTATION_MIN_INTERVAL_MS  Minimum ms between mutation HTTP calls (default 0; SQLite often 250).
 # GRAMPS_LOG_LEVEL    Server log level (default Information); Debug/Trace also log API bodies.
-# GRAMPS_MEDIA_RESOURCES_ENABLED  true|false — expose read_media and media resources (default false).
+# GRAMPS_MEDIA_RESOURCES_ENABLED  true|false — expose read_media, media resources and uploads (default false).
 # GRAMPS_MEDIA_MAX_BYTES  Max bytes returned by read_media or a media resource (default 5242880).
 # GRAMPS_MEDIA_ALLOW_PRIVATE  true|false — return bytes for media marked private (default false).
-# GRAMPS_MEDIA_UPLOAD_DIRS  Mounted folders create_media may upload from, :-separated (default unset: off).
+# GRAMPS_MEDIA_UPLOAD_DIRS  Mounted folders create_media may upload from, :-separated (default unset: off; needs media access).
 # GRAMPS_MEDIA_UPLOAD_MAX_BYTES  Largest file create_media or update_media uploads (default 52428800).
 
 # --- MCP transport (optional; these defaults suit a networked container) ---

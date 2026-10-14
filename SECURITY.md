@@ -50,8 +50,10 @@ resource content.
 
 ## Media upload
 
-Uploading is off unless `GRAMPS_MEDIA_UPLOAD_DIRS` lists at least one folder;
-`create_media` is hidden from `tools/list` until then, and in read-only mode.
+Uploading is off unless media file access is enabled
+(`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and `GRAMPS_MEDIA_UPLOAD_DIRS` lists at
+least one folder; until then, and in read-only mode, `create_media` is hidden
+from `tools/list`.
 `create_media` and `update_media` read files only from those folders and their
 subfolders: symbolic links are resolved before the check, so a link cannot lead
 outside, and `..` cannot climb out. The type is judged from the file's first

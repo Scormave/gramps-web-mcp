@@ -107,7 +107,7 @@
     "gramps_media_resources_enabled": {
       "type": "boolean",
       "title": "Enable media file access",
-      "description": "Allow read_media for image previews (rendered locally, location and other metadata removed) and original files. Disabled by default for privacy; when disabled, the tool is hidden from the catalog.",
+      "description": "Allow read_media for image previews (rendered locally, location and other metadata removed) and original files, and uploads from the media upload folder. Disabled by default for privacy; when disabled, read_media and create_media are hidden from the catalog.",
       "default": false,
       "required": false
     },
@@ -130,7 +130,7 @@
     "gramps_media_upload_dir": {
       "type": "directory",
       "title": "Media upload folder",
-      "description": "Folder create_media and update_media may upload photos, scans and PDFs from (files in its subfolders too). Clear it to turn uploading off; create_media is then hidden. On macOS, Claude may ask for access to this folder.",
+      "description": "Folder create_media and update_media may upload photos, scans and PDFs from (files in its subfolders too) while media file access is enabled. Clear it to turn uploading off; create_media is then hidden. On macOS, Claude may ask for access to this folder.",
       "default": "${HOME}/Downloads",
       "required": false
     },

@@ -38,10 +38,11 @@ public record GrampsConfig(
     public bool UsesRefreshToken => !string.IsNullOrWhiteSpace(RefreshToken);
 
     /// <summary>
-    /// True when <c>GRAMPS_MEDIA_UPLOAD_DIRS</c> names at least one folder that create_media and
-    /// update_media may upload files from.
+    /// True when media file access is enabled and <c>GRAMPS_MEDIA_UPLOAD_DIRS</c> names at least one
+    /// folder that create_media and update_media may upload files from. Media file access is the one
+    /// switch for every file the server handles, read or uploaded.
     /// </summary>
-    public bool MediaUploadEnabled => MediaUploadDirs is { Count: > 0 };
+    public bool MediaUploadEnabled => MediaResourcesEnabled && MediaUploadDirs is { Count: > 0 };
 
     /// <summary>
     /// Loads configuration from environment variables.

@@ -307,7 +307,7 @@ public class MediaUploadToolsTests : IDisposable
     private static FlexibleMediaLinkList LinksJson(string json) => JsonSerializer.Deserialize<FlexibleMediaLinkList>(json)!;
 
     private GrampsConfig Config() =>
-        new("https://gramps-web.test", "user", "pass", "tree", MediaUploadDirs: [_uploads]);
+        new("https://gramps-web.test", "user", "pass", "tree", MediaResourcesEnabled: true, MediaUploadDirs: [_uploads]);
 
     /// <summary>
     /// A Gramps Web stand-in: records each request as "METHOD path?query", serves <see cref="Objects"/> and

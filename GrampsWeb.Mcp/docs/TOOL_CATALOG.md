@@ -20,8 +20,8 @@ Direct calls to a previously known write-tool name still return an MCP error
 before any mutation request is sent to Gramps Web.
 When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media`
 is also omitted from the catalog; `get_object` still reads
-media metadata. `create_media` is published only when
-`GRAMPS_MEDIA_UPLOAD_DIRS` names at least one upload folder.
+media metadata. `create_media` is published only when media access is enabled
+and `GRAMPS_MEDIA_UPLOAD_DIRS` names at least one upload folder.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
 
 Tool descriptions state what a tool does, what it returns, when to use a
@@ -37,7 +37,7 @@ and `linkMode` work, the order to create linked records in, and when to delete.
 They name only the tools the configuration publishes: read-only mode replaces
 the writing guidance with one line saying no tool changes the tree,
 `read_media` is mentioned only when media access is enabled, and
-`create_media` only when an upload folder is set.
+`create_media` only when media access is enabled and an upload folder is set.
 
 Create/update/delete HTTP calls are serialized in-process by default
 (`GRAMPS_MUTATION_SERIALIZE=true`) and may wait
@@ -590,7 +590,8 @@ upload or download file bytes. Media byte tools/resources require
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect `GRAMPS_MEDIA_MAX_BYTES`, and
 block private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
 Uploading with `create_media` or `update_media(filePath)` requires
-`GRAMPS_MEDIA_UPLOAD_DIRS` and respects `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`.
+`GRAMPS_MEDIA_RESOURCES_ENABLED=true` and `GRAMPS_MEDIA_UPLOAD_DIRS`, and
+respects `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`.
 
 ### R — `ReadMedia`
 Download media bytes as typed MCP content. Default mode `thumbnail` returns a
@@ -785,9 +786,10 @@ in this tree.`
 | Reference | 1 | 0 | 0 | 0 | 1 |
 | **Total with media access and upload enabled** | **10** | **10** | **9** | **1** | **30** |
 
-With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` is hidden,
-and without `GRAMPS_MEDIA_UPLOAD_DIRS`, `create_media` is hidden: the default
-catalog contains 28 tools in read/write mode. Read-only mode publishes 10 tools
+With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
+`create_media` are hidden: the default catalog contains 28 tools in read/write
+mode. With media access enabled, `create_media` also needs
+`GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 10 tools
 with media access enabled, or 9 with it disabled.
 
 ## Prerequisites for write tools

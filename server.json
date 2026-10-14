@@ -71,7 +71,7 @@
         },
         {
           "name": "GRAMPS_MEDIA_RESOURCES_ENABLED",
-          "description": "Set to true to expose read_media and the media resources for thumbnails and full files",
+          "description": "Set to true to expose read_media and the media resources for thumbnails and full files, and to allow uploads from GRAMPS_MEDIA_UPLOAD_DIRS",
           "default": "false"
         },
         {
@@ -86,7 +86,7 @@
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_DIRS",
-          "description": "Absolute folders, separated by : (; on Windows), that create_media and update_media may upload photos, scans and PDFs from. Unset turns uploading off and hides create_media"
+          "description": "Absolute folders, separated by : (; on Windows), that create_media and update_media may upload photos, scans and PDFs from while GRAMPS_MEDIA_RESOURCES_ENABLED is true. Unset turns uploading off and hides create_media"
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_MAX_BYTES",

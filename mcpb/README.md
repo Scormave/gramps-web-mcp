@@ -66,9 +66,11 @@ The settings form does not expose `GRAMPS_LOG_LEVEL`, so the extension logs at
 `Information`: request metadata only, without genealogy data from API bodies.
 **Minimum write interval defaults to 250ms** (SQLite-friendly); the server-side
 env default remains `0` for Docker/registry installs.
-**Media upload folder defaults to `~/Downloads`**, so `create_media` can upload
-scans saved there once read-only mode is off; clear the field to turn uploading
-off. On macOS, Claude may ask for permission to read that folder.
+**Media upload folder defaults to `~/Downloads`**. Uploading also needs media
+file access, which is disabled by default: once it is enabled and read-only
+mode is off, `create_media` can upload scans saved there. Clear the folder to
+keep uploading off while media access stays on. On macOS, Claude may ask for
+permission to read that folder.
 
 ## GitHub Releases
 

@@ -157,6 +157,30 @@ public class MediaUploadFileTests : IDisposable
         var ex = await Assert.ThrowsAsync<McpException>(() => MediaUploadFile.ReadAsync("scan.jpg", config));
 
         Assert.Contains("GRAMPS_MEDIA_UPLOAD_DIRS", ex.Message);
+        Assert.Contains("GRAMPS_MEDIA_RESOURCES_ENABLED=true", ex.Message);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Asks_Only_For_A_Folder_When_Media_Access_Is_On()
+    {
+        var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree", MediaResourcesEnabled: true);
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaUploadFile.ReadAsync("scan.jpg", config));
+
+        Assert.Contains("GRAMPS_MEDIA_UPLOAD_DIRS", ex.Message);
+        Assert.DoesNotContain("GRAMPS_MEDIA_RESOURCES_ENABLED", ex.Message);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Refuses_Upload_Folders_Without_Media_Access()
+    {
+        File.WriteAllBytes(Path.Combine(_uploads, "scan.jpg"), Jpeg);
+        var config = Config(_uploads) with { MediaResourcesEnabled = false };
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaUploadFile.ReadAsync("scan.jpg", config));
+
+        Assert.Contains("media file access is disabled", ex.Message);
+        Assert.Contains("GRAMPS_MEDIA_RESOURCES_ENABLED=true", ex.Message);
     }
 
     [Fact]
@@ -169,5 +193,5 @@ public class MediaUploadFileTests : IDisposable
     }
 
     private static GrampsConfig Config(params string[] directories) =>
-        new("https://gramps-web.test", "user", "pass", "tree", MediaUploadDirs: directories);
+        new("https://gramps-web.test", "user", "pass", "tree", MediaResourcesEnabled: true, MediaUploadDirs: directories);
 }

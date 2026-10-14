@@ -190,10 +190,21 @@ public class GrampsConfigTests
         var second = Path.Combine(Path.GetTempPath(), "gramps-upload-b");
         var value = string.Join(Path.PathSeparator, $" {first}{Path.DirectorySeparatorChar} ", "", second, first);
 
-        var config = LoadConfig(readOnlyEnv: null, mediaUploadDirs: value);
+        var config = LoadConfig(readOnlyEnv: null, mediaResourcesEnabled: "true", mediaUploadDirs: value);
 
         Assert.True(config.MediaUploadEnabled);
         Assert.Equal([Path.GetFullPath(first), Path.GetFullPath(second)], config.MediaUploadDirs);
+    }
+
+    [Fact]
+    public void FromEnvironment_Leaves_Upload_Off_Without_Media_Access()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "gramps-upload-a");
+
+        var config = LoadConfig(readOnlyEnv: null, mediaUploadDirs: folder);
+
+        Assert.False(config.MediaUploadEnabled);
+        Assert.Equal([Path.GetFullPath(folder)], config.MediaUploadDirs);
     }
 
     [Theory]

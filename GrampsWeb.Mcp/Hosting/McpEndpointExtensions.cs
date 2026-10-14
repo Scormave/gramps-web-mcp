@@ -89,4 +89,20 @@ internal static class McpEndpointExtensions
                 name);
         }
     }
+
+    /// <summary>
+    /// Says why uploading is off when upload folders are set but media file access is not, as in the
+    /// Claude Desktop extension, whose upload folder has a default while media access starts disabled.
+    /// </summary>
+    public static void LogUploadWithoutMediaAccess(this IHost host, GrampsConfig config)
+    {
+        if (config.MediaResourcesEnabled || config.MediaUploadDirs is not { Count: > 0 })
+            return;
+
+        host.Services
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("GrampsWeb.Mcp.Config")
+            .LogInformation(
+                "Uploading is off: GRAMPS_MEDIA_UPLOAD_DIRS is set, but media file access is disabled. Set GRAMPS_MEDIA_RESOURCES_ENABLED=true to upload.");
+    }
 }

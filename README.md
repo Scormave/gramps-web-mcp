@@ -347,11 +347,12 @@ Media byte tools/resources are disabled by default. `get_object` with
 available for metadata without enabling file downloads.
 When disabled, `read_media` is omitted from
 `tools/list`; direct calls by a client that already knows its name return a
-configuration error without downloading bytes.
+configuration error without downloading bytes. The same setting switches
+[uploads](#media-upload) on and off.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media tools/resources for thumbnails and full files | `false` |
+| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media tools/resources for thumbnails and full files, and uploads | `false` |
 | `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by `read_media` or any media resource | `5242880` |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allows bytes for Gramps media records marked private | `false` |
 
@@ -371,9 +372,10 @@ configuration; the server ignores it and logs a warning at startup if it is set.
 
 `create_media` uploads a photo, document scan or PDF from a folder on the
 server and shows it on the records named in `attachTo`; `update_media` takes
-`filePath` to replace a record's file. Uploading is off until
-`GRAMPS_MEDIA_UPLOAD_DIRS` names a folder, and `create_media` is hidden until
-then. Only files inside those folders can be read, symbolic links included,
+`filePath` to replace a record's file. Uploading needs media file access
+(`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and at least one folder in
+`GRAMPS_MEDIA_UPLOAD_DIRS`; until both are set, `create_media` is hidden. Only
+files inside those folders can be read, symbolic links included,
 and only JPEG, PNG, GIF, WebP, TIFF, BMP and PDF files, judged by content. A
 file the tree already stores is reused, not uploaded twice. In Docker, mount
 the folder into the container and set the path as seen inside it.

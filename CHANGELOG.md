@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Uploading needs media file access too: `create_media` and `filePath` on
+  `update_media` work only while `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, so
+  one setting, "Enable media file access" in the Claude Desktop extension,
+  covers every file the server reads or uploads. Before, the extension's
+  default upload folder let `create_media` read `~/Downloads` while media
+  access was off. A server with `GRAMPS_MEDIA_UPLOAD_DIRS` set and media
+  access off now hides `create_media` and logs why at startup
+
 ### Fixed
 
 - The Claude Desktop extension did not start while its "Media upload folder"

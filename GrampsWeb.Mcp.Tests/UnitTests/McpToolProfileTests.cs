@@ -65,7 +65,7 @@ public class McpToolProfileTests
     [Theory]
     [InlineData(false, new[] { "get_object", "update_media" })]
     [InlineData(true, new[] { "get_object", "create_media", "update_media" })]
-    public void KeepAvailableTools_PublishesCreateMediaOnlyWithUploadFolders(bool uploadEnabled, string[] expected)
+    public void KeepAvailableTools_PublishesCreateMediaOnlyWithUploadFolders(bool uploadFolders, string[] expected)
     {
         var result = new ListToolsResult
         {
@@ -78,7 +78,7 @@ public class McpToolProfileTests
         };
 
         var filtered = McpToolProfileExtensions.KeepAvailableTools(result,
-            Config(readOnly: false, mediaResourcesEnabled: true, mediaUploadEnabled: uploadEnabled));
+            Config(readOnly: false, mediaResourcesEnabled: true, uploadFolders: uploadFolders));
 
         Assert.Equal(expected, filtered.Tools.Select(tool => tool.Name));
     }
@@ -89,19 +89,39 @@ public class McpToolProfileTests
         var result = new ListToolsResult { Tools = [Tool("get_object", readOnly: true), Tool("create_media", readOnly: false)] };
 
         var filtered = McpToolProfileExtensions.KeepAvailableTools(result,
-            Config(readOnly: true, mediaResourcesEnabled: true, mediaUploadEnabled: true));
+            Config(readOnly: true, mediaResourcesEnabled: true, uploadFolders: true));
 
         Assert.Equal(["get_object"], filtered.Tools.Select(tool => tool.Name));
     }
 
-    private static GrampsWeb.Mcp.Config.GrampsConfig Config(bool readOnly, bool mediaResourcesEnabled, bool mediaUploadEnabled = false) => new(
+    [Fact]
+    public void KeepAvailableTools_DisabledMediaAccessHidesCreateMediaEvenWithUploadFolders()
+    {
+        var result = new ListToolsResult
+        {
+            Tools =
+            [
+                Tool("get_object", readOnly: true),
+                Tool("read_media", readOnly: true),
+                Tool("create_media", readOnly: false),
+                Tool("update_media", readOnly: false)
+            ]
+        };
+
+        var filtered = McpToolProfileExtensions.KeepAvailableTools(result,
+            Config(readOnly: false, mediaResourcesEnabled: false, uploadFolders: true));
+
+        Assert.Equal(["get_object", "update_media"], filtered.Tools.Select(tool => tool.Name));
+    }
+
+    private static GrampsWeb.Mcp.Config.GrampsConfig Config(bool readOnly, bool mediaResourcesEnabled, bool uploadFolders = false) => new(
         ApiUrl: "https://gramps-web.test",
         Username: "user",
         Password: "pass",
         TreeId: "tree",
         ReadOnly: readOnly,
         MediaResourcesEnabled: mediaResourcesEnabled,
-        MediaUploadDirs: mediaUploadEnabled ? ["/srv/uploads"] : null);
+        MediaUploadDirs: uploadFolders ? ["/srv/uploads"] : null);
 
     private static Tool Tool(string name, bool? readOnly) => new()
     {

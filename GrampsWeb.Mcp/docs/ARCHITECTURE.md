@@ -150,12 +150,12 @@ Runtime notes:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP media resources and image-content media tools | `false` |
+| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP media resources and image-content media tools; uploads need it too | `false` |
 | `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource/tool | `5242880` |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allow bytes for Gramps media records marked private | `false` |
 
-When media access is disabled, `tools/list` omits `read_media`;
-media metadata remains available through `get_object`.
+When media access is disabled, `tools/list` omits `read_media` and
+`create_media`; media metadata remains available through `get_object`.
 `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig` lists it as
 retired, and startup logs a warning when it is still set.
 
@@ -166,7 +166,9 @@ retired, and startup logs a warning when it is still set.
 | `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; a leading `~` or `${HOME}` expands to the home folder | unset (off) |
 | `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
 
-When no upload folder is set, `tools/list` omits `create_media`, and
+Uploading needs media access too: `GrampsConfig.MediaUploadEnabled` is true
+only with both, and startup logs why uploading is off when folders are set
+without media access. Until then `tools/list` omits `create_media`, and
 `update_media` rejects `filePath`. `MediaUploadFile` resolves symbolic links
 before checking that a file lies inside a folder, then reads the resolved path,
 and judges the type from the file's first bytes (JPEG, PNG, GIF, WebP, TIFF,
@@ -215,7 +217,7 @@ adds the call-tool filters for argument checks and read scopes, and, when
 needed, a `tools/list` filter that publishes only tools enabled by the current
 configuration:
 read-only mode removes write tools, disabled media access removes
-`read_media`, and no upload folder removes `create_media`. Hidden tools remain
+`read_media` and `create_media`, and no upload folder removes `create_media`. Hidden tools remain
 registered so direct calls still receive the normal read-only or configuration
 error.
 
@@ -223,7 +225,8 @@ error.
 `Hosting/GrampsServerInstructions.cs` in both transports. The instructions
 tell the client how the tools fit together and follow the same profile: no
 write guidance in read-only mode, no `read_media` while media access is
-disabled, and no `create_media` without an upload folder.
+disabled, and no `create_media` without both media access and an upload
+folder.
 
 ### 1b. Resources (`Resources/`)
 

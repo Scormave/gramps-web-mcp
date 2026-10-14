@@ -25,8 +25,11 @@ internal sealed record MediaUploadFile(string Path, byte[] Bytes, string MimeTyp
     public static async Task<MediaUploadFile> ReadAsync(string filePath, GrampsConfig config)
     {
         if (!config.MediaUploadEnabled)
-            throw McpToolErrors.ValidationError(
-                "Uploading files is turned off: set GRAMPS_MEDIA_UPLOAD_DIRS to the folders files may be uploaded from.");
+            throw McpToolErrors.ValidationError("Uploading files is turned off: " + (
+                config.MediaUploadDirs is not { Count: > 0 }
+                    ? "set GRAMPS_MEDIA_UPLOAD_DIRS to the folders files may be uploaded from"
+                      + (config.MediaResourcesEnabled ? "." : ", and GRAMPS_MEDIA_RESOURCES_ENABLED=true.")
+                    : "media file access is disabled; set GRAMPS_MEDIA_RESOURCES_ENABLED=true."));
         if (string.IsNullOrWhiteSpace(filePath))
             throw McpToolErrors.ValidationError("filePath is required.");
 
