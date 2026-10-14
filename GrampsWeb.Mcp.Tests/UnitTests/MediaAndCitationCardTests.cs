@@ -55,8 +55,21 @@ public class MediaAndCitationCardTests
         var result = await CitationFormatter.FormatCitationFull(citation, CreateClient());
 
         Assert.Contains("Page/Location: p. 12", result);
-        Assert.DoesNotContain("Access Date", result);
+        Assert.DoesNotContain("Date:", result);
         Assert.DoesNotContain("Unknown date", result);
+    }
+
+    [Fact]
+    public async Task CitationCard_Shows_The_Date_Of_The_Cited_Entry()
+    {
+        var citation = JsonSerializer.Deserialize<GrampsCitation>(
+            """{"handle":"c1","gramps_id":"C0001","page":"p. 12","confidence":2,"date":{"modifier":0,"dateval":[0,0,1850,false]}}""",
+            GrampsJson.Options)!;
+
+        var result = (await CitationFormatter.FormatCitationFull(citation, CreateClient())).Replace("\r\n", "\n");
+
+        Assert.Contains("\nDate: 1850\n", result);
+        Assert.DoesNotContain("Access Date", result);
     }
 
     private static GrampsMedia Media(string mime, string date) =>

@@ -19,7 +19,7 @@ namespace GrampsWeb.Mcp.Tools;
 public static class CitationTools
 {
     [Description(
-        "Read-only: one citation (source title/handle, page, confidence, access date). " +
+        "Read-only: one citation (source title/handle, page, confidence, date of the cited entry). " +
         "Citations connect sources to facts on people, events, places, etc.")]
     internal static async Task<string> ReadCitationAsync(
         [Description("Citation handle. " + ToolDescriptionFragments.HandleDiscovery + " For one source's citations use list_objects('citations', sourceHandle: ...).")]

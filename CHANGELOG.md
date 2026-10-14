@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The citation card that `get_object` returns labelled the citation's date
+  "Access Date". Gramps keeps there the date of the cited entry, which is how
+  `create_citation` and `update_citation` describe it, so a date such as the
+  year of a register entry read as the day the source was consulted. The card
+  now shows it as `Date:`
+
 ## [2.4.0] - 2026-10-08
 
 ### Added

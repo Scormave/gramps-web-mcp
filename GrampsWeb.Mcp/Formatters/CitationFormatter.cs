@@ -56,7 +56,7 @@ public static class CitationFormatter
         sb.AppendLine($"Confidence: {confidenceLabel} ({citation.Confidence})");
 
         if (!GrampsDateHelpers.IsEmpty(citation.Date))
-            sb.AppendLine($"Access Date: {GrampsValueFormatter.FormatDate(citation.Date!)}");
+            sb.AppendLine($"Date: {GrampsValueFormatter.FormatDate(citation.Date!)}");
 
         var labels = await labelsTask;
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", citation.NoteList, labels);
