@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The Claude Desktop extension did not start while its "Media upload folder"
+  setting stayed at the default. Claude Desktop passes that default,
+  `${HOME}/Downloads`, to the server without expanding it, and the server
+  refused it as not an absolute path. A leading `${HOME}` in
+  `GRAMPS_MEDIA_UPLOAD_DIRS` now expands to the home folder, as `~` does
+
 ## [2.5.0] - 2026-10-14
 
 ### Added

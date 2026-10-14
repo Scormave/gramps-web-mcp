@@ -163,7 +163,7 @@ retired, and startup logs a warning when it is still set.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; `~` expands to the home folder | unset (off) |
+| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; a leading `~` or `${HOME}` expands to the home folder | unset (off) |
 | `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
 
 When no upload folder is set, `tools/list` omits `create_media`, and

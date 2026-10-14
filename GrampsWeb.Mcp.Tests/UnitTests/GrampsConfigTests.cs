@@ -196,13 +196,37 @@ public class GrampsConfigTests
         Assert.Equal([Path.GetFullPath(first), Path.GetFullPath(second)], config.MediaUploadDirs);
     }
 
-    [Fact]
-    public void FromEnvironment_Expands_Home_In_Upload_Directories()
+    [Theory]
+    [InlineData("~/Downloads")]
+    [InlineData("${HOME}/Downloads")]
+    public void FromEnvironment_Expands_Home_In_Upload_Directories(string value)
     {
-        var config = LoadConfig(readOnlyEnv: null, mediaUploadDirs: "~/Downloads");
+        var config = LoadConfig(readOnlyEnv: null, mediaUploadDirs: value);
 
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         Assert.Equal([Path.Combine(home, "Downloads")], config.MediaUploadDirs);
+    }
+
+    [Theory]
+    [InlineData("~", "")]
+    [InlineData("${HOME}", "")]
+    [InlineData("~/scans/2026", "scans/2026")]
+    [InlineData("${HOME}/scans", "scans")]
+    public void ExpandHome_Replaces_A_Leading_Home_Prefix(string path, string rest)
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        Assert.Equal(rest.Length == 0 ? home : Path.Combine(home, rest), GrampsConfig.ExpandHome(path));
+    }
+
+    [Theory]
+    [InlineData("~scans")]
+    [InlineData("${HOME}scans")]
+    [InlineData("/data/${HOME}/scans")]
+    [InlineData("${DOWNLOADS}/scans")]
+    public void ExpandHome_Keeps_Other_Paths(string path)
+    {
+        Assert.Equal(path, GrampsConfig.ExpandHome(path));
     }
 
     [Fact]

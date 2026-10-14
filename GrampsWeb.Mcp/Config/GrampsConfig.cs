@@ -150,8 +150,8 @@ public record GrampsConfig(
 
     /// <summary>
     /// Splits a folder list on the platform's path-list separator (<c>:</c>, or <c>;</c> on Windows),
-    /// expanding a leading <c>~</c> to the home folder. Each folder must be an absolute path; whether it
-    /// exists is checked when a file is uploaded, so a folder created later still works.
+    /// expanding a leading <c>~</c> or <c>${HOME}</c> to the home folder. Each folder must be an absolute
+    /// path; whether it exists is checked when a file is uploaded, so a folder created later still works.
     /// </summary>
     private static IReadOnlyList<string>? ParseDirectoryList(string? value, string name, List<string> errors)
     {
@@ -176,16 +176,28 @@ public record GrampsConfig(
         return directories.Count > 0 ? directories : null;
     }
 
-    /// <summary>Replaces a leading <c>~</c> (alone or before a separator) with the user's home folder.</summary>
+    /// <summary>
+    /// Replaces a leading <c>~</c> or <c>${HOME}</c> (alone or before a separator) with the user's home folder.
+    /// Claude Desktop passes the MCPB default of the upload folder, <c>${HOME}/Downloads</c>, through
+    /// without expanding it while the user has not saved the setting.
+    /// </summary>
     internal static string ExpandHome(string path)
     {
-        if (path == "~")
-            return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (path.StartsWith("~/", StringComparison.Ordinal)
-            || (Path.DirectorySeparatorChar == '\\' && path.StartsWith("~\\", StringComparison.Ordinal)))
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
+        foreach (var prefix in HomePrefixes)
+        {
+            if (path == prefix)
+                return Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (path.Length > prefix.Length
+                && path.StartsWith(prefix, StringComparison.Ordinal)
+                && (path[prefix.Length] == '/' || path[prefix.Length] == Path.DirectorySeparatorChar))
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    path[(prefix.Length + 1)..]);
+        }
+
         return path;
     }
+
+    private static readonly string[] HomePrefixes = ["~", "${HOME}"];
 
     private static bool ParseBoolOrDefault(string? value, bool defaultValue)
     {
