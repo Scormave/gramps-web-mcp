@@ -135,8 +135,8 @@ public static class EventTools
         FlexibleHandleList? noteHandles = null,
         [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description(FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
         [Description("Mark the event private (default false).")]
@@ -162,7 +162,7 @@ public static class EventTools
                 Date = dateRequest,
                 Place = resolvedPlaceHandle,
                 Description = description,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
+                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
                 AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
@@ -205,8 +205,8 @@ public static class EventTools
         FlexibleHandleList? noteHandles = null,
         [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
-        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
         [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -236,7 +236,7 @@ public static class EventTools
                 evt.SetOrRemove("date", AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range));
             evt.Set("place", resolvedPlaceHandle);
             evt.Set("description", description);
-            evt.ApplyMediaHandles(mediaHandles, linkMode);
+            evt.ApplyMediaLinks(mediaHandles, linkMode);
             evt.ReplaceAttributes(attributes);
             evt.ApplyHandles("citation_list", citationHandles, linkMode);
             evt.ApplyHandles("note_list", noteHandles, linkMode);

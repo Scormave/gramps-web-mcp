@@ -27,7 +27,7 @@ public sealed class GrampsMediaRef
     [JsonPropertyName("attribute_list")]
     public object[]? AttributeList { get; set; }
 
-    /// <summary>Image crop rectangle <c>[x, y, width, height]</c>.</summary>
+    /// <summary>Image region <c>[left, top, right, bottom]</c> in percent of the image size (<see cref="MediaRegion"/>).</summary>
     [JsonPropertyName("rect")]
     public int[]? Rect { get; set; }
 

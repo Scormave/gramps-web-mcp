@@ -60,8 +60,8 @@ public static class CitationTools
         string? date = null,
         [Description("Notes, e.g. a transcript of the entry (create_note with type Transcript). " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Media such as the scan of the page. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media such as the scan of the page. " + FlexibleMediaLinkList.DescriptionHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description(FlexibleAttributeList.DescriptionHint + " " + FlexibleAttributeList.SourceAttributesHint)]
@@ -89,7 +89,7 @@ public static class CitationTools
                 Page = page,
                 Confidence = confidenceLevel,
                 Date = dateRequest,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
+                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
                 NoteList = noteHandles,
                 TagList = tagHandles,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
@@ -124,8 +124,8 @@ public static class CitationTools
         string? date = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint + " " +
@@ -158,7 +158,7 @@ public static class CitationTools
                 citation.Set("confidence", Math.Clamp(confidenceLevel, 0, 4));
             if (date != null)
                 citation.SetOrRemove("date", AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range));
-            citation.ApplyMediaHandles(mediaHandles, linkMode);
+            citation.ApplyMediaLinks(mediaHandles, linkMode);
             citation.ReplaceAttributes(attributes);
             citation.ApplyHandles("note_list", noteHandles, linkMode);
             citation.ApplyHandles("tag_list", tagHandles, linkMode);

@@ -42,6 +42,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   call is rejected and nothing is saved; an empty `withText` deletes it.
   Styling and links after the fragment move with the text, and those around
   it stretch or shrink with it
+- A media link can show only part of an image, such as one record on a page
+  scan: `mediaHandles` and `attachTo` take `{"ref": …, "region": [left, top,
+  right, bottom]}` in place of a handle, with edges in percent of the image as
+  Gramps stores a crop. A plain handle keeps the stored region; in add mode,
+  and always with `attachTo`, a record already showing the media keeps its
+  link with its citations and privacy and takes the region, and listing the
+  media twice shows two regions. Repeating a call changes nothing, and an
+  empty or out-of-range region is rejected before anything is saved.
+  `read_media` takes `region` to show what a region covers, read from the
+  full-resolution original when it is small, and records list each media
+  link with its region. `update_media` takes `attachTo` too, and applies it
+  without saving the media record when nothing else changes
 
 ### Changed
 

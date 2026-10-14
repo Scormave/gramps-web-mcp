@@ -1,4 +1,5 @@
 using GrampsWeb.Mcp.Dates;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Requests;
@@ -54,11 +55,19 @@ internal static class GrampsRequestMapping
     /// <summary>
     /// Gramps <c>get_schema()</c> for Person, Family, Event, etc. expects <c>media_list</c> items to match
     /// <c>MediaRef</c>, not bare handle strings (Gramps Web API <c>fix_object_dict</c> does not coerce them).
+    /// A link with a region shows that part of the image; the whole image is stored as no region.
     /// </summary>
-    public static MediaRefRequest[]? ToMediaRefRequests(string[]? handles) =>
-        handles is null || handles.Length == 0
-            ? null
-            : handles.Select(static h => new MediaRefRequest { Ref = string.IsNullOrWhiteSpace(h) ? h : h.Trim() }).ToArray();
+    public static MediaRefRequest[]? ToMediaRefRequests(MediaLink[]? links)
+    {
+        if (links is null || links.Length == 0)
+            return null;
+        FlexibleMediaLinkList.EnsureValid(links, "mediaHandles");
+        return links.Select(static link => new MediaRefRequest
+        {
+            Ref = string.IsNullOrWhiteSpace(link.Ref) ? link.Ref : link.Ref.Trim(),
+            Rect = link.Region is { IsWholeImage: false } region ? region.ToArray() : null
+        }).ToArray();
+    }
 
     /// <summary>Builds event_ref_list from parallel handle/role arrays (default role Primary).</summary>
     public static EventRefRequest[] BuildEventRefList(string[]? handles, string[]? roles)

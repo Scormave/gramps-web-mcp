@@ -111,7 +111,7 @@ public static class PersonFormatter
             }
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, "Gallery (media)", GrampsMediaRef.ToHandleStrings(person.MediaList), labels);
+        MediaFormatter.AppendMediaLinkSection(sb, "Gallery (media)", person.MediaList, labels);
 
         if (person.AlternateNames is { Length: > 0 })
         {
@@ -284,7 +284,7 @@ public static class PersonFormatter
             }
         }
 
-        MediaFormatter.AppendExtendedMediaSection(sb, person.Extended?.Media, GrampsMediaRef.ToHandleStrings(person.MediaList));
+        MediaFormatter.AppendExtendedMediaSection(sb, person.Extended?.Media, person.MediaList);
 
         if (person.AlternateNames is { Length: > 0 })
         {

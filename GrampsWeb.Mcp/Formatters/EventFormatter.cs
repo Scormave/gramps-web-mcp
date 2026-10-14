@@ -54,7 +54,7 @@ public static class EventFormatter
         var labels = await labelsTask;
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", evt.CitationList, labels);
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", evt.NoteList, labels);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(evt.MediaList), labels);
+        MediaFormatter.AppendMediaLinkSection(sb, "Media", evt.MediaList, labels);
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", evt.TagList, labels);
 
         if (linkedPeople is { Count: > 0 })

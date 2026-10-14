@@ -75,7 +75,7 @@ public static class PlaceFormatter
         var labels = await labelsTask;
         HandleListFormatter.AppendHandleBulletSection(sb, "Citations", place.CitationList, labels);
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", place.NoteList, labels);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(place.MediaList), labels);
+        MediaFormatter.AppendMediaLinkSection(sb, "Media", place.MediaList, labels);
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", place.TagList, labels);
 
         return sb.ToString();

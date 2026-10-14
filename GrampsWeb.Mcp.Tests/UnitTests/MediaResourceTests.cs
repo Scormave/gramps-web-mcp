@@ -53,6 +53,31 @@ public class MediaResourceTests
     }
 
     [Fact]
+    public async Task ReadMedia_Thumbnail_Shows_Only_The_Region()
+    {
+        var result = await MediaTools.ReadMedia("large1", size: 256, client: CreateClient(),
+            config: CreateConfig(mediaResourcesEnabled: true), region: [0, 0, 40, 30]);
+        var image = Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
+
+        var info = TestImages.Identify(image.DecodedData);
+        Assert.Equal((256, 128), (info.Width, info.Height));
+    }
+
+    [Theory]
+    [InlineData("thumbnail", new[] { 50.0, 0, 10, 25 }, "region: region [50, 0, 10, 25] is empty")]
+    [InlineData("thumbnail", new[] { 0.0, 0, 50 }, "region: a region needs 4 numbers")]
+    [InlineData("file", new[] { 0.0, 0, 50, 25 }, "region is only supported for mode thumbnail")]
+    public async Task ReadMedia_Rejects_A_Bad_Region_Before_Download(string mode, double[] region, string expected)
+    {
+        var handler = new MediaHandler();
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.ReadMedia(
+            "large1", mode, client: CreateClient(handler), config: CreateConfig(mediaResourcesEnabled: true), region: region));
+
+        Assert.Contains(expected, ex.Message);
+        Assert.Empty(handler.RequestPaths);
+    }
+
+    [Fact]
     public async Task ReadMedia_Thumbnail_Does_Not_Upscale_Small_Images()
     {
         var client = CreateClient();

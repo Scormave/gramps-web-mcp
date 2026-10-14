@@ -25,7 +25,7 @@ public class LinkUpdatesTests
         var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
         var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
         await PersonTools.UpdatePerson("person-handle", noteHandles: new FlexibleHandleList { Handles = ["old", "new"] },
-            mediaHandles: new FlexibleHandleList { Handles = mode == "remove" ? ["media"] : [] }, client: client, linkMode: mode);
+            mediaHandles: new FlexibleMediaLinkList { Items = mode == "remove" ? [new MediaLink("media")] : [] }, client: client, linkMode: mode);
         var body = handler.Body!.Value;
         Assert.Equal(notes, body.GetProperty("note_list").GetArrayLength());
         Assert.Equal(media, body.GetProperty("media_list").GetArrayLength());

@@ -60,7 +60,7 @@ public static class CitationFormatter
 
         var labels = await labelsTask;
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", citation.NoteList, labels);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(citation.MediaList), labels);
+        MediaFormatter.AppendMediaLinkSection(sb, "Media", citation.MediaList, labels);
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", citation.TagList, labels);
 
         BacklinkFormatter.AppendReferencedBySections(sb, backlinks, labels);

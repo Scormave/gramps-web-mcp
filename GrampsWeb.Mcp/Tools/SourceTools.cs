@@ -60,8 +60,8 @@ public static class SourceTools
         FlexibleRepositoryRefList? repositoryHandles = null,
         [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description(FlexibleAttributeList.DescriptionHint + " " + FlexibleAttributeList.SourceAttributesHint)]
@@ -88,7 +88,7 @@ public static class SourceTools
                 PubInfo = pubinfo,
                 Abbrev = abbrev,
                 RepositoryRefList = repoRefList,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
+                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
                 NoteList = noteHandles,
                 TagList = tagHandles,
                 AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
@@ -125,8 +125,8 @@ public static class SourceTools
         FlexibleRepositoryRefList? repositoryHandles = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint + " " +
@@ -163,7 +163,7 @@ public static class SourceTools
                 Private = r.Private,
                 NoteList = r.NoteList
             }).ToArray(), linkMode);
-            source.ApplyMediaHandles(mediaHandles, linkMode);
+            source.ApplyMediaLinks(mediaHandles, linkMode);
             source.ReplaceAttributes(attributes);
             source.ApplyHandles("note_list", noteHandles, linkMode);
             source.ApplyHandles("tag_list", tagHandles, linkMode);

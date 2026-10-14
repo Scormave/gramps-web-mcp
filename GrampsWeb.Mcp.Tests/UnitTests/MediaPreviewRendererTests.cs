@@ -1,10 +1,12 @@
 using System.Text;
+using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Resources;
 using ModelContextProtocol;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.Metadata.Profiles.Iptc;
 using SixLabors.ImageSharp.Metadata.Profiles.Xmp;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
@@ -21,6 +23,59 @@ public class MediaPreviewRendererTests
         Assert.InRange(preview.Height, 340, 342);
         var info = TestImages.Identify(preview.Bytes);
         Assert.Equal((preview.Width, preview.Height), (info.Width, info.Height));
+    }
+
+    [Fact]
+    public void Render_Crops_A_Region_Before_Downscaling()
+    {
+        var source = TestImages.Jpeg(1000, 500, image =>
+        {
+            var pixels = (Image<Rgb24>)image;
+            for (var y = 0; y < 500; y++)
+            for (var x = 500; x < 1000; x++)
+                pixels[x, y] = new Rgb24(0, 0, 255);
+        });
+
+        var preview = MediaPreviewRenderer.Render(source, 256, new MediaRegion(50, 0, 100, 100));
+
+        Assert.Equal((256, 256), (preview.Width, preview.Height));
+        using var image = Image.Load<Rgb24>(preview.Bytes);
+        Assert.InRange(image[128, 128].B, 200, 255);
+        Assert.InRange(image[2, 128].R, 0, 60);
+    }
+
+    [Fact]
+    public void Render_Reads_A_Small_Region_At_Full_Resolution()
+    {
+        var preview = MediaPreviewRenderer.Render(TestImages.Jpeg(3000, 2000), 512, new MediaRegion(0, 0, 10, 10));
+
+        Assert.Equal((300, 200), (preview.Width, preview.Height));
+    }
+
+    [Fact]
+    public void Render_Region_Follows_Exif_Orientation()
+    {
+        var source = TestImages.Jpeg(300, 200, image =>
+        {
+            image.Metadata.ExifProfile = new ExifProfile();
+            image.Metadata.ExifProfile.SetValue(ExifTag.Orientation, (ushort)6);
+        });
+
+        var preview = MediaPreviewRenderer.Render(source, 1568, new MediaRegion(0, 0, 100, 50));
+
+        Assert.Equal((200, 150), (preview.Width, preview.Height));
+    }
+
+    [Theory]
+    [InlineData(10, 10, 99, 99, 100, 100, 9, 9, 1, 1)]
+    [InlineData(1000, 500, 10, 20, 60, 45, 100, 100, 500, 125)]
+    [InlineData(3, 3, 0, 0, 1, 1, 0, 0, 1, 1)]
+    public void CropRectangle_Covers_At_Least_One_Pixel(int width, int height, int left, int top, int right, int bottom,
+        int x, int y, int cropWidth, int cropHeight)
+    {
+        var rectangle = MediaPreviewRenderer.CropRectangle(width, height, new MediaRegion(left, top, right, bottom));
+
+        Assert.Equal(new Rectangle(x, y, cropWidth, cropHeight), rectangle);
     }
 
     [Fact]

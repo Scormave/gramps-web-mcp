@@ -55,7 +55,7 @@ polymorphic wire shapes.
 | `GrampsFamilyRef` | in `GrampsPerson.cs` | `Ref`, `Relationship`, `FatherRelationship`, `MotherRelationship`; whole-type converter |
 | `GrampsRepositoryRef` | `GrampsRepositoryRef.cs` | `Ref`, `CallNumber`, `MediaType`, `NoteList`; whole-type converter |
 | `GrampsPersonRef` | `GrampsPersonRef.cs` | `Ref`, `Relationship`, `CitationList`, `NoteList`, `Private` |
-| `GrampsMediaRef` | `GrampsMediaRef.cs` | `Ref`, `Private`, `CitationList`, `NoteList`, `AttributeList`, `Rect` (crop `[x, y, width, height]`) — `media_list` entries |
+| `GrampsMediaRef` | `GrampsMediaRef.cs` | `Ref`, `Private`, `CitationList`, `NoteList`, `AttributeList`, `Rect` (region `[left, top, right, bottom]` in percent 0–100; null for the whole image) — `media_list` entries |
 | `GrampsAttribute` | in `GrampsPerson.cs` | `Type`, `Value`, `CitationList`, `NoteList`, `Private` |
 | `GrampsAddress` | `GrampsAddress.cs` | `Street`, `Locality`, `City`, `County`, `State`, `Country`, `Postal`, `Phone`, `Date`, `CitationList`, `NoteList`, `Private` |
 | `GrampsUrl` | `GrampsUrl.cs` | `Type`, `Path`, `Description`, `Private` |
@@ -183,6 +183,7 @@ canonical model type.
 | Type | Target type | Agent-friendly formats |
 |------|-------------|----------------------|
 | `FlexibleHandleList` | `string[]` | JSON array; single string; comma/semicolon/pipe/newline-separated; `{ref}`/`{handle}` objects |
+| `FlexibleMediaLinkList` | `MediaLink[]` | As `FlexibleHandleList`, plus objects `{ref, region}` (`rect` alias) with a region as a 4-number array or `"l,t,r,b"` string; an unreadable region is kept in `RegionError` for the tool to report |
 | `FlexibleGrampsName` | `GrampsName` | Full JSON; shorthand `"Given Surname"` or `"Given :: Surname"` with `\|`-separated fields |
 | `FlexibleAlternateNameList` | `GrampsName[]` | Array of names (objects or strings); newline-separated strings |
 | `FlexibleAttributeList` | `GrampsAttribute[]` | Object array; `"Type: Value"` strings; multiline/pipe-separated |
@@ -239,7 +240,7 @@ Common pattern:
 - `GrampsAttribute[]` → `AttributeRequest[]`, with each attribute's citations,
   notes and privacy; `SourceAttributeError` rejects citations and notes on
   source and citation attributes (Gramps `SrcAttribute` has neither)
-- Media handles → `MediaRefRequest[]` (`ToMediaRefRequests`)
+- Media links → `MediaRefRequest[]` (`ToMediaRefRequests`), each region as `rect`
 - Parallel handle/role arrays → `EventRefRequest[]` (`BuildEventRefList`)
 
 Update tools do not map GET models back into request DTOs. Gramps Web

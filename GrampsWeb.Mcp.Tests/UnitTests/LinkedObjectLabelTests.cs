@@ -198,7 +198,7 @@ public class LinkedObjectLabelTests
             """
             {"handle":"f1","gramps_id":"F0001","father_handle":"p1",
              "profile":{"father":{"handle":"p1","name_display":"Ivanov, Pyotr"}},
-             "tag_list":["t1"],"media_list":[{"ref":"m1"},{"ref":"m2"}],
+             "tag_list":["t1"],"media_list":[{"ref":"m1","rect":[10,20,60,45]},{"ref":"m2"}],
              "note_list":["n1"],"citation_list":["c1"]}
             """,
             GrampsJson.Options)!;
@@ -209,7 +209,7 @@ public class LinkedObjectLabelTests
         Assert.Contains("Tags (1):\n  • To check [handle: t1]\n", result);
         Assert.Contains(
             "Gallery (media) (2):\n" +
-            "  • [image] wedding.jpg [handle: m1]\n" +
+            "  • [image] wedding.jpg [handle: m1] region [10, 20, 60, 45]\n" +
             "  • [handle: m2]\n",
             result);
         Assert.Contains("Notes (1):\n  • [General] Married in Tver [handle: n1]\n", result);

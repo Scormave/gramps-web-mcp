@@ -91,6 +91,38 @@ update_person(handle: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"], lin
 update_family(handle: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "add", sort: ["Children"])
 ```
 
+### Image regions
+
+A media link can show only part of an image, such as one baptism record on a
+page scan. `mediaHandles` on the person, family, event, place, source and
+citation tools, and `attachTo` on `create_media` and `update_media`, take an
+object `{"ref": "MEDIA_HANDLE", "region": [left, top, right, bottom]}` in place
+of a handle (`attachTo` takes a Gramps ID as `ref` too). The edges are whole
+percent of the image width and height, 0 to 100, from the top-left corner, as
+Gramps stores the crop of a media reference: `[10, 20, 60, 45]` runs from 10% to
+60% across and from 20% to 45% down. The key `rect` and a string such as
+`"10,20,60,45"` are read too; fractions are rounded. `[0, 0, 100, 100]` shows the
+whole image again. An empty region or an edge outside 0 to 100 is rejected
+before anything is saved or uploaded.
+
+A plain handle keeps the region its link has, in every mode. With
+`linkMode: "add"` (and always with `attachTo`), a media the record already shows
+keeps its link, with its privacy, citations and notes, and takes the region; a
+link that already shows that region is left as it is, so repeating a call
+changes nothing. To show two regions of one image on a record, list the media
+twice, each with its region. In `replace` mode a region is laid over the
+matching stored link like other link fields. Records list each media link with
+its region, and `read_media` with `region` shows what a region covers before it
+is saved.
+
+```text
+read_media(handle: "O0100", region: [5, 50, 95, 75])
+update_person(handle: "PERSON_HANDLE", mediaHandles: [{"ref": "MEDIA_HANDLE", "region": [5, 50, 95, 75]}], linkMode: "add")
+create_media(filePath: "page12.jpg", attachTo: [{"ref": "I0001", "region": [5, 50, 95, 75]}, "C0001"])
+```
+
+### Updates keep stored data
+
 Every update tool sends back the stored object with only the supplied fields
 changed, including data the tools cannot show or edit (styled note text, LDS
 ordinances, fields from newer Gramps versions). `update_note` keeps the styling
@@ -354,7 +386,7 @@ Create a new person.  Returns handle and Gramps ID.
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
 | `familyHandles` | `FlexibleHandleList?` | no | — | Families (as parent/spouse) |
 | `parentFamilyHandles` | `FlexibleHandleList?` | no | — | Parent families (as child) |
-| `mediaHandles` | `FlexibleHandleList?` | no | — | Media handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects to show part of an image; see [Image regions](#image-regions) |
 | `citationHandles` | `FlexibleHandleList?` | no | — | Citation handles |
 | `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
 | `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
@@ -393,7 +425,8 @@ Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guid
 | `relationshipType` | `string?` | no | `"Married"` | Married, Unmarried, Civil Union, Unknown |
 | `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
-| `mediaHandles`, `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects; see [Image regions](#image-regions) |
+| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -418,7 +451,8 @@ Link to persons/families via their create/update tools' `eventRefs`.
 | `date` | `string?` | no | — | Date text |
 | `placeHandle` | `string?` | no | — | Place handle |
 | `description` | `string?` | no | — | Event description |
-| `citationHandles`, `noteHandles`, `tagHandles`, `mediaHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects; see [Image regions](#image-regions) |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -445,7 +479,8 @@ Create a place.  **Prerequisites:** `gramps://types`.
 | `nameLang` | `string?` | no | — | Language code for primary name |
 | `nameDate` | `string?` | no | — | When the primary name applies, same date rules as `alternateNames` (`from 1937-02-10`, `1918-1937`). Gramps shows the first name, primary first, whose date is empty or matches the event date, so an undated primary name hides dated alternate names |
 | `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate names `{value, lang?, date?}`. Dashes → span; open `1991-` → From; English months / ISO day ranges / mixed `1703-1914-08-31` supported. Unrecognized dates fail validation |
-| `noteHandles`, `mediaHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `noteHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects; see [Image regions](#image-regions) |
 | `code` | `string?` | no | — | Place code / postal reference |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -472,7 +507,8 @@ Create a source.  Create sources **before** citations.
 | `pubinfo` | `string?` | no | — | Publication info |
 | `abbrev` | `string?` | no | — | Abbreviation |
 | `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handle strings, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted); media types are checked against `source_media_types` |
-| `noteHandles`, `mediaHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects; see [Image regions](#image-regions) |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -496,7 +532,7 @@ Attach to persons/events/places via their `citationHandles`.
 | `confidence` | `string` | no | `"Normal"` | Very Low / Low / Normal / High / Very High |
 | `date` | `string?` | no | — | Access or reference date |
 | `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
-| `mediaHandles` | `FlexibleHandleList?` | no | — | Media handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects; see [Image regions](#image-regions) |
 | `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
 | `isPrivate` | `bool` | no | `false` | Mark private |
@@ -572,6 +608,7 @@ an embedded blob with a text hint. Prefer thumbnails before full files.
 | `handle` | `string` | yes | — | Media handle or Gramps ID |
 | `mode` | `string` | no | `thumbnail` | `thumbnail` or `file` |
 | `size` | `int?` | no | — | Thumbnail long edge in pixels, 1 to 4096; omitted means 1568, which keeps document scans legible. Images are never upscaled. Must be omitted in file mode |
+| `region` | `double[]?` | no | — | Show only this part of the image, `[left, top, right, bottom]` in percent as on a media link (see [Image regions](#image-regions)), at up to `size` pixels on its long edge; a small region is read from the full-resolution original. Thumbnail mode only |
 
 Migration: replace `get_media_thumbnail(handle, size)` with
 `read_media(handle, mode: "thumbnail", size: size)` and replace
@@ -590,14 +627,16 @@ nothing is uploaded, its fields stay as they are, only `attachTo` is applied,
 and the response says `action: existing`. Repeating a call is therefore safe.
 An unreadable date or an unknown `attachTo` record is rejected before anything
 is uploaded. Each `attachTo` record gets the media after its existing media,
-and a record that already shows it is left unchanged.
+and a record that already shows it is left unchanged. An `attachTo` entry can
+be `{"ref": "I0001", "region": [left, top, right, bottom]}` to show only that
+part of the image; see [Image regions](#image-regions).
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `filePath` | `string` | yes | — | Absolute path inside an upload folder, `~/…`, or a name relative to a folder, such as `scan.jpg` |
 | `description` | `string?` | no | file name without extension | Description (caption) |
 | `date` | `string?` | no | — | Date of the photo or document |
-| `attachTo` | `FlexibleHandleList?` | no | — | Records to show the media on: Gramps IDs (`I`, `F`, `E`, `P`, `S`, `C`) or handles |
+| `attachTo` | `FlexibleMediaLinkList?` | no | — | Records to show the media on: Gramps IDs (`I`, `F`, `E`, `P`, `S`, `C`) or handles, or `{ref, region}` objects |
 | `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Links on the media record itself |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool` | no | `false` | Mark private |
@@ -609,6 +648,10 @@ Update media metadata, or replace the stored file with `filePath` from an
 upload folder. The new file is checked like in `CreateMedia`; a file identical
 to the stored one uploads nothing, and a file another media record already
 holds is rejected. The date and file are checked before anything is saved.
+`attachTo` shows the media on more records, whole or as a region, like in
+`CreateMedia`; it works alone, without saving the media record. To take the
+media off a record, use that record's update tool with `mediaHandles` and
+`linkMode: "remove"`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -619,6 +662,7 @@ holds is rejected. The date and file are checked before anything is saved.
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool?` | no | — | Private flag |
 | `filePath` | `string?` | no | — | Replacement file inside an upload folder; omit to keep the file |
+| `attachTo` | `FlexibleMediaLinkList?` | no | — | Records to show the media on, as in `CreateMedia`; not affected by `linkMode` |
 
 ---
 

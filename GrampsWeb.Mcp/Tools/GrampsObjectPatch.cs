@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Exceptions;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Serialization;
 
@@ -91,13 +92,94 @@ internal sealed class GrampsObjectPatch
     public void ApplyHandles(string key, string[]? handles, string mode) =>
         ApplyLinks(key, handles?.Select(h => (JsonNode?)JsonValue.Create(h)), mode);
 
-    /// <summary>Applies media handles to <c>media_list</c>, whose entries are <c>MediaRef</c> objects.</summary>
-    public void ApplyMediaHandles(string[]? handles, string mode) =>
-        ApplyLinks("media_list", handles?.Select(h => (JsonNode?)new JsonObject
+    /// <summary>
+    /// Applies media links to <c>media_list</c>, whose entries are <c>MediaRef</c> objects. A link with a region
+    /// sets the stored <c>rect</c> (the whole image clears it); a link without one keeps the stored region.
+    /// In add mode a media already shown keeps its link and takes the region given; a region for a media
+    /// whose links all took one already adds another link, so one image can show several regions.
+    /// </summary>
+    public void ApplyMediaLinks(MediaLink[]? links, string mode, string argument = "mediaHandles")
+    {
+        if (links is null)
+            return;
+        LinkUpdates.Validate(mode);
+        FlexibleMediaLinkList.EnsureValid(links, argument);
+        if (mode != "add")
         {
-            ["_class"] = "MediaRef",
-            ["ref"] = h?.Trim()
-        }), mode);
+            ApplyLinks("media_list", links.Select(link => (JsonNode?)MediaRefNode(link)), mode);
+            return;
+        }
+
+        if (links.Any(link => string.IsNullOrWhiteSpace(link.Ref)))
+            throw McpToolErrors.ValidationError("Each link must have a non-empty handle/ref.");
+        var list = Root["media_list"] as JsonArray ?? new JsonArray();
+        var stored = list.ToArray();
+        var used = new bool[stored.Length];
+        var shown = stored.Select(LinkKey).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        var changed = false;
+
+        // Links that already show their region stay as they are, so repeating a call changes nothing.
+        var pending = new List<MediaLink>();
+        foreach (var link in links.Where(link => link.Region is not null))
+        {
+            var region = link.Region!.IsWholeImage ? null : link.Region;
+            var index = Enumerable.Range(0, stored.Length).FirstOrDefault(i => !used[i] && LinkKey(stored[i]) == link.Ref.Trim()
+                && stored[i] is JsonObject o && MediaRegion.FromStored(IntArray(o["rect"])) == region, -1);
+            if (index >= 0)
+                used[index] = true;
+            else
+                pending.Add(link);
+        }
+
+        foreach (var link in links)
+        {
+            var handle = link.Ref.Trim();
+            if (link.Region is null)
+            {
+                if (shown.Add(handle))
+                {
+                    list.Add(MediaRefNode(link));
+                    changed = true;
+                }
+                continue;
+            }
+
+            if (!pending.Remove(link))
+                continue;
+            var index = FindUnused(stored, used, handle, LinkKey);
+            if (index >= 0 && stored[index] is JsonObject match)
+            {
+                used[index] = true;
+                match["rect"] = RectNode(link.Region);
+                changed = true;
+                continue;
+            }
+
+            shown.Add(handle);
+            list.Add(MediaRefNode(link));
+            changed = true;
+        }
+
+        if (changed && list.Parent is null)
+            Root["media_list"] = list;
+    }
+
+    private static JsonObject MediaRefNode(MediaLink link)
+    {
+        var node = new JsonObject { ["_class"] = "MediaRef", ["ref"] = link.Ref.Trim() };
+        if (link.Region is not null)
+            node["rect"] = RectNode(link.Region);
+        return node;
+    }
+
+    /// <summary>The stored <c>rect</c>: the region's edges, or null for the whole image, as Gramps stores a link without one.</summary>
+    private static JsonNode? RectNode(MediaRegion region) =>
+        region.IsWholeImage ? null : new JsonArray(region.ToArray().Select(edge => (JsonNode?)edge).ToArray());
+
+    private static int[]? IntArray(JsonNode? node) =>
+        node is JsonArray array && array.All(item => item is JsonValue value && value.TryGetValue<int>(out _))
+            ? array.Select(item => item!.GetValue<int>()).ToArray()
+            : null;
 
     /// <summary>Applies typed references, written by their converters (which leave out empty fields).</summary>
     public void ApplyRefs<T>(string key, T[]? refs, string mode) =>

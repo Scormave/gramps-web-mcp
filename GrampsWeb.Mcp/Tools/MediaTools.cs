@@ -52,7 +52,8 @@ public static class MediaTools
     [Description(
         "Download a media file's bytes so you can see it. Default mode thumbnail renders a JPEG preview (PNG when transparent) from an image original " +
         "as MCP image content, 1568 pixels on the long edge unless size is given; EXIF and other metadata are stripped. " +
-        "Prefer it for reading photos and document scans. Use mode file only when the original is needed: returns image, audio, " +
+        "Prefer it for reading photos and document scans; region shows one part of an image, as a media link with that region does. " +
+        "Use mode file only when the original is needed: returns image, audio, " +
         "or embedded blob resource content according to MIME type. " +
         "Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects size and private-record safeguards. " +
         "For the media record itself (path, description, links) use get_object; to change it use update_media.")]
@@ -65,7 +66,11 @@ public static class MediaTools
                      "Use 512 or less for a quick look at photos. Images are never upscaled. Only valid for mode thumbnail; omit for mode file.")]
         int? size = null,
         GrampsApiClient client = null!,
-        GrampsConfig config = null!)
+        GrampsConfig config = null!,
+        [Description("Show only this part of the image, at up to size pixels on its long edge: [left, top, right, bottom] in percent of the image " +
+                     "width and height, 0 to 100, from the top-left corner, as stored on a media link. Use it to check a region before saving it " +
+                     "in mediaHandles or attachTo, or to read one record on a page scan. Only valid for mode thumbnail.")]
+        double[]? region = null)
     {
         try
         {
@@ -78,6 +83,16 @@ public static class MediaTools
                 throw McpToolErrors.ValidationError("size is only supported for mode thumbnail; omit it for mode file.");
             if (normalizedMode == "thumbnail" && size.HasValue)
                 MediaPreviewRenderer.EnsureValidSize(size.Value);
+            if (normalizedMode == "file" && region != null)
+                throw McpToolErrors.ValidationError("region is only supported for mode thumbnail; omit it for mode file.");
+            MediaRegion? crop = null;
+            if (region != null)
+            {
+                if (!MediaRegion.TryCreate(region, out crop, out var regionError))
+                    throw McpToolErrors.ValidationError($"region: {regionError} {MediaRegion.DescriptionHint}");
+                if (crop.IsWholeImage)
+                    crop = null;
+            }
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             if (normalizedMode == "file")
@@ -86,7 +101,7 @@ public static class MediaTools
                 return GrampsResources.ToMediaFileCallToolResult(mediaFile);
             }
             var thumbnail = await GrampsResources.RenderMediaThumbnailAsync(
-                resolvedHandle, size ?? MediaPreviewRenderer.DefaultSize, client, config);
+                resolvedHandle, size ?? MediaPreviewRenderer.DefaultSize, client, config, crop);
             return new CallToolResult { Content = [ImageContentBlock.FromBytes(thumbnail.Binary.Bytes, thumbnail.MimeType)] };
         }
         catch (Exception ex)
@@ -94,6 +109,16 @@ public static class MediaTools
             throw McpToolErrors.ToMcpException(ex);
         }
     }
+
+    private const string AttachToDescription =
+        "Records to show the media on, each getting a link after its existing media: Gramps IDs (I0001, F0001, E0001, P0001, S0001, C0001) " +
+        "or handles of people, families, events, places, sources or citations. JSON array, one value, or a comma-separated string. " +
+        "To show only part of the image, such as one record on a page scan, give an object {\"ref\":\"I0001\",\"region\":[left, top, right, bottom]} " +
+        "in place of the ID. " + MediaRegion.DescriptionHint + " A record already showing the media keeps its link and takes the region; " +
+        "list a record twice to show two regions. Check a region with read_media first.";
+
+    private const string CreateRetry =
+        "Run create_media again with the same file and attachTo: it finds the stored media by checksum and adds only the missing links.";
 
     /// <summary>The records Gramps lets show media, by Gramps ID prefix.</summary>
     private static readonly MediaOwnerType[] OwnerTypes =
@@ -109,7 +134,7 @@ public static class MediaTools
     [McpServerTool(Title = "Create Media", ReadOnly = false, Destructive = false)]
     [Description(
         "Upload a photo, document scan or PDF from the server's upload folder as a new media record, and show it on " +
-        "people, families, events, places, sources or citations with attachTo. " +
+        "people, families, events, places, sources or citations with attachTo, whole or as a region such as one record on a page scan. " +
         "Only files inside GRAMPS_MEDIA_UPLOAD_DIRS can be uploaded; the type (" + MediaUploadFile.SupportedTypes + ") is judged by content. " +
         "If the tree already stores an identical file (same MD5 checksum), nothing is uploaded: that record is returned with action existing, " +
         "its fields stay as they are and only attachTo is applied, so repeating a call is safe. " +
@@ -123,9 +148,8 @@ public static class MediaTools
         string? description = null,
         [Description("Date of the photo or document. " + ToolDescriptionFragments.DateText)]
         string? date = null,
-        [Description("Records to show the media on, each getting a link after its existing media: Gramps IDs (I0001, F0001, E0001, P0001, S0001, C0001) " +
-                     "or handles of people, families, events, places, sources or citations. JSON array, one value, or a comma-separated string.")]
-        FlexibleHandleList? attachTo = null,
+        [Description(AttachToDescription)]
+        FlexibleMediaLinkList? attachTo = null,
         [Description("Citations for the media itself. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
@@ -145,12 +169,12 @@ public static class MediaTools
             var mediaDate = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             await KnownTypes.CheckAttributesAsync(attributes, client);
             using var updateLease = await client.BeginUpdateAsync();
-            var owners = await ResolveOwnersAsync(attachTo, client);
+            var owners = await ResolveOwnersAsync(attachTo, client, "Nothing was uploaded.");
 
             var existing = await FindByChecksumAsync(file.Checksum, client);
             if (existing?.Handle is { Length: > 0 } existingHandle)
             {
-                var linked = await AttachAsync(owners, existingHandle, existing.GrampsId, client);
+                var linked = await AttachAsync(owners, existingHandle, existing.GrampsId, client, CreateRetry);
                 return ResponseEnvelope.FoundExisting("Media", existingHandle, existing.GrampsId, existing.Description,
                     $"{Path.GetFileName(file.Path)} is already stored as this media record (same MD5 checksum), so nothing was uploaded. " +
                     "Its description, date, notes, tags, citations, attributes and privacy were left as they are; change them with update_media." +
@@ -188,7 +212,7 @@ public static class MediaTools
                     $"Do not upload it again: set them with update_media(handle: \"{handle}\").", ex);
             }
 
-            var attached = await AttachAsync(owners, handle, grampsId, client);
+            var attached = await AttachAsync(owners, handle, grampsId, client, CreateRetry);
             return ResponseEnvelope.CreateSuccess("Media", handle, grampsId, mediaDescription,
                 owners.Count == 0 ? ResponseEnvelope.MediaCreateNextSteps(handle) : null,
                 [new("mime", ResponseEnvelope.HeaderValue(file.MimeType)), new("attached_to", ResponseEnvelope.HeaderValue(attached))]);
@@ -205,7 +229,8 @@ public static class MediaTools
         "or replace its file with filePath from the server's upload folder (GRAMPS_MEDIA_UPLOAD_DIRS). " +
         ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing media object returns a not-found message, and an unreadable date or file is rejected before anything is saved. " +
-        "To show the media on a person, event or citation, add it to their mediaHandles (linkMode add). " +
+        "attachTo shows the media on people, families, events, places, sources or citations, whole or as a region; " +
+        "to take it off a record, use that record's update tool with mediaHandles and linkMode remove. " +
         ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateMedia(
         [Description("The media object to change. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -230,7 +255,9 @@ public static class MediaTools
         [Description("Replace the stored file with this one: an absolute path inside an upload folder, ~/…, or a name relative to the folder. " +
                      "Accepts " + MediaUploadFile.SupportedTypes + ", judged by content; a file another media record already holds is rejected. Omit to keep the file.")]
         string? filePath = null,
-        GrampsConfig config = null!)
+        GrampsConfig config = null!,
+        [Description(AttachToDescription + " Not affected by linkMode.")]
+        FlexibleMediaLinkList? attachTo = null)
     {
         try
         {
@@ -241,13 +268,20 @@ public static class MediaTools
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             var mediaPath = $"/api/media/{Uri.EscapeDataString(resolvedHandle)}";
+            var owners = await ResolveOwnersAsync(attachTo, client, "Nothing was changed.");
+            var metadataChanges = HasMetadataChanges(description, date, noteHandles, tagHandles, citationHandles, attributes, isPrivate);
 
-            List<KeyValuePair<string, string>>? stored = null;
-            if (file is not null)
+            List<KeyValuePair<string, string>> stored = [];
+            GrampsMedia? current = null;
+            if (file is not null || !metadataChanges)
             {
-                var current = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(mediaPath);
+                current = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(mediaPath);
                 if (current == null)
                     return NotFoundHelper.NotFoundMessage("Media", handle);
+            }
+
+            if (file is not null && current is not null)
+            {
                 var replaced = false;
                 if (!string.Equals(current.Checksum, file.Checksum, StringComparison.OrdinalIgnoreCase))
                 {
@@ -258,27 +292,39 @@ public static class MediaTools
                             "link that record instead of storing the file twice. Nothing was changed.");
                     replaced = await UploadAsync(() => client.PutMediaFileAsync(resolvedHandle, file.Bytes, file.MimeType), file);
                 }
-                stored = [new("file", replaced ? "replaced" : "unchanged (identical)"), new("mime", ResponseEnvelope.HeaderValue(file.MimeType))];
-                if (!HasMetadataChanges(description, date, noteHandles, tagHandles, citationHandles, attributes, isPrivate))
-                    return ResponseEnvelope.UpdateSuccess("Media", current.Handle, current.GrampsId, stored);
+                stored.Add(new("file", replaced ? "replaced" : "unchanged (identical)"));
+                stored.Add(new("mime", ResponseEnvelope.HeaderValue(file.MimeType)));
             }
 
-            // Loaded after the file is replaced, so the save keeps the new checksum, path and MIME type.
-            var media = await GrampsObjectPatch.LoadAsync(client, mediaPath);
-            if (media == null)
-                return NotFoundHelper.NotFoundMessage("Media", handle);
+            var (savedHandle, savedId) = (current?.Handle ?? resolvedHandle, current?.GrampsId);
+            if (metadataChanges)
+            {
+                // Loaded after the file is replaced, so the save keeps the new checksum, path and MIME type.
+                var media = await GrampsObjectPatch.LoadAsync(client, mediaPath);
+                if (media == null)
+                    return NotFoundHelper.NotFoundMessage("Media", handle);
 
-            media.Set("desc", description);
-            if (date != null)
-                media.SetOrRemove("date", mediaDate);
-            media.ReplaceAttributes(attributes);
-            media.ApplyHandles("citation_list", citationHandles, linkMode);
-            media.ApplyHandles("note_list", noteHandles, linkMode);
-            media.ApplyHandles("tag_list", tagHandles, linkMode);
-            media.Set("private", isPrivate);
+                media.Set("desc", description);
+                if (date != null)
+                    media.SetOrRemove("date", mediaDate);
+                media.ReplaceAttributes(attributes);
+                media.ApplyHandles("citation_list", citationHandles, linkMode);
+                media.ApplyHandles("note_list", noteHandles, linkMode);
+                media.ApplyHandles("tag_list", tagHandles, linkMode);
+                media.Set("private", isPrivate);
 
-            await media.SaveAsync(client);
-            return ResponseEnvelope.UpdateSuccess("Media", media.Handle, media.GrampsId, stored);
+                await media.SaveAsync(client);
+                (savedHandle, savedId) = (media.Handle ?? savedHandle, media.GrampsId ?? savedId);
+            }
+
+            if (owners.Count > 0)
+            {
+                var attached = await AttachAsync(owners, savedHandle, savedId, client,
+                    $"Run update_media(handle: \"{savedHandle}\") again with the same attachTo: it adds only the missing links.");
+                stored.Add(new("attached_to", ResponseEnvelope.HeaderValue(attached)));
+            }
+
+            return ResponseEnvelope.UpdateSuccess("Media", savedHandle, savedId, stored.Count > 0 ? stored : null);
         }
         catch (Exception ex)
         {
@@ -315,46 +361,58 @@ public static class MediaTools
     }
 
     /// <summary>
-    /// Finds each attachTo record before anything is uploaded, so a typo costs nothing.
+    /// Finds each attachTo record before anything is uploaded or saved, so a typo costs nothing.
     /// Gramps IDs are looked up by their prefix; a handle is tried as each record type in turn.
+    /// <paramref name="nothingDone"/> ends the not-found errors.
     /// </summary>
-    private static async Task<List<MediaOwner>> ResolveOwnersAsync(string[]? values, GrampsApiClient client)
+    private static async Task<List<MediaAttachment>> ResolveOwnersAsync(MediaLink[]? links, GrampsApiClient client, string nothingDone)
     {
-        var owners = new List<MediaOwner>();
-        foreach (var value in (values ?? []).Select(v => v?.Trim() ?? "").Where(v => v.Length > 0))
+        FlexibleMediaLinkList.EnsureValid(links, "attachTo");
+        var attachments = new List<MediaAttachment>();
+        var resolved = new Dictionary<string, MediaOwner>(StringComparer.Ordinal);
+        foreach (var link in links ?? [])
         {
-            MediaOwner? owner = null;
-            if (HandleResolver.LooksLikeGrampsId(value))
+            var value = link.Ref?.Trim() ?? "";
+            if (value.Length == 0)
+                continue;
+            if (!resolved.TryGetValue(value, out var owner))
             {
-                var type = OwnerTypes.FirstOrDefault(t => t.Prefix == value[0])
-                    ?? throw McpToolErrors.ValidationError(
-                        $"attachTo: {value} is not a person, family, event, place, source or citation; media can be shown only on those.");
-                var resolved = await HandleResolver.ResolveToHandleAsync(value, client, type.Endpoint);
-                owner = await LoadOwnerAsync(type, resolved, client)
-                    ?? throw McpToolErrors.ValidationError($"attachTo: there is no {type.Kind} {value}. Nothing was uploaded.");
-            }
-            else if (HandleResolver.LooksLikeHandle(value))
-            {
-                foreach (var type in OwnerTypes)
-                {
-                    owner = await LoadOwnerAsync(type, value, client);
-                    if (owner is not null)
-                        break;
-                }
-                if (owner is null)
-                    throw McpToolErrors.ValidationError(
-                        $"attachTo: no person, family, event, place, source or citation has handle {value}. Nothing was uploaded.");
-            }
-            else
-            {
-                throw McpToolErrors.ValidationError($"attachTo: \"{value}\" is neither a Gramps ID such as I0001 nor a handle.");
+                owner = await ResolveOwnerAsync(value, client, nothingDone);
+                resolved[value] = owner;
             }
 
-            if (owners.All(o => o.Handle != owner.Handle))
-                owners.Add(owner);
+            if (!attachments.Any(a => a.Owner.Handle == owner.Handle && a.Region == link.Region))
+                attachments.Add(new MediaAttachment(owner, link.Region));
         }
 
-        return owners;
+        return attachments;
+    }
+
+    private static async Task<MediaOwner> ResolveOwnerAsync(string value, GrampsApiClient client, string nothingDone)
+    {
+        if (HandleResolver.LooksLikeGrampsId(value))
+        {
+            var type = OwnerTypes.FirstOrDefault(t => t.Prefix == value[0])
+                ?? throw McpToolErrors.ValidationError(
+                    $"attachTo: {value} is not a person, family, event, place, source or citation; media can be shown only on those. {nothingDone}");
+            var resolved = await HandleResolver.ResolveToHandleAsync(value, client, type.Endpoint);
+            return await LoadOwnerAsync(type, resolved, client)
+                ?? throw McpToolErrors.ValidationError($"attachTo: there is no {type.Kind} {value}. {nothingDone}");
+        }
+
+        if (HandleResolver.LooksLikeHandle(value))
+        {
+            foreach (var type in OwnerTypes)
+            {
+                if (await LoadOwnerAsync(type, value, client) is { } owner)
+                    return owner;
+            }
+
+            throw McpToolErrors.ValidationError(
+                $"attachTo: no person, family, event, place, source or citation has handle {value}. {nothingDone}");
+        }
+
+        throw McpToolErrors.ValidationError($"attachTo: \"{value}\" is neither a Gramps ID such as I0001 nor a handle. {nothingDone}");
     }
 
     private static async Task<MediaOwner?> LoadOwnerAsync(MediaOwnerType type, string handle, GrampsApiClient client)
@@ -370,34 +428,32 @@ public static class MediaTools
     }
 
     /// <summary>
-    /// Adds the media after each owner's existing media, skipping owners that already show it.
-    /// Returns the owners' Gramps IDs (handles when an ID is missing).
+    /// Adds the media after each owner's existing media (<see cref="GrampsObjectPatch.ApplyMediaLinks"/>, add mode),
+    /// saving only owners whose links change. Returns the owners' Gramps IDs (handles when an ID is missing),
+    /// each followed by the region it shows. <paramref name="retry"/> ends the error when an owner fails.
     /// </summary>
     private static async Task<List<string>> AttachAsync(
-        IReadOnlyList<MediaOwner> owners, string mediaHandle, string? mediaGrampsId, GrampsApiClient client)
+        IReadOnlyList<MediaAttachment> attachments, string mediaHandle, string? mediaGrampsId, GrampsApiClient client, string retry)
     {
         var attached = new List<string>();
-        foreach (var owner in owners)
+        foreach (var group in attachments.GroupBy(a => a.Owner.Handle, StringComparer.Ordinal))
         {
+            var owner = group.First().Owner;
             try
             {
                 var patch = await GrampsObjectPatch.LoadAsync(client, owner.Path)
                     ?? throw new InvalidOperationException($"the {owner.Type.Kind} no longer exists.");
-                var shown = (patch.Root["media_list"] as JsonArray)?
-                    .Any(link => link is JsonObject o && GrampsObjectPatch.StringValue(o["ref"])?.Trim() == mediaHandle) == true;
-                if (!shown)
-                {
-                    patch.ApplyMediaHandles([mediaHandle], "add");
+                var before = patch.Root["media_list"]?.ToJsonString();
+                patch.ApplyMediaLinks(group.Select(a => new MediaLink(mediaHandle, a.Region)).ToArray(), "add", "attachTo");
+                if (patch.Root["media_list"]?.ToJsonString() != before)
                     await patch.SaveAsync(client);
-                }
-                attached.Add(owner.Label);
+                attached.AddRange(group.Select(a => a.Label));
             }
             catch (Exception ex) when (ex is not McpException)
             {
                 var done = attached.Count > 0 ? $" and shown on {string.Join(", ", attached)}" : "";
                 throw new McpException(
-                    $"Media {mediaGrampsId ?? mediaHandle} is stored{done}, but showing it on {owner.Type.Kind} {owner.Label} failed: {ex.Message} " +
-                    "Run create_media again with the same file and attachTo: it finds the stored media by checksum and adds only the missing links.", ex);
+                    $"Media {mediaGrampsId ?? mediaHandle} is stored{done}, but showing it on {owner.Type.Kind} {owner.Label} failed: {ex.Message} {retry}", ex);
             }
         }
 
@@ -409,5 +465,16 @@ public static class MediaTools
     private sealed record MediaOwner(MediaOwnerType Type, string Path, string Handle, string? GrampsId)
     {
         public string Label => GrampsId ?? Handle;
+    }
+
+    /// <summary>One attachTo entry: the record, and the region it shows (null keeps a stored region).</summary>
+    private sealed record MediaAttachment(MediaOwner Owner, MediaRegion? Region)
+    {
+        public string Label => Region switch
+        {
+            null => Owner.Label,
+            { IsWholeImage: true } => $"{Owner.Label} (whole image)",
+            _ => $"{Owner.Label} region {Region}"
+        };
     }
 }

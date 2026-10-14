@@ -36,7 +36,7 @@ public class MediaUploadToolsTests : IDisposable
         server.Objects["/api/people/h-person"] = """{"_class":"Person","handle":"h-person","gramps_id":"I0001","media_list":[{"_class":"MediaRef","ref":"h-photo"}]}""";
 
         var result = await MediaTools.CreateMedia("metric book 1890.jpg", date: "1890",
-            attachTo: Handles("I0001"), noteHandles: Handles("h-note"), client: server.Client(), config: Config());
+            attachTo: Links("I0001"), noteHandles: Handles("h-note"), client: server.Client(), config: Config());
 
         Assert.Equal(
         [
@@ -76,7 +76,7 @@ public class MediaUploadToolsTests : IDisposable
             """{"_class":"Person","handle":"h-person-handle-1","gramps_id":"I0002","media_list":[{"_class":"MediaRef","ref":"h-old"}]}""";
 
         var result = await MediaTools.CreateMedia("metric book 1890.jpg", description: "ignored",
-            attachTo: Handles("h-event-handle-1", "h-person-handle-1"), client: server.Client(), config: Config());
+            attachTo: Links("h-event-handle-1", "h-person-handle-1"), client: server.Client(), config: Config());
 
         Assert.DoesNotContain("POST /api/media/", server.Requests);
         Assert.DoesNotContain("PUT /api/media/h-old", server.Requests);
@@ -99,7 +99,7 @@ public class MediaUploadToolsTests : IDisposable
         server.Lists["/api/people/?gramps_id=I0009&pagesize=1"] = "[]";
 
         var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia("metric book 1890.jpg",
-            attachTo: Handles(owner), client: server.Client(), config: Config()));
+            attachTo: Links(owner), client: server.Client(), config: Config()));
 
         Assert.Contains(message, ex.Message);
         Assert.DoesNotContain(server.Requests, r => r.StartsWith("POST", StringComparison.Ordinal) || r.StartsWith("PUT", StringComparison.Ordinal));
@@ -202,6 +202,92 @@ public class MediaUploadToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateMedia_Shows_A_Region_On_One_Owner_And_The_Whole_Image_On_Another()
+    {
+        var server = new FakeGramps();
+        server.Lists["/api/people/?gramps_id=I0001&pagesize=1"] = """[{"handle":"h-person","gramps_id":"I0001"}]""";
+        server.Objects["/api/people/h-person"] = """{"_class":"Person","handle":"h-person","gramps_id":"I0001","media_list":[{"_class":"MediaRef","ref":"h-photo"}]}""";
+        server.Lists["/api/citations/?gramps_id=C0001&pagesize=1"] = """[{"handle":"h-citation","gramps_id":"C0001"}]""";
+        server.Objects["/api/citations/h-citation"] = """{"_class":"Citation","handle":"h-citation","gramps_id":"C0001"}""";
+
+        var result = await MediaTools.CreateMedia("metric book 1890.jpg",
+            attachTo: LinksJson("""[{"ref":"I0001","region":[10,20,60,45]},"C0001"]"""), client: server.Client(), config: Config());
+
+        Assert.Equal(
+            """[{"_class":"MediaRef","ref":"h-photo"},{"_class":"MediaRef","ref":"h-new","rect":[10,20,60,45]}]""",
+            server.Saved["/api/people/h-person"]["media_list"]!.ToJsonString());
+        Assert.Equal("""[{"_class":"MediaRef","ref":"h-new"}]""", server.Saved["/api/citations/h-citation"]["media_list"]!.ToJsonString());
+        Assert.Contains("""attached_to: ["I0001 region [10, 20, 60, 45]","C0001"]""", result);
+    }
+
+    [Fact]
+    public async Task CreateMedia_Rejects_An_Unreadable_Region_Before_Uploading()
+    {
+        var server = new FakeGramps();
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia("metric book 1890.jpg",
+            attachTo: LinksJson("""[{"ref":"I0001","region":[10,20,5,45]}]"""), client: server.Client(), config: Config()));
+
+        Assert.Contains("attachTo: I0001: region [10, 20, 5, 45] is empty", ex.Message);
+        Assert.Empty(server.Requests);
+    }
+
+    [Fact]
+    public async Task UpdateMedia_AttachTo_Gives_A_Shown_Scan_Its_Region_Once()
+    {
+        var server = new FakeGramps();
+        server.Objects["/api/media/h-media"] = """{"_class":"Media","handle":"h-media","gramps_id":"O0100","checksum":"0ld","desc":"Page 12"}""";
+        server.Lists["/api/people/?gramps_id=I0002&pagesize=1"] = """[{"handle":"h-person","gramps_id":"I0002"}]""";
+        server.Objects["/api/people/h-person"] =
+            """{"_class":"Person","handle":"h-person","gramps_id":"I0002","media_list":[{"_class":"MediaRef","ref":"h-media","private":true}]}""";
+        var attachTo = LinksJson("""[{"ref":"I0002","region":"5,50,95,75"}]""");
+
+        var result = await MediaTools.UpdateMedia("h-media", client: server.Client(), config: Config(), attachTo: attachTo);
+
+        Assert.DoesNotContain("PUT /api/media/h-media", server.Requests);
+        Assert.Equal("""[{"_class":"MediaRef","ref":"h-media","private":true,"rect":[5,50,95,75]}]""",
+            server.Saved["/api/people/h-person"]["media_list"]!.ToJsonString());
+        Assert.Contains("action: updated", result);
+        Assert.Contains("gramps_id: O0100", result);
+        Assert.Contains("""attached_to: ["I0002 region [5, 50, 95, 75]"]""", result);
+
+        server.Requests.Clear();
+        await MediaTools.UpdateMedia("h-media", client: server.Client(), config: Config(), attachTo: attachTo);
+
+        Assert.DoesNotContain(server.Requests, r => r.StartsWith("PUT", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task UpdateMedia_AttachTo_Saves_Metadata_Then_Links()
+    {
+        var server = new FakeGramps();
+        server.Objects["/api/media/h-media"] = """{"_class":"Media","handle":"h-media","gramps_id":"O0100","checksum":"0ld","desc":"old"}""";
+        server.Objects["/api/events/h-event-handle-1"] = """{"_class":"Event","handle":"h-event-handle-1","gramps_id":"E0003","media_list":[]}""";
+
+        var result = await MediaTools.UpdateMedia("h-media", description: "Page 12", client: server.Client(), config: Config(),
+            attachTo: Links("h-event-handle-1"));
+
+        Assert.Equal(["PUT /api/media/h-media", "PUT /api/events/h-event-handle-1"],
+            server.Requests.Where(r => r.StartsWith("PUT", StringComparison.Ordinal)));
+        Assert.Equal("Page 12", server.Saved["/api/media/h-media"]["desc"]!.GetValue<string>());
+        Assert.Contains("""attached_to: ["E0003"]""", result);
+    }
+
+    [Fact]
+    public async Task UpdateMedia_Rejects_An_Unknown_Owner_Before_Changing_Anything()
+    {
+        var server = new FakeGramps();
+        server.Objects["/api/media/h-media"] = """{"_class":"Media","handle":"h-media","gramps_id":"O0100","checksum":"0ld"}""";
+        server.Lists["/api/people/?gramps_id=I0009&pagesize=1"] = "[]";
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.UpdateMedia("h-media", description: "Page 12",
+            filePath: "metric book 1890.jpg", client: server.Client(), config: Config(), attachTo: Links("I0009")));
+
+        Assert.Contains("there is no person I0009. Nothing was changed.", ex.Message);
+        Assert.DoesNotContain(server.Requests, r => r.StartsWith("PUT", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Upload_Is_Refused_In_Read_Only_Mode()
     {
         var server = new FakeGramps();
@@ -214,6 +300,11 @@ public class MediaUploadToolsTests : IDisposable
 
     private static FlexibleHandleList Handles(params string[] values) =>
         JsonSerializer.Deserialize<FlexibleHandleList>(JsonSerializer.Serialize(values))!;
+
+    private static FlexibleMediaLinkList Links(params string[] values) =>
+        JsonSerializer.Deserialize<FlexibleMediaLinkList>(JsonSerializer.Serialize(values))!;
+
+    private static FlexibleMediaLinkList LinksJson(string json) => JsonSerializer.Deserialize<FlexibleMediaLinkList>(json)!;
 
     private GrampsConfig Config() =>
         new("https://gramps-web.test", "user", "pass", "tree", MediaUploadDirs: [_uploads]);

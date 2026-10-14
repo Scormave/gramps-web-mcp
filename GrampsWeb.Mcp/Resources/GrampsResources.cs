@@ -272,14 +272,16 @@ public sealed class GrampsResources
     }
 
     /// <summary>
-    /// Renders a preview from the original file. The Gramps Web thumbnail endpoint is not used
-    /// because it always returns AVIF, which MCP vision clients cannot read.
+    /// Renders a preview from the original file, of <paramref name="region"/> only when one is given.
+    /// The Gramps Web thumbnail endpoint is not used because it always returns AVIF, which MCP vision
+    /// clients cannot read.
     /// </summary>
     internal static async Task<MediaBinaryDownload> RenderMediaThumbnailAsync(
         string handle,
         int size,
         GrampsApiClient client,
-        GrampsConfig config)
+        GrampsConfig config,
+        MediaRegion? region = null)
     {
         EnsureMediaResourcesEnabled(config);
         EnsureMediaHandle(handle);
@@ -293,7 +295,7 @@ public sealed class GrampsResources
         var original = await client.GetBytesAsync(
             $"/api/media/{escapedHandle}/file",
             Math.Max(config.MediaMaxBytes, MediaPreviewRenderer.SourceMaxBytes));
-        var preview = MediaPreviewRenderer.Render(original.Bytes.Span, size);
+        var preview = MediaPreviewRenderer.Render(original.Bytes.Span, size, region);
         if (preview.Bytes.Length > config.MediaMaxBytes)
             throw McpToolErrors.ValidationError(
                 $"Thumbnail is {preview.Bytes.Length} bytes, exceeding the configured limit of {config.MediaMaxBytes} bytes (GRAMPS_MEDIA_MAX_BYTES). Request a smaller size.");

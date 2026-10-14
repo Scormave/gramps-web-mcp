@@ -1,3 +1,4 @@
+using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Tools;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
@@ -75,11 +76,13 @@ internal static class MediaPreviewRenderer
     }
 
     /// <summary>
-    /// Decodes the first frame, applies EXIF orientation, downscales to <paramref name="size"/> on the
-    /// long edge without upscaling, and re-encodes from raw pixels so no source metadata (EXIF, GPS,
-    /// XMP, IPTC, ICC, comments) survives. Output is PNG only when the image has transparent pixels.
+    /// Decodes the first frame, applies EXIF orientation, crops to <paramref name="region"/> when one is given,
+    /// downscales to <paramref name="size"/> on the long edge without upscaling, and re-encodes from raw pixels
+    /// so no source metadata (EXIF, GPS, XMP, IPTC, ICC, comments) survives. Output is PNG only when the image
+    /// has transparent pixels.
     /// </summary>
-    public static RenderedPreview Render(ReadOnlySpan<byte> source, int size, long maxSourcePixels = MaxSourcePixels)
+    public static RenderedPreview Render(
+        ReadOnlySpan<byte> source, int size, MediaRegion? region = null, long maxSourcePixels = MaxSourcePixels)
     {
         EnsureValidSize(size);
         if (source.IsEmpty)
@@ -92,16 +95,20 @@ internal static class MediaPreviewRenderer
                 throw McpToolErrors.ValidationError(
                     $"Image is {info.Width}x{info.Height} pixels, exceeding the preview limit of {maxSourcePixels / 1_000_000} megapixels. Use read_media with mode file for the original.");
 
+            // A region keeps its share of the pixels: decode large enough that its narrower side can still fill size.
+            var decodeSize = region is null ? size : (int)Math.Min(int.MaxValue, Math.Ceiling(size * 100.0 / Math.Min(region.Width, region.Height)));
             var options = new DecoderOptions
             {
                 MaxFrames = 1,
                 Sampler = KnownResamplers.Lanczos3,
                 // Square bounds: EXIF orientation only swaps width and height.
-                TargetSize = Math.Max(info.Width, info.Height) > size ? new Size(size, size) : null
+                TargetSize = Math.Max(info.Width, info.Height) > decodeSize ? new Size(decodeSize, decodeSize) : null
             };
 
             using var image = Image.Load(options, source);
             image.Mutate(x => x.AutoOrient());
+            if (region is not null)
+                image.Mutate(x => x.Crop(CropRectangle(image.Width, image.Height, region)));
             if (image.Width > size || image.Height > size)
             {
                 image.Mutate(x => x.Resize(new ResizeOptions
@@ -123,6 +130,18 @@ internal static class MediaPreviewRenderer
             throw McpToolErrors.ValidationError(
                 "The image is too large to render a preview. Use read_media with mode file for the original.");
         }
+    }
+
+    /// <summary>The pixels <paramref name="region"/> covers, at least one pixel wide and high.</summary>
+    internal static Rectangle CropRectangle(int width, int height, MediaRegion region)
+    {
+        static int Edge(int length, int percent) => (int)Math.Round(length * percent / 100.0, MidpointRounding.AwayFromZero);
+
+        var left = Math.Clamp(Edge(width, region.Left), 0, width - 1);
+        var top = Math.Clamp(Edge(height, region.Top), 0, height - 1);
+        var right = Math.Clamp(Edge(width, region.Right), left + 1, width);
+        var bottom = Math.Clamp(Edge(height, region.Bottom), top + 1, height);
+        return new Rectangle(left, top, right - left, bottom - top);
     }
 
     private static RenderedPreview Encode(Image image)

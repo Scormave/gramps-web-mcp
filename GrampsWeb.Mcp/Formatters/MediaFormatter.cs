@@ -14,30 +14,59 @@ public static class MediaFormatter
 {
     private const string GallerySectionTitle = "Gallery (media)";
 
-    /// <summary>Uses resolved <paramref name="extendedMedia"/> when present; otherwise handle bullets from <paramref name="handleFallback"/>.</summary>
+    /// <summary>
+    /// Uses resolved <paramref name="extendedMedia"/> when present, which Gramps lists in the order of
+    /// <paramref name="links"/>; otherwise handle bullets from <paramref name="links"/>. Either way a link that shows
+    /// part of its image is followed by its region.
+    /// </summary>
     public static void AppendExtendedMediaSection(
         StringBuilder sb,
         GrampsMedia[]? extendedMedia,
-        string[]? handleFallback)
+        GrampsMediaRef[]? links)
     {
         if (extendedMedia is { Length: > 0 })
         {
             sb.AppendLine();
             sb.AppendLine($"{GallerySectionTitle} ({extendedMedia.Length}):");
-            foreach (var m in extendedMedia)
+            for (var i = 0; i < extendedMedia.Length; i++)
             {
+                var m = extendedMedia[i];
                 var fn = Path.GetFileName(m.Path ?? "");
                 var label = !string.IsNullOrWhiteSpace(m.Description)
                     ? m.Description.Trim()
                     : (!string.IsNullOrEmpty(fn) ? fn : "(media)");
                 var mh = string.IsNullOrWhiteSpace(m.Handle) ? "—" : m.Handle.Trim();
-                sb.AppendLine($"  • {label} [handle: {mh}]");
+                var link = links is not null && i < links.Length && links[i].ResolvedRef == mh ? links[i] : null;
+                sb.AppendLine($"  • {label} [handle: {mh}]{RegionSuffix(link?.Rect)}");
             }
             return;
         }
 
-        HandleListFormatter.AppendHandleBulletSection(sb, GallerySectionTitle, handleFallback);
+        AppendMediaLinkSection(sb, GallerySectionTitle, links);
     }
+
+    /// <summary>
+    /// Media links as handle bullets (<see cref="HandleListFormatter.FormatBullet"/>), each followed by
+    /// <c>region [left, top, right, bottom]</c> when it shows only part of its image.
+    /// </summary>
+    public static void AppendMediaLinkSection(
+        StringBuilder sb,
+        string title,
+        GrampsMediaRef[]? links,
+        IReadOnlyDictionary<string, string>? labels = null)
+    {
+        var shown = links?.Where(link => link.ResolvedRef is not null).ToList();
+        if (shown is not { Count: > 0 })
+            return;
+
+        sb.AppendLine();
+        sb.AppendLine($"{title} ({shown.Count}):");
+        foreach (var link in shown)
+            sb.AppendLine(HandleListFormatter.FormatBullet(link.ResolvedRef!, labels) + RegionSuffix(link.Rect));
+    }
+
+    private static string RegionSuffix(int[]? rect) =>
+        MediaRegion.FromStored(rect) is { } region ? $" region {region}" : "";
 
     public static async Task<string> FormatMediaFull(
         GrampsMedia media,

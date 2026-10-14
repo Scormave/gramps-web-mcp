@@ -404,6 +404,7 @@ writes empty collections, so `PutMutationAsync` can clear a list.
 
 `Flexible*` wrapper types let agents pass arguments in multiple formats:
 - `FlexibleHandleList`: JSON array, single string, comma-separated, `{ref}` objects
+- `FlexibleMediaLinkList`: the same, plus `{ref, region}` objects for part of an image
 - `FlexibleGrampsName`: full JSON or shorthand string notation
 - `FlexibleAttributeList`: objects or `"Type: Value"` strings
 - etc.

@@ -79,8 +79,8 @@ public static class PlaceTools
         FlexibleHandleList? noteHandles = null,
         [Description("Place code or postal code (optional).")]
         string? code = null,
-        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
         [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
@@ -113,7 +113,7 @@ public static class PlaceTools
                 Code = code,
                 Latitude = ToCoordinate(lat),
                 Longitude = ToCoordinate(lon),
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
+                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
@@ -163,8 +163,8 @@ public static class PlaceTools
         FlexibleHandleList? noteHandles = null,
         [Description("New place code. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? code = null,
-        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
         [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
@@ -214,7 +214,7 @@ public static class PlaceTools
             if (enclosedBy != null)
                 place.ApplyRefs("placeref_list", await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client) ?? [], linkMode);
             place.Set("alt_names", (PlaceNameRequest[]?)alternateNames);
-            place.ApplyMediaHandles(mediaHandles, linkMode);
+            place.ApplyMediaLinks(mediaHandles, linkMode);
             place.ApplyHandles("note_list", noteHandles, linkMode);
             place.ApplyHandles("citation_list", citationHandles, linkMode);
             place.ApplyHandles("tag_list", tagHandles, linkMode);

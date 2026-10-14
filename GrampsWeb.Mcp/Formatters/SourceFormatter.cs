@@ -48,7 +48,7 @@ public static class SourceFormatter
         }
 
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", source.NoteList, labels);
-        HandleListFormatter.AppendHandleBulletSection(sb, "Media", GrampsMediaRef.ToHandleStrings(source.MediaList), labels);
+        MediaFormatter.AppendMediaLinkSection(sb, "Media", source.MediaList, labels);
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", source.TagList, labels);
 
         BacklinkFormatter.AppendReferencedBySections(sb, backlinks, labels);

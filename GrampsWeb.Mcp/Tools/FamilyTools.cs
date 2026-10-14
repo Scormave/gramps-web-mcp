@@ -78,8 +78,8 @@ public static class FamilyTools
         FlexibleChildRefList? childRefs = null,
         [Description("Existing family events such as Marriage or Divorce. " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
@@ -115,7 +115,7 @@ public static class FamilyTools
                 MotherHandle = resolvedMotherHandle,
                 ChildRefList = childRefArr is { Length: > 0 } ? childRefArr : null,
                 EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
+                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
@@ -158,8 +158,8 @@ public static class FamilyTools
         FlexibleChildRefList? childRefs = null,
         [Description("Family events (Marriage, Divorce, …). " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
@@ -203,7 +203,7 @@ public static class FamilyTools
             family.Set("type", relationshipType);
             family.ApplyRefs("child_ref_list", (GrampsChildRef[]?)childRefs, linkMode);
             family.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
-            family.ApplyMediaHandles(mediaHandles, linkMode);
+            family.ApplyMediaLinks(mediaHandles, linkMode);
             family.ReplaceAttributes(attributes);
             family.ApplyHandles("citation_list", citationHandles, linkMode);
             family.ApplyHandles("note_list", noteHandles, linkMode);

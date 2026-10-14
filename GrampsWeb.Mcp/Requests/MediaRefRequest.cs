@@ -26,7 +26,7 @@ public sealed class MediaRefRequest
     [JsonPropertyName("attribute_list")]
     public object[]? AttributeList { get; set; }
 
-    /// <summary>Image region [x,y,w,h]; omit when not cropping.</summary>
+    /// <summary>Image region [left, top, right, bottom] in percent of the image size; omit to show the whole image.</summary>
     [JsonPropertyName("rect")]
     public int[]? Rect { get; set; }
 }

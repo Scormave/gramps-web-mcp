@@ -97,13 +97,64 @@ public class UpdateToolsPreserveStoredDataTests
         var handler = new StoredObjectHandler(stored);
 
         await PersonTools.UpdatePerson("h-person",
-            mediaHandles: new FlexibleHandleList { Handles = mode == "add" ? ["m-new"] : ["m-scan"] },
+            mediaHandles: new FlexibleMediaLinkList { Items = [new MediaLink(mode == "add" ? "m-new" : "m-scan")] },
             client: CreateClient(handler), linkMode: mode);
 
         var media = handler.Body!["media_list"]!.AsArray();
         Assert.Equal(expectedRefs, media.Select(m => m!["ref"]!.GetValue<string>()));
         AssertJsonEqual(Parse(stored)["media_list"]![0], media[0]);
     }
+
+    private const string StoredScanLinks = """
+        {
+          "handle": "h-person", "gramps_id": "I0100",
+          "media_list": [
+            { "_class": "MediaRef", "ref": "m-scan", "rect": [10, 20, 60, 45], "private": true, "citation_list": ["c1"] },
+            { "_class": "MediaRef", "ref": "m-photo", "rect": null }
+          ]
+        }
+        """;
+
+    [Theory]
+    [InlineData("""["m-photo", "m-scan"]""", """[{ "_class": "MediaRef", "ref": "m-photo", "rect": null }, { "_class": "MediaRef", "ref": "m-scan", "rect": [10, 20, 60, 45], "private": true, "citation_list": ["c1"] }]""")]
+    [InlineData("""[{ "ref": "m-scan", "region": [5, 50, 95, 75] }]""", """[{ "_class": "MediaRef", "ref": "m-scan", "rect": [5, 50, 95, 75], "private": true, "citation_list": ["c1"] }]""")]
+    [InlineData("""[{ "ref": "m-scan", "region": [0, 0, 100, 100] }, "m-new"]""", """[{ "_class": "MediaRef", "ref": "m-scan", "rect": null, "private": true, "citation_list": ["c1"] }, { "_class": "MediaRef", "ref": "m-new" }]""")]
+    public async Task UpdatePerson_Replace_Sets_Or_Keeps_Regions_And_Keeps_Link_Metadata(string mediaHandles, string expected)
+    {
+        var handler = new StoredObjectHandler(StoredScanLinks);
+
+        await PersonTools.UpdatePerson("h-person", mediaHandles: MediaLinks(mediaHandles), client: CreateClient(handler));
+
+        AssertJsonEqual(JsonNode.Parse(expected), handler.Body!["media_list"]);
+    }
+
+    [Theory]
+    [InlineData("""["m-scan"]""", """[{ "_class": "MediaRef", "ref": "m-scan", "rect": [10, 20, 60, 45], "private": true, "citation_list": ["c1"] }, { "_class": "MediaRef", "ref": "m-photo", "rect": null }]""")]
+    [InlineData("""[{ "ref": "m-scan", "region": [10, 20, 60, 45] }]""", """[{ "_class": "MediaRef", "ref": "m-scan", "rect": [10, 20, 60, 45], "private": true, "citation_list": ["c1"] }, { "_class": "MediaRef", "ref": "m-photo", "rect": null }]""")]
+    [InlineData("""[{ "ref": "m-photo", "region": "30,0,70,50" }]""", """[{ "_class": "MediaRef", "ref": "m-scan", "rect": [10, 20, 60, 45], "private": true, "citation_list": ["c1"] }, { "_class": "MediaRef", "ref": "m-photo", "rect": [30, 0, 70, 50] }]""")]
+    [InlineData("""[{ "ref": "m-scan", "region": [5, 50, 95, 75] }, { "ref": "m-scan", "region": [10, 20, 60, 45] }]""", """[{ "_class": "MediaRef", "ref": "m-scan", "rect": [10, 20, 60, 45], "private": true, "citation_list": ["c1"] }, { "_class": "MediaRef", "ref": "m-photo", "rect": null }, { "_class": "MediaRef", "ref": "m-scan", "rect": [5, 50, 95, 75] }]""")]
+    public async Task UpdatePerson_Add_Gives_A_Shown_Media_Its_Region_Or_Shows_Another_Region(string mediaHandles, string expected)
+    {
+        var handler = new StoredObjectHandler(StoredScanLinks);
+
+        await PersonTools.UpdatePerson("h-person", mediaHandles: MediaLinks(mediaHandles), client: CreateClient(handler), linkMode: "add");
+
+        AssertJsonEqual(JsonNode.Parse(expected), handler.Body!["media_list"]);
+    }
+
+    [Fact]
+    public async Task UpdatePerson_Rejects_An_Unreadable_Region_Before_Saving()
+    {
+        var handler = new StoredObjectHandler(StoredScanLinks);
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => PersonTools.UpdatePerson("h-person",
+            mediaHandles: MediaLinks("""[{ "ref": "m-scan", "region": [10, 20, 160, 45] }]"""), client: CreateClient(handler), linkMode: "add"));
+
+        Assert.Contains("mediaHandles: m-scan: region edges are percent of the image, 0 to 100; 160 is outside that.", ex.Message);
+        Assert.Null(handler.Body);
+    }
+
+    private static FlexibleMediaLinkList MediaLinks(string json) => JsonSerializer.Deserialize<FlexibleMediaLinkList>(json)!;
 
     [Fact]
     public async Task UpdatePerson_Attributes_Keep_Citations_Notes_And_Privacy_Of_Unchanged_Entries()

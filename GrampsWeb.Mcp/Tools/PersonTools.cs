@@ -208,8 +208,8 @@ public static class PersonTools
         FlexibleHandleList? familyHandles = null,
         [Description("Families where this person is a child. Does not add the person to the family's children: use childRefs on the family for that. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? parentFamilyHandles = null,
-        [Description("Media. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
@@ -255,7 +255,7 @@ public static class PersonTools
                 EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
                 FamilyList = familyHandles,
                 ParentFamilyList = parentFamilyHandleArray?.Length > 0 ? parentFamilyHandleArray : null,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests((string[]?)mediaHandles),
+                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
                 CitationList = citationHandles,
                 NoteList = noteHandles,
                 TagList = tagHandles,
@@ -305,8 +305,8 @@ public static class PersonTools
         FlexibleHandleList? familyHandles = null,
         [Description("Families where this person is a child. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? parentFamilyHandles = null,
-        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? mediaHandles = null,
+        [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
+        FlexibleMediaLinkList? mediaHandles = null,
         [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
@@ -351,7 +351,7 @@ public static class PersonTools
             person.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
             person.ApplyHandles("family_list", familyHandles, linkMode);
             person.ApplyHandles("parent_family_list", parentFamilyHandles, linkMode);
-            person.ApplyMediaHandles(mediaHandles, linkMode);
+            person.ApplyMediaLinks(mediaHandles, linkMode);
             person.Set("address_list", (GrampsAddress[]?)addresses);
             person.ReplaceAttributes(attributes);
             person.ApplyHandles("citation_list", citationHandles, linkMode);
