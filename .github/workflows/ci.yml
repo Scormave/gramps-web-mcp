@@ -31,9 +31,11 @@ jobs:
       - name: Build
         run: dotnet build gramps-web-mcp.sln --no-restore -c Release
 
+      # The integration tests run in their own job; here they would only be
+      # skipped and add a second coverage report.
       - name: Test
         run: >
-          dotnet test gramps-web-mcp.sln --no-build -c Release --verbosity normal
+          dotnet test GrampsWeb.Mcp.Tests/GrampsWeb.Mcp.Tests.csproj --no-build -c Release --verbosity normal
           --collect "Code Coverage;Format=cobertura"
           --results-directory "$RUNNER_TEMP/coverage"
 
@@ -41,6 +43,28 @@ jobs:
       # summary page. Raise the minimum as tests are added.
       - name: Coverage
         run: python3 scripts/coverage-summary.py "$RUNNER_TEMP/coverage" --min-line 75
+
+  # The tools against a real Gramps Web server: the image pinned in
+  # GrampsWeb.Mcp.IntegrationTests/grampsweb.Dockerfile, started by
+  # Testcontainers on the runner's Docker.
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # Pulled in its own step, so the log shows the download apart from the tests.
+      - name: Pull Gramps Web image
+        run: docker pull "$(sed -n 's/^FROM //p' GrampsWeb.Mcp.IntegrationTests/grampsweb.Dockerfile)"
+
+      - name: Test
+        env:
+          GRAMPS_INTEGRATION_TESTS: "true"
+        run: dotnet test GrampsWeb.Mcp.IntegrationTests/GrampsWeb.Mcp.IntegrationTests.csproj -c Release --verbosity normal
 
   vulnerable-packages:
     runs-on: ubuntu-latest

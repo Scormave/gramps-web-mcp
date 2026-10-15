@@ -116,7 +116,8 @@ public sealed class GrampsAuthTokenProvider
 
     /// <summary>
     /// Whether flask-jwt-extended rejected the request's access token: HTTP 401 for an expired or
-    /// missing token, 422 for one it cannot verify, both with a <c>{"msg": …}</c> body. It checks the
+    /// missing token, 422 for one it cannot verify, both with a <c>{"message": …}</c> body (Gramps Web
+    /// sets <c>JWT_ERROR_MESSAGE_KEY</c>; <c>"msg"</c> is the flask-jwt-extended default). It checks the
     /// token before the endpoint runs, so a rejected write has not happened. Gramps Web's own errors,
     /// including argument validation failures with HTTP 422, are <c>{"error": {…}}</c>.
     /// </summary>
@@ -129,7 +130,7 @@ public sealed class GrampsAuthTokenProvider
         {
             using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             return doc.RootElement.ValueKind == JsonValueKind.Object
-                   && GetString(doc.RootElement, "msg") is not null;
+                   && (GetString(doc.RootElement, "message") ?? GetString(doc.RootElement, "msg")) is not null;
         }
         catch (JsonException)
         {

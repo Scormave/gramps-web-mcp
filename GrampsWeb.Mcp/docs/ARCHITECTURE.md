@@ -44,11 +44,12 @@ gramps-web-mcp.sln
 │   ├── Tools/              — MCP tool implementations (one file per domain)
 │   │   └── Parsing/        — small parsers (gender, confidence, note format)
 │   └── docs/               — internal documentation (this folder)
-└── GrampsWeb.Mcp.Tests/    — test project
-    ├── Contract/           — DTO ↔ OpenAPI spec sync tests
-    ├── Fixtures/           — JSON test payloads
-    ├── IntegrationTests/   — formatter and in-process MCP pipeline tests
-    └── UnitTests/          — unit tests
+├── GrampsWeb.Mcp.Tests/    — test project
+│   ├── Contract/           — DTO ↔ OpenAPI spec sync tests
+│   ├── Fixtures/           — JSON test payloads
+│   ├── IntegrationTests/   — formatter and in-process MCP pipeline tests
+│   └── UnitTests/          — unit tests
+└── GrampsWeb.Mcp.IntegrationTests/ — tools against a real Gramps Web container
 ```
 
 ## Runtime & dependencies
@@ -63,7 +64,8 @@ gramps-web-mcp.sln
 | `SixLabors.ImageSharp` | 4.1.3 (media thumbnails; Six Labors Split License, Apache 2.0 terms for open-source use) |
 
 Test-only: xUnit 2.9, Moq 4.21, YamlDotNet 18.1 (for OpenAPI spec parsing),
-Microsoft.AspNetCore.TestHost 10.0.12 (in-process MCP server tests).
+Microsoft.AspNetCore.TestHost 10.0.12 (in-process MCP server tests),
+Testcontainers 4.16 (the Gramps Web container of the integration tests).
 
 [`THIRD-PARTY-NOTICES.txt`](../../THIRD-PARTY-NOTICES.txt) lists every package the
 server restores, including transitive ones, with its license.
@@ -295,7 +297,7 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 `GrampsApiClient` is the HTTP client with:
 - JWT authentication (automatic token acquisition and refresh). When Gramps
   Web rejects the access token (HTTP 401, or 422 after its `SECRET_KEY`
-  changed, both with a flask-jwt-extended `{"msg": …}` body), the client
+  changed, both with a flask-jwt-extended `{"message": …}` body), the client
   replaces it through `GrampsAuthTokenProvider` and sends the request once
   more. Gramps Web checks the token before the endpoint runs, so writes are
   retried too; Gramps Web's own HTTP 422 validation errors are not
@@ -533,13 +535,15 @@ shell or package manager, so its `HEALTHCHECK` runs the server's own
 - **GitHub Actions** (`.github/workflows/ci.yml`): build and test on pushes
   and pull requests to `main`/`master`, and fail when a NuGet package,
   transitive ones included, has a known vulnerability. The test step measures
-  code coverage; `scripts/coverage-summary.py` puts the server's line and
-  branch coverage by folder on the job's summary page and fails the job when
-  line coverage drops below the minimum set in the workflow. CI also runs
-  every Monday, so an advisory for a package already in use shows up without
-  a commit.
+  code coverage of the unit tests; `scripts/coverage-summary.py` puts the
+  server's line and branch coverage by folder on the job's summary page and
+  fails the job when line coverage drops below the minimum set in the
+  workflow. The `integration-tests` job runs `GrampsWeb.Mcp.IntegrationTests`
+  against the pinned Gramps Web image. CI also runs every Monday, so an
+  advisory for a package already in use shows up without a commit.
 - **Dependabot** (`.github/dependabot.yml`): weekly pull requests that update
-  NuGet packages and GitHub Actions.
+  NuGet packages, GitHub Actions and the Gramps Web image of the integration
+  tests.
 - **GitHub Actions** (`.github/workflows/docker.yml`): on pushes to
   `main`/`master`, `v*` tags, or manual dispatch, test, then build and publish
   the Docker image to `ghcr.io/scormave/gramps-web-mcp` (`:latest` from the
@@ -567,3 +571,12 @@ shell or package manager, so its `HEALTHCHECK` runs the server's own
   per-call read cache) and a DI test of the User-Agent sent to Gramps Web.
 - **Fixtures** (`Fixtures/`): JSON files representing actual API responses for
   deserialization tests.
+- **Gramps Web integration tests** (`GrampsWeb.Mcp.IntegrationTests`, a
+  separate project): Testcontainers starts one Gramps Web container per run,
+  the server runs in-process on `TestServer`, and the tests call tools,
+  resources and prompts through the MCP SDK client. They check what fixtures
+  cannot: how Gramps Web stores and returns what the tools send (dates, links,
+  child order, media files), its validation and backlink errors, and the token
+  handling against its real JWT errors. They run only with
+  `GRAMPS_INTEGRATION_TESTS=true` and Docker; see the
+  [developer guide](DEVELOPER_GUIDE.md#integration-tests).

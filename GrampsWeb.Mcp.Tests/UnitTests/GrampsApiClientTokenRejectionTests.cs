@@ -12,7 +12,7 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 public class GrampsApiClientTokenRejectionTests
 {
-    private const string SignatureRejected = """{"msg":"Signature verification failed"}""";
+    private const string SignatureRejected = """{"message":"Signature verification failed"}""";
 
     [Fact]
     public async Task GetAsync_Logs_In_Again_And_Retries_When_The_Token_Signature_Is_Rejected()
@@ -35,7 +35,7 @@ public class GrampsApiClientTokenRejectionTests
         var handler = new TokenHandler
         {
             RejectionStatus = HttpStatusCode.Unauthorized,
-            RejectionBody = """{"msg":"Token has expired"}"""
+            RejectionBody = """{"message":"Token has expired"}"""
         };
         var client = CreateClient(handler);
 

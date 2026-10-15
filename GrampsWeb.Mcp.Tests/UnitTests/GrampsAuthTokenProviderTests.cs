@@ -156,11 +156,13 @@ public class GrampsAuthTokenProviderTests
     }
 
     [Theory]
+    [InlineData(HttpStatusCode.Unauthorized, """{"message":"Token has expired"}""", true)]
+    [InlineData(HttpStatusCode.UnprocessableEntity, """{"message":"Signature verification failed"}""", true)]
+    [InlineData(HttpStatusCode.UnprocessableEntity, """{"message":"Invalid header string"}""", true)]
     [InlineData(HttpStatusCode.Unauthorized, """{"msg":"Token has expired"}""", true)]
-    [InlineData(HttpStatusCode.UnprocessableEntity, """{"msg":"Signature verification failed"}""", true)]
     [InlineData(HttpStatusCode.UnprocessableEntity, """{"error":{"code":422,"message":"Unprocessable Content"}}""", false)]
     [InlineData(HttpStatusCode.Unauthorized, "Unauthorized", false)]
-    [InlineData(HttpStatusCode.Forbidden, """{"msg":"Forbidden"}""", false)]
+    [InlineData(HttpStatusCode.Forbidden, """{"message":"Forbidden"}""", false)]
     public async Task IsRejectedAccessTokenAsync_Recognizes_Jwt_Errors_Only(
         HttpStatusCode statusCode, string body, bool expected)
     {

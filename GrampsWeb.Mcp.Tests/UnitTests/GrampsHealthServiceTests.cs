@@ -84,8 +84,8 @@ public class GrampsHealthServiceTests
     }
 
     [Theory]
-    [InlineData(HttpStatusCode.Unauthorized, """{"msg":"Token has expired"}""")]
-    [InlineData(HttpStatusCode.UnprocessableEntity, """{"msg":"Signature verification failed"}""")]
+    [InlineData(HttpStatusCode.Unauthorized, """{"message":"Token has expired"}""")]
+    [InlineData(HttpStatusCode.UnprocessableEntity, """{"message":"Signature verification failed"}""")]
     public async Task CheckAsync_Replaces_The_Cached_Token_When_It_Is_Rejected(HttpStatusCode status, string body)
     {
         var handler = new RecordingHandler(rejectedTokens: ["token-1"], rejection: (status, body));
@@ -212,7 +212,7 @@ public class GrampsHealthServiceTests
                 MetadataReads++;
                 if (rejectedTokens?.Contains(request.Headers.Authorization?.Parameter) == true)
                 {
-                    var (status, body) = rejection ?? (HttpStatusCode.Unauthorized, """{"msg":"Token has expired"}""");
+                    var (status, body) = rejection ?? (HttpStatusCode.Unauthorized, """{"message":"Token has expired"}""");
                     return Task.FromResult(new HttpResponseMessage(status)
                     {
                         Content = new StringContent(body, Encoding.UTF8, "application/json")

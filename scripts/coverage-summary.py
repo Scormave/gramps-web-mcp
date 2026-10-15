@@ -4,7 +4,7 @@
 CI runs the tests with the code coverage collector that Microsoft.NET.Test.Sdk
 already brings:
 
-    dotnet test gramps-web-mcp.sln \\
+    dotnet test GrampsWeb.Mcp.Tests/GrampsWeb.Mcp.Tests.csproj \\
         --collect "Code Coverage;Format=cobertura" \\
         --results-directory TestResults/coverage
 

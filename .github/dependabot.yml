@@ -1,11 +1,12 @@
-# Weekly version-update pull requests for NuGet packages and GitHub Actions.
-# Security updates are switched on separately, in the repository's Code
-# security settings, and are not delayed by the cooldown below.
+# Weekly version-update pull requests for NuGet packages, GitHub Actions and
+# the Gramps Web image the integration tests run against. Security updates are
+# switched on separately, in the repository's Code security settings, and are
+# not delayed by the cooldown below.
 #
-# The Docker base images are not listed: the Dockerfile uses the floating
-# 10.0-noble and 10.0-noble-chiseled tags, so every image build already picks
-# up .NET 10 patches, and the only update Dependabot could offer is the next
-# .NET major.
+# The server's Docker base images are not listed: the Dockerfile uses the
+# floating 10.0-noble and 10.0-noble-chiseled tags, so every image build
+# already picks up .NET 10 patches, and the only update Dependabot could offer
+# is the next .NET major.
 version: 2
 updates:
   - package-ecosystem: nuget
@@ -34,6 +35,7 @@ updates:
           - "xunit*"
           - "Moq"
           - "YamlDotNet"
+          - "Testcontainers*"
     ignore:
       # Framework packages follow the target framework, net10.0; the next
       # major comes with the move to the next .NET release.
@@ -55,3 +57,16 @@ updates:
       actions:
         patterns:
           - "*"
+
+  # The FROM line of grampsweb.Dockerfile, which the integration tests read;
+  # nothing builds that file. Each new Gramps Web release then runs the
+  # integration tests in the pull request's CI.
+  - package-ecosystem: docker
+    directory: /GrampsWeb.Mcp.IntegrationTests
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: test
+      include: scope

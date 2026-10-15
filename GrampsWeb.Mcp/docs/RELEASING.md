@@ -58,6 +58,13 @@ dotnet build gramps-web-mcp.sln --no-restore -c Release
 dotnet test gramps-web-mcp.sln --no-build -c Release --verbosity normal
 ```
 
+With Docker running, also run the integration tests against Gramps Web; CI
+runs them too:
+
+```bash
+GRAMPS_INTEGRATION_TESTS=true dotnet test GrampsWeb.Mcp.IntegrationTests --no-build -c Release
+```
+
 Optionally smoke-test packaging before tagging:
 
 ```bash

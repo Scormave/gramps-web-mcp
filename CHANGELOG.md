@@ -14,6 +14,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `DOTNET_URLS`, `ASPNETCORE_HTTP_PORTS`), with `0.0.0.0`, `[::]`, `*` and
   `+` replaced by `localhost`; with `MCP_TRANSPORT=stdio` it reports
   `skipped` and exits with 0, since there is no HTTP endpoint
+- Integration tests run the server against a real Gramps Web (26.10.1) in
+  Docker and call it through the MCP protocol: people and families with
+  their links and child order, dates in the formats the tools accept,
+  places, sources and citations, notes, tags, media uploads and previews,
+  deletion with backlinks, sign-in by password and by refresh token,
+  read-only mode and the health check. CI runs them on every push and pull
+  request, and Dependabot proposes each new Gramps Web release, so its pull
+  request shows whether the server still works with it. Locally:
+  `GRAMPS_INTEGRATION_TESTS=true dotnet test GrampsWeb.Mcp.IntegrationTests`
+  (needs Docker)
 
 ### Changed
 
@@ -33,6 +43,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   instead of a `ChatMessage`, so the MCP SDK no longer builds a JSON schema
   for the `ChatMessage` type at startup. `prompts/list` and `prompts/get`
   answer exactly as before
+
+### Fixed
+
+- When Gramps Web rejects the access token, the server now gets a new one and
+  sends the request once more, for tool calls and for `GET /health`, as
+  2.1.0 meant it to. The server looked for the error text under
+  flask-jwt-extended's default key `msg`, but Gramps Web names it `message`,
+  so it never recognized a rejected token: after Gramps Web restarted with a
+  new `SECRET_KEY`, every tool call failed with HTTP 422 "Signature
+  verification failed" and `/health` answered 503 until the cached token was
+  due for renewal, up to 15 minutes later. The integration tests found it
 
 ## [2.5.2] - 2026-10-15
 

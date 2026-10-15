@@ -26,6 +26,13 @@ Contract tests only:
 dotnet test --filter "Category=Contract"
 ```
 
+Integration tests against a real Gramps Web server in Docker (skipped
+without the variable; CI runs them on every pull request):
+
+```bash
+GRAMPS_INTEGRATION_TESTS=true dotnet test GrampsWeb.Mcp.IntegrationTests
+```
+
 Coverage of the server code, as CI reports it (needs Python 3):
 
 ```bash

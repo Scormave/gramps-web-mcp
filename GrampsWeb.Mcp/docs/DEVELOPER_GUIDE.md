@@ -12,6 +12,9 @@ Practical guide for extending the gramps-web-mcp server with new features.
 
 # Run tests
 dotnet test
+
+# Run the integration tests against a Gramps Web container (needs Docker)
+GRAMPS_INTEGRATION_TESTS=true dotnet test GrampsWeb.Mcp.IntegrationTests
 ```
 
 The server starts on `http://127.0.0.1:8080` (HTTP transport) and connects
@@ -161,6 +164,9 @@ objects and return formatted strings.
 - **Unit test** for the formatter in `GrampsWeb.Mcp.Tests/UnitTests/`.
 - **Fixture file** in `GrampsWeb.Mcp.Tests/Fixtures/` with realistic API response JSON.
 - **Contract test mapping** if new models were added.
+- **Integration test** in `GrampsWeb.Mcp.IntegrationTests/` when the tool
+  depends on what Gramps Web does with the request: how it stores a value,
+  what it validates, what it returns. See [Integration tests](#integration-tests).
 
 ---
 
@@ -288,6 +294,49 @@ Contract tests ensure C# DTOs stay in sync with the OpenAPI spec:
 JSON files in `GrampsWeb.Mcp.Tests/Fixtures/` represent real API responses. They serve as
 regression tests for deserialization. When the API changes shape, update or
 add fixtures to document the new format.
+
+### Integration tests
+
+`GrampsWeb.Mcp.IntegrationTests` runs the tools against a real Gramps Web
+server. Testcontainers starts one Gramps Web container for the whole run, with
+an empty tree whose owner the fixture creates through Gramps Web's first-run
+route. The MCP server runs in-process on ASP.NET Core `TestServer`, and the
+tests call tools, resources and prompts through the MCP SDK client, the same
+JSON-RPC path a real client takes.
+
+```bash
+GRAMPS_INTEGRATION_TESTS=true dotnet test GrampsWeb.Mcp.IntegrationTests
+```
+
+- They need Docker: Docker Desktop, Colima, or a `DOCKER_HOST`. Without
+  `GRAMPS_INTEGRATION_TESTS=true` (or `1`) they are skipped, so a plain
+  `dotnet test` needs neither Docker nor a network.
+- The image is the `FROM` line of
+  `GrampsWeb.Mcp.IntegrationTests/grampsweb.Dockerfile`. Nothing builds that
+  file; Dependabot proposes each new Gramps Web release there, and the pull
+  request's CI runs the tests against it. `GRAMPS_WEB_IMAGE` overrides the
+  image for one run, for example to try the next release early:
+
+  ```bash
+  GRAMPS_INTEGRATION_TESTS=true GRAMPS_WEB_IMAGE=ghcr.io/gramps-project/grampsweb:latest \
+    dotnet test GrampsWeb.Mcp.IntegrationTests
+  ```
+
+- All tests share one container and one tree. Each test creates its own
+  records with random names from `TestNames` and never counts records it did
+  not create, so the order of tests does not matter.
+- Mark a test `[IntegrationFact]` or `[IntegrationTheory]` and put its class
+  in `[Collection(GrampsWebCollection.Name)]`; the fixture's `Session` is the
+  shared server, signed in as the owner. `McpSession.CreateAsync` returns the
+  new record's handle and Gramps ID, `CallAsync` fails the test on a tool
+  error, and `CallErrorAsync` expects one.
+- To test another configuration, start a server of its own with
+  `gramps.StartSessionAsync(gramps.Config with { … })` and dispose it with
+  `await using`. `create_media` and `update_media` read files that
+  `gramps.WriteUpload` puts in the upload folder.
+- Gramps Web lets a client call its token routes once a second.
+  `TokenRoutePacer` spaces those calls across all servers in the run and
+  records them, so a test can check how a server signed in.
 
 ---
 
@@ -479,13 +528,15 @@ and exits with 0.
 - **GitHub Actions** (`.github/workflows/ci.yml`): build and test on pushes
   and pull requests to `main`/`master`, and fail when a NuGet package,
   transitive ones included, has a known vulnerability. The test step measures
-  code coverage; `scripts/coverage-summary.py` puts the server's line and
-  branch coverage by folder on the job's summary page and fails the job when
-  line coverage drops below the minimum set in the workflow. CI also runs
-  every Monday, so an advisory for a package already in use shows up without
-  a commit.
+  code coverage of the unit tests; `scripts/coverage-summary.py` puts the
+  server's line and branch coverage by folder on the job's summary page and
+  fails the job when line coverage drops below the minimum set in the
+  workflow. The `integration-tests` job runs `GrampsWeb.Mcp.IntegrationTests`
+  against the pinned Gramps Web image. CI also runs every Monday, so an
+  advisory for a package already in use shows up without a commit.
 - **Dependabot** (`.github/dependabot.yml`): weekly pull requests that update
-  NuGet packages and GitHub Actions.
+  NuGet packages, GitHub Actions and the Gramps Web image of the integration
+  tests.
 - **GitHub Actions** (`.github/workflows/docker.yml`): test, then publish the
   Docker image to `ghcr.io/scormave/gramps-web-mcp` on pushes to
   `main`/`master` (`:latest`), `v*` tags (`:x.y.z`, plus the MCP Registry
@@ -507,7 +558,9 @@ ImageSharp 4 checks for a Six Labors license key before it compiles
 `GrampsWeb.Mcp.Tests` assemblies, and every build finds it on its own: local
 builds, CI, the Docker build stage and `scripts/pack-mcpb.sh`. Without it a
 Release build fails with "No Six Labors license found" and a Debug build only
-warns. The key expires; [RELEASING.md](RELEASING.md#six-labors-license-key)
+warns. `GrampsWeb.Mcp.IntegrationTests` uses ImageSharp only through
+`GrampsWeb.Mcp`, so the key needs no entry for it; referencing ImageSharp there
+directly would. The key expires; [RELEASING.md](RELEASING.md#six-labors-license-key)
 describes the reminders and how to renew it.
 
 ### Local development
@@ -550,6 +603,8 @@ dotnet run --project GrampsWeb.Mcp/GrampsWeb.Mcp.csproj
 | Add or replace a NuGet package | `GrampsWeb.Mcp.csproj` + `THIRD-PARTY-NOTICES.txt` |
 | Add a test fixture | `GrampsWeb.Mcp.Tests/Fixtures/{name}.json` |
 | Update contract mapping | `GrampsWeb.Mcp.Tests/Contract/swagger-dto-map.json` |
+| Test a tool against a real Gramps Web | `GrampsWeb.Mcp.IntegrationTests/{Area}Tests.cs` |
+| Change the Gramps Web version of the integration tests | `GrampsWeb.Mcp.IntegrationTests/grampsweb.Dockerfile` |
 | Parse dates from agent input | `Dates/AgentDateParser.cs` |
 | Date interval preference (span vs range) | `Dates/DateIntervalPreference.cs` |
 | English month names (parse) | `Dates/EnglishMonthNames.cs` |

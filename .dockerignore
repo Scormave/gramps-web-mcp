@@ -5,4 +5,5 @@
 **/bin
 **/obj
 GrampsWeb.Mcp.Tests
+GrampsWeb.Mcp.IntegrationTests
 *.md

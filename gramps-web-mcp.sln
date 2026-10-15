@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrampsWeb.Mcp", "GrampsWeb.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrampsWeb.Mcp.Tests", "GrampsWeb.Mcp.Tests\GrampsWeb.Mcp.Tests.csproj", "{C306CDC1-DBFD-4780-83D3-90A011D72E71}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrampsWeb.Mcp.IntegrationTests", "GrampsWeb.Mcp.IntegrationTests\GrampsWeb.Mcp.IntegrationTests.csproj", "{6D598D32-25C9-4008-BD05-2D8A1F529E06}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +43,18 @@ Global
 		{C306CDC1-DBFD-4780-83D3-90A011D72E71}.Release|x64.Build.0 = Release|Any CPU
 		{C306CDC1-DBFD-4780-83D3-90A011D72E71}.Release|x86.ActiveCfg = Release|Any CPU
 		{C306CDC1-DBFD-4780-83D3-90A011D72E71}.Release|x86.Build.0 = Release|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Debug|x64.Build.0 = Debug|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Debug|x86.Build.0 = Debug|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Release|x64.ActiveCfg = Release|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Release|x64.Build.0 = Release|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Release|x86.ActiveCfg = Release|Any CPU
+		{6D598D32-25C9-4008-BD05-2D8A1F529E06}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
