@@ -32,7 +32,15 @@ jobs:
         run: dotnet build gramps-web-mcp.sln --no-restore -c Release
 
       - name: Test
-        run: dotnet test gramps-web-mcp.sln --no-build -c Release --verbosity normal
+        run: >
+          dotnet test gramps-web-mcp.sln --no-build -c Release --verbosity normal
+          --collect "Code Coverage;Format=cobertura"
+          --results-directory "$RUNNER_TEMP/coverage"
+
+      # Line coverage of the server, without the test project, on the job's
+      # summary page. Raise the minimum as tests are added.
+      - name: Coverage
+        run: python3 scripts/coverage-summary.py "$RUNNER_TEMP/coverage" --min-line 75
 
   vulnerable-packages:
     runs-on: ubuntu-latest

@@ -26,6 +26,16 @@ Contract tests only:
 dotnet test --filter "Category=Contract"
 ```
 
+Coverage of the server code, as CI reports it (needs Python 3):
+
+```bash
+dotnet test --collect "Code Coverage;Format=cobertura" --results-directory TestResults/coverage
+python3 scripts/coverage-summary.py TestResults/coverage
+```
+
+CI fails when line coverage drops below the minimum set in
+`.github/workflows/ci.yml`.
+
 ## Development guide
 
 See [GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md) for:

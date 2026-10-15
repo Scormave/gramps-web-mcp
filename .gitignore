@@ -24,6 +24,9 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# Test results and coverage reports
+[Tt]est[Rr]esults/
+
 # Visual Studio cache/options
 .vs/
 

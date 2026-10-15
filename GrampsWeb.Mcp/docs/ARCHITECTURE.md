@@ -527,9 +527,12 @@ HTTP transport on port 8080.
 
 - **GitHub Actions** (`.github/workflows/ci.yml`): build and test on pushes
   and pull requests to `main`/`master`, and fail when a NuGet package,
-  transitive ones included, has a known vulnerability. It also runs every
-  Monday, so an advisory for a package already in use shows up without a
-  commit.
+  transitive ones included, has a known vulnerability. The test step measures
+  code coverage; `scripts/coverage-summary.py` puts the server's line and
+  branch coverage by folder on the job's summary page and fails the job when
+  line coverage drops below the minimum set in the workflow. CI also runs
+  every Monday, so an advisory for a package already in use shows up without
+  a commit.
 - **Dependabot** (`.github/dependabot.yml`): weekly pull requests that update
   NuGet packages and GitHub Actions.
 - **GitHub Actions** (`.github/workflows/docker.yml`): on pushes to
