@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Update the MCP C# SDK (`ModelContextProtocol` and
+  `ModelContextProtocol.AspNetCore`) from 1.3.0 to 2.2.0. Clients on protocol
+  versions 2024-11-05 through 2025-11-25 get the same tools, resources,
+  prompts and replies as before, over stdio, Streamable HTTP (stateless and
+  stateful) and legacy SSE. Tools no longer advertise
+  `execution.taskSupport`: the SDK moved its experimental tasks to a separate
+  package, and the server never used them. A client that asks for protocol
+  version 2026-07-28 in `initialize` now gets error -32022 with the list of
+  supported versions; 1.3.0 answered with 2025-11-25
+
 ## [2.5.1] - 2026-10-14
 
 ### Changed

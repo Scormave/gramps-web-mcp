@@ -87,7 +87,7 @@ public class GrampsApiClientMutationPolicyTests
         var elapsedMs = (DateTime.UtcNow - started).TotalMilliseconds;
 
         Assert.Contains("Read-only mode is enabled", ex.Message);
-        Assert.Empty(handler.Spans.Where(s => s.Path == "/api/people/"));
+        Assert.DoesNotContain(handler.Spans, s => s.Path == "/api/people/");
         Assert.True(elapsedMs < 100, $"read-only waited {elapsedMs}ms on the mutation gate");
 
         held.SetResult();

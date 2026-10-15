@@ -28,14 +28,14 @@ public class ToolAnnotationTests
         }
 
         Assert.Equal(30, toolMethods.Count);
-        Assert.Single(toolMethods.Where(method => method.Name == "ReadMedia"));
-        Assert.Single(toolMethods.Where(method => method.Name == "CreateMedia"));
+        Assert.Single(toolMethods, method => method.Name == "ReadMedia");
+        Assert.Single(toolMethods, method => method.Name == "CreateMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
-        Assert.Single(toolMethods.Where(method => method.Name == "DeleteObject"));
-        Assert.Single(toolMethods.Where(method => method.Name == "GetObject"));
-        Assert.Single(toolMethods.Where(method => method.Name == "GetReference"));
-        Assert.Single(toolMethods.Where(method => method.Name == "GetPersonTree"));
-        Assert.Single(toolMethods.Where(method => method.Name == "GetTimeline"));
+        Assert.Single(toolMethods, method => method.Name == "DeleteObject");
+        Assert.Single(toolMethods, method => method.Name == "GetObject");
+        Assert.Single(toolMethods, method => method.Name == "GetReference");
+        Assert.Single(toolMethods, method => method.Name == "GetPersonTree");
+        Assert.Single(toolMethods, method => method.Name == "GetTimeline");
         Assert.DoesNotContain(toolMethods, method => method.Name.StartsWith("DeletePerson", StringComparison.Ordinal));
         Assert.DoesNotContain(toolMethods, method => method.Name == "GetPerson");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetAncestors" or "GetDescendants");

@@ -30,7 +30,7 @@ Components
    Copyright (c) Model Context Protocol a Series of LF Projects, LLC.
    License: Apache License, Version 2.0
    The SDK contains further third-party code, listed in its own notices:
-   https://github.com/modelcontextprotocol/csharp-sdk/blob/v1.3.0/THIRD-PARTY-NOTICES.txt
+   https://github.com/modelcontextprotocol/csharp-sdk/blob/v2.2.0/THIRD-PARTY-NOTICES.txt
    Packages:
    - ModelContextProtocol
    - ModelContextProtocol.AspNetCore
