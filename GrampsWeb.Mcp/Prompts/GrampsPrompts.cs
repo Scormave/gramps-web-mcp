@@ -1,16 +1,20 @@
 using System.ComponentModel;
 using System.Text;
-using Microsoft.Extensions.AI;
 using ModelContextProtocol.Server;
 
 namespace GrampsWeb.Mcp.Prompts;
 
+/// <summary>
+/// Workflow templates. Each prompt returns plain text, which the SDK sends as one user-role message. A
+/// <c>ChatMessage</c> return type would give the same message, but the SDK would build a JSON schema for the whole
+/// <c>AIContent</c> type graph behind it at startup.
+/// </summary>
 [McpServerPromptType]
 public sealed class GrampsPrompts
 {
     [McpServerPrompt(Name = "add-person")]
     [Description("Add a new person with optional birth/death events")]
-    public static ChatMessage AddPerson(
+    public static string AddPerson(
         [Description("Person's full name (e.g. 'John Smith')")] string name,
         [Description("Gender: Male, Female, or Unknown")] string gender = "Unknown",
         [Description("Birth date (e.g. '1920-05-15', 'about 1920')")] string? birthDate = null,
@@ -50,12 +54,12 @@ public sealed class GrampsPrompts
         sb.AppendLine("3. Create the Birth and Death events that have a date or place with create_event, using the place handles.");
         sb.AppendLine("4. Create the person with create_person: the name, gender, and those events in eventRefs with role Primary.");
         sb.AppendLine("After creation, confirm the result by showing the handle and Gramps ID.");
-        return new ChatMessage(ChatRole.User, sb.ToString());
+        return sb.ToString();
     }
 
     [McpServerPrompt(Name = "research-person")]
     [Description("Research a person, expanding to timelines or trees only when relevant")]
-    public static ChatMessage ResearchPerson(
+    public static string ResearchPerson(
         [Description("Person handle, Gramps ID (e.g. I0001), or name to search")] string person)
     {
         var text =
@@ -64,12 +68,12 @@ public sealed class GrampsPrompts
             "2. Start with the person's record. Set extended=true only when linked family or event details are needed.\n" +
             "3. Call get_timeline(objectType: \"person\", ...) only for chronological questions. Call get_person_tree(direction: \"ancestors\" or \"descendants\", ...) only for the requested branch; use a small generation count first.\n" +
             "4. Report only facts supported by the retrieved records, distinguish uncertainty, and mention missing citations when relevant.";
-        return new ChatMessage(ChatRole.User, text);
+        return text;
     }
 
     [McpServerPrompt(Name = "add-family")]
     [Description("Create a family connecting two people with optional marriage event")]
-    public static ChatMessage AddFamily(
+    public static string AddFamily(
         [Description("Father: name, handle, or Gramps ID")] string? father = null,
         [Description("Mother: name, handle, or Gramps ID")] string? mother = null,
         [Description("Relationship type: Married, Unmarried, Civil Union, Unknown")] string relationship = "Married",
@@ -99,12 +103,12 @@ public sealed class GrampsPrompts
         sb.AppendLine("3. If a marriage date is provided, create a Marriage event with create_event,");
         sb.AppendLine("   then link it to the family using update_family with eventRefs and linkMode: \"add\".");
         sb.AppendLine("4. Show the created family details with get_object(objectType: \"family\", ...).");
-        return new ChatMessage(ChatRole.User, sb.ToString());
+        return sb.ToString();
     }
 
     [McpServerPrompt(Name = "find-connections")]
     [Description("Find the genealogical relationship between two people")]
-    public static ChatMessage FindConnections(
+    public static string FindConnections(
         [Description("First person: name, handle, or Gramps ID")] string person1,
         [Description("Second person: name, handle, or Gramps ID")] string person2)
     {
@@ -117,12 +121,12 @@ public sealed class GrampsPrompts
             "3. If related, explain the connection in plain language (e.g. \"3rd cousin once removed\").\n" +
             "4. If no direct relationship found, try showing both their ancestor trees\n" +
             "   with get_person_tree(direction=ancestors, 3 generations each) to see if there's a common ancestor.";
-        return new ChatMessage(ChatRole.User, text);
+        return text;
     }
 
     [McpServerPrompt(Name = "import-from-text")]
     [Description("Parse genealogical information from text and add to the database")]
-    public static ChatMessage ImportFromText(
+    public static string ImportFromText(
         [Description("Text containing genealogy information to import")] string text)
     {
         var sb = new StringBuilder();
@@ -145,12 +149,12 @@ public sealed class GrampsPrompts
         sb.AppendLine("- Families created");
         sb.AppendLine("- Events added");
         sb.AppendLine("- Any information that could not be imported and why");
-        return new ChatMessage(ChatRole.User, sb.ToString());
+        return sb.ToString();
     }
 
     [McpServerPrompt(Name = "change-link")]
     [Description("Add or remove one link between existing Gramps records")]
-    public static ChatMessage ChangeLink(
+    public static string ChangeLink(
         [Description("Owner record type: person, family, event, place, source, citation, note, media, or repository")]
         string ownerType,
         [Description("Owner handle, Gramps ID, or unambiguous name")]
@@ -168,12 +172,12 @@ public sealed class GrampsPrompts
             "2. Use the matching update_* tool with handle: OWNER_HANDLE, the chosen link field containing TARGET_HANDLE, and linkMode: \"add\" or \"remove\". For childRefs, eventRefs, repositoryHandles, or enclosedBy, include known relationship/role metadata on add; do not guess unknown relationship facts.\n" +
             "3. Read the owner again to verify the link changed. Do not create a new record to satisfy this request. For metadata changes to an existing reference, read and replace the full list instead.\n" +
             "See get_reference(topic: \"input-guide\", section: \"link_updates\") if the list semantics are unclear.";
-        return new ChatMessage(ChatRole.User, text);
+        return text;
     }
 
     [McpServerPrompt(Name = "cite-fact")]
     [Description("Attach a source citation to an existing person, family, event, place, or media record")]
-    public static ChatMessage CiteFact(
+    public static string CiteFact(
         [Description("Record type: person, family, event, place, or media")]
         string recordType,
         [Description("Record handle, Gramps ID, or unambiguous name")]
@@ -191,6 +195,6 @@ public sealed class GrampsPrompts
         sb.AppendLine("2. Find the source by handle/Gramps ID or search by title. Reuse a matching source; create_source only if no matching source exists and the supplied information is sufficient.");
         sb.AppendLine("3. Reuse an existing matching citation if available; otherwise create_citation(sourceHandle: SOURCE_HANDLE, page: PAGE_IF_KNOWN). Do not invent page, confidence, or other evidence details.");
         sb.AppendLine("4. Attach with the target's update_* tool: handle: TARGET_HANDLE, citationHandles: [CITATION_HANDLE], linkMode: \"add\". Read the target again to verify it is linked.");
-        return new ChatMessage(ChatRole.User, sb.ToString());
+        return sb.ToString();
     }
 }

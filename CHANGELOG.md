@@ -28,6 +28,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   image has no ICU, so .NET runs in invariant globalization mode; the server
   already parses and formats dates and numbers with the invariant culture,
   and its tests pass in that mode
+- The server starts about 70 ms faster (stdio, until the answer to
+  `initialize`: 264 ms instead of 332 ms). The prompts return plain text
+  instead of a `ChatMessage`, so the MCP SDK no longer builds a JSON schema
+  for the `ChatMessage` type at startup. `prompts/list` and `prompts/get`
+  answer exactly as before
 
 ## [2.5.2] - 2026-10-15
 
