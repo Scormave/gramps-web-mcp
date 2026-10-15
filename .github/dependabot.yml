@@ -1,0 +1,56 @@
+# Weekly version-update pull requests for NuGet packages and GitHub Actions.
+# Security updates are switched on separately, in the repository's Code
+# security settings, and are not delayed by the cooldown below.
+#
+# The Docker base images are not listed: the Dockerfile uses the floating
+# 10.0-noble tags, so every image build already picks up .NET 10 patches,
+# and the only update Dependabot could offer is the next .NET major.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait a week after a release before proposing it.
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      # Released together each month; TestHost lands here too.
+      dotnet:
+        patterns:
+          - "Microsoft.Extensions.*"
+          - "Microsoft.AspNetCore.*"
+      # ModelContextProtocol and ModelContextProtocol.AspNetCore must match.
+      mcp-sdk:
+        patterns:
+          - "ModelContextProtocol*"
+      test:
+        patterns:
+          - "Microsoft.NET.Test.Sdk"
+          - "xunit*"
+          - "Moq"
+          - "YamlDotNet"
+    ignore:
+      # Framework packages follow the target framework, net10.0; the next
+      # major comes with the move to the next .NET release.
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns:
+          - "*"
