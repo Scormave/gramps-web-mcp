@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.5.2] - 2026-10-15
+
 ### Changed
 
 - Update the MCP C# SDK (`ModelContextProtocol` and
@@ -817,7 +819,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.2...HEAD
+[2.5.2]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.3.1...v2.4.0
