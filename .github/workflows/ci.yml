@@ -1,10 +1,18 @@
 name: CI
 
+# The weekly run catches advisories published for packages we already use,
+# when nothing in the repository changes.
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
@@ -25,3 +33,37 @@ jobs:
 
       - name: Test
         run: dotnet test gramps-web-mcp.sln --no-build -c Release --verbosity normal
+
+  vulnerable-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore gramps-web-mcp.sln
+
+      # GitHub's dependency graph lists only the packages named in the .csproj
+      # files, so Dependabot alerts miss transitive ones; this check covers them.
+      # dotnet list exits 0 when it finds vulnerable packages and 1 when it
+      # cannot check, so the step reads the JSON report for findings.
+      - name: Check for vulnerable packages
+        run: |
+          dotnet list gramps-web-mcp.sln package --vulnerable --include-transitive --format json > "$RUNNER_TEMP/vulnerable.json"
+          found=$(jq -r '
+            .projects[]
+            | (.path | split("/") | last) as $project
+            | .frameworks[]?
+            | ((.topLevelPackages // []) + (.transitivePackages // []))[]
+            | select(.vulnerabilities)
+            | "\($project): \(.id) \(.resolvedVersion), \(.vulnerabilities | map("\(.severity) \(.advisoryurl)") | join(", "))"
+          ' "$RUNNER_TEMP/vulnerable.json")
+          if [ -n "$found" ]; then
+            echo "$found" | sed 's/^/::error::/'
+            exit 1
+          fi
+          echo "No known vulnerable packages, transitive ones included."

@@ -469,7 +469,12 @@ Default environment in the image:
 ### CI
 
 - **GitHub Actions** (`.github/workflows/ci.yml`): build and test on pushes
-  and pull requests to `main`/`master`.
+  and pull requests to `main`/`master`, and fail when a NuGet package,
+  transitive ones included, has a known vulnerability. It also runs every
+  Monday, so an advisory for a package already in use shows up without a
+  commit.
+- **Dependabot** (`.github/dependabot.yml`): weekly pull requests that update
+  NuGet packages and GitHub Actions.
 - **GitHub Actions** (`.github/workflows/docker.yml`): test, then publish the
   Docker image to `ghcr.io/scormave/gramps-web-mcp` on pushes to
   `main`/`master` (`:latest`), `v*` tags (`:x.y.z`, plus the MCP Registry

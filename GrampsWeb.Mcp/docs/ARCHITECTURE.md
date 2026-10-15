@@ -522,7 +522,12 @@ HTTP transport on port 8080.
 ### CI
 
 - **GitHub Actions** (`.github/workflows/ci.yml`): build and test on pushes
-  and pull requests to `main`/`master`.
+  and pull requests to `main`/`master`, and fail when a NuGet package,
+  transitive ones included, has a known vulnerability. It also runs every
+  Monday, so an advisory for a package already in use shows up without a
+  commit.
+- **Dependabot** (`.github/dependabot.yml`): weekly pull requests that update
+  NuGet packages and GitHub Actions.
 - **GitHub Actions** (`.github/workflows/docker.yml`): on pushes to
   `main`/`master`, `v*` tags, or manual dispatch, test, then build and publish
   the Docker image to `ghcr.io/scormave/gramps-web-mcp` (`:latest` from the
