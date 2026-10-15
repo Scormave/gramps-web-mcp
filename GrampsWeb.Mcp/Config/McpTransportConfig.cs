@@ -33,13 +33,7 @@ public sealed record McpTransportConfig(
     /// </summary>
     public static McpTransportConfig FromEnvironment()
     {
-        var raw = Environment.GetEnvironmentVariable("MCP_TRANSPORT")?.Trim().ToLowerInvariant();
-        var mode = raw switch
-        {
-            "http" => McpListenMode.Http,
-            "sse" => McpListenMode.Sse,
-            _ => McpListenMode.Stdio
-        };
+        var mode = ParseMode(Environment.GetEnvironmentVariable("MCP_TRANSPORT"));
 
         var path = Environment.GetEnvironmentVariable("MCP_PATH")?.Trim() ?? "/mcp";
         if (path.Length > 0 && !path.StartsWith('/'))
@@ -60,6 +54,14 @@ public sealed record McpTransportConfig(
 
         return new McpTransportConfig(mode, path, stateless, EnableLegacySse: false);
     }
+
+    /// <summary>The listen mode an <c>MCP_TRANSPORT</c> value selects; anything but <c>http</c> or <c>sse</c> means stdio.</summary>
+    internal static McpListenMode ParseMode(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "http" => McpListenMode.Http,
+        "sse" => McpListenMode.Sse,
+        _ => McpListenMode.Stdio
+    };
 
     private static bool ParseBoolOrDefault(string? value, bool defaultValue)
     {

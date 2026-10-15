@@ -88,8 +88,9 @@ services:
     #   - ./media-inbox:/uploads:ro
     depends_on:
       - grampsweb
+    # The image has no shell or curl: the server checks its own /health.
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "dotnet", "/app/GrampsWeb.Mcp.dll", "--health-check"]
       interval: 30s
       timeout: 5s
       retries: 3

@@ -13,7 +13,9 @@ RUN dotnet publish GrampsWeb.Mcp/GrampsWeb.Mcp.csproj \
     -o /app/publish \
     --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
+# Chiseled Ubuntu: only the .NET runtime and its libraries, no shell or package
+# manager, non-root by default. Globalization runs in invariant mode (no ICU).
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled AS final
 WORKDIR /app
 
 LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
@@ -43,6 +45,7 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # MCP_API_KEY         Optional shared secret for HTTP/SSE transport (min 16 chars; comma-separated for rotation).
 # MCP_ALLOWED_ORIGINS Browser origins allowed to call HTTP/SSE, comma-separated (default none; others get 403).
 # GET /health         Liveness/readiness probe; minimal JSON {"status": ...}.
+#                     Inside the container: dotnet /app/GrampsWeb.Mcp.dll --health-check
 
 ENV MCP_TRANSPORT=http \
     ASPNETCORE_URLS=http://0.0.0.0:8080 \
@@ -50,16 +53,13 @@ ENV MCP_TRANSPORT=http \
 
 EXPOSE 8080
 
-# Used by Docker HEALTHCHECK and docker-compose health probes.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY --from=build /app/publish .
 COPY LICENSE THIRD-PARTY-NOTICES.txt ./
 USER $APP_UID
 
+# The image has no curl: the server checks its own GET /health, finding the
+# port from ASPNETCORE_URLS, and exits 0 on 200 and 1 otherwise.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD ["dotnet", "/app/GrampsWeb.Mcp.dll", "--health-check"]
 
 ENTRYPOINT ["dotnet", "GrampsWeb.Mcp.dll"]

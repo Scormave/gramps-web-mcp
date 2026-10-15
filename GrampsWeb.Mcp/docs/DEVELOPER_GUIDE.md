@@ -456,8 +456,11 @@ This is applied automatically by `PersonTools.ReadPersonAsync` and
 
 The `Dockerfile` uses multi-stage build:
 1. **Build stage**: SDK 10.0 on Ubuntu 24.04 (Noble), restore + publish
-2. **Runtime stage**: ASP.NET Core 10.0 on Ubuntu 24.04 (Noble), runs as non-root user;
-   `LICENSE` and `THIRD-PARTY-NOTICES.txt` are copied next to the server
+2. **Runtime stage**: ASP.NET Core 10.0 on Ubuntu 24.04 (Noble) Chiseled, runs as
+   non-root user; `LICENSE` and `THIRD-PARTY-NOTICES.txt` are copied next to the
+   server. Chiseled images hold only the runtime and its libraries: there is no
+   shell, package manager or curl, and globalization runs in invariant mode
+   (no ICU), so culture-sensitive comparisons are ordinal
 
 Default environment in the image:
 - `MCP_TRANSPORT=http`
@@ -465,6 +468,11 @@ Default environment in the image:
 - `MCP_PATH=/mcp`
 
 `GET /health` returns a minimal status payload for liveness/readiness checks.
+The image's `HEALTHCHECK` runs `dotnet /app/GrampsWeb.Mcp.dll --health-check`
+(`Hosting/HealthCheckCommand.cs`): it requests `/health` on the first http
+address of `ASPNETCORE_URLS`, with wildcard hosts replaced by `localhost`, and
+exits with 0 on success and 1 otherwise. In stdio mode it reports `skipped`
+and exits with 0.
 
 ### CI
 

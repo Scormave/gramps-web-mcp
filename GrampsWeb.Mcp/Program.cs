@@ -11,6 +11,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 
+if (HealthCheckCommand.IsRequested(args))
+{
+    Environment.ExitCode = await HealthCheckCommand.RunAsync(args, Console.Out);
+    return;
+}
+
 try
 {
     var config = GrampsConfig.FromEnvironment();

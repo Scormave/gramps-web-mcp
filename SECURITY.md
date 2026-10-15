@@ -111,4 +111,5 @@ separated by semicolons, for example
 `AllowedHosts=gramps-mcp.example.com;localhost`. ASP.NET Core then answers a
 request for any other `Host` with 400, an IP address such as `127.0.0.1`
 included unless it is listed. Keep `localhost` in the list in Docker: the
-image's `HEALTHCHECK` calls `http://localhost:8080/health`.
+image's `HEALTHCHECK` runs `dotnet /app/GrampsWeb.Mcp.dll --health-check`,
+which requests `http://localhost:8080/health`.

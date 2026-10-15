@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `--health-check [url]` command-line option: instead of starting a server,
+  request `GET /health` of a running one and exit with 0 on HTTP 200 and 1
+  otherwise. Without a URL it takes the address from `ASPNETCORE_URLS` (or
+  `DOTNET_URLS`, `ASPNETCORE_HTTP_PORTS`), with `0.0.0.0`, `[::]`, `*` and
+  `+` replaced by `localhost`; with `MCP_TRANSPORT=stdio` it reports
+  `skipped` and exits with 0, since there is no HTTP endpoint
+
+### Changed
+
+- The Docker image runs on `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`
+  instead of `10.0-noble`: no shell, package manager or curl, about half the
+  size (54 MB to download instead of 97 MB) and a smaller set of system
+  packages to patch. Its `HEALTHCHECK` runs
+  `dotnet /app/GrampsWeb.Mcp.dll --health-check` in place of curl. A health
+  check defined outside the image with `curl`, such as in an older copy of
+  `docker-compose.example.yml`, fails on the new image and must switch to
+  `["CMD", "dotnet", "/app/GrampsWeb.Mcp.dll", "--health-check"]`. The
+  image has no ICU, so .NET runs in invariant globalization mode; the server
+  already parses and formats dates and numbers with the invariant culture,
+  and its tests pass in that mode
+
 ## [2.5.2] - 2026-10-15
 
 ### Changed

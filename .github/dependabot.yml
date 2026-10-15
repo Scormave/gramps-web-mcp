@@ -3,8 +3,9 @@
 # security settings, and are not delayed by the cooldown below.
 #
 # The Docker base images are not listed: the Dockerfile uses the floating
-# 10.0-noble tags, so every image build already picks up .NET 10 patches,
-# and the only update Dependabot could offer is the next .NET major.
+# 10.0-noble and 10.0-noble-chiseled tags, so every image build already picks
+# up .NET 10 patches, and the only update Dependabot could offer is the next
+# .NET major.
 version: 2
 updates:
   - package-ecosystem: nuget

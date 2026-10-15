@@ -99,6 +99,20 @@ public response is minimal: `{ "status": "healthy" }` or
 `{ "status": "unhealthy" }`. Startup logs include a line such as
 `Connected to Gramps Web at …` once the API is reachable.
 
+The image is built on Ubuntu Chiseled and has no shell or `curl`. Its
+`HEALTHCHECK` runs `dotnet /app/GrampsWeb.Mcp.dll --health-check`, which
+requests `/health` on the port from `ASPNETCORE_URLS` and exits with 0 on
+HTTP 200 and 1 otherwise. A health check you define yourself, in Compose or in
+a NAS app template, runs the same command:
+
+```yaml
+healthcheck:
+  test: ["CMD", "dotnet", "/app/GrampsWeb.Mcp.dll", "--health-check"]
+```
+
+If the server listens on an address that `ASPNETCORE_URLS` does not give, pass
+the URL after the option, for example `--health-check http://localhost:9000`.
+
 The image defaults to Streamable HTTP (`MCP_TRANSPORT=http`) on port 8080, which
 is what the commands above use. Clients that spawn the container themselves
 (such as MCP Registry installs) instead run it over stdio with

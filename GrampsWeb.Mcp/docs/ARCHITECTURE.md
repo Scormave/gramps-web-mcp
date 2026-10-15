@@ -99,8 +99,11 @@ stays anonymous.
 ## Configuration
 
 Configuration is loaded from **environment variables** (no appsettings files).
-The server has no command-line options of its own; read-only mode is set only
-through `GRAMPS_READ_ONLY`.
+The server's only command-line option of its own is `--health-check [url]`,
+which starts no server: it requests `GET /health` of a running one, on the
+address from `ASPNETCORE_URLS` unless a URL is given, and exits with 0 on
+success and 1 otherwise (`HealthCheckCommand`; the Docker `HEALTHCHECK` uses
+it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
 
 ### Required (Gramps connection)
 
@@ -520,8 +523,10 @@ docker run -p 8080:8080 \
   gramps-web-mcp
 ```
 
-The Dockerfile uses multi-stage build (SDK → ASP.NET runtime) and defaults to
-HTTP transport on port 8080.
+The Dockerfile uses multi-stage build (SDK → ASP.NET runtime on Ubuntu
+Chiseled) and defaults to HTTP transport on port 8080. The runtime image has no
+shell or package manager, so its `HEALTHCHECK` runs the server's own
+`--health-check` option instead of curl.
 
 ### CI
 
