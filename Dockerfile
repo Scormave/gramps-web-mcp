@@ -41,6 +41,7 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # MCP_STATELESS       true|false — Streamable HTTP stateless mode (default true for http).
 # MCP_ENABLE_LEGACY_SSE  true|false — with http, also expose legacy /sse + /message.
 # MCP_API_KEY         Optional shared secret for HTTP/SSE transport (min 16 chars; comma-separated for rotation).
+# MCP_ALLOWED_ORIGINS Browser origins allowed to call HTTP/SSE, comma-separated (default none; others get 403).
 # GET /health         Liveness/readiness probe; minimal JSON {"status": ...}.
 
 ENV MCP_TRANSPORT=http \

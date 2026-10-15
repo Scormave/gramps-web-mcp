@@ -410,6 +410,7 @@ example `http://127.0.0.1:8080`.
 | `MCP_STATELESS` | Stateless mode for Streamable HTTP | `true` |
 | `MCP_ENABLE_LEGACY_SSE` | Expose legacy `/sse` with `http` transport | `false` |
 | `MCP_API_KEY` | Shared secret for HTTP/SSE transport (comma-separated for rotation; min 16 characters) | — |
+| `MCP_ALLOWED_ORIGINS` | Browser origins allowed to call HTTP/SSE endpoints, comma-separated; requests from other origins get 403 | — |
 
 ### HTTP authentication
 
@@ -430,6 +431,23 @@ address is not loopback-only, a warning is logged recommending that you set
 Inside Docker, `ASPNETCORE_URLS` is typically `http://0.0.0.0:8080`, so the
 warning appears even when the host publishes the port on `127.0.0.1` only.
 That is expected when external access is already restricted.
+
+### Browser origins
+
+Browsers send an `Origin` header with their requests, and the server refuses
+with 403 every request whose origin is not listed in `MCP_ALLOWED_ORIGINS`.
+This keeps a web page on another site from calling tools with the server's
+Gramps credentials, also through DNS rebinding, which works even when the
+server listens on `127.0.0.1` only. MCP clients outside a browser, such as
+Claude Desktop, Claude Code and SDK clients, send no `Origin` and need no
+setting. For a browser-based MCP client you trust, list its origin:
+
+```bash
+MCP_ALLOWED_ORIGINS=https://app.example.com
+```
+
+[SECURITY.md](SECURITY.md) also describes the optional `AllowedHosts` check of
+the `Host` header.
 
 ### Logging
 

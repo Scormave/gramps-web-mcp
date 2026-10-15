@@ -16,6 +16,7 @@ try
     var config = GrampsConfig.FromEnvironment();
     var transport = McpTransportConfig.FromEnvironment();
     var auth = McpAuthConfig.FromEnvironment(transport.Mode);
+    var origins = McpOriginConfig.FromEnvironment(transport.Mode);
 
     if (transport.Mode == McpListenMode.Stdio)
     {
@@ -23,7 +24,7 @@ try
     }
     else
     {
-        await RunHttpAsync(args, config, transport, auth);
+        await RunHttpAsync(args, config, transport, auth, origins);
     }
 }
 catch (InvalidOperationException ex) when (ex.Message.Contains("Configuration validation failed"))
@@ -65,7 +66,12 @@ static async Task RunStdioAsync(GrampsConfig config, McpAuthConfig auth)
     await host.RunAsync();
 }
 
-static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportConfig transport, McpAuthConfig auth)
+static async Task RunHttpAsync(
+    string[] args,
+    GrampsConfig config,
+    McpTransportConfig transport,
+    McpAuthConfig auth,
+    McpOriginConfig origins)
 {
     var builder = WebApplication.CreateBuilder(args);
 
@@ -93,7 +99,7 @@ static async Task RunHttpAsync(string[] args, GrampsConfig config, McpTransportC
         .WithPrompts<GrampsPrompts>();
 
     var app = builder.Build();
-    app.MapGrampsMcpEndpoints(transport, auth);
+    app.MapGrampsMcpEndpoints(transport, auth, origins);
     app.LogAuthStartupStatus(auth);
     app.LogRetiredEnvironmentVariables();
     app.LogUploadWithoutMediaAccess(config);

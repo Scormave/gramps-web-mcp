@@ -12,8 +12,11 @@ internal static class McpEndpointExtensions
     public static WebApplication MapGrampsMcpEndpoints(
         this WebApplication app,
         McpTransportConfig transport,
-        McpAuthConfig auth)
+        McpAuthConfig auth,
+        McpOriginConfig origins)
     {
+        app.UseOriginValidation(origins);
+
         if (auth.Enabled)
         {
             app.UseAuthentication();

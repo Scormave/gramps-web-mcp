@@ -90,8 +90,11 @@ environment variable.  See `McpTransportConfig` for details.
 | `sse` | Legacy MCP SSE (`GET /sse` + `POST /message`) | Stateful only |
 
 `Program.cs` selects between `RunStdioAsync` (empty host) and `RunHttpAsync`
-(ASP.NET Core + `MapGrampsMcpEndpoints`). HTTP mode optionally gates MCP routes
-with `MCP_API_KEY` via `RequireAuthorization()`; `GET /health` stays anonymous.
+(ASP.NET Core + `MapGrampsMcpEndpoints`). HTTP mode first refuses with 403 any
+request whose `Origin` header is not in `MCP_ALLOWED_ORIGINS`
+(`UseOriginValidation`; requests without the header pass), then optionally
+gates MCP routes with `MCP_API_KEY` via `RequireAuthorization()`; `GET /health`
+stays anonymous.
 
 ## Configuration
 
@@ -119,6 +122,7 @@ through `GRAMPS_READ_ONLY`.
 | `MCP_STATELESS` | Stateless mode for Streamable HTTP | `true` |
 | `MCP_ENABLE_LEGACY_SSE` | Expose legacy `/sse` with `http` transport | `false` |
 | `MCP_API_KEY` | Shared secret for HTTP/SSE transport | — |
+| `MCP_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to call HTTP/SSE endpoints; requests from other origins get 403 | — |
 
 ### Optional (runtime mode)
 

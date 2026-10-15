@@ -15,6 +15,7 @@ public class McpAuthPipelineTests
 {
     private const string ApiKey = "0123456789abcdef";
     private const string MapPath = "/mcp";
+    private const string AllowedOrigin = "http://localhost:6274";
     private const string MinimalJsonRpcBody =
         """{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}},"id":1}""";
 
@@ -92,6 +93,98 @@ public class McpAuthPipelineTests
         Assert.NotEqual(401, (int)response.StatusCode);
     }
 
+    [Fact]
+    public async Task Post_Mcp_From_Foreign_Origin_Returns_403_When_Auth_Disabled()
+    {
+        await using var factory = await CreateFactoryAsync(enabled: false, enableLegacySse: false);
+        using var client = factory.CreateClient();
+
+        using var request = CreateMcpPostRequest(MapPath, MinimalJsonRpcBody);
+        request.Headers.Add("Origin", "http://evil.example:8080");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(403, (int)response.StatusCode);
+        Assert.Contains("\"code\":-32000", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Post_Mcp_From_Foreign_Origin_Returns_403_Even_With_Valid_Key()
+    {
+        await using var factory = await CreateFactoryAsync(enabled: true, enableLegacySse: false);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", ApiKey);
+
+        using var request = CreateMcpPostRequest(MapPath, MinimalJsonRpcBody);
+        request.Headers.Add("Origin", "https://evil.example");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(403, (int)response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_Mcp_From_Null_Origin_Returns_403()
+    {
+        await using var factory = await CreateFactoryAsync(enabled: false, enableLegacySse: false);
+        using var client = factory.CreateClient();
+
+        using var request = CreateMcpPostRequest(MapPath, MinimalJsonRpcBody);
+        request.Headers.Add("Origin", "null");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(403, (int)response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_Mcp_From_Allowed_Origin_Is_Served()
+    {
+        await using var factory = await CreateFactoryAsync(enabled: false, enableLegacySse: false);
+        using var client = factory.CreateClient();
+
+        using var request = CreateMcpPostRequest(MapPath, MinimalJsonRpcBody);
+        request.Headers.Add("Origin", "HTTP://LocalHost:6274");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(200, (int)response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Post_Mcp_Without_Origin_Is_Served()
+    {
+        await using var factory = await CreateFactoryAsync(enabled: false, enableLegacySse: false);
+        using var client = factory.CreateClient();
+
+        using var request = CreateMcpPostRequest(MapPath, MinimalJsonRpcBody);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(200, (int)response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_Health_From_Foreign_Origin_Returns_403()
+    {
+        await using var factory = await CreateFactoryAsync(enabled: false, enableLegacySse: false);
+        using var client = factory.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
+        request.Headers.Add("Origin", "https://evil.example");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(403, (int)response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_Legacy_Sse_From_Foreign_Origin_Returns_403()
+    {
+        await using var factory = await CreateFactoryAsync(enabled: false, enableLegacySse: true);
+        using var client = factory.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{MapPath}/sse");
+        request.Headers.Add("Origin", "https://evil.example");
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(403, (int)response.StatusCode);
+    }
+
     private static HttpRequestMessage CreateMcpPostRequest(string path, string body)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, path)
@@ -107,6 +200,8 @@ public class McpAuthPipelineTests
         var auth = enabled
             ? new McpAuthConfig([ApiKey], WarnAboutAnonymousAccess: false)
             : new McpAuthConfig([], WarnAboutAnonymousAccess: true);
+
+        var origins = McpOriginConfig.Create(AllowedOrigin, McpListenMode.Http);
 
         var transport = new McpTransportConfig(
             Mode: McpListenMode.Http,
@@ -134,7 +229,7 @@ public class McpAuthPipelineTests
         RegisterHealthDependencies(builder.Services);
 
         var app = builder.Build();
-        app.MapGrampsMcpEndpoints(transport, auth);
+        app.MapGrampsMcpEndpoints(transport, auth, origins);
 
         await app.StartAsync();
         return new TestServerFactory(app);

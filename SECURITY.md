@@ -93,3 +93,22 @@ Inside Docker, `ASPNETCORE_URLS` is typically `http://0.0.0.0:8080`, so the
 server logs a startup warning when `MCP_API_KEY` is not set even if the host
 publishes the port on `127.0.0.1` only. That warning is expected when external
 access is already restricted at the host firewall or reverse proxy.
+
+Browsers send an `Origin` header with the requests that carry MCP messages,
+and the server refuses with 403 every request whose origin is not listed in
+`MCP_ALLOWED_ORIGINS`, `GET /health` included. The list is empty by default
+and takes comma-separated origins such as `https://app.example.com`. MCP
+clients outside a browser (Claude Desktop, Claude Code, SDK and command-line
+clients) send no `Origin` and are not affected. The check keeps a web page on
+another site from calling tools with the server's Gramps credentials, also
+through DNS rebinding, where the page points a name it controls at your
+machine so the browser treats it as the same site as the server; without the
+check, that works even on a server bound to `127.0.0.1`. List only the origins
+of browser-based MCP clients you trust.
+
+For further hardening, set `AllowedHosts` to the host names clients use,
+separated by semicolons, for example
+`AllowedHosts=gramps-mcp.example.com;localhost`. ASP.NET Core then answers a
+request for any other `Host` with 400, an IP address such as `127.0.0.1`
+included unless it is listed. Keep `localhost` in the list in Docker: the
+image's `HEALTHCHECK` calls `http://localhost:8080/health`.

@@ -18,6 +18,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   version 2026-07-28 in `initialize` now gets error -32022 with the list of
   supported versions; 1.3.0 answered with 2025-11-25
 
+### Security
+
+- Over HTTP and SSE the server now refuses with 403 any request that carries
+  an `Origin` header not listed in the new `MCP_ALLOWED_ORIGINS`
+  (comma-separated, empty by default), as the MCP specification requires.
+  Without the check, a web page on another site could call tools with the
+  server's Gramps credentials through DNS rebinding: a name the page
+  controls is pointed at the machine running the server, so the browser
+  treats the page and the server as one site. That worked on a server bound
+  to `127.0.0.1` without `MCP_API_KEY`. MCP clients outside a browser send
+  no `Origin` and work as before. An entry that is not an `http` or `https`
+  origin stops the server at startup
+
 ## [2.5.1] - 2026-10-14
 
 ### Changed
