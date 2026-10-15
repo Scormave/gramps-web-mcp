@@ -34,7 +34,7 @@ public class ReferenceToolsTests
         var ex = await Assert.ThrowsAsync<McpException>(
             () => ReferenceTools.GetReference("unknown"));
 
-        Assert.Equal("Invalid topic. Must be one of: input-guide, types, metadata, name-settings.", ex.Message);
+        Assert.Equal("Invalid topic. Must be one of: input-guide, types, metadata, name-settings, filter-rules.", ex.Message);
     }
 
     [Fact]
@@ -129,6 +129,57 @@ public class ReferenceToolsTests
 
         Assert.Contains("Unknown types section 'unknown_types'", ex.Message);
         Assert.Contains("event_types", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(null, "/api/filters/", "FILTER RULES")]
+    [InlineData("people", "/api/filters/people", "FILTER RULES: people (1)")]
+    [InlineData(" Event ", "/api/filters/events", "FILTER RULES: events (1)")]
+    public async Task GetReference_FilterRules_ReadsTheOverviewOrOneType(string? section, string path, string heading)
+    {
+        using var handler = new FiltersHandler();
+        using var http = new HttpClient(handler);
+        var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");
+        var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
+        var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
+
+        var result = await ReferenceTools.GetReference("filter-rules", section, client);
+
+        Assert.StartsWith(heading, result);
+        Assert.Equal([path], handler.Paths);
+    }
+
+    [Fact]
+    public async Task GetReference_RejectsUnknownFilterRulesSection()
+    {
+        var ex = await Assert.ThrowsAsync<McpException>(
+            () => ReferenceTools.GetReference("filter-rules", "tags"));
+
+        Assert.Equal(
+            "Unknown filter-rules section 'tags'. Available sections: people, families, events, places, citations, sources, repositories, media, notes.",
+            ex.Message);
+    }
+
+    private sealed class FiltersHandler : HttpMessageHandler
+    {
+        private const string Catalog = """{"filters": [], "rules": [{"category": "General filters", "description": "Matches everyone", "labels": [], "rule": "Everyone"}]}""";
+
+        public List<string> Paths { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var path = request.RequestUri!.PathAndQuery;
+            if (path == "/api/token/")
+                return Task.FromResult(JsonResponse("""{"access_token":"token","refresh_token":"refresh","expires_in":900}"""));
+
+            Paths.Add(path);
+            return Task.FromResult(JsonResponse(path == "/api/filters/" ? $$"""{"people": {{Catalog}}}""" : Catalog));
+        }
+
+        private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
     }
 
     private sealed class TypesHandler : HttpMessageHandler

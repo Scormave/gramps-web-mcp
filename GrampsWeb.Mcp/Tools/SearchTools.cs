@@ -2,6 +2,7 @@ using System.ComponentModel;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 using GrampsWeb.Mcp.Serialization;
 using ModelContextProtocol;
@@ -74,8 +75,9 @@ public static class SearchTools
     [Description(
         "List the records of one type, a page at a time, optionally filtered and sorted: one line per record " +
         "(Gramps ID, summary, handle) with the page and total count. Use it to browse a type, look up one Gramps ID, " +
-        "list the citations of a source, or filter by fields with Gramps Query Language; to find records by text use search, " +
-        "and to read one record in full use get_object.")]
+        "list the citations of a source, filter by fields with Gramps Query Language, or select with Gramps filter rules " +
+        "(ancestors or descendants of a person, everyone related to someone, people with no family links); " +
+        "to find records by text use search, and to read one record in full use get_object.")]
     public static async Task<string> ListObjects(
         [Description("Which records to list: people, families, events, places, sources, citations, repositories, notes, media or tags.")]
         string objectType,
@@ -89,6 +91,17 @@ public static class SearchTools
         string? sourceHandle = null,
         [Description("Filter in Gramps Query Language, run on the server, e.g. gender == 1 or media_list.length >= 1 (optional).")]
         string? gql = null,
+        [Description(
+            "Gramps filter rules, run on the server before gql (a record must match both): " +
+            "{\"function\": \"and\" (default), \"or\" or \"one\", \"invert\": true to keep the records that do not match, " +
+            "\"rules\": [{\"name\": rule, \"values\": [one per label of the rule, in order]}]}, or just the array of rules. " +
+            "Values are Gramps IDs (I0001), text, numbers or true/false. An item of rules can be a nested filter of the same form; " +
+            "with \"namespace\" (Event, Family, Person, Place, Source or Repository) it matches the records each listed one links to, " +
+            "e.g. people by their events. Examples: people with no family links {\"rules\": [{\"name\": \"Disconnected\"}]}; " +
+            "people not related to I0001 {\"invert\": true, \"rules\": [{\"name\": \"IsRelatedWith\", \"values\": [\"I0001\"]}]}; " +
+            "a saved filter {\"name\": \"MatchesFilter\", \"values\": [\"its name\"]}. " +
+            "Rules of each type and their values: get_reference(topic: \"filter-rules\", section: type). Not for tags (optional).")]
+        FlexibleFilterRules? rules = null,
         [Description("Field to sort by, e.g. gramps_id; a leading - sorts descending, e.g. -change for latest edits first (optional).")]
         string? sort = null,
         GrampsApiClient client = null!)
@@ -116,7 +129,17 @@ public static class SearchTools
             };
 
             if (!string.IsNullOrEmpty(grampsId))
+            {
+                // Gramps Web returns the record with this ID without applying rules.
+                if (rules != null)
+                    throw McpToolErrors.ValidationError(
+                        "Pass grampsId or rules, not both; to test one record against rules, add {\"name\": \"HasIdOf\", \"values\": [\"its ID\"]} to them.");
                 queryParams.Add($"gramps_id={Uri.EscapeDataString(grampsId)}");
+            }
+
+            var filter = rules == null ? null : FilterRules.Build(rules, objectType.ToLowerInvariant());
+            if (filter != null)
+                queryParams.Add($"rules={Uri.EscapeDataString(filter.Json)}");
 
             var isCitations = objectType.Equals("citations", StringComparison.OrdinalIgnoreCase);
             if (isCitations && !string.IsNullOrEmpty(sourceHandle))
@@ -142,21 +165,35 @@ public static class SearchTools
                 queryParams.Add(SearchFormatter.ProfileQuery);
 
             var queryString = $"/api/{objectType.ToLower()}/?{string.Join("&", queryParams)}";
+            // Rules naming an ID, tag or saved filter that does not exist match nothing, without an error.
+            var emptyNote = filter == null
+                ? null
+                : "A Gramps ID, tag or saved filter name in the rules that the tree does not have matches nothing; check those values.";
 
-            return objectType.ToLower() switch
+            try
             {
-                "people" => await SearchFormatter.FetchAndFormatObjects<GrampsPerson>(queryString, client, objectType, pagesize),
-                "families" => await SearchFormatter.FetchAndFormatObjects<GrampsFamily>(queryString, client, objectType, pagesize),
-                "events" => await SearchFormatter.FetchAndFormatObjects<GrampsEvent>(queryString, client, objectType, pagesize),
-                "places" => await SearchFormatter.FetchAndFormatObjects<GrampsPlace>(queryString, client, objectType, pagesize),
-                "sources" => await SearchFormatter.FetchAndFormatObjects<GrampsSource>(queryString, client, objectType, pagesize),
-                "citations" => await SearchFormatter.FetchAndFormatObjects<GrampsCitation>(queryString, client, objectType, pagesize),
-                "repositories" => await SearchFormatter.FetchAndFormatObjects<GrampsRepository>(queryString, client, objectType, pagesize),
-                "notes" => await SearchFormatter.FetchAndFormatObjects<GrampsNote>(queryString, client, objectType, pagesize),
-                "media" => await SearchFormatter.FetchAndFormatObjects<GrampsMedia>(queryString, client, objectType, pagesize),
-                "tags" => await SearchFormatter.FetchAndFormatObjects<GrampsTag>(queryString, client, objectType, pagesize),
-                _ => throw new McpException("Invalid object type")
-            };
+                return objectType.ToLower() switch
+                {
+                    "people" => await SearchFormatter.FetchAndFormatObjects<GrampsPerson>(queryString, client, objectType, pagesize, emptyNote),
+                    "families" => await SearchFormatter.FetchAndFormatObjects<GrampsFamily>(queryString, client, objectType, pagesize, emptyNote),
+                    "events" => await SearchFormatter.FetchAndFormatObjects<GrampsEvent>(queryString, client, objectType, pagesize, emptyNote),
+                    "places" => await SearchFormatter.FetchAndFormatObjects<GrampsPlace>(queryString, client, objectType, pagesize, emptyNote),
+                    "sources" => await SearchFormatter.FetchAndFormatObjects<GrampsSource>(queryString, client, objectType, pagesize, emptyNote),
+                    "citations" => await SearchFormatter.FetchAndFormatObjects<GrampsCitation>(queryString, client, objectType, pagesize, emptyNote),
+                    "repositories" => await SearchFormatter.FetchAndFormatObjects<GrampsRepository>(queryString, client, objectType, pagesize, emptyNote),
+                    "notes" => await SearchFormatter.FetchAndFormatObjects<GrampsNote>(queryString, client, objectType, pagesize, emptyNote),
+                    "media" => await SearchFormatter.FetchAndFormatObjects<GrampsMedia>(queryString, client, objectType, pagesize, emptyNote),
+                    "tags" => await SearchFormatter.FetchAndFormatObjects<GrampsTag>(queryString, client, objectType, pagesize),
+                    _ => throw new McpException("Invalid object type")
+                };
+            }
+            catch (GrampsApiException ex) when (filter != null)
+            {
+                var explanation = await FilterRules.ExplainFailureAsync(ex, filter, client);
+                if (explanation == null)
+                    throw;
+                throw new McpException(explanation, ex);
+            }
         }
         catch (Exception ex)
         {

@@ -100,6 +100,50 @@ public sealed class GrampsResources
     }
 
     [McpServerResource(
+        Name = "filter-rules",
+        UriTemplate = "gramps://filter-rules",
+        MimeType = "text/plain")]
+    [Description("How Gramps filter rules select records in list_objects, with the number of rules and the saved filters of each type.")]
+    public static async Task<TextResourceContents> GetFilterRules(GrampsApiClient client)
+    {
+        try
+        {
+            return new TextResourceContents
+            {
+                Uri = "gramps://filter-rules",
+                MimeType = "text/plain",
+                Text = await FetchFilterRulesTextAsync(client)
+            };
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    [McpServerResource(
+        Name = "filter-rules-of-type",
+        UriTemplate = "gramps://filter-rules/{objectType}",
+        MimeType = "text/plain")]
+    [Description("The Gramps filter rules of one type (people, families, events, places, citations, sources, repositories, media or notes) with their values, and its saved filters.")]
+    public static async Task<TextResourceContents> GetFilterRulesOfType(string objectType, GrampsApiClient client)
+    {
+        try
+        {
+            return new TextResourceContents
+            {
+                Uri = $"gramps://filter-rules/{Uri.EscapeDataString(objectType)}",
+                MimeType = "text/plain",
+                Text = await FetchFilterRulesTextAsync(client, objectType)
+            };
+        }
+        catch (Exception ex)
+        {
+            throw McpToolErrors.ToMcpException(ex);
+        }
+    }
+
+    [McpServerResource(
         Name = "media-file",
         UriTemplate = "gramps://media/{handle}/file",
         MimeType = "application/octet-stream")]
@@ -235,6 +279,30 @@ public sealed class GrampsResources
         var groups = await groupsTask;
         return $"NAME FORMATS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(formats)}\n\n" +
                $"NAME GROUPS\n{new string('=', 60)}\n\n{JsonResponseFormatter.FormatDynamic(groups)}";
+    }
+
+    /// <summary>
+    /// The filter overview of every type, or the rules of one type when <paramref name="section"/> names it
+    /// (an object type such as people, or a Gramps namespace such as Person).
+    /// </summary>
+    internal static async Task<string> FetchFilterRulesTextAsync(GrampsApiClient client, string? section = null)
+    {
+        if (string.IsNullOrWhiteSpace(section))
+            return FilterRulesFormatter.FormatOverview(await client.GetAsync<JsonElement>("/api/filters/"));
+
+        var normalizedSection = section.Trim();
+        var objectType = FilterRules.Namespaces
+            .FirstOrDefault(pair =>
+                string.Equals(pair.Key, normalizedSection, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(pair.Value, normalizedSection, StringComparison.OrdinalIgnoreCase))
+            .Key;
+        if (objectType == null)
+            throw McpToolErrors.ValidationError(
+                $"Unknown filter-rules section '{section}'. Available sections: {string.Join(", ", FilterRules.Namespaces.Keys)}.");
+
+        return FilterRulesFormatter.FormatType(
+            objectType,
+            await client.GetAsync<JsonElement>($"/api/filters/{objectType}"));
     }
 
     internal static async Task<GrampsMedia> GetMediaMetadataOrThrowAsync(string handle, GrampsApiClient client)

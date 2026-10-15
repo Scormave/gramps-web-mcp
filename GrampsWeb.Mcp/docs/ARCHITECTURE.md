@@ -241,7 +241,11 @@ folder.
 
 `GrampsResources.cs` exposes read-only reference payloads as MCP resources:
 `gramps://input-guide`, `gramps://types`, `gramps://metadata`,
-`gramps://name-settings`.
+`gramps://name-settings`, `gramps://filter-rules` and
+`gramps://filter-rules/{objectType}`. The filter rules come from Gramps Web's
+`/api/filters/` and are formatted by `FilterRulesFormatter`; `Tools/FilterRules.cs`
+checks the `rules` argument of `list_objects` before the request and explains
+the server's refusals.
 
 It also exposes opt-in binary media resources:
 `gramps://media/{handle}/thumbnail/{size}` and

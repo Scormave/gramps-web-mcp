@@ -68,18 +68,20 @@ public static class SearchFormatter
     /// <summary>
     /// Fetches a paged list and formats each row the same way as <see cref="FormatSearchResults"/>.
     /// Lists of people, families, events and citations need <see cref="ProfileQuery"/> in <paramref name="queryString"/>.
+    /// <paramref name="emptyNote"/> follows "No … found." when nothing is returned.
     /// </summary>
     public static async Task<string> FetchAndFormatObjects<T>(
         string queryString,
         GrampsApiClient client,
         string objectType,
-        int pageSize) where T : class
+        int pageSize,
+        string? emptyNote = null) where T : class
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
         var result = await client.GetPagedListAsync<T>(queryString);
 
         if (result?.Objects == null || result.Objects.Length == 0)
-            return $"No {objectType} found.";
+            return emptyNote == null ? $"No {objectType} found." : $"No {objectType} found. {emptyNote}";
 
         int totalPages = result.Total >= 0
             ? (int)(((long)result.Total + pageSize - 1) / pageSize)

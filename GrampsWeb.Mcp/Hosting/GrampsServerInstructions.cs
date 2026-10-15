@@ -15,7 +15,7 @@ internal static class GrampsServerInstructions
         Finding and reading:
         - With a name or other text, start with search; to browse or filter one type, use list_objects. Read one record with get_object.
         - Gramps IDs show the type by prefix: I person, F family, E event, P place, S source, C citation, R repository, N note, O media, T tag. Arguments that take one record accept a Gramps ID or a handle; link lists (…Handles, …Refs) take handles.
-        - Kinship: get_person_tree for ancestors or descendants, get_relations for how two people are related, get_timeline for the dated events around a person, family or place.
+        - Kinship: get_person_tree for ancestors or descendants, get_relations for how two people are related, get_timeline for the dated events around a person, family or place; list_objects with rules selects by kinship across the tree, such as everyone related to a person or people with no family links.
         - Report what the tree records, and say so when something is not recorded instead of guessing.
         """;
 

@@ -212,6 +212,8 @@ Read-only reference/discovery data exposed as MCP resources:
 | `gramps://types` | Built-in and custom type vocabularies (event/place/note/etc.) |
 | `gramps://metadata` | Connection/tree metadata (API version, tree id/name, owner, default person) |
 | `gramps://name-settings` | Name display formats and surname grouping rules |
+| `gramps://filter-rules` | How to write the `rules` of `list_objects`, with the number of rules and the saved filters of each type |
+| `gramps://filter-rules/{objectType}` | The filter rules of one type (such as `people`) by category, with the values each takes, and the tree's saved filters |
 | `gramps://media/{handle}/thumbnail/{size}` | Opt-in JPEG preview (PNG when transparent) rendered from an image original, at most `{size}` (1–4096) pixels on the long edge, metadata stripped; recommended for vision agents |
 | `gramps://media/{handle}/file` | Opt-in full media file bytes, subject to size and private-record safeguards |
 
@@ -231,8 +233,8 @@ ones.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `topic` | `string` | yes | `input-guide`, `types`, `metadata`, or `name-settings` |
-| `section` | `string?` | no | For `input-guide`: `dates`, `name_schema`, `link_updates`, `structured_fields`, or `structured_fields.names`, `.attributes`, `.urls`, `.addresses`, `.person_associations`, `.repository_refs`. For `types`: one returned category key such as `event_types`. For `name-settings`: `formats` or `groups`. Unsupported for `metadata`. |
+| `topic` | `string` | yes | `input-guide`, `types`, `metadata`, `name-settings`, or `filter-rules` |
+| `section` | `string?` | no | For `input-guide`: `dates`, `name_schema`, `link_updates`, `structured_fields`, or `structured_fields.names`, `.attributes`, `.urls`, `.addresses`, `.person_associations`, `.repository_refs`. For `types`: one returned category key such as `event_types`. For `name-settings`: `formats` or `groups`. For `filter-rules`: a type such as `people` or `events` (its rules and values; omitted, an overview of all types). Unsupported for `metadata`. |
 
 ## Prompts
 
@@ -732,10 +734,44 @@ same summary and `handle | gramps_id` suffix as `search`. An empty page returns
 | `objectType` | `string` | yes | — | `people`, `families`, `events`, `places`, `sources`, `citations`, `repositories`, `notes`, `media`, `tags` |
 | `page` | `int` | no | `1` | 1-based page |
 | `pagesize` | `int` | no | `20` | Page size (max 100) |
-| `grampsId` | `string?` | no | — | Filter by Gramps ID (I0001-style) |
+| `grampsId` | `string?` | no | — | Filter by Gramps ID (I0001-style); not together with `rules` |
 | `sourceHandle` | `string?` | no | — | For citations only: filter by source |
 | `gql` | `string?` | no | — | Gramps QL expression |
+| `rules` | `object \| array \| string?` | no | — | Gramps filter rules, applied on the server before `gql`; not for tags |
 | `sort` | `string?` | no | — | Sort field (prefix `-` for descending) |
+
+`rules` selects records with the filter rules of Gramps itself, which can
+follow kinship where Gramps QL cannot: ancestors or descendants of a person,
+everyone related to someone, people with no family links. A filter is
+`{"function": "and", "invert": false, "rules": [...]}`, where `function` is
+`and` (the default), `or` or `one`, `invert: true` keeps the records that do
+not match, and each rule is `{"name": "IsAncestorOf", "values": ["I0001", true]}`
+with one value per label of the rule, in order, and an optional
+`"regex": true`. The array of rules alone, a single rule, and the same JSON as a
+string are read too. An item of `rules` can be a nested filter; with
+`"namespace"` it matches the records each listed one links to: from people
+`Event` or `Family`, from families `Event` or `Person`, from events `Place`,
+from citations `Source`, from sources `Repository`. Filters nest at most five
+levels deep. A saved filter of the tree is the rule `MatchesFilter` with its
+name.
+
+```text
+list_objects(objectType: "people", rules: {"rules": [{"name": "Disconnected"}]})
+list_objects(objectType: "people", rules: {"invert": true, "rules": [{"name": "IsRelatedWith", "values": ["I0001"]}]})
+list_objects(objectType: "people", rules: [{"namespace": "Event", "rules": [{"name": "HasType", "values": ["Residence"]}]}])
+```
+
+The shape, keys and namespaces are checked before the request, with the path
+of the faulty item (`Invalid rules at rules[0]: …`). A rule name Gramps Web
+does not know is named with the closest known one
+(`Unknown filter rule: IsRelatedwith for people (did you mean IsRelatedWith?)`),
+and a rule Gramps cannot evaluate keeps the server's reason
+(`Gramps Web could not apply the rules: …`). Values are not checked: a Gramps
+ID, tag or saved filter name the tree does not have matches nothing, so an
+empty result with rules says to check those values. Gramps Web reads `true`
+and `false` as `1` and `0`. `MatchesQuery` needs Gramps
+Web API 3.23 or later. `get_reference(topic: "filter-rules", section: "people")`
+lists the rules of a type with their values, and the tree's saved filters.
 
 ---
 

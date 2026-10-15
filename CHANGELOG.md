@@ -8,6 +8,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `list_objects` takes `rules`: Gramps filter rules, applied on the server
+  before `gql`, which follow kinship where Gramps QL cannot, such as the
+  ancestors or descendants of a person, everyone related to someone
+  (inverted: everyone who is not) or people with no family links. A filter
+  is `{"function", "invert", "rules": [{"name", "values", "regex"}]}`;
+  the array of rules alone, one rule and a JSON string are read too. Nested
+  filters with a `namespace` match the records each listed one links to,
+  such as people by their events, and `MatchesFilter` uses a filter saved
+  in the tree. The shape is checked before the request with the path of
+  the faulty item, an unknown rule is named with the closest known one,
+  a rule Gramps cannot evaluate keeps the server's reason, and an empty
+  result says that a missing ID, tag or filter name matches nothing
+- `get_reference` topic `filter-rules` and the resources
+  `gramps://filter-rules` and `gramps://filter-rules/{objectType}`: how to
+  write `rules`, then the rules of one type by category with the values
+  each takes (their kinds come from Gramps Web API 3.23; on older versions
+  the labels alone) and the tree's saved filters
 - `--health-check [url]` command-line option: instead of starting a server,
   request `GET /health` of a running one and exit with 0 on HTTP 200 and 1
   otherwise. Without a URL it takes the address from `ASPNETCORE_URLS` (or
