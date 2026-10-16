@@ -27,11 +27,12 @@ public class ToolAnnotationTests
                 Assert.False(attr.Destructive, $"Read-only tool {method.Name} must not be destructive");
         }
 
-        Assert.Equal(31, toolMethods.Count);
+        Assert.Equal(32, toolMethods.Count);
         Assert.Single(toolMethods, method => method.Name == "ReadMedia");
         Assert.Single(toolMethods, method => method.Name == "CreateMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
         Assert.Single(toolMethods, method => method.Name == "DeleteObject");
+        Assert.Single(toolMethods, method => method.Name == "UndoChange");
         Assert.Single(toolMethods, method => method.Name == "GetObject");
         Assert.Single(toolMethods, method => method.Name == "GetReference");
         Assert.Single(toolMethods, method => method.Name == "GetPersonTree");
@@ -46,10 +47,10 @@ public class ToolAnnotationTests
 
     /// <summary>
     /// Every tool works on the one configured tree, so none is open-world. Creates only add, while updates
-    /// overwrite fields and replace mode removes links, so updates and delete are destructive. A write tool also
-    /// states whether repeating the same call changes anything more: updates and delete settle on the same state
+    /// overwrite fields and replace mode removes links, so updates, delete and undo are destructive. A write tool
+    /// also states whether repeating the same call changes anything more: updates and delete settle on the same state
     /// (add mode skips handles already linked, an identical upload returns the stored media), while plain creates
-    /// add another record and update_note can append the same text again.
+    /// add another record, update_note can append the same text again and a forced undo_change writes again.
     /// </summary>
     [Fact]
     public void Tools_Expose_Destructive_Idempotent_And_Closed_World_Hints()
@@ -62,7 +63,7 @@ public class ToolAnnotationTests
         string[] repeatable =
         [
             "create_citation", "create_event", "create_family", "create_note", "create_person", "create_place",
-            "create_repository", "create_source", "create_tag", "update_note"
+            "create_repository", "create_source", "create_tag", "update_note", "undo_change"
         ];
 
         var tools = typeof(PersonTools).Assembly

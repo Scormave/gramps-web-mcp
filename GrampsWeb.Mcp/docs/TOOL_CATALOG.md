@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 31 MCP tools exposed by the server.
+Complete catalog of up to 32 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -292,7 +292,8 @@ repository, or tag. The server checks backlinks and blocks deletion unless
 `force=true`; the refusal lists the backlinks by type. Forcing may leave
 dangling references. On success the reply gives the type, `action: deleted`,
 and the handle. Deleting a media record does not necessarily delete its file on
-disk.
+disk. `undo_change` with the deletion's transaction from `get_recent_changes`
+restores the record with its handle and Gramps ID.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -801,7 +802,7 @@ lists the rules of a type with their values, and the tree's saved filters.
 Recent transaction history, newest first, under the header
 `RECENT CHANGES (20 of 512, newest first)`. Each transaction row shows its UTC
 commit time, description, user, an `(undo)` marker for undo transactions, and
-`[transaction: id]`. Below it, each changed object appears as `Added`,
+`[transaction: id]`, the number `undo_change` takes. Below it, each changed object appears as `Added`,
 `Updated`, `Deleted`, or `Changed` with its class and handle, up to 10 objects
 per transaction followed by `(+N more changes)`. A link that an edit adds or
 removes, which Gramps records as a reference change, appears as
@@ -818,6 +819,62 @@ record as its one-line summary with `[handle: …]`. Bookmarks belong to the
 tree and are shared by all its users; they are set in Gramps Web or Gramps
 desktop, not through this server. A tree without bookmarks gets `No bookmarks
 in this tree.`
+
+---
+
+## Undo (`UndoTools.cs`) — 1 tool
+
+### U — `UndoChange`
+Undo one transaction of the edit history through Gramps Web's undo endpoint,
+named by the number `get_recent_changes` shows as `[transaction: N]`. Records
+the transaction added are deleted, records it updated get their earlier version
+back, and records it deleted are restored with the same handles and Gramps IDs.
+Gramps Web applies the undo as one new transaction, all or nothing, described
+as `Undo transaction N: <description>`; `get_recent_changes` lists it, and
+`undo_change` can revert it in turn.
+
+Before writing, the tool looks for conflicts, and any conflict refuses the undo
+with nothing changed:
+
+- Gramps Web's own check: a record changed or deleted again after the
+  transaction, or a deleted record that exists again;
+- a record the undo would delete that records outside the transaction now link
+  to;
+- an earlier version to restore that links a record which no longer exists.
+
+The two link checks run for transactions of up to 200 records; larger ones
+rely on Gramps Web's check alone. The refusal names each conflicting record
+and advises undoing the later transactions first, newest first, or passing
+`force=true` after the user separately confirms. A forced undo overwrites the
+later changes to those records and may leave links dangling.
+
+Gramps Web before API 3.23 (images before 26.10) undoes a deletion only with
+`force=true`: its check reports the deleted record as changed. The tool reads
+the version from `/api/metadata/`; when nothing else conflicts, the refusal
+says that `force=true` would apply exactly the listed changes, so the user can
+confirm it or update Gramps Web.
+
+With a task queue, Gramps Web runs the undo in the background. The tool waits
+up to 45 seconds for the task; a task still running returns `action: pending`
+with its `task` id and the advice not to call `undo_change` again for it.
+
+The reply header carries `type: Transaction`, `action` (`undone`, `checked`
+for `dryRun`, `refused`, `pending`, or `unchanged` for a transaction that
+changed only links), `transaction`, the undo's own `undo_transaction` once
+found, and `conflicts`. The body names the transaction and each change, up to
+10 records followed by `(+N more records)`; deleted records are named from
+their stored version with their Gramps ID.
+
+```text
+undo_change(transactionId: 412, dryRun: true)
+undo_change(transactionId: 412)
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `transactionId` | `int` | yes | — | The transaction to undo, from `get_recent_changes` |
+| `dryRun` | `bool` | no | `false` | List the changes and conflicts without writing |
+| `force` | `bool` | no | `false` | Undo despite conflicts, only after a separate confirmation |
 
 ---
 
@@ -840,10 +897,11 @@ in this tree.`
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
-| **Total with media access and upload enabled** | **10** | **10** | **10** | **1** | **31** |
+| Undo | 0 | 0 | 1 | 0 | 1 |
+| **Total with media access and upload enabled** | **10** | **10** | **11** | **1** | **32** |
 
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
-`create_media` are hidden: the default catalog contains 29 tools in read/write
+`create_media` are hidden: the default catalog contains 30 tools in read/write
 mode. With media access enabled, `create_media` also needs
 `GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 10 tools
 with media access enabled, or 9 with it disabled.
@@ -869,3 +927,5 @@ For structured write fields, request only the relevant subsection, such as
 `delete_object` checks for backlinks before deleting. If the object is
 referenced by other objects, deletion is **blocked** unless `force=true`.
 Using `force=true` can leave **dangling references** in the database.
+A deletion can be reverted with `undo_change`, which restores the record with
+its handle, Gramps ID and its own links.

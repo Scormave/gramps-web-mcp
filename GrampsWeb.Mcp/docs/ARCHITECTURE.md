@@ -141,8 +141,8 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
   block create/update/delete mutation calls, including direct calls to a
   previously known write-tool name.
 - `GRAMPS_MUTATION_SERIALIZE`: serializes mutation HTTP calls in-process, plus
-  read/modify/write sequences of update tools against each other using a
-  separate lock. It does not coordinate with external clients.
+  read/modify/write sequences of update tools and `undo_change`'s conflict
+  check and undo against each other using a separate lock. It does not coordinate with external clients.
   Writes run in parallel only when this is `false` and
   `GRAMPS_MUTATION_MIN_INTERVAL_MS` is `0`; a minimum interval keeps the
   single-flight lock.
@@ -203,9 +203,10 @@ URLs contain genealogy data, so `GrampsApiClient` logs them only at `Debug` or
 
 Each file exposes a set of `[McpServerTool]` static methods grouped by Gramps
 entity type (Person, Family, Event, Place, Source, Citation, Note, Media, Tag,
-Repository) plus cross-cutting tools (Search, System, Reference, Object, Timeline).
-There are no composite tools: each write tool changes one record, and
-multi-step workflows live in the MCP prompts and next-step hints.
+Repository) plus cross-cutting tools (Search, System, Reference, Object, Timeline,
+Undo). There are no composite tools: each write tool changes one record, except
+`undo_change`, which reverts one transaction of the edit history as Gramps Web
+applies it, and multi-step workflows live in the MCP prompts and next-step hints.
 
 Tools are the **public API surface** of the MCP server.  They:
 - validate input parameters (with server-side type validation via `TypeCache`)

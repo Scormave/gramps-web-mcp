@@ -154,14 +154,7 @@ public static class SystemFormatter
         for (var i = 0; i < transactions.Count; i++)
         {
             var transaction = transactions[i];
-            var parts = new List<string>();
-            if (FormatUnixTime(transaction.Timestamp ?? transaction.Connection?.Timestamp) is { } time)
-                parts.Add(time);
-            parts.Add(string.IsNullOrWhiteSpace(transaction.Description) ? "(no description)" : transaction.Description.Trim());
-            if (FormatUser(transaction.Connection?.User) is { } user)
-                parts.Add($"by {user}");
-            var undo = transaction.Undo ? " (undo)" : "";
-            sb.AppendLine($"{i + 1}. {string.Join(" — ", parts)}{undo} [transaction: {transaction.Id}]");
+            sb.AppendLine($"{i + 1}. {FormatTransactionSummary(transaction)} [transaction: {transaction.Id}]");
 
             var changes = transaction.Changes ?? [];
             foreach (var change in changes.Take(MaxChangesShownPerTransaction))
@@ -181,6 +174,19 @@ public static class SystemFormatter
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>"2026-09-30 14:22:05 UTC — Edit Person — by Jane Doe", with " (undo)" for a Gramps undo.</summary>
+    internal static string FormatTransactionSummary(GrampsTransaction transaction)
+    {
+        var parts = new List<string>();
+        if (FormatUnixTime(transaction.Timestamp ?? transaction.Connection?.Timestamp) is { } time)
+            parts.Add(time);
+        parts.Add(string.IsNullOrWhiteSpace(transaction.Description) ? "(no description)" : transaction.Description.Trim());
+        if (FormatUser(transaction.Connection?.User) is { } user)
+            parts.Add($"by {user}");
+        var undo = transaction.Undo ? " (undo)" : "";
+        return $"{string.Join(" — ", parts)}{undo}";
     }
 
     /// <summary>

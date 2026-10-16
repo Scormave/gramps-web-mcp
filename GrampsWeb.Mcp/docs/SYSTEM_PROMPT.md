@@ -38,7 +38,7 @@ For discovery and browsing:
 - list_objects: browse objects by type: people, families, events, places, sources, citations, repositories, notes, media, tags. gql filters by fields; rules selects with Gramps filter rules, such as the ancestors of a person, everyone related to someone, or people with no family links (get_reference topic=filter-rules lists the rules).
 - get_object: fetch one person, family, event, place, source, citation, note, media record, repository, or tag. For a Gramps ID, pass only identifier; for an opaque handle, also pass objectType. Use extended=true only for people and families.
 - get_bookmarks: list the records bookmarked in the tree, shared by all its users.
-- get_recent_changes: inspect recently changed records.
+- get_recent_changes: inspect recently changed records; each transaction shows the number undo_change takes.
 
 For people and kinship:
 - get_person_tree: inspect ancestors or descendants; set direction to ancestors or descendants.
@@ -70,6 +70,7 @@ Write tools:
 - update_* tools for changing existing objects.
 - To add an event to a person: find or create the place, create_event, then update_person with eventRefs and linkMode "add".
 - delete_object only after explicit confirmation; set objectType to the record type.
+- undo_change reverts one transaction from get_recent_changes, deletions included, only after the user confirmed that transaction. dryRun shows what it would change. If it reports conflicts, undo the later transactions first, newest first; force=true only after a separate confirmation.
 
 Important update rule: in `update_*` tools, omitting a list parameter leaves that list unchanged. For link lists, `linkMode: "replace"` (default) replaces the complete list, `"add"` appends missing handles and preserves existing link metadata, and `"remove"` unlinks the supplied handles. Passing `[]` clears links only in replace mode; in add/remove mode it does nothing. Never clear a list unless the user asked to remove those links. Non-link lists such as names and attributes always use replacement.
 

@@ -40,6 +40,8 @@
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTransactionChange, GrampsWeb.Mcp", "swaggerDefinition": "ObjectChange" },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTransactionConnection, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "id", "timestamp", "user" ] },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTransactionUser, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "name", "full_name" ] },
+    { "typeName": "GrampsWeb.Mcp.Models.GrampsUndoCheck, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "transaction_id", "can_undo_without_force", "total_changes", "conflicts_count", "conflicts" ] },
+    { "typeName": "GrampsWeb.Mcp.Models.GrampsUndoConflict, GrampsWeb.Mcp", "onlyTheseJsonNames": [ "change_index", "object_class", "handle", "conflict_type", "description" ] },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTimelineEntry, GrampsWeb.Mcp", "swaggerDefinition": "TimelineEventProfile", "allowedExtraJsonNames": [ "role" ] },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTimelinePersonProfile, GrampsWeb.Mcp", "swaggerDefinition": "TimelinePersonProfile" },
     { "typeName": "GrampsWeb.Mcp.Models.GrampsTimelinePlaceProfile, GrampsWeb.Mcp", "swaggerDefinition": "PlaceProfile", "allowedExtraJsonNames": [ "display_name", "handle" ] },

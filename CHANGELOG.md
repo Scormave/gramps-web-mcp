@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `undo_change`: undo one transaction listed by `get_recent_changes`, by
+  its `[transaction: N]` number. Records it added are deleted, records it
+  updated get their earlier version back, and records it deleted are
+  restored with the same handles and Gramps IDs, as one new all-or-nothing
+  transaction that `undo_change` can revert in turn. `dryRun` lists the
+  changes without writing. Any conflict refuses the undo with nothing
+  changed and names the records: one changed again after the transaction
+  (Gramps Web's own check), one to delete that other records now link to,
+  or an earlier version that links a record which no longer exists. Undo
+  the later transactions first, newest first, or pass `force=true` after
+  a separate confirmation. Gramps Web before API 3.23 restores deleted
+  records only with `force=true`; the refusal says so when nothing else
+  conflicts. A background undo (Gramps Web with a task queue) is followed
+  for up to 45 seconds and otherwise reported as `pending`
+
+### Changed
+
+- `delete_object` no longer describes a deletion as permanent:
+  `undo_change` with the deletion's transaction restores the record.
+  The server instructions and the `get_recent_changes` description say
+  when to use `undo_change` and where its transaction number comes from
+
 ## [2.6.0] - 2026-10-16
 
 ### Added

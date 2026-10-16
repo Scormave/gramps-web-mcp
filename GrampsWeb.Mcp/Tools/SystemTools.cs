@@ -14,12 +14,13 @@ public static class SystemTools
 {
     [McpServerTool(Title = "Get Recent Changes", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
-        "Show the tree's recent edit history, newest first: commit time (UTC), description, user, " +
-        "an undo marker, and each changed object's class, change kind (added/updated/deleted) and handle, " +
+        "Show the tree's recent edit history, newest first: each transaction's number, commit time (UTC), description, " +
+        "user, an undo marker, and each changed object's class, change kind (added/updated/deleted) and handle, " +
         "with the first 10 objects of each transaction and how many more it changed. A link added or removed between " +
         "objects appears as Reference from one handle to the other. limit counts transactions, not objects, and stops at " +
         "the latest 100, so older history is out of reach here; list_objects with sort -change lists records by last edit " +
-        "instead. Use it to see what was changed last and by whom, or to check that your own writes landed; " +
+        "instead. Use it to see what was changed last and by whom, to check that your own writes landed, or to find the " +
+        "number undo_change takes to revert a transaction; " +
         "for the dated events of one person use get_timeline, and read a changed record with get_object.")]
     public static async Task<string> GetRecentChanges(
         [Description("How many transactions to show, 1–100 (default 20); other values are clamped.")]

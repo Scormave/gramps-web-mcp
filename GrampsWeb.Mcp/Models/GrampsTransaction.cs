@@ -1,10 +1,11 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
 /// <summary>
 /// One row of <c>GET /api/transactions/history/</c> (OpenAPI <c>UndoTransaction</c>).
-/// Requested without <c>old</c>/<c>new</c>, so changes carry no object data.
+/// Changes carry object data only when requested with <c>old=true</c>.
 /// </summary>
 public class GrampsTransaction
 {
@@ -75,4 +76,50 @@ public class GrampsTransactionChange
 
     [JsonPropertyName("timestamp")]
     public double? Timestamp { get; set; }
+
+    /// <summary>The object as stored before the change, null for an add; sent only with <c>old=true</c>.</summary>
+    [JsonPropertyName("old_data")]
+    public JsonElement? OldData { get; set; }
+}
+
+/// <summary>
+/// Reply of <c>GET /api/transactions/history/{id}/undo</c>: whether undoing the transaction would meet
+/// records changed since. The spec has no schema for it.
+/// </summary>
+public class GrampsUndoCheck
+{
+    [JsonPropertyName("transaction_id")]
+    public int TransactionId { get; set; }
+
+    [JsonPropertyName("can_undo_without_force")]
+    public bool CanUndoWithoutForce { get; set; }
+
+    /// <summary>Changes other than references, which the undo leaves to the database.</summary>
+    [JsonPropertyName("total_changes")]
+    public int TotalChanges { get; set; }
+
+    [JsonPropertyName("conflicts_count")]
+    public int ConflictsCount { get; set; }
+
+    [JsonPropertyName("conflicts")]
+    public GrampsUndoConflict[]? Conflicts { get; set; }
+}
+
+public class GrampsUndoConflict
+{
+    [JsonPropertyName("change_index")]
+    public int ChangeIndex { get; set; }
+
+    [JsonPropertyName("object_class")]
+    public string? ObjectClass { get; set; }
+
+    [JsonPropertyName("handle")]
+    public string? Handle { get; set; }
+
+    /// <summary>object_exists, object_changed or check_failed.</summary>
+    [JsonPropertyName("conflict_type")]
+    public string? ConflictType { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 }

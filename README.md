@@ -24,7 +24,7 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 
 ## Features
 
-- **Up to 31 MCP tools** — read, create, update, and delete people, families, events, places,
+- **Up to 32 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing,
   filtered by Gramps QL or by Gramps filter rules (everyone related to a
@@ -32,6 +32,8 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
 - **Incremental links** — add or remove one event, child, citation, or note
   with `linkMode`, keeping every other link
+- **Undo** — revert one transaction of the edit history, deletions included,
+  after a check that it would not overwrite later edits or break links
 - **Dates as Gramps writes them** — ranges, before/after/about, and every Gramps
   calendar (`1856-07-20 (Julian)`), stored with the sort value Gramps computes
 - **8 MCP resources** — type vocabularies, input guide, tree metadata, name

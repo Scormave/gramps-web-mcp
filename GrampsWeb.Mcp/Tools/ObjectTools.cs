@@ -119,7 +119,7 @@ public static class ObjectTools
 
     [McpServerTool(Title = "Delete Object", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
-        "Permanently delete one record; it cannot be undone through this server. Call it only after the user confirmed " +
+        "Delete one record; undo_change with the deletion's transaction from get_recent_changes restores it. Call it only after the user confirmed " +
         "this exact record. If other records still point to it, nothing is deleted and the reply lists those backlinks " +
         "by type; unlink them first with the owners' update tools, or pass force=true after a separate confirmation. " +
         "On success returns the type, action: deleted and the handle; a missing record returns a not-found message.")]

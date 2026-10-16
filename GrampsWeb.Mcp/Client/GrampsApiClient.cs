@@ -335,6 +335,29 @@ public class GrampsApiClient
     }
 
     /// <summary>
+    /// POST without a body to an action endpoint such as <c>/api/transactions/history/{id}/undo</c>.
+    /// Returns the status and body of a successful reply, e.g. 202 with a task reference when Gramps Web
+    /// runs the action in the background; throws <see cref="GrampsApiException"/> on any other status.
+    /// </summary>
+    public async Task<(System.Net.HttpStatusCode StatusCode, string Body)> PostActionAsync(string path)
+    {
+        EnsureWritable();
+
+        try
+        {
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Post, path), SendMutationAsync);
+            var body = await response.Content.ReadAsStringAsync();
+            ThrowIfMutationFailed(response, body);
+            return (response.StatusCode, body);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway, ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Sends a request built by <paramref name="createRequest"/> with the cached access token. When the
     /// API rejects the token, e.g. after the server's SECRET_KEY changed, replaces it and sends a new
     /// request once; see <see cref="GrampsAuthTokenProvider.IsRejectedAccessTokenAsync"/>.
@@ -373,7 +396,8 @@ public class GrampsApiClient
         return content;
     }
 
-    private void EnsureWritable()
+    /// <summary>Throws when the server runs read-only; every mutation calls it before sending.</summary>
+    public void EnsureWritable()
     {
         if (_config.ReadOnly)
             throw new InvalidOperationException(

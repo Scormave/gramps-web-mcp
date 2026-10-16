@@ -36,6 +36,7 @@ internal static class GrampsServerInstructions
         - update_* tools change only the arguments passed. Link lists follow linkMode, and replace (the default) overwrites every link of that kind, so use add or remove to change one link.
         - Argument formats (dates, names, structured fields) and valid types: get_reference.
         - Use delete_object only after the user confirmed that exact record, and force past backlinks only after a separate confirmation.
+        - undo_change reverts one transaction from get_recent_changes, deletions included: only after the user confirmed it, newest first, and force past conflicts only after a separate confirmation.
         """;
 
     private const string MediaUpload =
