@@ -119,7 +119,8 @@ public static class EventTools
         "attach it with update_person or update_family (eventRefs, linkMode add), which keeps their other events; several people " +
         "can share one event, each with their own role. The place must exist: find it with search or create it with create_place. " +
         "Change an existing event with update_event. " +
-        "An unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.InputGuide)]
+        "An unknown type or unreadable date is rejected before anything is saved. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateEvent(
         [Description("Event type, e.g. Birth, Baptism, Death, Burial, Marriage, Residence, Occupation. " + ToolDescriptionFragments.KnownType)]
         string eventType,
@@ -184,10 +185,14 @@ public static class EventTools
 
     [McpServerTool(Title = "Update Event", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing event: type, date, place, description, citations, notes, media, tags, attributes or the private flag. " +
-        ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing event returns a not-found message, " +
-        "and an unknown type or unreadable date is rejected before anything is saved. Who takes part is stored on the people " +
-        "and families (their eventRefs), not on the event. " + ToolDescriptionFragments.InputGuide)]
+        "Change an existing event's type, date, place, description, attributes or links to citations, notes, media and tags; " +
+        "everyone who shares the event sees the change. Who takes part is not set here: add or remove the event in a person's " +
+        "or family's eventRefs with update_person or update_family, which also hold each participant's role. " +
+        "For a new event use create_event; to remove one, delete_object. An empty string clears date, and attributes " +
+        "replace the whole list whatever linkMode says. " + ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing event returns a not-found message, and an unknown type or unreadable " +
+        "date is rejected before anything is saved. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateEvent(
         [Description("The event to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

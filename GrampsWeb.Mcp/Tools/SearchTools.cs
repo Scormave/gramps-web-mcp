@@ -19,11 +19,11 @@ public static class SearchTools
     [McpServerTool(Title = "Search", ReadOnly = true, Destructive = false)]
     [Description(
         "Find records by words in them: one query across people, families, events, places, sources, citations, repositories, " +
-        "notes, media and tags. Start here when you have a name, place, title or other text but no Gramps ID. " +
-        "Returns one line per hit (type, Gramps ID, summary, handle) with the page and total count; " +
-        "pass a Gramps ID or handle to get_object for the full record. " +
-        "To browse or filter one type by its fields (all people, citations of one source, sorted by change) use list_objects. " +
-        "Very long queries can fail on the server; use a shorter term then.")]
+        "notes, media and tags. Start here when you have a name, place, title or other text but no Gramps ID; " +
+        "to browse or filter one type by its fields (all people, citations of one source, sorted by change) use list_objects, " +
+        "and to read a hit in full pass its Gramps ID or handle to get_object. " +
+        "Returns one line per hit (type, Gramps ID, summary, handle) with the page and total count; a page past the end " +
+        "says so with the total. Very long queries can fail on the server (HTTP 500): retry with one shorter term.")]
     public static async Task<string> Search(
         [Description("Words to find; * matches any ending. Examples: Smith*, John, Dublin*, a register title.")]
         string query,
@@ -73,11 +73,13 @@ public static class SearchTools
 
     [McpServerTool(Title = "List Objects", ReadOnly = true, Destructive = false)]
     [Description(
-        "List the records of one type, a page at a time, optionally filtered and sorted: one line per record " +
-        "(Gramps ID, summary, handle) with the page and total count. Use it to browse a type, look up one Gramps ID, " +
-        "list the citations of a source, filter by fields with Gramps Query Language, or select with Gramps filter rules " +
-        "(ancestors or descendants of a person, everyone related to someone, people with no family links); " +
-        "to find records by text use search, and to read one record in full use get_object.")]
+        "List the records of one type a page at a time, optionally filtered and sorted: one line per record " +
+        "(Gramps ID, summary, handle) with the page and total count. Use it to browse a type, fetch one Gramps ID, " +
+        "list a source's citations (sourceHandle), filter by field values (gql) or select by relationships with Gramps " +
+        "filter rules (rules), such as a person's ancestors or people with no family links. To find records by text use " +
+        "search; to read one record in full use get_object. rules run first and gql must then also match; grampsId " +
+        "cannot be combined with rules. Filtering runs on the Gramps Web server: invalid gql returns its error, invalid " +
+        "rules are explained, and an ID, tag or saved filter the tree lacks matches nothing instead of failing.")]
     public static async Task<string> ListObjects(
         [Description("Which records to list: people, families, events, places, sources, citations, repositories, notes, media or tags.")]
         string objectType,

@@ -46,7 +46,9 @@ public static class NoteTools
         "Create a free-text note (research notes, transcriptions, comments) of a given type. " +
         "Returns the new handle, Gramps ID and type, with next steps. The note is attached to nothing yet: add its handle " +
         "to the noteHandles of each person, family, event, place, source or citation it belongs to (their update tool, linkMode add). " +
-        "Change an existing note with update_note. An unknown type is rejected before anything is saved.")]
+        "For the transcript of a cited record use type Transcript and attach the note to that citation. " +
+        "Change an existing note with update_note. An unknown type is rejected before anything is saved. " +
+        ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> CreateNote(
         [Description("The note text (required).")]
         string text,
@@ -98,7 +100,8 @@ public static class NoteTools
         "replaceText with withText changes one fragment and appendText adds to the end: both work on the body as stored now " +
         "and keep the rest of it, styling and links included. " +
         ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing note returns a not-found message. " +
-        "Which records the note is attached to is stored on them (their noteHandles), not here.")]
+        "Which records the note is attached to is stored on them (their noteHandles), not here. " +
+        "For a new note use create_note; to remove one, delete_object. " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> UpdateNote(
         [Description("The note to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

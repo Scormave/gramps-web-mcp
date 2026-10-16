@@ -15,10 +15,12 @@ public static class TimelineTools
 {
     [McpServerTool(Title = "Get Timeline", ReadOnly = true, Destructive = false)]
     [Description(
-        "List the dated events around one person, family or place in date order: date, event type, place, " +
-        "and whose event it is, with Gramps IDs. Use it to check a life's sequence or gaps; for the full record use get_object, " +
-        "for ancestors or descendants use get_person_tree, for how two people are related use get_relations. " +
-        "Filter by event category and dates. Without dates, a person timeline lists relatives' events " +
+        "List the events around one person, family or place in date order, grouped by decade with undated ones last: " +
+        "date, event type, place, and whose event it is, with Gramps IDs. Use it to check a life's sequence or gaps; " +
+        "for the full record use get_object, for ancestors or descendants use get_person_tree, for how two people are " +
+        "related use get_relations. events filters the subject's own events and relativeEvents those of the relatives " +
+        "chosen in relatives (person timelines only, rejected otherwise); dates narrows both. " +
+        "Without dates, a person timeline lists relatives' events " +
         "from their whole lives, also before the person's birth and after their death; pass dates to narrow it. " +
         "Place timelines are computed from direct event backlinks; child places are not included.")]
     public static async Task<string> GetTimeline(

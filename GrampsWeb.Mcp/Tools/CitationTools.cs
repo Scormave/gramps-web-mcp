@@ -44,11 +44,14 @@ public static class CitationTools
 
     [McpServerTool(Title = "Create Citation", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a citation: one specific spot in an existing source (page, act or entry number) with its date, confidence, " +
-        "notes and media such as the scan. Returns the new handle, Gramps ID and page, with next steps. " +
-        "The source must already exist (search, or create_source). The citation supports nothing until it is attached: " +
+        "Create a citation: one specific spot in an existing source, such as a page, act or entry number, with its date, " +
+        "confidence, notes and media. Returns the new handle, Gramps ID and page, with next steps. " +
+        "The source must already exist (search, or create_source). A transcript of the entry goes in a note " +
+        "(create_note, type Transcript) passed in noteHandles; the scan goes in mediaHandles, or later through create_media " +
+        "attachTo, which can mark the entry's region on the page. The citation supports nothing until it is attached: " +
         "add it to each person, family, event or place it names (citationHandles, linkMode add, on their update tool). " +
-        "Does not check for duplicates; change an existing citation with update_citation. " + ToolDescriptionFragments.InputGuide)]
+        "Does not check for duplicates; change an existing citation with update_citation. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateCitation(
         [Description("The source being cited (required). " + ToolDescriptionFragments.HandleDiscovery)]
         string sourceHandle,
@@ -108,9 +111,13 @@ public static class CitationTools
 
     [McpServerTool(Title = "Update Citation", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing citation: its source, page, confidence, date, notes, media, tags, attributes or the private flag. " +
-        ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing citation returns a not-found message. " +
-        "Which people and events it supports is stored on them (their citationHandles), not here. " + ToolDescriptionFragments.InputGuide)]
+        "Change an existing citation's source, page, date, confidence, attributes or links to notes, media and tags. " +
+        "Which people, events and other records it supports is stored on them: attach or detach it with their update tool " +
+        "(citationHandles), not here. For a new citation use create_citation; to remove one, delete_object. " +
+        "sourceHandle moves the citation to another source, an empty string clears date, and attributes replace the whole " +
+        "list whatever linkMode says. " + ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing citation returns a not-found message. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateCitation(
         [Description("The citation to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

@@ -66,7 +66,8 @@ public static class FamilyTools
         "such as Marriage. Returns the new handle, Gramps ID and a label, with next steps. People and events must already exist " +
         "(create_person, create_event). Does not check for duplicates: look at the parents' families first, " +
         "and change an existing family with update_family. Children are added here through childRefs, " +
-        "not through the child's parentFamilyHandles. " + ToolDescriptionFragments.InputGuide)]
+        "not through the child's parentFamilyHandles. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateFamily(
         [Description("The father, optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? fatherHandle = null,
@@ -141,10 +142,13 @@ public static class FamilyTools
 
     [McpServerTool(Title = "Update Family", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing family: father, mother, relationship type, children, family events, citations, notes, media, tags, " +
-        "attributes or the private flag. " + ToolDescriptionFragments.UpdateSemantics + " " +
+        "Change an existing family's father, mother, relationship type, children, family events, attributes or links to " +
+        "citations, notes, media and tags. For a new family use create_family; to remove one, delete_object. " +
+        "To add one child, pass it in childRefs with linkMode add; in replace mode childRefs must hold every child the " +
+        "family keeps. attributes replace the whole list whatever linkMode says, and sort reorders children, events, " +
+        "citations or media by date without changing which are linked. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing family returns a not-found message. " +
-        "To add one child, pass it in childRefs with linkMode add. " + ToolDescriptionFragments.InputGuide)]
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateFamily(
         [Description("The family to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

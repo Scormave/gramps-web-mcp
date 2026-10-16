@@ -13,7 +13,13 @@ public static class ToolDescriptionFragments
     public const string UpdateSemantics =
         "Pass only what changes; omitted arguments stay as they are. " +
         "Link lists (…Handles, …Refs) follow linkMode: replace (default) sets the whole list, add appends, " +
-        "remove drops the given handles; in replace mode [] REMOVES every link of that kind.";
+        "remove drops the given handles; in replace mode [] REMOVES every link of that kind, " +
+        "though the linked records themselves stay in the tree.";
+
+    /// <summary>Tool-level sentence for write tools: the permission they need and the failures worth retrying.</summary>
+    public const string WriteAccess =
+        "Writes run one at a time and need a Gramps Web account allowed to edit the tree; " +
+        "a locked or rate-limited write fails with the delay to wait before retrying it.";
 
     /// <summary>For link-list parameters on update tools.</summary>
     public const string LinkListOnUpdate =

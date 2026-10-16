@@ -42,7 +42,8 @@ public static class TagTools
         "Create a tag: a colored label such as \"To check\" or \"Line of John Smith\" for grouping records. " +
         "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicate names: " +
         "look through list_objects(objectType: \"tags\") first. The tag labels nothing yet: add its handle to the " +
-        "tagHandles of each record (their create or update tool, linkMode add on update). Tags cannot be renamed here.")]
+        "tagHandles of each record (their create or update tool, linkMode add on update). Tags cannot be renamed here. " +
+        ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> CreateTag(
         [Description("Tag name shown on records (required).")]
         string name,

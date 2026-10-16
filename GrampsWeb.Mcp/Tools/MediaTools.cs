@@ -140,7 +140,7 @@ public static class MediaTools
         "its fields stay as they are and only attachTo is applied, so repeating a call is safe. " +
         "Returns the handle and Gramps ID; an unreadable date or unknown attachTo record is rejected before anything is uploaded. " +
         "Change the record later with update_media. " +
-        ToolDescriptionFragments.InputGuide)]
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateMedia(
         [Description("The file to upload: an absolute path inside an upload folder, ~/…, or a name relative to the folder, e.g. scan.jpg.")]
         string filePath,
@@ -225,13 +225,14 @@ public static class MediaTools
 
     [McpServerTool(Title = "Update Media", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing media record: description, date, attributes, notes, tags, citations or the private flag, " +
+        "Change an existing media record's description, date, attributes or links to notes, tags and citations, " +
         "or replace its file with filePath from the server's upload folder (GRAMPS_MEDIA_UPLOAD_DIRS). " +
-        ToolDescriptionFragments.UpdateSemantics + " " +
-        "Returns the handle and Gramps ID; a missing media object returns a not-found message, and an unreadable date or file is rejected before anything is saved. " +
         "attachTo shows the media on people, families, events, places, sources or citations, whole or as a region; " +
         "to take it off a record, use that record's update tool with mediaHandles and linkMode remove. " +
-        ToolDescriptionFragments.InputGuide)]
+        "For a new media record use create_media; to remove one, delete_object. " +
+        ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing media object returns a not-found message, and an unreadable date or file is rejected before anything is saved. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateMedia(
         [Description("The media object to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

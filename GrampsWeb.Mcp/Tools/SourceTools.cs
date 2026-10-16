@@ -42,11 +42,13 @@ public static class SourceTools
 
     [McpServerTool(Title = "Create Source", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a source: a book, register, archive unit or website that facts come from, with title, author, publication info " +
-        "and the repositories that hold it (with call numbers). Returns the new handle, Gramps ID and title, with next steps. " +
-        "Does not check for duplicates: search for the source first. A source alone proves nothing: cite a page or act " +
-        "of it with create_citation, then attach that citation to people and events. Change an existing source with update_source. " +
-        ToolDescriptionFragments.InputGuide)]
+        "Create a source: a book, register, archive unit or website that facts come from, with title, author, publication " +
+        "info and the repositories that hold it. Search for the source first: no duplicate check is made, and an existing " +
+        "source is changed with update_source. repositoryHandles takes existing repositories only (create_repository), " +
+        "each with the source's call number there. A source alone proves nothing: cite a page or act of it with " +
+        "create_citation, then attach that citation to people and events. " +
+        "Returns the new handle, Gramps ID and title, with next steps. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateSource(
         [Description("Title (required).")]
         string title,
@@ -107,9 +109,13 @@ public static class SourceTools
 
     [McpServerTool(Title = "Update Source", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing source: title, author, publication info, abbreviation, repositories, notes, media, tags, " +
-        "attributes or the private flag. " + ToolDescriptionFragments.UpdateSemantics + " " +
-        "Returns the handle and Gramps ID; a missing source returns a not-found message. " + ToolDescriptionFragments.InputGuide)]
+        "Change an existing source's title, author, publication info, abbreviation, attributes or links to repositories, " +
+        "notes, media and tags. For a new source use create_source; to remove one, delete_object; a page or act inside " +
+        "the source is a citation, changed with update_citation. repositoryHandles carry each repository's call number, " +
+        "so edit a call number with linkMode replace; attributes replace the whole list whatever linkMode says. " +
+        ToolDescriptionFragments.UpdateSemantics + " " +
+        "Returns the handle and Gramps ID; a missing source returns a not-found message. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateSource(
         [Description("The source to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

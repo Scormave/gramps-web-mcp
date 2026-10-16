@@ -47,7 +47,7 @@ public static class RepositoryTools
         "change an existing repository with update_repository. Link sources to it afterwards through repositoryHandles " +
         "on create_source or update_source, which also carry the call number. noteHandles and tagHandles only link " +
         "existing notes and tags (create_note, create_tag); nothing else is created or changed. " +
-        "An unknown type is rejected before anything is saved.")]
+        "An unknown type is rejected before anything is saved. " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> CreateRepository(
         [Description("Name, e.g. \"State Archive in Warsaw\" (required).")]
         string name,
@@ -98,10 +98,13 @@ public static class RepositoryTools
 
     [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing repository: name, type, address, website, notes, tags or the private flag. " +
+        "Change an existing repository's name, type, address, website or links to notes and tags. " +
+        "For a new repository use create_repository; to remove one, delete_object. Which sources it holds, with their " +
+        "call numbers, is stored on the sources: change that with update_source (repositoryHandles), not here. " +
+        "address and url each replace every stored value, and an empty string removes them. " +
         ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing repository returns a not-found message, and an unknown type is " +
-        "rejected before anything is saved. Which sources it holds is stored on the sources (their repositoryHandles), not here.")]
+        "rejected before anything is saved. " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> UpdateRepository(
         [Description("The repository to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

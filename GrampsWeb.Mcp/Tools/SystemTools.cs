@@ -16,8 +16,10 @@ public static class SystemTools
     [Description(
         "Show the tree's recent edit history, newest first: commit time (UTC), description, user, " +
         "an undo marker, and each changed object's class, change kind (added/updated/deleted) and handle, " +
-        "up to 10 objects per transaction. A link added or removed between objects appears as Reference from one handle to the other. " +
-        "Use it to see what was changed last and by whom, or to check that your own writes landed; " +
+        "with the first 10 objects of each transaction and how many more it changed. A link added or removed between " +
+        "objects appears as Reference from one handle to the other. limit counts transactions, not objects, and stops at " +
+        "the latest 100, so older history is out of reach here; list_objects with sort -change lists records by last edit " +
+        "instead. Use it to see what was changed last and by whom, or to check that your own writes landed; " +
         "for the dated events of one person use get_timeline, and read a changed record with get_object.")]
     public static async Task<string> GetRecentChanges(
         [Description("How many transactions to show, 1–100 (default 20); other values are clamped.")]

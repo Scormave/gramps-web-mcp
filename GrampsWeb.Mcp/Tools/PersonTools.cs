@@ -63,9 +63,12 @@ public static class PersonTools
     [Description(
         "List a person's ancestors or descendants up to 10 generations deep: one row per relative with the generation, " +
         "an optional kinship label (Father's mother, Granddaughter), name, Gramps ID, birth and death with places, and handle. " +
-        "Ancestors follow the person's parent families; descendants follow the children of families where the person is a parent, " +
-        "so relatives not linked that way are missing. For how two given people are related use get_relations; " +
-        "for dated events around one person use get_timeline; for one full record use get_object.")]
+        "Ancestors follow every parent family, adoptive ones included; descendants follow the children of every family " +
+        "where the person is a parent, so relatives not linked that way are missing, and someone reached by two lines is " +
+        "listed once. generations counts steps from the person (1 = parents or children); each extra one costs another " +
+        "round of reads, so start with the default 3. For how two given people are related use get_relations; " +
+        "for dated events around one person use get_timeline; for one full record use get_object. " +
+        "A missing person returns a not-found message.")]
     public static async Task<string> GetPersonTree(
         [Description("The person to start from. " + ToolDescriptionFragments.HandleDiscovery)]
         string person,
@@ -194,7 +197,8 @@ public static class PersonTools
         "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: search for the person first, " +
         "and change an existing person with update_person. Events are separate records: create the Birth, Death and other " +
         "events with create_event first and pass them in eventRefs, or attach them later with update_person (linkMode add). To make the person a child of a family, add them to the family's childRefs " +
-        "(create_family or update_family). " + ToolDescriptionFragments.InputGuide)]
+        "(create_family or update_family). " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreatePerson(
         [Description(FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName,
@@ -285,11 +289,15 @@ public static class PersonTools
 
     [McpServerTool(Title = "Update Person", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing person: names, gender, links to events, families, citations, notes, media and tags, " +
-        "attributes, addresses, URLs, associations or the private flag. " + ToolDescriptionFragments.UpdateSemantics + " " +
+        "Change an existing person's names, gender, attributes, addresses, URLs, associations or links to events, " +
+        "families, citations, notes, media and tags. For a new person use create_person; to remove one, delete_object. " +
+        "Links live on one side: an event joins this person here through eventRefs (linkMode add) with the person's role, " +
+        "not on the event; to make the person a child, add them to the family's childRefs with update_family. " +
+        "alternateNames, attributes, addresses and urls replace their whole lists " +
+        "whatever linkMode says; sort reorders events, families, citations or media by date without changing which are linked. " +
+        ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing person returns a not-found message. " +
-        "Links live on one side: to link an event to this person, update the person (linkMode add), not the event. " +
-        ToolDescriptionFragments.InputGuide)]
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdatePerson(
         [Description("The person to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

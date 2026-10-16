@@ -60,6 +60,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   instead of a `ChatMessage`, so the MCP SDK no longer builds a JSON schema
   for the `ChatMessage` type at startup. `prompts/list` and `prompts/get`
   answer exactly as before
+- Tool descriptions say when to use each tool and which one to use
+  instead: every `update_*` tool names its `create_*` tool and
+  `delete_object`, and where a link is kept on the other record, the tool
+  to change it there. Write tools say that writes run one at a time, need
+  a Gramps Web account allowed to edit the tree, and that a locked or
+  rate-limited write fails with the delay to wait. They also explain how
+  arguments work together, such as `rules` before `gql` in `list_objects`,
+  lists that `linkMode` does not affect, and `sort` reordering links
+  without changing them, and what a call returns or rejects. In replace
+  mode, `[]` removes the links, not the linked records
 
 ### Fixed
 

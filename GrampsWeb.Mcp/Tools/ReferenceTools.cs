@@ -13,12 +13,14 @@ public static class ReferenceTools
 {
     [McpServerTool(Title = "Get Reference", ReadOnly = true, Destructive = false)]
     [Description(
-        "Read the server's reference text before writing when a format or type is unclear. Topics: input-guide (how to " +
-        "write dates, names, link updates and structured fields such as attributes and addresses), types (the valid event, " +
-        "role, place, note and other types, including custom ones the tree uses), metadata (server and tree info), " +
-        "name-settings (name display formats and surname groups), and filter-rules (the Gramps filter rules for the rules " +
-        "argument of list_objects, with their values, and the tree's saved filters). section narrows the reply to one part; an unknown topic " +
-        "or section is rejected with the valid ones. The same texts are MCP resources (gramps://input-guide and so on) for clients that read resources.")]
+        "Read the server's reference for writing valid arguments; it holds no family records. Call it before a create_*, " +
+        "update_* or list_objects call when a date, name, link update, type or filter rule is unclear; to read the tree itself " +
+        "use search, list_objects or get_object. topic picks the text: input-guide (argument formats), types (valid types, " +
+        "with the tree's custom ones), metadata (server and tree info), name-settings (name formats, surname groups) or " +
+        "filter-rules (rules for list_objects, saved filters). section returns one part of a topic, e.g. topic types with " +
+        "section event_types; an unknown topic or section is rejected with the valid values. Returns input-guide as fixed " +
+        "JSON and the other topics as plain text read live from the tree. Clients that read MCP resources get the same " +
+        "texts at gramps://input-guide and its siblings.")]
     public static async Task<string> GetReference(
         [Description("Which reference: input-guide, types, metadata, name-settings or filter-rules.")]
         string topic,

@@ -52,12 +52,15 @@ public static class PlaceTools
 
     [McpServerTool(Title = "Create Place", ReadOnly = false, Destructive = false)]
     [Description(
-        "Create a place (village, town, parish, county, country, …) with its name, type, coordinates, enclosing places, " +
-        "historical or other-language names, and links to notes, media, citations and tags. " +
-        "Returns the new handle and Gramps ID with the stored name, type, coordinates and enclosing places, and next steps. " +
-        "Does not check for duplicates: search for the place first, " +
-        "and change an existing one with update_place. Enclosing places must already exist: create the larger region first " +
-        "and pass it in enclosedBy, with dates when the place changed hands. " + ToolDescriptionFragments.InputGuide)]
+        "Create a new place, such as a village, parish or county, with its names, type, coordinates and the larger places " +
+        "that contain it. Search first: no duplicate check is made, and an existing place is changed with update_place. " +
+        "Build hierarchies top-down: enclosedBy takes existing places only, each with optional dates for when the place " +
+        "belonged there, so create the county before its villages. name, nameLang and nameDate make the primary name and " +
+        "alternateNames the historical or other-language ones; an undated primary name hides dated alternate names. " +
+        "Events point here afterwards through placeHandle on create_event or update_event. " +
+        "Returns the new handle and Gramps ID with the stored name, type, coordinates and enclosing places, and next steps; " +
+        "an unknown type or unreadable date is rejected before anything is saved. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreatePlace(
         [Description("Primary name (required).")]
         string name,
@@ -136,10 +139,14 @@ public static class PlaceTools
 
     [McpServerTool(Title = "Update Place", ReadOnly = false, Destructive = false)]
     [Description(
-        "Change an existing place: name with its language and date, type, coordinates, enclosing places, alternate names, code, " +
-        "and links to notes, media, citations and tags. " + ToolDescriptionFragments.UpdateSemantics + " " +
+        "Change an existing place's names, type, coordinates, code, enclosing places or links to notes, media, citations " +
+        "and tags. The change shows on every event at this place: if only one event names the wrong place, give that event " +
+        "another placeHandle with update_event instead. For a new place use create_place; to remove one, delete_object. " +
+        "name, nameLang and nameDate each change one part of the primary name, alternateNames replaces all the other names, " +
+        "and an empty string clears lat, lon or nameDate. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID with the stored name, type, coordinates and enclosing places; " +
-        "a missing place returns a not-found message. " + ToolDescriptionFragments.InputGuide)]
+        "a missing place returns a not-found message, and an unknown type or unreadable date is rejected before anything is saved. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdatePlace(
         [Description("The place to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
