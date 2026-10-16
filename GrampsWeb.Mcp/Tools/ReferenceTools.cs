@@ -11,7 +11,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class ReferenceTools
 {
-    [McpServerTool(Title = "Get Reference", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Get Reference", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Read the server's reference for writing valid arguments; it holds no family records. Call it before a create_*, " +
         "update_* or list_objects call when a date, name, link update, type or filter rule is unclear; to read the tree itself " +

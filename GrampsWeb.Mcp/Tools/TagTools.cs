@@ -37,7 +37,7 @@ public static class TagTools
         }
     }
 
-    [McpServerTool(Title = "Create Tag", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Tag", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a tag: a colored label such as \"To check\" or \"Line of John Smith\" for grouping records. " +
         "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicate names: " +

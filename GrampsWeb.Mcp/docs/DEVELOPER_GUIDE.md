@@ -74,7 +74,8 @@ Key rules:
 - `[Description]` states what the tool does, what it returns, which sibling
   tool to use instead and when, prerequisites, and what happens on duplicates,
   partial failure, or bad input. Leave read-only vs write to the
-  `ReadOnly`/`Destructive` annotations; do not prefix "Read-only:" or "(write)".
+  `ReadOnly`/`Destructive`/`Idempotent` annotations; do not prefix
+  "Read-only:" or "(write)".
   Each parameter description says what the value is, its format or allowed
   values, and the default.
 - Use constants from `ToolDescriptionFragments` for consistent documentation.
@@ -142,8 +143,14 @@ objects and return formatted strings.
    or create a new file if it's a new domain (add `[McpServerToolType]` to
    the class).
 2. Follow the standard method signature pattern.
-3. Set `Title`, `ReadOnly`, and `Destructive` on `[McpServerTool]` for Claude
-   Connectors Directory compliance (`readOnlyHint` / `destructiveHint`).
+3. Set `Title`, `ReadOnly`, `Destructive`, and `OpenWorld = false` on
+   `[McpServerTool]` for Claude Connectors Directory compliance
+   (`readOnlyHint` / `destructiveHint` / `openWorldHint`). `Destructive` is
+   false only when the tool can only add (creates); a tool that overwrites or
+   removes anything (updates, delete) sets it to true. A write tool also
+   sets `Idempotent`: true when repeating the same call changes nothing more
+   (updates, delete), false when it adds again (creates, appended text).
+   `ToolAnnotationTests` lists the expected value for each write tool.
 4. For write tools, include appropriate `ToolDescriptionFragments` constants
    in the `[Description]`.
 5. For write tools, create a request DTO in `Requests/` if needed.

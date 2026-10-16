@@ -39,7 +39,7 @@ public static class RepositoryTools
         }
     }
 
-    [McpServerTool(Title = "Create Repository", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Repository", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a repository: an archive, library, church, website or other holder of sources. " +
         "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: " +
@@ -96,7 +96,7 @@ public static class RepositoryTools
         }
     }
 
-    [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing repository's name, type, address, website or links to notes and tags. " +
         "For a new repository use create_repository; to remove one, delete_object. Which sources it holds, with their " +

@@ -48,7 +48,7 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool(Title = "Read Media", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Read Media", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Download a media file's bytes so you can see it. Default mode thumbnail renders a JPEG preview (PNG when transparent) from an image original " +
         "as MCP image content, 1568 pixels on the long edge unless size is given; EXIF and other metadata are stripped. " +
@@ -131,7 +131,7 @@ public static class MediaTools
         new('C', "citation", "citations"),
     ];
 
-    [McpServerTool(Title = "Create Media", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Media", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description(
         "Upload a photo, document scan or PDF from the server's upload folder as a new media record, and show it on " +
         "people, families, events, places, sources or citations with attachTo, whole or as a region such as one record on a page scan. " +
@@ -223,7 +223,7 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool(Title = "Update Media", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Media", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing media record's description, date, attributes or links to notes, tags and citations, " +
         "or replace its file with filePath from the server's upload folder (GRAMPS_MEDIA_UPLOAD_DIRS). " +

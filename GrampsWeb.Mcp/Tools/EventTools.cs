@@ -112,7 +112,7 @@ public static class EventTools
         return orderedDistinct.Count > 0 ? string.Join(", ", orderedDistinct) : "Primary";
     }
 
-    [McpServerTool(Title = "Create Event", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Event", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a standalone event (Birth, Marriage, Residence, Census, …) with its date, place, description, citations, " +
         "notes and media. Returns the new handle, Gramps ID and type, with next steps. The event is linked to nobody yet: " +
@@ -183,7 +183,7 @@ public static class EventTools
         }
     }
 
-    [McpServerTool(Title = "Update Event", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Event", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing event's type, date, place, description, attributes or links to citations, notes, media and tags; " +
         "everyone who shares the event sees the change. Who takes part is not set here: add or remove the event in a person's " +

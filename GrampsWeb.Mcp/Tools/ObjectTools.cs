@@ -27,7 +27,7 @@ public static class ObjectTools
             ["tag"] = new("Tag", "tags")
         };
 
-    [McpServerTool(Title = "Get Object", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Get Object", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Read one record in full: its fields, its links to other records, and the records that point to it (backlinks, " +
         "read-only here). Use it once you know the Gramps ID or handle; to find a record by text use search, to browse " +
@@ -117,7 +117,7 @@ public static class ObjectTools
             }
             : null;
 
-    [McpServerTool(Title = "Delete Object", ReadOnly = false, Destructive = true)]
+    [McpServerTool(Title = "Delete Object", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Permanently delete one record; it cannot be undone through this server. Call it only after the user confirmed " +
         "this exact record. If other records still point to it, nothing is deleted and the reply lists those backlinks " +

@@ -59,7 +59,7 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool(Title = "Get Person Tree", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Get Person Tree", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "List a person's ancestors or descendants up to 10 generations deep: one row per relative with the generation, " +
         "an optional kinship label (Father's mother, Granddaughter), name, Gramps ID, birth and death with places, and handle. " +
@@ -113,7 +113,7 @@ public static class PersonTools
     /// <summary>Common ancestors fetched by name; any beyond are listed by handle.</summary>
     internal const int MaxNamedCommonAncestors = 10;
 
-    [McpServerTool(Title = "Get Relations", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Get Relations", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Explain how two people are related, read as 'person 2 is the X of person 1' " +
         "(e.g. 'third cousin twice removed', 'husband'): the closest relationship with generations to the common ancestor, " +
@@ -190,7 +190,7 @@ public static class PersonTools
     private static Task<GrampsPerson?> GetPersonProfileAsync(GrampsApiClient client, string handle) =>
         client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{Uri.EscapeDataString(handle)}?profile=self");
 
-    [McpServerTool(Title = "Create Person", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Person", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create one person with full control: names, gender, links to existing events (with roles), families, " +
         "citations, notes, media and tags, plus attributes, addresses, URLs and associations. " +
@@ -287,7 +287,7 @@ public static class PersonTools
         }
     }
 
-    [McpServerTool(Title = "Update Person", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Person", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing person's names, gender, attributes, addresses, URLs, associations or links to events, " +
         "families, citations, notes, media and tags. For a new person use create_person; to remove one, delete_object. " +

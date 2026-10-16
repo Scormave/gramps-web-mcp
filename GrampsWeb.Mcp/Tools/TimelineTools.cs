@@ -13,7 +13,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class TimelineTools
 {
-    [McpServerTool(Title = "Get Timeline", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Get Timeline", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "List the events around one person, family or place in date order, grouped by decade with undated ones last: " +
         "date, event type, place, and whose event it is, with Gramps IDs. Use it to check a life's sequence or gaps; " +

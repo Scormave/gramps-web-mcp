@@ -40,7 +40,7 @@ public static class SourceTools
         }
     }
 
-    [McpServerTool(Title = "Create Source", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Source", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a source: a book, register, archive unit or website that facts come from, with title, author, publication " +
         "info and the repositories that hold it. Search for the source first: no duplicate check is made, and an existing " +
@@ -107,7 +107,7 @@ public static class SourceTools
         }
     }
 
-    [McpServerTool(Title = "Update Source", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Source", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing source's title, author, publication info, abbreviation, attributes or links to repositories, " +
         "notes, media and tags. For a new source use create_source; to remove one, delete_object; a page or act inside " +

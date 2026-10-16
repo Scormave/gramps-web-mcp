@@ -60,7 +60,7 @@ public static class FamilyTools
         }
     }
 
-    [McpServerTool(Title = "Create Family", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Family", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a family: a couple (father and mother, each optional) with their relationship type, children and family events " +
         "such as Marriage. Returns the new handle, Gramps ID and a label, with next steps. People and events must already exist " +
@@ -140,7 +140,7 @@ public static class FamilyTools
         }
     }
 
-    [McpServerTool(Title = "Update Family", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Family", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing family's father, mother, relationship type, children, family events, attributes or links to " +
         "citations, notes, media and tags. For a new family use create_family; to remove one, delete_object. " +

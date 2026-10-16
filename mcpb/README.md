@@ -83,5 +83,6 @@ This workflow is independent of the Docker / MCP Registry pipeline in `docker.ym
 ## Connectors Directory
 
 For Anthropic Connectors Directory submission, see [PRIVACY.md](../PRIVACY.md) and ensure
-all MCP tools expose `title`, `readOnlyHint`, and `destructiveHint` annotations (implemented
-via `[McpServerTool(Title, ReadOnly, Destructive)]` on each tool).
+all MCP tools expose `title`, `readOnlyHint`, `destructiveHint`, and `openWorldHint` annotations,
+and write tools also `idempotentHint` (implemented via
+`[McpServerTool(Title, ReadOnly, Destructive, Idempotent, OpenWorld)]` on each tool).

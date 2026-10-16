@@ -50,7 +50,7 @@ public static class PlaceTools
         }
     }
 
-    [McpServerTool(Title = "Create Place", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Place", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a new place, such as a village, parish or county, with its names, type, coordinates and the larger places " +
         "that contain it. Search first: no duplicate check is made, and an existing place is changed with update_place. " +
@@ -137,7 +137,7 @@ public static class PlaceTools
         }
     }
 
-    [McpServerTool(Title = "Update Place", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Place", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing place's names, type, coordinates, code, enclosing places or links to notes, media, citations " +
         "and tags. The change shows on every event at this place: if only one event names the wrong place, give that event " +

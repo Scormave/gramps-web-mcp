@@ -41,7 +41,7 @@ public static class NoteTools
         }
     }
 
-    [McpServerTool(Title = "Create Note", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Note", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a free-text note (research notes, transcriptions, comments) of a given type. " +
         "Returns the new handle, Gramps ID and type, with next steps. The note is attached to nothing yet: add its handle " +
@@ -94,7 +94,7 @@ public static class NoteTools
         }
     }
 
-    [McpServerTool(Title = "Update Note", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Note", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Description(
         "Change an existing note: its text, type, format, tags or private flag. text replaces the whole body. For a long note, " +
         "replaceText with withText changes one fragment and appendText adds to the end: both work on the body as stored now " +

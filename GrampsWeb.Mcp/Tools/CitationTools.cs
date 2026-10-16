@@ -42,7 +42,7 @@ public static class CitationTools
         }
     }
 
-    [McpServerTool(Title = "Create Citation", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Create Citation", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a citation: one specific spot in an existing source, such as a page, act or entry number, with its date, " +
         "confidence, notes and media. Returns the new handle, Gramps ID and page, with next steps. " +
@@ -109,7 +109,7 @@ public static class CitationTools
         }
     }
 
-    [McpServerTool(Title = "Update Citation", ReadOnly = false, Destructive = false)]
+    [McpServerTool(Title = "Update Citation", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing citation's source, page, date, confidence, attributes or links to notes, media and tags. " +
         "Which people, events and other records it supports is stored on them: attach or detach it with their update tool " +

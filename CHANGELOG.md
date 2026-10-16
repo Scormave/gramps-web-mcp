@@ -70,6 +70,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   lists that `linkMode` does not affect, and `sort` reordering links
   without changing them, and what a call returns or rejects. In replace
   mode, `[]` removes the links, not the linked records
+- The `update_*` tools declare `destructiveHint: true`, like
+  `delete_object`: they overwrite the fields passed, and replace mode
+  removes links. Clients that ask before a destructive call now ask for
+  them too. The `create_*` tools stay non-destructive, since they only add
+- Every tool declares `openWorldHint: false`, since it works only on the
+  configured tree, and every write tool declares `idempotentHint`. It is
+  true for the `update_*` tools except `update_note`, for `create_media`
+  (an identical file returns the stored media) and for `delete_object`,
+  where repeating a call changes nothing more; false for the other
+  `create_*` tools, which add another record on each call, and for
+  `update_note`, whose `appendText` appends again
 
 ### Fixed
 

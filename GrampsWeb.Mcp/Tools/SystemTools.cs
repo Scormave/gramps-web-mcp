@@ -12,7 +12,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class SystemTools
 {
-    [McpServerTool(Title = "Get Recent Changes", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Get Recent Changes", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Show the tree's recent edit history, newest first: commit time (UTC), description, user, " +
         "an undo marker, and each changed object's class, change kind (added/updated/deleted) and handle, " +
@@ -41,7 +41,7 @@ public static class SystemTools
         }
     }
 
-    [McpServerTool(Title = "Get Bookmarks", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Get Bookmarks", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "List the records bookmarked in this tree, grouped by type (people, families, events, places, " +
         "sources, citations, repositories, media, notes), each as a one-line summary with its handle. " +

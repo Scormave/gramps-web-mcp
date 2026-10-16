@@ -16,7 +16,7 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class SearchTools
 {
-    [McpServerTool(Title = "Search", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "Search", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Find records by words in them: one query across people, families, events, places, sources, citations, repositories, " +
         "notes, media and tags. Start here when you have a name, place, title or other text but no Gramps ID; " +
@@ -71,7 +71,7 @@ public static class SearchTools
         }
     }
 
-    [McpServerTool(Title = "List Objects", ReadOnly = true, Destructive = false)]
+    [McpServerTool(Title = "List Objects", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "List the records of one type a page at a time, optionally filtered and sorted: one line per record " +
         "(Gramps ID, summary, handle) with the page and total count. Use it to browse a type, fetch one Gramps ID, " +

@@ -11,8 +11,8 @@ decorated with `[McpServerTool]`.
 | Symbol | Meaning |
 |--------|---------|
 | R | Read-only tool |
-| C | Create (write) |
-| U | Update (write) |
+| C | Create (additive write) |
+| U | Update (destructive write: overwrites fields, replace mode removes links) |
 | D | Delete (destructive write) |
 
 Read-only mode (`GRAMPS_READ_ONLY=true`) publishes only the read-only tools.
@@ -26,9 +26,11 @@ Binary media resources are read-only GETs and are not blocked by read-only mode.
 
 Tool descriptions state what a tool does, what it returns, when to use a
 sibling tool instead, and what happens on duplicates, partial failure, or bad
-input. Whether a tool writes is carried by its `readOnlyHint` and
-`destructiveHint` annotations, not by the description text. Shared wording
-(handle lookup, update semantics, date text, known types) comes from
+input. Whether a tool writes, and whether repeating a write changes
+anything more, is carried by its `readOnlyHint`, `destructiveHint` and
+`idempotentHint` annotations, not by the description text; every tool has
+`openWorldHint: false`, since it works only on the configured tree. Shared
+wording (handle lookup, update semantics, date text, known types) comes from
 `ToolDescriptionFragments`.
 
 The server also sends **instructions** at initialization
