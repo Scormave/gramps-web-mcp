@@ -27,7 +27,7 @@ public class ToolAnnotationTests
                 Assert.False(attr.Destructive, $"Read-only tool {method.Name} must not be destructive");
         }
 
-        Assert.Equal(30, toolMethods.Count);
+        Assert.Equal(31, toolMethods.Count);
         Assert.Single(toolMethods, method => method.Name == "ReadMedia");
         Assert.Single(toolMethods, method => method.Name == "CreateMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
@@ -57,7 +57,7 @@ public class ToolAnnotationTests
         string[] idempotent =
         [
             "create_media", "update_citation", "update_event", "update_family", "update_media", "update_person",
-            "update_place", "update_repository", "update_source", "delete_object"
+            "update_place", "update_repository", "update_source", "update_tag", "delete_object"
         ];
         string[] repeatable =
         [

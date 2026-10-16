@@ -25,6 +25,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   write `rules`, then the rules of one type by category with the values
   each takes (their kinds come from Gramps Web API 3.23; on older versions
   the labels alone) and the tree's saved filters
+- `update_tag`: rename a tag or change its color or priority; every record
+  carrying the tag shows the change. The tag is named by its handle or its
+  exact name, since tags have no Gramps ID. A name another tag already
+  uses, ignoring case, is rejected, because Gramps filters such as `HasTag`
+  find tags by name
 - `--health-check [url]` command-line option: instead of starting a server,
   request `GET /health` of a running one and exit with 0 on HTTP 200 and 1
   otherwise. Without a URL it takes the address from `ASPNETCORE_URLS` (or
@@ -92,6 +97,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   new `SECRET_KEY`, every tool call failed with HTTP 422 "Signature
   verification failed" and `/health` answered 503 until the cached token was
   due for renewal, up to 15 minutes later. The integration tests found it
+- `create_tag` stored the color as given, so the documented form `FF5733`
+  and the default `000000` were saved without `#`, which is not a valid CSS
+  or GTK color for Gramps Web or Gramps desktop to show. The color is now
+  stored as `#rrggbb`, as Gramps Web stores it: six hex digits are
+  accepted with or without `#`, anything else is rejected before saving.
+  Tags created earlier keep their color; correct it with `update_tag`
 
 ## [2.5.2] - 2026-10-15
 

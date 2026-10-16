@@ -110,6 +110,40 @@ public sealed class RecordTests(GrampsWebFixture gramps)
         Assert.Contains(tagName, stored);
     }
 
+    [IntegrationFact]
+    public async Task Tag_IsRenamedAndRecoloredOnEveryRecordCarryingIt()
+    {
+        var oldName = TestNames.Unique("tag");
+        var tag = await Session.CreateAsync("create_tag", new { name = oldName, color = "FF0000" });
+        var person = await Session.CreateAsync("create_person", new { primaryName = new { first = "Anna", surname = TestNames.Surname() } });
+        await Session.CallAsync("update_person", new { handle = person.Handle, tagHandles = new[] { tag.Handle }, linkMode = "add" });
+        var newName = TestNames.Unique("tag");
+
+        var updated = await Session.CallAsync("update_tag", new { handle = oldName, name = newName, color = "#00AA55", priority = 2 });
+
+        Assert.Equal(tag.Handle, McpSession.Header(updated, "handle"));
+        Assert.Equal("\"#00aa55\"", McpSession.Header(updated, "color"));
+        var storedTag = await Session.CallAsync("get_object", new { identifier = tag.Handle, objectType = "tag" });
+        Assert.Contains($"TAG: {newName}", storedTag);
+        Assert.Contains("Color: #00aa55", storedTag);
+        Assert.Contains("Priority: 2", storedTag);
+        var storedPerson = await Session.CallAsync("get_object", new { identifier = person.GrampsId, extended = true });
+        Assert.Contains(newName, storedPerson);
+        Assert.DoesNotContain(oldName, storedPerson);
+    }
+
+    [IntegrationFact]
+    public async Task Tag_CannotTakeTheNameOfAnotherTag()
+    {
+        var taken = TestNames.Unique("tag");
+        await Session.CreateAsync("create_tag", new { name = taken });
+        var tag = await Session.CreateAsync("create_tag", new { name = TestNames.Unique("tag") });
+
+        var error = await Session.CallErrorAsync("update_tag", new { handle = tag.Handle, name = taken.ToUpperInvariant() });
+
+        Assert.Contains("another tag is already named", error);
+    }
+
     [IntegrationTheory]
     [InlineData("1890-05-03", "1890-05-03")]
     [InlineData("1890-05", "1890-05")]

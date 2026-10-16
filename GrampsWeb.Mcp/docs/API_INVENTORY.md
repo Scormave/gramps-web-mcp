@@ -62,6 +62,7 @@ MCP resources remain disabled by the same setting; metadata remains readable.
 | `GET /api/media/{handle}/file` | Binary | MCP resources `gramps://media/{handle}/file` and `gramps://media/{handle}/thumbnail/{size}` via `GetBytesAsync`; thumbnails are rendered locally by `MediaPreviewRenderer`; opt-in safeguards apply |
 | `GET /api/media/{handle}/thumbnail/{size}` | Binary | Not used: Gramps Web always returns AVIF, which MCP clients cannot display |
 | `GET /api/tags/{handle}` | Tag | `GrampsTag` |
+| `GET /api/tags/` | Array | `GrampsTag[]` via `GetPagedListAsync<T>`: `update_tag` finds the tag by handle or name and checks that no other tag has the new name |
 | `GET ...?backlinks=true` | Backlinks | `JsonElement`; `GrampsPerson.Backlinks` (`GrampsBacklinks`, families only) in `get_person_tree` batches |
 | `GET /api/types/default/` | Types | `JsonElement` via `GetDefaultTypesAsync` → `TypesPayloadParser.ParseCategories` (per-category string lists; see `DefaultTypes` in OpenAPI); kept for the process lifetime by `GrampsTypeVocabularies` |
 | `GET /api/types/default/{datatype}` | String array | `JsonElement` via `GetDefaultTypesAsync(category)` for type labels, with the bulk endpoint as fallback; kept for the process lifetime |

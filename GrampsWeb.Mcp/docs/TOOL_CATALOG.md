@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 30 MCP tools exposed by the server.
+Complete catalog of up to 31 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -697,7 +697,11 @@ Update a repository (same field set, all optional).
 
 ---
 
-## Tag (`TagTools.cs`) — 1 tool
+## Tag (`TagTools.cs`) — 2 tools
+
+Tags have no Gramps ID. Their color is stored as `#rrggbb`, the form Gramps
+Web and Gramps desktop read; both tools accept six hex digits with or without
+`#` and reject anything else before saving.
 
 ### C — `CreateTag`
 Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
@@ -705,8 +709,22 @@ Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `name` | `string` | yes | — | Display name |
-| `color` | `string` | no | `"000000"` | RRGGBB (no `#`) |
+| `color` | `string` | no | `"000000"` | RRGGBB, with or without `#`; stored as `#rrggbb` |
 | `priority` | `int` | no | `0` | Sort priority |
+
+### U — `UpdateTag`
+Rename a tag or change its color or priority; every record carrying the tag
+shows the change. Which records carry it is stored on the records and changes
+through their `tagHandles`. A name another tag already uses, ignoring case, is
+rejected, because Gramps filters such as `HasTag` find tags by name. The
+header reports the stored `name`, `color` and `priority`.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `handle` | `string` | yes | — | Tag handle or exact name (a name that differs only in case is accepted when one tag matches) |
+| `name` | `string?` | no | — | New name; empty is rejected |
+| `color` | `string?` | no | — | New color, RRGGBB with or without `#` |
+| `priority` | `int?` | no | — | New sort priority |
 
 ---
 
@@ -817,15 +835,15 @@ in this tree.`
 | Note | 0 | 1 | 1 | 0 | 2 |
 | Media | 1 | 1 | 1 | 0 | 3 |
 | Repository | 0 | 1 | 1 | 0 | 2 |
-| Tag | 0 | 1 | 0 | 0 | 1 |
+| Tag | 0 | 1 | 1 | 0 | 2 |
 | Object | 1 | 0 | 0 | 1 | 2 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
-| **Total with media access and upload enabled** | **10** | **10** | **9** | **1** | **30** |
+| **Total with media access and upload enabled** | **10** | **10** | **10** | **1** | **31** |
 
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
-`create_media` are hidden: the default catalog contains 28 tools in read/write
+`create_media` are hidden: the default catalog contains 29 tools in read/write
 mode. With media access enabled, `create_media` also needs
 `GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 10 tools
 with media access enabled, or 9 with it disabled.
