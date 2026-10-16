@@ -5,6 +5,7 @@
 [![MCP server version](https://img.shields.io/github/v/release/Scormave/gramps-web-mcp?label=MCP%20server&color=14b8a6)](https://github.com/Scormave/gramps-web-mcp/releases)
 [![CI](https://github.com/Scormave/gramps-web-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Scormave/gramps-web-mcp/actions/workflows/ci.yml)
 [![Docker on GHCR](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/Scormave/gramps-web-mcp/pkgs/container/gramps-web-mcp)
+[![Gramps Web MCP MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/Scormave/gramps-web-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Scormave/gramps-web-mcp)
 
 > [!WARNING]
 > **Update to 2.3.1 or later.** Before 2.3.1 the `update_*` tools could drop
