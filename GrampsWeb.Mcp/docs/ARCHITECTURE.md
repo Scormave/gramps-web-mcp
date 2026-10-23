@@ -136,6 +136,7 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
 | `GRAMPS_READ_ONLY` | `false` |
 | `GRAMPS_MUTATION_SERIALIZE` | `true` |
 | `GRAMPS_MUTATION_MIN_INTERVAL_MS` | `0` |
+| `GRAMPS_CONFIRMATION` | `when-supported` |
 
 - `GRAMPS_READ_ONLY`: set to `true` to publish only read-only MCP tools and
   block create/update/delete mutation calls, including direct calls to a
@@ -148,6 +149,13 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
   single-flight lock.
 - `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum milliseconds between mutation HTTP
   calls.
+- `GRAMPS_CONFIRMATION`: whether `delete_object` and `undo_change` ask the user
+  through MCP elicitation before they change the tree. `when-supported` asks
+  clients that advertise form elicitation and runs as before elsewhere;
+  `required` refuses the change (`action: not_confirmed`) when the client cannot
+  ask; `off` never asks. `UserConfirmation.For` reads it per call from the
+  request-scoped `McpServer`, and logs once per client whether it asks. Stateless
+  HTTP has no client capabilities, so it never asks there.
 
 Runtime notes:
 

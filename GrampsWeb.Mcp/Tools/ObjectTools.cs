@@ -118,11 +118,14 @@ public static class ObjectTools
             : null;
 
     [McpServerTool(Title = "Delete Object", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [McpMeta("anthropic/requiresUserInteraction", true)]
     [Description(
         "Delete one record; undo_change with the deletion's transaction from get_recent_changes restores it. Call it only after the user confirmed " +
         "this exact record. If other records still point to it, nothing is deleted and the reply lists those backlinks " +
         "by type; unlink them first with the owners' update tools, or pass force=true after a separate confirmation. " +
-        "On success returns the type, action: deleted and the handle; a missing record returns a not-found message.")]
+        "Clients that support it also show the user a confirmation dialog before deleting; action: declined or cancelled " +
+        "means the user said no and nothing was deleted. On success returns the type, action: deleted and the handle; " +
+        "a missing record returns a not-found message.")]
     public static async Task<string> DeleteObject(
         [Description("Record type: person, family, event, place, source, citation, note, media, repository or tag.")]
         string objectType,
@@ -130,7 +133,14 @@ public static class ObjectTools
         string handle,
         [Description("true deletes even when other records still point to it, leaving those links dangling (default false).")]
         bool force = false,
-        GrampsApiClient client = null!)
+        GrampsApiClient client = null!,
+        McpServer server = null!,
+        CancellationToken cancellationToken = default) =>
+        await DeleteObjectAsync(objectType, handle, force, client,
+            UserConfirmation.For(server, "delete_object"), cancellationToken);
+
+    internal static async Task<string> DeleteObjectAsync(string objectType, string handle, bool force,
+        GrampsApiClient client, IUserConfirmation confirmation, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -142,7 +152,7 @@ public static class ObjectTools
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, kind.ApiPath);
             return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, kind.DisplayName, kind.ApiPath, resolvedHandle, force, handle);
+                client, kind.DisplayName, kind.ApiPath, resolvedHandle, force, handle, confirmation, cancellationToken);
         }
         catch (Exception ex)
         {

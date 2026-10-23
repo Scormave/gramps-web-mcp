@@ -323,6 +323,88 @@ public class UndoToolsTests
         Assert.Contains("action: checked", result);
     }
 
+    [Fact]
+    public async Task Undo_AsksTheUser_ThenUndoes()
+    {
+        using var handler = AddNoteEditPersonServer();
+        handler.Post(CheckPath, HttpStatusCode.OK, "[]");
+        handler.Get("/api/transactions/history/?page=1&pagesize=10&sort=-id",
+            """[{"id": 6, "description": "Undo transaction 5: Add Note"}]""");
+        var user = new FakeConfirmation(ConfirmationAnswer.Confirmed);
+
+        var result = await Undo(handler, user: user);
+
+        var question = Assert.Single(user.Questions).ReplaceLineEndings("\n");
+        Assert.StartsWith("Undo transaction 5 (", question);
+        Assert.Contains("?\n\nIt will:\n  • Delete Note: [General] A new note\n", question);
+        Assert.Contains("  • Restore the earlier version of Person [handle: p1]\n", question);
+        Assert.EndsWith("\n\nThe undo is a new transaction, which undo_change can revert in turn.", question);
+        Assert.Single(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
+        Assert.Contains("action: undone", result);
+    }
+
+    [Theory]
+    [InlineData("Declined", "declined")]
+    [InlineData("Cancelled", "cancelled")]
+    [InlineData("Unavailable", "not_confirmed")]
+    [InlineData("Failed", "not_confirmed")]
+    public async Task Undo_WithoutConfirmation_ChangesNothing(string answer, string action)
+    {
+        using var handler = AddNoteEditPersonServer();
+
+        var result = await Undo(handler, user: new FakeConfirmation(Enum.Parse<ConfirmationAnswer>(answer)));
+
+        Assert.Contains($"action: {action}", result);
+        Assert.Contains("nothing was changed", result);
+        Assert.DoesNotContain(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Undo_DoesNotAsk_ForADryRunOrARefusal()
+    {
+        var user = new FakeConfirmation(ConfirmationAnswer.Confirmed);
+        using var conflicting = AddNoteEditPersonServer(eventExists: false);
+
+        Assert.Contains("action: checked", await Undo(conflicting, dryRun: true, user: user));
+        Assert.Contains("action: refused", await Undo(conflicting, user: user));
+
+        Assert.Empty(user.Questions);
+        Assert.DoesNotContain(conflicting.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Undo_WithForce_ShowsTheConflictsWithoutHandles()
+    {
+        using var handler = AddNoteEditPersonServer(eventExists: false);
+        var user = new FakeConfirmation(ConfirmationAnswer.Declined);
+
+        await Undo(handler, force: true, user: user);
+
+        var question = Assert.Single(user.Questions);
+        Assert.Contains("Conflicts it will override (1):", question);
+        Assert.Contains("  • The version of Person to restore links Event, which no longer exist", question);
+        Assert.Contains("Overriding overwrites later changes", question);
+    }
+
+    [Fact]
+    public async Task Undo_RefusesWhenTheConflictsChangeWhileTheUserDecides()
+    {
+        using var handler = AddNoteEditPersonServer();
+        handler.Post(CheckPath, HttpStatusCode.OK, "[]");
+        var user = new FakeConfirmation(ConfirmationAnswer.Confirmed, whileDeciding: () => handler.Get(CheckPath,
+            """
+            {"transaction_id": 5, "can_undo_without_force": false, "total_changes": 2, "conflicts_count": 1,
+             "conflicts": [{"change_index": 0, "object_class": "Note", "handle": "n1", "conflict_type": "object_changed",
+                            "description": "Object has been modified since this transaction"}]}
+            """));
+
+        var result = await Undo(handler, force: true, user: user);
+
+        Assert.Contains("action: refused", result);
+        Assert.Contains("changed while the user was deciding", result);
+        Assert.DoesNotContain(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("3.22.1", "3.22")]
     [InlineData("3.23.0rc1", "3.23")]
@@ -362,9 +444,9 @@ public class UndoToolsTests
     }
 
     private static Task<string> Undo(UndoServer handler, int transactionId = 5, bool dryRun = false, bool force = false,
-        TimeSpan? waitLimit = null) =>
+        TimeSpan? waitLimit = null, IUserConfirmation? user = null) =>
         UndoTools.UndoChangeAsync(transactionId, dryRun, force, CreateClient(handler),
-            TimeSpan.FromMilliseconds(1), waitLimit ?? TimeSpan.FromSeconds(5));
+            TimeSpan.FromMilliseconds(1), waitLimit ?? TimeSpan.FromSeconds(5), user);
 
     /// <summary>Transaction 5 of <see cref="AddNoteEditPerson"/> with the reads its checks and labels make.</summary>
     private static UndoServer AddNoteEditPersonServer(string check = NoConflicts, string noteBacklinks = "{}",

@@ -115,6 +115,15 @@ public static class ResponseEnvelope
         return $"---\ntype: {objectType}\naction: deleted\nhandle: {handle}\n---";
     }
 
+    /// <summary>
+    /// Formats a delete that did not happen because the user did not confirm it, or the record changed
+    /// meanwhile: <paramref name="action"/> such as <c>declined</c>, then why.
+    /// </summary>
+    public static string DeleteNotDone(string objectType, string handle, string action, string reason)
+    {
+        return $"---\ntype: {objectType}\naction: {action}\nhandle: {handle}\n---\n{reason}";
+    }
+
     public static string[] PersonCreateNextSteps(string? handle,
         bool hasEvents = false, bool hasFamily = false, bool hasNotes = false)
     {

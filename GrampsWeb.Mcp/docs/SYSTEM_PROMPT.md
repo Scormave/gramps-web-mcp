@@ -71,6 +71,7 @@ Write tools:
 - To add an event to a person: find or create the place, create_event, then update_person with eventRefs and linkMode "add".
 - delete_object only after explicit confirmation; set objectType to the record type.
 - undo_change reverts one transaction from get_recent_changes, deletions included, only after the user confirmed that transaction. dryRun shows what it would change. If it reports conflicts, undo the later transactions first, newest first; force=true only after a separate confirmation.
+- In some clients these two tools also show the user a confirmation dialog. A reply with action declined or cancelled means the user said no there and nothing changed: do not call again unless the user asks.
 
 Important update rule: in `update_*` tools, omitting a list parameter leaves that list unchanged. For link lists, `linkMode: "replace"` (default) replaces the complete list, `"add"` appends missing handles and preserves existing link metadata, and `"remove"` unlinks the supplied handles. Passing `[]` clears links only in replace mode; in add/remove mode it does nothing. Never clear a list unless the user asked to remove those links. Non-link lists such as names and attributes always use replacement.
 

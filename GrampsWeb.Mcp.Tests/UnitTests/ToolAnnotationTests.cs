@@ -92,4 +92,31 @@ public class ToolAnnotationTests
             idempotent.Concat(repeatable).Order(StringComparer.Ordinal),
             tools.Where(tool => tool.Annotations?.ReadOnlyHint != true).Select(tool => tool.Name).Order(StringComparer.Ordinal));
     }
+
+    /// <summary>
+    /// delete_object and undo_change ask the user to confirm through the client, so they tell clients that
+    /// they need a person present; the server and cancellation token the SDK passes them are not arguments.
+    /// </summary>
+    [Fact]
+    public void Delete_And_Undo_Require_User_Interaction()
+    {
+        var tools = typeof(PersonTools).Assembly
+            .GetTypes()
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static))
+            .Where(m => m.GetCustomAttribute<McpServerToolAttribute>() is not null)
+            .Select(m => McpServerTool.Create(m).ProtocolTool)
+            .ToList();
+
+        Assert.Equal(
+            ["delete_object", "undo_change"],
+            tools.Where(tool => tool.Meta?["anthropic/requiresUserInteraction"]?.GetValue<bool>() == true)
+                .Select(tool => tool.Name)
+                .Order(StringComparer.Ordinal));
+        foreach (var tool in tools.Where(tool => tool.Name is "delete_object" or "undo_change"))
+        {
+            var properties = tool.InputSchema.GetProperty("properties");
+            Assert.False(properties.TryGetProperty("server", out _), $"{tool.Name} exposes the server");
+            Assert.False(properties.TryGetProperty("cancellationToken", out _), $"{tool.Name} exposes the token");
+        }
+    }
 }

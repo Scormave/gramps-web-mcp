@@ -34,6 +34,8 @@ media, permissions, and genealogy editing UI stay in Gramps Web.
   with `linkMode`, keeping every other link
 - **Undo** — revert one transaction of the edit history, deletions included,
   after a check that it would not overwrite later edits or break links
+- **Confirmation dialogs** — `delete_object` and `undo_change` ask the user, not
+  the model, before they change the tree, in clients that support MCP elicitation
 - **Dates as Gramps writes them** — ranges, before/after/about, and every Gramps
   calendar (`1856-07-20 (Julian)`), stored with the sort value Gramps computes
 - **8 MCP resources** — type vocabularies, input guide, tree metadata, name
@@ -328,6 +330,34 @@ Runtime notes:
   MCP error with a short backoff hint instead of a generic 500.
 - Set `GRAMPS_MUTATION_SERIALIZE=false` when Gramps Web uses PostgreSQL and you
   want parallel writes.
+
+### Confirming deletes and undos
+
+`delete_object` and `undo_change` ask the user to confirm in a dialog before
+they change the tree, when the client supports
+[MCP elicitation](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation).
+The dialog names the record, or lists what the undo will change, and the user
+ticks a box to go ahead. Declining or closing it changes nothing. Dry runs and
+refusals do not ask.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GRAMPS_CONFIRMATION` | `when-supported` asks clients that support elicitation and runs as before in the others; `required` refuses deletes and undos in clients that cannot ask; `off` never asks | `when-supported` |
+
+- Stateless Streamable HTTP (`MCP_STATELESS=true`, the default) cannot send
+  requests to the client, so it never asks, and `required` refuses every delete
+  and undo there. Set `MCP_STATELESS=false` to confirm over HTTP; stdio and
+  legacy SSE keep a session and can ask.
+- Both tools also carry the `anthropic/requiresUserInteraction` tool metadata,
+  whatever the setting. Clients that honour it, such as Claude Code, ask their
+  own permission first, so the user may confirm twice; `off` keeps only the
+  client's prompt.
+- The tool call lasts until the user answers. If the client cancels the call
+  first, nothing changes.
+- The server logs once per client whether it asks.
+
+See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md#confirmation-dialogs)
+for the dialog and the replies.
 
 ### Updating linked records
 

@@ -22,6 +22,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   records only with `force=true`; the refusal says so when nothing else
   conflicts. A background undo (Gramps Web with a task queue) is followed
   for up to 45 seconds and otherwise reported as `pending`
+- Confirmation dialogs: in clients that support MCP elicitation,
+  `delete_object` and `undo_change` ask the user, not the model, before
+  they change the tree. The dialog names the record to delete and, with
+  `force=true`, the records that will keep a link to it, or lists what
+  the undo will delete and restore and the conflicts it will override.
+  Only a ticked box goes ahead; declining or closing the dialog returns
+  `action: declined` or `action: cancelled` with nothing changed. The
+  record, or the transaction's conflicts, are checked again after the
+  answer, and a change made while the user was deciding refuses the call.
+  Dry runs and refusals do not ask
+- `GRAMPS_CONFIRMATION`: `when-supported` (default) asks clients that
+  support elicitation and runs as before in the others, `required`
+  refuses deletes and undos in clients that cannot ask
+  (`action: not_confirmed`), `off` never asks. Stateless Streamable HTTP
+  cannot ask; `MCP_STATELESS=false` enables the dialog over HTTP. The
+  server logs once per client whether it asks
+- `delete_object` and `undo_change` carry the tool metadata
+  `anthropic/requiresUserInteraction`, so clients that honour it ask
+  their own permission before the call
 
 ### Changed
 

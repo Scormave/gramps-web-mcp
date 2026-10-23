@@ -17,7 +17,8 @@ public record GrampsConfig(
     int MutationMinIntervalMs = 0,
     string? RefreshToken = null,
     IReadOnlyList<string>? MediaUploadDirs = null,
-    long MediaUploadMaxBytes = GrampsConfig.DefaultMediaUploadMaxBytes)
+    long MediaUploadMaxBytes = GrampsConfig.DefaultMediaUploadMaxBytes,
+    ConfirmationMode Confirmation = ConfirmationMode.WhenSupported)
 {
     public const long DefaultMediaMaxBytes = 5 * 1024 * 1024;
 
@@ -75,6 +76,7 @@ public record GrampsConfig(
         var errors = new List<string>();
         var mediaUploadDirs = ParseDirectoryList(ReadEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS"),
             "GRAMPS_MEDIA_UPLOAD_DIRS", errors);
+        var confirmation = ParseConfirmationMode(ReadEnvironmentVariable("GRAMPS_CONFIRMATION"), errors);
 
         if (string.IsNullOrWhiteSpace(apiUrl))
             errors.Add("GRAMPS_API_URL is not set or empty");
@@ -121,7 +123,8 @@ public record GrampsConfig(
             MutationMinIntervalMs: mutationMinIntervalMs,
             RefreshToken: string.IsNullOrWhiteSpace(refreshToken) ? null : refreshToken.Trim(),
             MediaUploadDirs: mediaUploadDirs,
-            MediaUploadMaxBytes: mediaUploadMaxBytes);
+            MediaUploadMaxBytes: mediaUploadMaxBytes,
+            Confirmation: confirmation);
     }
 
     /// <summary>
@@ -199,6 +202,23 @@ public record GrampsConfig(
     }
 
     private static readonly string[] HomePrefixes = ["~", "${HOME}"];
+
+    private static ConfirmationMode ParseConfirmationMode(string? value, List<string> errors)
+    {
+        switch (value?.Trim().ToLowerInvariant())
+        {
+            case null or "":
+            case "when-supported":
+                return ConfirmationMode.WhenSupported;
+            case "required":
+                return ConfirmationMode.Required;
+            case "off":
+                return ConfirmationMode.Off;
+            default:
+                errors.Add("GRAMPS_CONFIRMATION must be when-supported, required or off");
+                return ConfirmationMode.WhenSupported;
+        }
+    }
 
     private static bool ParseBoolOrDefault(string? value, bool defaultValue)
     {

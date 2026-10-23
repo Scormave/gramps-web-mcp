@@ -65,6 +65,11 @@
           "default": "0"
         },
         {
+          "name": "GRAMPS_CONFIRMATION",
+          "description": "Whether delete_object and undo_change ask the user to confirm through MCP elicitation: when-supported, required (refuse in clients that cannot ask), or off",
+          "default": "when-supported"
+        },
+        {
           "name": "GRAMPS_LOG_LEVEL",
           "description": "Server log level: Trace, Debug, Information, Warning, Error, Critical, or None. Debug and Trace also log request and response bodies, which contain genealogy data",
           "default": "Information"

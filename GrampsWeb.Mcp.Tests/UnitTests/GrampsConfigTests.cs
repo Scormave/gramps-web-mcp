@@ -277,6 +277,29 @@ public class GrampsConfigTests
         Assert.Equal(1048576, config.MediaUploadMaxBytes);
     }
 
+    [Theory]
+    [InlineData(null, ConfirmationMode.WhenSupported)]
+    [InlineData("", ConfirmationMode.WhenSupported)]
+    [InlineData("${user_config.gramps_confirmation}", ConfirmationMode.WhenSupported)]
+    [InlineData("when-supported", ConfirmationMode.WhenSupported)]
+    [InlineData("Required", ConfirmationMode.Required)]
+    [InlineData(" off ", ConfirmationMode.Off)]
+    public void FromEnvironment_Reads_Confirmation_Mode(string? value, ConfirmationMode expected)
+    {
+        var config = LoadConfig(readOnlyEnv: null, confirmation: value);
+
+        Assert.Equal(expected, config.Confirmation);
+    }
+
+    [Fact]
+    public void FromEnvironment_Rejects_Unknown_Confirmation_Mode()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, confirmation: "always"));
+
+        Assert.Contains("GRAMPS_CONFIRMATION must be when-supported, required or off", ex.Message);
+    }
+
     private static GrampsConfig LoadConfig(
         string? readOnlyEnv,
         string? username = "user",
@@ -289,7 +312,8 @@ public class GrampsConfigTests
         string? mutationSerialize = null,
         string? mutationMinIntervalMs = null,
         string? mediaUploadDirs = null,
-        string? mediaUploadMaxBytes = null) =>
+        string? mediaUploadMaxBytes = null,
+        string? confirmation = null) =>
         WithEnvironment(
             GrampsConfig.FromEnvironment,
             readOnlyEnv,
@@ -303,7 +327,8 @@ public class GrampsConfigTests
             mutationSerialize,
             mutationMinIntervalMs,
             mediaUploadDirs,
-            mediaUploadMaxBytes);
+            mediaUploadMaxBytes,
+            confirmation);
 
     private static T WithEnvironment<T>(
         Func<T> action,
@@ -318,7 +343,8 @@ public class GrampsConfigTests
         string? mutationSerialize = null,
         string? mutationMinIntervalMs = null,
         string? mediaUploadDirs = null,
-        string? mediaUploadMaxBytes = null)
+        string? mediaUploadMaxBytes = null,
+        string? confirmation = null)
     {
         lock (EnvironmentLock)
         {
@@ -339,6 +365,7 @@ public class GrampsConfigTests
                 Environment.SetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS", mutationMinIntervalMs);
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS", mediaUploadDirs);
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES", mediaUploadMaxBytes);
+                Environment.SetEnvironmentVariable("GRAMPS_CONFIRMATION", confirmation);
 
                 return action();
             }
@@ -366,7 +393,8 @@ public class GrampsConfigTests
             ["GRAMPS_MUTATION_SERIALIZE"] = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_SERIALIZE"),
             ["GRAMPS_MUTATION_MIN_INTERVAL_MS"] = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS"),
             ["GRAMPS_MEDIA_UPLOAD_DIRS"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS"),
-            ["GRAMPS_MEDIA_UPLOAD_MAX_BYTES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES")
+            ["GRAMPS_MEDIA_UPLOAD_MAX_BYTES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES"),
+            ["GRAMPS_CONFIRMATION"] = Environment.GetEnvironmentVariable("GRAMPS_CONFIRMATION")
         };
     }
 

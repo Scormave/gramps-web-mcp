@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Formatters;
@@ -17,7 +18,7 @@ namespace GrampsWeb.Mcp.Tools;
 /// MCP tool that reverts one transaction of the tree's edit history through Gramps Web's undo endpoint.
 /// </summary>
 [McpServerToolType]
-public static class UndoTools
+public static partial class UndoTools
 {
     // Gramps TXNADD, TXNUPD and TXNDEL; the history logs links as changes of REFERENCE_KEY, sent as "7".
     private const int Added = 0;
@@ -42,6 +43,7 @@ public static class UndoTools
     private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(45);
 
     [McpServerTool(Title = "Undo Change", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
+    [McpMeta("anthropic/requiresUserInteraction", true)]
     [Description(
         "Undo one transaction listed by get_recent_changes: records it added are deleted, records it updated get " +
         "their earlier version back, and records it deleted are restored with the same handles and Gramps IDs. " +
@@ -49,8 +51,9 @@ public static class UndoTools
         "Call it only after the user confirmed that transaction; dryRun lists the effects and conflicts without changing " +
         "anything. A conflict stops the undo with nothing changed: a record changed again later, a record to be deleted " +
         "that other records now link to, or an earlier version linking a record that no longer exists. Undo the later " +
-        "transactions first, newest first, or pass force=true after a separate confirmation. Returns action undone, " +
-        "checked, refused or pending, the records affected and the undo's own transaction number.")]
+        "transactions first, newest first, or pass force=true after a separate confirmation. Clients that support it " +
+        "also show the user a confirmation dialog before undoing; action declined or cancelled means the user said no. " +
+        "Returns action undone, checked, refused or pending, the records affected and the undo's own transaction number.")]
     public static Task<string> UndoChange(
         [Description("The transaction to undo: the number shown as [transaction: N] by get_recent_changes.")]
         int transactionId,
@@ -58,11 +61,15 @@ public static class UndoTools
         bool dryRun = false,
         [Description("true undoes despite conflicts, overwriting later changes to these records and possibly leaving links dangling; only after a separate confirmation (default false).")]
         bool force = false,
-        GrampsApiClient client = null!) =>
-        UndoChangeAsync(transactionId, dryRun, force, client, PollInterval, WaitLimit);
+        GrampsApiClient client = null!,
+        McpServer server = null!,
+        CancellationToken cancellationToken = default) =>
+        UndoChangeAsync(transactionId, dryRun, force, client, PollInterval, WaitLimit,
+            UserConfirmation.For(server, "undo_change"), cancellationToken);
 
     internal static async Task<string> UndoChangeAsync(
-        int transactionId, bool dryRun, bool force, GrampsApiClient client, TimeSpan pollInterval, TimeSpan waitLimit)
+        int transactionId, bool dryRun, bool force, GrampsApiClient client, TimeSpan pollInterval, TimeSpan waitLimit,
+        IUserConfirmation? confirmation = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -72,30 +79,34 @@ public static class UndoTools
             if (!dryRun)
                 client.EnsureWritable();
 
+            Plan? confirmed = null;
+            if (!dryRun && (confirmation ?? UserConfirmation.None).Asks)
+            {
+                // Asks before taking the update lease: the user may take minutes to answer, and this
+                // server's other update tools must not wait for them meanwhile.
+                var (early, asked) = await CheckAsync(client, transactionId, dryRun, force);
+                if (early is not null)
+                    return early;
+                var answer = await confirmation!.AskAsync(FormatQuestion(asked!, force), cancellationToken);
+                if (answer != ConfirmationAnswer.Confirmed)
+                    return Header(transactionId, UserConfirmation.ActionName(answer)) + UserConfirmation.Explain(answer);
+                confirmed = asked;
+            }
+
             Plan plan;
             (HttpStatusCode Status, string Body) reply;
             var message = "";
             // Holds off this server's other update tools from the check until Gramps Web has the undo.
             using (dryRun ? null : await client.BeginUpdateAsync())
             {
-                var transaction = await client.GetOrNullIfNotFoundAsync<GrampsTransaction>(
-                    $"/api/transactions/history/{transactionId}?old=true");
-                if (transaction is null)
-                    return $"Transaction not found: {transactionId}\n\nHint: get_recent_changes lists the latest transactions with their numbers.";
+                var (early, current) = await CheckAsync(client, transactionId, dryRun, force);
+                if (early is not null)
+                    return early;
+                plan = current!;
+                if (confirmed is not null && Digest(plan) != Digest(confirmed))
+                    return FormatChangedWhileDeciding(plan);
 
-                plan = await PlanAsync(client, transaction, needVersion: !force);
-                if (plan.Changes.Count == 0)
-                    return Header(transactionId, "unchanged") +
-                           $"Transaction {transactionId} ({SystemFormatter.FormatTransactionSummary(transaction)}) " +
-                           "changed no records, so there is nothing to undo.";
-                if (dryRun)
-                    return FormatChecked(plan, force);
-                if (!force && plan.Conflicts.Count > 0)
-                    return FormatRefused(plan);
-                if (!force && plan.DeletionNeedsForce)
-                    return FormatOldServerRefusal(plan);
-
-                message = UndoMessage(transaction);
+                message = UndoMessage(plan.Transaction);
                 var path = $"/api/transactions/history/{transactionId}/undo?message={Uri.EscapeDataString(message)}" +
                            (force ? "&force=true" : "");
                 try
@@ -150,6 +161,38 @@ public static class UndoTools
         bool LinksChecked,
         bool DeletionNeedsForce,
         string? ServerVersion);
+
+    /// <summary>
+    /// Reads the transaction and plans its undo. Returns the reply instead when there is nothing to undo,
+    /// for a dry run, and when a conflict or an older server stops the undo without force.
+    /// </summary>
+    private static async Task<(string? Reply, Plan? Plan)> CheckAsync(
+        GrampsApiClient client, int transactionId, bool dryRun, bool force)
+    {
+        var transaction = await client.GetOrNullIfNotFoundAsync<GrampsTransaction>(
+            $"/api/transactions/history/{transactionId}?old=true");
+        if (transaction is null)
+            return ($"Transaction not found: {transactionId}\n\nHint: get_recent_changes lists the latest transactions with their numbers.", null);
+
+        var plan = await PlanAsync(client, transaction, needVersion: !force);
+        if (plan.Changes.Count == 0)
+            return (Header(transactionId, "unchanged") +
+                    $"Transaction {transactionId} ({SystemFormatter.FormatTransactionSummary(transaction)}) " +
+                    "changed no records, so there is nothing to undo.", null);
+        if (dryRun)
+            return (FormatChecked(plan, force), null);
+        if (!force && plan.Conflicts.Count > 0)
+            return (FormatRefused(plan), null);
+        if (!force && plan.DeletionNeedsForce)
+            return (FormatOldServerRefusal(plan), null);
+        return (null, plan);
+    }
+
+    /// <summary>What the user confirmed: the records, what undoing does to each, and the conflicts forced past.</summary>
+    private static string Digest(Plan plan) =>
+        string.Join("\n", plan.Changes.Select(c => $"{c.Class}|{c.Handle}|{c.Kind}")
+            .Concat(plan.Conflicts)
+            .Append(plan.DeletionNeedsForce.ToString()));
 
     /// <summary>
     /// Reads Gramps Web's own conflict check and adds the link checks it lacks: Gramps writes a deleted or
@@ -463,15 +506,26 @@ public static class UndoTools
     private static string Describe(Change change, Names names) =>
         Describe(change.Collection, change.Handle, names, change.Class);
 
-    /// <summary>"Note N0012: [General] Text [handle: h]"; the Gramps ID only for a deleted record.</summary>
-    private static string Describe(string collection, string handle, Names names, string? className = null)
+    /// <summary>
+    /// "Note N0012: [General] Text [handle: h]"; the Gramps ID only for a deleted record. <paramref name="forUser"/>
+    /// leaves out the handle when the ID or the label names the record.
+    /// </summary>
+    private static string Describe(string collection, string handle, Names names, string? className = null,
+        bool forUser = false)
     {
         var sb = new StringBuilder(className?.Trim() is { Length: > 0 } cls ? cls : ClassOf(collection));
+        var named = false;
         if (names.GrampsIds.TryGetValue(handle, out var grampsId))
+        {
             sb.Append(' ').Append(grampsId);
+            named = true;
+        }
         if (names.Labels.TryGetValue(handle, out var label))
+        {
             sb.Append(": ").Append(label);
-        return sb.Append($" [handle: {handle}]").ToString();
+            named = true;
+        }
+        return forUser && named ? sb.ToString() : sb.Append($" [handle: {handle}]").ToString();
     }
 
     private static string ClassOf(string collection) => collection switch
@@ -608,6 +662,58 @@ public static class UndoTools
         sb.AppendLine("Otherwise a record changed after the check: run undo_change with dryRun to see the conflicts.");
         return sb.ToString();
     }
+
+    private static string FormatChangedWhileDeciding(Plan plan)
+    {
+        var sb = new StringBuilder(Header(plan.Transaction.Id, "refused", plan.Conflicts.Count));
+        sb.AppendLine($"Nothing was changed: the records of {Summary(plan)} or their conflicts changed while the user " +
+                      "was deciding. Check again with dryRun and ask the user before calling again.");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// The confirmation question in plain text, as clients show it: what undoing does to each record,
+    /// and with force the conflicts it overrides. Records are named without handles.
+    /// </summary>
+    private static string FormatQuestion(Plan plan, bool force)
+    {
+        var sb = new StringBuilder($"Undo {Summary(plan)}?");
+        sb.AppendLine();
+        sb.AppendLine();
+        sb.AppendLine("It will:");
+        foreach (var change in plan.Changes.Take(SystemFormatter.MaxChangesShownPerTransaction))
+        {
+            var verb = change.Kind switch
+            {
+                Added => "Delete",
+                Updated => "Restore the earlier version of",
+                _ => "Restore the deleted"
+            };
+            sb.AppendLine($"  • {verb} {Describe(change.Collection, change.Handle, plan.Names, change.Class, forUser: true)}");
+        }
+
+        if (plan.Changes.Count > SystemFormatter.MaxChangesShownPerTransaction)
+            sb.AppendLine($"  • … and {plan.Changes.Count - SystemFormatter.MaxChangesShownPerTransaction} more records");
+
+        if (force && plan.Conflicts.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"Conflicts it will override ({plan.Conflicts.Count}):");
+            foreach (var conflict in plan.Conflicts)
+                sb.AppendLine($"  • {WithoutHandles(conflict)}");
+            sb.AppendLine("Overriding overwrites later changes to these records and may leave links to missing records.");
+        }
+
+        sb.AppendLine();
+        sb.Append("The undo is a new transaction, which undo_change can revert in turn.");
+        return sb.ToString();
+    }
+
+    /// <summary>Drops the " [handle: …]" of the records a conflict names.</summary>
+    private static string WithoutHandles(string text) => HandleTag().Replace(text, "");
+
+    [GeneratedRegex(@" \[handle: [^\]]+\]")]
+    private static partial Regex HandleTag();
 
     private static string FormatPending(Plan plan, string? taskId, string message)
     {

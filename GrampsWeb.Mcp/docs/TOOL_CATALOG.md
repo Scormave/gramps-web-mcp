@@ -295,6 +295,11 @@ and the handle. Deleting a media record does not necessarily delete its file on
 disk. `undo_change` with the deletion's transaction from `get_recent_changes`
 restores the record with its handle and Gramps ID.
 
+When the client supports MCP elicitation, the user confirms the deletion in a
+[dialog](#confirmation-dialogs) that names the record and, with `force=true`,
+the records that will keep a link to it. A user who says no gets
+`action: declined` or `action: cancelled`, and nothing is deleted.
+
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `objectType` | `string` | yes | — | `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
@@ -858,9 +863,15 @@ With a task queue, Gramps Web runs the undo in the background. The tool waits
 up to 45 seconds for the task; a task still running returns `action: pending`
 with its `task` id and the advice not to call `undo_change` again for it.
 
+When the client supports MCP elicitation, the user confirms the undo in a
+[dialog](#confirmation-dialogs) that lists what it does to each record and,
+with `force=true`, the conflicts it overrides. Dry runs and refusals do not
+ask.
+
 The reply header carries `type: Transaction`, `action` (`undone`, `checked`
-for `dryRun`, `refused`, `pending`, or `unchanged` for a transaction that
-changed only links), `transaction`, the undo's own `undo_transaction` once
+for `dryRun`, `refused`, `pending`, `unchanged` for a transaction that
+changed only links, or `declined`, `cancelled` and `not_confirmed` when the
+user did not confirm), `transaction`, the undo's own `undo_transaction` once
 found, and `conflicts`. The body names the transaction and each change, up to
 10 records followed by `(+N more records)`; deleted records are named from
 their stored version with their Gramps ID.
@@ -929,3 +940,42 @@ referenced by other objects, deletion is **blocked** unless `force=true`.
 Using `force=true` can leave **dangling references** in the database.
 A deletion can be reverted with `undo_change`, which restores the record with
 its handle, Gramps ID and its own links.
+
+## Confirmation dialogs
+
+`delete_object` and `undo_change` ask the user, not the model, before they
+change the tree, through MCP elicitation. The client shows the question with a
+single checkbox, `confirm`, unticked by default:
+
+```text
+Delete Note N0012: [General] Born in Tver?
+
+The change history keeps it: undo_change can restore it later.
+```
+
+Only an accepted dialog with the box ticked goes ahead. Accepting without the
+box or declining returns `action: declined`; closing the dialog returns
+`action: cancelled`. Both replies say that nothing was changed and tell the
+model to wait for the user before calling again. The tool reads the record (or
+the transaction's conflicts) again after the answer, and refuses with
+`action: refused` if it changed while the user was deciding. The tools ask
+only before writing: invalid arguments, a backlink refusal without `force`,
+`dryRun` and a conflict refusal return without a dialog.
+
+`GRAMPS_CONFIRMATION` chooses when to ask:
+
+| Value | Behavior |
+|-------|----------|
+| `when-supported` (default) | Asks when the client declares form elicitation; otherwise the tools work as before and rely on the confirmation in chat. |
+| `required` | Asks as above; a client without elicitation gets `action: not_confirmed` and nothing changes. |
+| `off` | Never asks. |
+
+The server logs once per client, at Information, whether it asks, and logs
+each answer. Stateless Streamable HTTP (`MCP_STATELESS=true`, the default for
+`http`) cannot send requests to the client, so there the server never asks,
+and with `required` it refuses every delete and undo; set
+`MCP_STATELESS=false` to confirm over HTTP. Both tools also carry the
+`anthropic/requiresUserInteraction` tool meta, whatever the setting, so
+clients that honor it ask for their own permission first and keep these tools
+out of unattended runs. The tool call lasts until the user answers; if the
+client cancels the call first, nothing changes.
