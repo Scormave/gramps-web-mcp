@@ -58,6 +58,11 @@ dotnet build gramps-web-mcp.sln --no-restore -c Release
 dotnet test gramps-web-mcp.sln --no-build -c Release --verbosity normal
 ```
 
+`ReleaseVersionTests` fails until `server.json`, the changelog and the
+`pack-mcpb.sh` examples follow the `<Version>` in the csproj: a dated
+changelog section for it with entries, the compare links of every version,
+and the image tag in `server.json`.
+
 With Docker running, also run the integration tests against Gramps Web; CI
 runs them too:
 
@@ -87,23 +92,33 @@ at minimum:
 git status
 git add CHANGELOG.md GrampsWeb.Mcp/GrampsWeb.Mcp.csproj server.json mcpb/README.md scripts/pack-mcpb.sh
 git commit -m "Release x.y.z"
+./scripts/check-release-version.sh vx.y.z
 git tag vx.y.z
 git push origin main --tags
 ```
 
 Adjust the branch name if the release branch is not `main`.
 
+`scripts/check-release-version.sh` passes when the tag is `vx.y.z`, the
+csproj declares `<Version>x.y.z</Version>` and `CHANGELOG.md` has a dated
+`## [x.y.z]` section. The release workflows run it on every `v*` tag before
+they build anything, so a tag pushed without the release commit fails before
+it publishes an image, MCPB bundles or a registry entry (see
+[If Something Fails](#if-something-fails)).
+
 ## Watch Automation
 
 After the tag push, verify these GitHub Actions complete successfully:
 
 - `.github/workflows/docker.yml` (one run for the `main` push, one for the tag)
+  - The tag run first checks the tag with `scripts/check-release-version.sh`.
   - Runs tests.
   - The tag run builds and pushes `ghcr.io/scormave/gramps-web-mcp:x.y.z` and
     publishes `server.json` to the MCP Registry.
   - The `main` run builds and pushes `ghcr.io/scormave/gramps-web-mcp:latest`;
     tag runs never move `latest`.
 - `.github/workflows/mcpb-release.yml`
+  - Checks the tag with `scripts/check-release-version.sh`.
   - Builds platform MCPB bundles for `osx-arm64`, `osx-x64`, `win-x64`,
     `linux-x64`, and `linux-arm64`.
   - Attaches `dist/*.mcpb` assets to the GitHub Release for the tag.

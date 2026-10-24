@@ -562,6 +562,11 @@ and exits with 0.
   an issue when the Six Labors license key is due for renewal (see below).
 - **Gitea Actions** (`.gitea/workflows/docker.yml`): build and publish the
   Docker image to a private Gitea container registry.
+- On `v*` tags, `docker.yml`, `mcpb-release.yml` and the Gitea workflow
+  first run `scripts/check-release-version.sh`, which fails unless the tag
+  matches the csproj `<Version>` and a dated `CHANGELOG.md` section;
+  `ReleaseVersionTests` keeps `server.json`, the changelog links and the
+  `pack-mcpb.sh` examples on that version (see [RELEASING.md](RELEASING.md)).
 
 ### Six Labors license key
 

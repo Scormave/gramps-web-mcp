@@ -45,6 +45,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   tool descriptions, prompts and the server instructions may name only
   registered tools, and the instructions of each profile only the tools
   it publishes
+- Release checks: on a `v*` tag, the Docker, MCPB and Gitea workflows
+  first run `scripts/check-release-version.sh`, which fails unless the
+  tag matches the csproj `<Version>` and `CHANGELOG.md` has a dated
+  section for it, so a tag without the release commit publishes nothing.
+  A test keeps `server.json`, the changelog compare links and the
+  `pack-mcpb.sh` examples on the csproj version
 - `delete_object` and `undo_change` carry the tool metadata
   `anthropic/requiresUserInteraction`, so clients that honour it ask
   their own permission before the call
