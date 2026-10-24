@@ -38,6 +38,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`action: not_confirmed`), `off` never asks. Stateless Streamable HTTP
   cannot ask; `MCP_STATELESS=false` enables the dialog over HTTP. The
   server logs once per client whether it asks
+- A test keeps the documentation in step with the registered tools,
+  resources and prompts: the tool catalog's sections, R/C/U/D letters,
+  summary table and per-profile counts, its resource and prompt tables,
+  and the counts in the READMEs, the MCPB manifest and the site. Docs,
+  tool descriptions, prompts and the server instructions may name only
+  registered tools, and the instructions of each profile only the tools
+  it publishes
 - `delete_object` and `undo_change` carry the tool metadata
   `anthropic/requiresUserInteraction`, so clients that honour it ask
   their own permission before the call

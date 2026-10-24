@@ -171,6 +171,12 @@ objects and return formatted strings.
 - **Unit test** for the formatter in `GrampsWeb.Mcp.Tests/UnitTests/`.
 - **Fixture file** in `GrampsWeb.Mcp.Tests/Fixtures/` with realistic API response JSON.
 - **Contract test mapping** if new models were added.
+- **Documentation**: `ToolSurfaceDocumentationTests` fails until
+  `TOOL_CATALOG.md` documents the tool in its class's section with the
+  right R/C/U/D letter, the summary table and profile counts add it, and
+  `README.md`, `docs/README.md`, the MCPB manifest and `site/index.html`
+  give the new "up to N tools". It also fails when the server instructions
+  of a profile name a tool that profile hides.
 - **Integration test** in `GrampsWeb.Mcp.IntegrationTests/` when the tool
   depends on what Gramps Web does with the request: how it stores a value,
   what it validates, what it returns. See [Integration tests](#integration-tests).
