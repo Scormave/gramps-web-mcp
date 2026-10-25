@@ -143,6 +143,29 @@ the equivalent tagged image to the configured container registry.
   settings form, stdio launch, and basic read-only tools work.
 - Optionally run the released Docker image against a Gramps Web instance and
   verify `/health` and the MCP endpoint.
+- Run the image scan for the new release (`gh workflow run image-scan.yml`),
+  or leave it to the Monday run (see [Image Scan Findings](#image-scan-findings)).
+
+## Image Scan Findings
+
+`.github/workflows/image-scan.yml` scans the image of the latest GitHub Release
+and `latest` with Trivy every Monday. When an Ubuntu package or a .NET library
+in either image has a HIGH or CRITICAL vulnerability with a fix, the run fails,
+its summary lists the vulnerabilities, and the Security tab shows them under
+code scanning. Published images are never rebuilt, so the fix is a new build:
+
+- Ubuntu packages and the .NET runtime come from the base image
+  `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`, which Microsoft
+  rebuilds when Ubuntu or .NET ship a fix. Rebuild `latest` with
+  `gh workflow run docker.yml`, and publish a patch release for the release
+  image. If Microsoft has not rebuilt the base image yet, the next Monday's run
+  checks again.
+- A NuGet package of the server also fails `ci.yml`; update it and publish a
+  patch release.
+- To accept a vulnerability that does not affect the server, add its ID with a
+  comment to `.trivyignore` at the repository root.
+
+The alerts close on their own once a scan no longer finds them.
 
 ## If Something Fails
 

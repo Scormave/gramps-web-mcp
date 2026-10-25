@@ -560,6 +560,12 @@ and exits with 0.
   Pages when it changes on `main`.
 - **GitHub Actions** (`.github/workflows/license-key.yml`): every Monday, open
   an issue when the Six Labors license key is due for renewal (see below).
+- **GitHub Actions** (`.github/workflows/image-scan.yml`): every Monday, scan
+  the published images of the latest release and `latest` with Trivy, upload
+  the results to code scanning, and fail when an Ubuntu package or .NET
+  library in them has a HIGH or CRITICAL vulnerability with a fix (see
+  [RELEASING.md](RELEASING.md#image-scan-findings)). The Trivy action is
+  pinned to a commit SHA, not a tag.
 - **Gitea Actions** (`.gitea/workflows/docker.yml`): build and publish the
   Docker image to a private Gitea container registry.
 - On `v*` tags, `docker.yml`, `mcpb-release.yml` and the Gitea workflow

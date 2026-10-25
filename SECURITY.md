@@ -4,6 +4,10 @@
 
 Security fixes are applied to the latest release on the `main` branch.
 
+The Docker images of the latest release and of `latest` are scanned every
+week. A high or critical vulnerability with a fix in their Ubuntu packages or
+.NET libraries leads to a rebuilt image and a patch release.
+
 ## Reporting a vulnerability
 
 **Please do not report security vulnerabilities through public GitHub issues.**

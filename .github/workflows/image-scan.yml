@@ -1,0 +1,99 @@
+name: Image scan
+
+# Published images are never rebuilt, so a vulnerability fixed after a release stays
+# in its image. Every Monday this scans the image of the latest release and :latest
+# on GHCR for HIGH and CRITICAL vulnerabilities that have a fix, in Ubuntu packages
+# and .NET libraries, uploads the results to code scanning and fails when it finds
+# any. What to do then: GrampsWeb.Mcp/docs/RELEASING.md, "Image Scan Findings".
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [release, latest]
+    steps:
+      # Trivy reads a .trivyignore at the repository root, if there is one.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Choose the image
+        id: image
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ matrix.image }}
+        run: |
+          if [ "$TARGET" = release ]; then
+            tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+            ref="ghcr.io/scormave/gramps-web-mcp:${tag#v}"
+          else
+            ref="ghcr.io/scormave/gramps-web-mcp:latest"
+          fi
+          echo "Scanning $ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      # Pinned to a commit, not a tag: in March 2026 an attacker moved almost every
+      # trivy-action tag to a malicious commit (GHSA-69fq-xp46-6x23). Dependabot
+      # updates the SHA together with its version comment. The runner is amd64, so
+      # Trivy scans the amd64 image; the arm64 one holds the same packages.
+      - name: Scan with Trivy
+        id: scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image.outputs.ref }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy.sarif
+          limit-severities-for-sarif: true
+          # The report below fails the job, after the upload.
+          exit-code: '0'
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy.sarif
+          category: image-${{ matrix.image }}
+
+      - name: Report findings
+        if: ${{ !cancelled() && steps.scan.outcome == 'success' }}
+        env:
+          IMAGE: ${{ steps.image.outputs.ref }}
+        run: |
+          rows=$(jq -r '
+            [.runs[].results[]?
+              | (.message.text | split("\n") | map(capture("^(?<key>[^:]+): (?<value>.*)$")) | from_entries) as $m
+              | [.ruleId, $m.Severity, $m.Package, $m["Installed Version"], $m["Fixed Version"]]]
+            | unique[] | @tsv' trivy.sarif)
+          if [ -z "$rows" ]; then
+            echo "No fixable HIGH or CRITICAL vulnerabilities in \`$IMAGE\`." >> "$GITHUB_STEP_SUMMARY"
+            echo "No fixable HIGH or CRITICAL vulnerabilities in $IMAGE."
+            exit 0
+          fi
+          {
+            echo "### Fixable HIGH and CRITICAL vulnerabilities in \`$IMAGE\`"
+            echo
+            echo "| Vulnerability | Severity | Package | Installed | Fixed in |"
+            echo "| --- | --- | --- | --- | --- |"
+            while IFS=$'\t' read -r id severity package installed fixed; do
+              echo "| $id | $severity | $package | $installed | $fixed |"
+            done <<< "$rows"
+            echo
+            echo "See \"Image Scan Findings\" in GrampsWeb.Mcp/docs/RELEASING.md."
+          } >> "$GITHUB_STEP_SUMMARY"
+          while IFS=$'\t' read -r id severity package installed fixed; do
+            echo "::error title=$id::$severity in $package $installed, fixed in $fixed ($IMAGE)"
+          done <<< "$rows"
+          exit 1
