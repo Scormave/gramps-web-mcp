@@ -22,6 +22,15 @@ This project is **not** a standalone genealogy UI or replacement for Gramps
 Web. Run it alongside an existing Gramps Web instance; your users, trees,
 media, permissions, and genealogy editing UI stay in Gramps Web.
 
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Server-0098FF)][install-vscode]
+[![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_Server-24bfa5)][install-vscode-insiders]
+[![Add to Cursor](https://img.shields.io/badge/Cursor-Install_Server-000000)][install-cursor]
+
+The buttons add the server to VS Code or Cursor, which start it from the
+Docker image, so Docker must be installed. Details are under
+[Over stdio in Docker](#over-stdio-in-docker); for Claude Desktop, install the
+[MCPB extension](#claude-desktop-mcpb-extension).
+
 ## Features
 
 - **Up to 32 MCP tools** — read, create, update, and delete people, families, events, places,
@@ -236,7 +245,8 @@ and Open WebUI, connect in one of three ways:
   server's address and API key, nothing is installed on the client's machine,
   and all clients share the one server.
 - **Over stdio in Docker**: the client starts the server's image for itself.
-  Each machine needs Docker and the Gramps Web credentials.
+  Each machine needs Docker and the Gramps Web credentials. VS Code and Cursor
+  add this setup with one click.
 - **Over stdio with the release binary**: the client starts the server from a
   single file downloaded from the release. Each machine needs the Gramps Web
   credentials, but neither Docker nor .NET.
@@ -382,6 +392,16 @@ password stays off the `docker` command line:
   }
 }
 ```
+
+The install buttons at the [top of this README](#gramps-web-mcp) add this
+entry to VS Code or Cursor. VS Code asks for the Gramps Web address, user name,
+password and tree ID when the server starts for the first time, and keeps the
+password in its secret storage. Cursor adds the placeholders shown above;
+replace them with your own before the first start.
+
+[install-vscode]: https://insiders.vscode.dev/redirect/mcp/install?name=gramps-web&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-api-url%22%2C%22description%22%3A%22Gramps%20Web%20address%2C%20such%20as%20https%3A%2F%2Fyour-gramps.example.com%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-username%22%2C%22description%22%3A%22Gramps%20Web%20user%20name%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-password%22%2C%22description%22%3A%22Gramps%20Web%20password%22%2C%22password%22%3Atrue%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-tree-id%22%2C%22description%22%3A%22Gramps%20Web%20tree%20ID%22%7D%5D&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-i%22%2C%22--rm%22%2C%22-e%22%2C%22MCP_TRANSPORT%3Dstdio%22%2C%22-e%22%2C%22GRAMPS_API_URL%22%2C%22-e%22%2C%22GRAMPS_USERNAME%22%2C%22-e%22%2C%22GRAMPS_PASSWORD%22%2C%22-e%22%2C%22GRAMPS_TREE_ID%22%2C%22ghcr.io%2Fscormave%2Fgramps-web-mcp%3Alatest%22%5D%2C%22env%22%3A%7B%22GRAMPS_API_URL%22%3A%22%24%7Binput%3Agramps-web-api-url%7D%22%2C%22GRAMPS_USERNAME%22%3A%22%24%7Binput%3Agramps-web-username%7D%22%2C%22GRAMPS_PASSWORD%22%3A%22%24%7Binput%3Agramps-web-password%7D%22%2C%22GRAMPS_TREE_ID%22%3A%22%24%7Binput%3Agramps-web-tree-id%7D%22%7D%7D
+[install-vscode-insiders]: https://insiders.vscode.dev/redirect/mcp/install?name=gramps-web&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-api-url%22%2C%22description%22%3A%22Gramps%20Web%20address%2C%20such%20as%20https%3A%2F%2Fyour-gramps.example.com%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-username%22%2C%22description%22%3A%22Gramps%20Web%20user%20name%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-password%22%2C%22description%22%3A%22Gramps%20Web%20password%22%2C%22password%22%3Atrue%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-tree-id%22%2C%22description%22%3A%22Gramps%20Web%20tree%20ID%22%7D%5D&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-i%22%2C%22--rm%22%2C%22-e%22%2C%22MCP_TRANSPORT%3Dstdio%22%2C%22-e%22%2C%22GRAMPS_API_URL%22%2C%22-e%22%2C%22GRAMPS_USERNAME%22%2C%22-e%22%2C%22GRAMPS_PASSWORD%22%2C%22-e%22%2C%22GRAMPS_TREE_ID%22%2C%22ghcr.io%2Fscormave%2Fgramps-web-mcp%3Alatest%22%5D%2C%22env%22%3A%7B%22GRAMPS_API_URL%22%3A%22%24%7Binput%3Agramps-web-api-url%7D%22%2C%22GRAMPS_USERNAME%22%3A%22%24%7Binput%3Agramps-web-username%7D%22%2C%22GRAMPS_PASSWORD%22%3A%22%24%7Binput%3Agramps-web-password%7D%22%2C%22GRAMPS_TREE_ID%22%3A%22%24%7Binput%3Agramps-web-tree-id%7D%22%7D%7D&quality=insiders
+[install-cursor]: https://cursor.com/en/install-mcp?name=gramps-web&config=eyJjb21tYW5kIjoiZG9ja2VyIiwiYXJncyI6WyJydW4iLCItaSIsIi0tcm0iLCItZSIsIk1DUF9UUkFOU1BPUlQ9c3RkaW8iLCItZSIsIkdSQU1QU19BUElfVVJMIiwiLWUiLCJHUkFNUFNfVVNFUk5BTUUiLCItZSIsIkdSQU1QU19QQVNTV09SRCIsIi1lIiwiR1JBTVBTX1RSRUVfSUQiLCJnaGNyLmlvL3Njb3JtYXZlL2dyYW1wcy13ZWItbWNwOmxhdGVzdCJdLCJlbnYiOnsiR1JBTVBTX0FQSV9VUkwiOiJodHRwczovL3lvdXItZ3JhbXBzLmV4YW1wbGUuY29tIiwiR1JBTVBTX1VTRVJOQU1FIjoieW91ci11c2VyIiwiR1JBTVBTX1BBU1NXT1JEIjoieW91ci1wYXNzd29yZCIsIkdSQU1QU19UUkVFX0lEIjoieW91ci10cmVlLXV1aWQifX0%3D
 
 - Cursor (`~/.cursor/mcp.json`), Antigravity CLI
   (`~/.gemini/config/mcp_config.json`) and Gemini CLI

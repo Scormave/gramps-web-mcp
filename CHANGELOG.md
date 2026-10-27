@@ -89,6 +89,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `oci://ghcr.io/scormave/gramps-web-mcp:<tag>` in place of the file,
   checks that this repository's workflow built it. Releases up to 2.6.0
   and the images pushed before this change have none
+- Install buttons for VS Code, VS Code Insiders and Cursor in the README
+  and on the GitHub Pages quick start. They add the Docker stdio entry:
+  VS Code asks for the Gramps Web address, user name, password and tree
+  ID when the server starts for the first time and keeps the password
+  as a secret; Cursor adds the entry with placeholders to replace
 
 ### Changed
 
