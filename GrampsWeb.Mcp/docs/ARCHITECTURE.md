@@ -562,9 +562,9 @@ shell or package manager, so its `HEALTHCHECK` runs the server's own
   the Docker image to `ghcr.io/scormave/gramps-web-mcp` (`:latest` from the
   default branch, `:x.y.z` from a tag). Tag runs also publish `server.json` to
   the MCP Registry.
-- **GitHub Actions** (`.github/workflows/mcpb-release.yml`): on `v*` tags,
-  pack the Claude Desktop MCPB bundles for five platforms and attach them to
-  the GitHub Release.
+- **GitHub Actions** (`.github/workflows/release-assets.yml`): on `v*` tags,
+  pack the Claude Desktop MCPB bundles and the plain server binaries for five
+  platforms and attach them to the GitHub Release with their checksums.
 - **GitHub Actions** (`.github/workflows/pages.yml`): deploy `site/` to GitHub
   Pages when it changes on `main`.
 - **Gitea Actions** (`.gitea/workflows/docker.yml`): builds and publishes the

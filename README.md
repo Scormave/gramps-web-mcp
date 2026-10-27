@@ -210,21 +210,24 @@ See [`mcpb/README.md`](mcpb/README.md) for packaging details and
 To build a bundle locally:
 
 ```bash
-./scripts/pack-mcpb.sh osx-arm64   # or osx-x64, win-x64, linux-x64, linux-arm64
+./scripts/pack-release.sh osx-arm64   # or osx-x64, win-x64, linux-x64, linux-arm64
 ```
 
 ### Other MCP clients
 
 Other MCP clients, such as Claude Code, VS Code, Cursor, Codex, Antigravity CLI
-and Open WebUI, connect in one of two ways:
+and Open WebUI, connect in one of three ways:
 
 - **Over HTTP** to a server that already runs in [Docker](#docker), on
   [Unraid](#unraid-installation) or with
   [Docker Compose](#gramps-web--mcp-docker-compose). Each client needs only the
   server's address and API key, nothing is installed on the client's machine,
   and all clients share the one server.
-- **Over stdio**: the client starts the server in Docker for itself. Each
-  machine needs Docker and the Gramps Web credentials.
+- **Over stdio in Docker**: the client starts the server's image for itself.
+  Each machine needs Docker and the Gramps Web credentials.
+- **Over stdio with the release binary**: the client starts the server from a
+  single file downloaded from the release. Each machine needs the Gramps Web
+  credentials, but neither Docker nor .NET.
 
 Claude Desktop connects to servers added by URL from Anthropic's cloud, not
 from your computer, so it cannot reach a server on your home network. Use the
@@ -394,7 +397,80 @@ Before the first start:
 - [Uploads](#media-upload) read files inside the container, so mount the
   upload folder with `-v`.
 
-To run the server from a source checkout instead, see
+#### Over stdio with the release binary
+
+Each [release](https://github.com/Scormave/gramps-web-mcp/releases) also carries
+the server as one self-contained file, the same one the Claude Desktop bundles
+hold. It starts over stdio unless told otherwise:
+
+| Platform | Archive |
+|----------|---------|
+| macOS Apple Silicon | `gramps-web-mcp-osx-arm64.tar.gz` |
+| macOS Intel | `gramps-web-mcp-osx-x64.tar.gz` |
+| Windows x64 | `gramps-web-mcp-win-x64.zip` |
+| Linux x64 | `gramps-web-mcp-linux-x64.tar.gz` |
+| Linux ARM64 | `gramps-web-mcp-linux-arm64.tar.gz` |
+
+Unpack the archive for your platform into a folder of its own. On macOS or
+Linux (here Apple Silicon; change the archive name for yours):
+
+```bash
+mkdir -p ~/.local/share/gramps-web-mcp
+curl -fL https://github.com/Scormave/gramps-web-mcp/releases/latest/download/gramps-web-mcp-osx-arm64.tar.gz \
+  | tar -xz -C ~/.local/share/gramps-web-mcp
+```
+
+On Windows, in PowerShell:
+
+```powershell
+curl.exe -fLo "$env:TEMP\gramps-web-mcp.zip" https://github.com/Scormave/gramps-web-mcp/releases/latest/download/gramps-web-mcp-win-x64.zip
+Expand-Archive -Force "$env:TEMP\gramps-web-mcp.zip" "$env:LOCALAPPDATA\gramps-web-mcp"
+```
+
+Then point the client at the binary by its full path, since clients start it
+without a shell that would expand `~`:
+
+```json
+{
+  "mcpServers": {
+    "gramps-web": {
+      "command": "/Users/you/.local/share/gramps-web-mcp/GrampsWeb.Mcp",
+      "env": {
+        "GRAMPS_API_URL": "https://your-gramps.example.com",
+        "GRAMPS_USERNAME": "your-user",
+        "GRAMPS_PASSWORD": "your-password",
+        "GRAMPS_TREE_ID": "your-tree-uuid"
+      }
+    }
+  }
+}
+```
+
+On Windows, `command` is
+`"C:\\Users\\you\\AppData\\Local\\gramps-web-mcp\\GrampsWeb.Mcp.exe"`: JSON
+needs each backslash doubled. Each client takes this entry the way it takes the
+Docker entry above.
+
+- Every [setting](#configuration) is an environment variable in `env`, such as
+  `GRAMPS_REFRESH_TOKEN` instead of the user name and password, or
+  `"GRAMPS_READ_ONLY": "true"`. Unlike in Docker, `localhost` in
+  `GRAMPS_API_URL` and the [upload](#media-upload) folders are those of your
+  own computer.
+- To update, close the client (Windows cannot replace a running binary), run
+  the same commands again and start the client: the archive name carries no
+  version, so the link always fetches the latest release, and the new binary
+  replaces the old one.
+- The binary is not notarized by Apple. `curl` does not mark the download, so
+  macOS runs it; if you downloaded the archive in a browser, macOS may refuse
+  to start the binary until you remove the mark with
+  `xattr -d com.apple.quarantine ~/.local/share/gramps-web-mcp/GrampsWeb.Mcp`.
+- On Linux it needs glibc and ICU (`libicu`), which desktop distributions
+  include; on Alpine or a minimal system, use Docker.
+- `SHA256SUMS` in each release lists the checksums of its files.
+
+The same binary can also serve the other machines over HTTP, like the image
+does; see [Transports](#transports). To run the server from a source checkout
+instead, see
 [Local development](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md#local-development) in
 the developer guide.
 

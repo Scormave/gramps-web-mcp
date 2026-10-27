@@ -1,7 +1,7 @@
 name: License key expiry
 
 # ImageSharp 4 refuses to compile the server in Release without a valid Six Labors
-# license key, so CI, Docker and MCPB builds stop when GrampsWeb.Mcp/sixlabors.lic
+# license key, so CI, Docker and release asset builds stop when GrampsWeb.Mcp/sixlabors.lic
 # expires. Renewal opens 90 days before the expiry date: from then on this workflow
 # keeps one open issue as a reminder, and in the last 30 days it also fails.
 on:
@@ -40,7 +40,7 @@ jobs:
             --jq "map(select(.title == \"$title\")) | length")
           if [ "$open" -eq 0 ]; then
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "\
-          \`GrampsWeb.Mcp/sixlabors.lic\` expires on $expiry_date. After that, Release builds in CI, Docker and the MCPB workflow fail; binaries already built keep working.
+          \`GrampsWeb.Mcp/sixlabors.lic\` expires on $expiry_date. After that, Release builds in CI, Docker and the release assets workflow fail; binaries already built keep working.
 
           To renew, apply again at https://licensing.sixlabors.com/ with the same email, for the assemblies \`GrampsWeb.Mcp\` and \`GrampsWeb.Mcp.Tests\`, and replace \`GrampsWeb.Mcp/sixlabors.lic\` with the new key. See \`GrampsWeb.Mcp/docs/RELEASING.md\`."
           fi

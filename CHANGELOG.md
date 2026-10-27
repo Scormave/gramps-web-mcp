@@ -45,28 +45,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   tool descriptions, prompts and the server instructions may name only
   registered tools, and the instructions of each profile only the tools
   it publishes
-- Release checks: on a `v*` tag, the Docker, MCPB and Gitea workflows
-  first run `scripts/check-release-version.sh`, which fails unless the
-  tag matches the csproj `<Version>` and `CHANGELOG.md` has a dated
-  section for it, so a tag without the release commit publishes nothing.
+- Release checks: on a `v*` tag, the Docker, release assets and Gitea
+  workflows first run `scripts/check-release-version.sh`, which fails
+  unless the tag matches the csproj `<Version>` and `CHANGELOG.md` has a
+  dated section for it, so a tag without the release commit publishes
+  nothing.
   A test keeps `server.json`, the changelog compare links and the
-  `pack-mcpb.sh` examples on the csproj version
+  `pack-release.sh` examples on the csproj version
 - Image scan: every Monday a workflow scans the published Docker images
   of the latest release and `latest` with Trivy, shows HIGH and CRITICAL
   vulnerabilities that have a fix in code scanning, and fails when it
   finds any
 - Smoke test: before the Docker workflow pushes an image, and before the
-  MCPB workflow attaches bundles to a release, `scripts/smoke-test.py`
-  starts the built server against a stand-in for Gramps Web and runs
-  MCP over it. The image is checked over HTTP (API key, origin check,
-  `HEALTHCHECK` command) and stdio; the `linux-x64` and `osx-arm64`
-  bundles are started from their manifest with the default settings
-  passed as Claude Desktop passes them, which would have caught the
-  2.5.0 `${HOME}` bug. A manual run of the MCPB workflow on a branch
-  packs and smoke-tests the bundles without a release
+  release assets workflow attaches bundles to a release,
+  `scripts/smoke-test.py` starts the built server against a stand-in for
+  Gramps Web and runs MCP over it. The image is checked over HTTP (API
+  key, origin check, `HEALTHCHECK` command) and stdio; the `linux-x64`
+  and `osx-arm64` bundles are started from their manifest with the
+  default settings passed as Claude Desktop passes them, which would
+  have caught the 2.5.0 `${HOME}` bug. A manual run of the release
+  assets workflow on a branch packs and smoke-tests the bundles without
+  a release
 - `delete_object` and `undo_change` carry the tool metadata
   `anthropic/requiresUserInteraction`, so clients that honour it ask
   their own permission before the call
+- Server binaries: each release also carries the self-contained server
+  for `osx-arm64`, `osx-x64`, `win-x64`, `linux-x64` and `linux-arm64`
+  as `gramps-web-mcp-<rid>.tar.gz` (`.zip` for Windows), the same
+  single file the MCPB bundles hold, so MCP clients other than Claude
+  Desktop can start it over stdio without Docker or .NET. The names
+  carry no version, so `releases/latest/download/<name>` always fetches
+  the newest one, and `SHA256SUMS` lists the checksums of the release
+  files. The smoke test starts the `linux-x64` and `osx-arm64` binaries
+  from their archives with only the Gramps settings in the environment.
+  The README shows how to download, configure and update them. The MCPB
+  workflow and `scripts/pack-mcpb.sh`, which now pack both, are renamed
+  `release-assets.yml` ("Release assets") and `scripts/pack-release.sh`
 
 ### Changed
 

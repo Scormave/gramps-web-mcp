@@ -1,4 +1,4 @@
-name: MCPB Release
+name: Release assets
 
 on:
   push:
@@ -22,14 +22,14 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: ./scripts/check-release-version.sh "$RELEASE_TAG"
 
-  build-mcpb:
-    name: Pack MCPB (${{ matrix.rid }})
+  build:
+    name: Pack (${{ matrix.rid }})
     needs: release-version
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        # smoke: the runner can start this bundle's binary itself.
+        # smoke: the runner can start this platform's binary itself.
         include:
           - rid: osx-arm64
             runner: macos-latest
@@ -68,9 +68,9 @@ jobs:
       - name: Install MCPB CLI
         run: npm install -g @anthropic-ai/mcpb
 
-      - name: Pack MCPB bundle
+      - name: Pack MCPB bundle and binary archive
         shell: bash
-        run: ./scripts/pack-mcpb.sh "${{ matrix.rid }}" "${{ steps.version.outputs.version }}"
+        run: ./scripts/pack-release.sh "${{ matrix.rid }}" "${{ steps.version.outputs.version }}"
 
       - name: Smoke-test the bundle
         if: ${{ matrix.smoke }}
@@ -81,29 +81,43 @@ jobs:
         run: |
           python3 scripts/smoke-test.py mcpb \
             "dist/gramps-web-mcp-claude-desktop-${RID}-v${VERSION}.mcpb" --version "$VERSION"
+          python3 scripts/smoke-test.py archive "dist/gramps-web-mcp-${RID}.tar.gz" --version "$VERSION"
 
-      - name: Upload MCPB artifact
+      - name: Upload release files
         uses: actions/upload-artifact@v7
         with:
-          name: mcpb-${{ matrix.rid }}
-          path: dist/*.mcpb
+          name: release-${{ matrix.rid }}
+          path: |
+            dist/*.mcpb
+            dist/*.tar.gz
+            dist/*.zip
           if-no-files-found: error
 
-  # A manual run on a branch packs and smoke-tests the bundles, and stops here.
+  # A manual run on a branch packs and smoke-tests the bundles and archives, and
+  # stops here.
   publish-release:
     name: Publish GitHub Release assets
-    needs: build-mcpb
+    needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8
         with:
-          pattern: mcpb-*
+          pattern: release-*
           merge-multiple: true
           path: dist
 
-      - name: Attach MCPB bundles to GitHub Release
+      - name: Write checksums
+        working-directory: dist
+        run: sha256sum *.mcpb *.tar.gz *.zip > SHA256SUMS
+
+      - name: Attach bundles, archives and checksums to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: dist/*.mcpb
+          files: |
+            dist/*.mcpb
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS
+          fail_on_unmatched_files: true
           generate_release_notes: true

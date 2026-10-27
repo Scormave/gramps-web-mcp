@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Smoke-test a built gramps-web-mcp: the Docker image or a Claude Desktop bundle.
+"""Smoke-test a built gramps-web-mcp: the Docker image, a Claude Desktop bundle or a binary archive.
 
-The release workflows run it on what they are about to publish, so an image or
-a bundle that does not start, does not answer MCP, or loses a setting on the
-way fails before anyone downloads it:
+The release workflows run it on what they are about to publish, so an image, a
+bundle or an archive that does not start, does not answer MCP, or loses a
+setting on the way fails before anyone downloads it:
 
     python3 scripts/smoke-test.py image IMAGE [--version X.Y.Z]
     python3 scripts/smoke-test.py mcpb BUNDLE.mcpb [--version X.Y.Z]
+    python3 scripts/smoke-test.py archive ARCHIVE.tar.gz|ARCHIVE.zip [--version X.Y.Z]
 
 Both start a stand-in for Gramps Web on 127.0.0.1 that answers the token and
 metadata routes and accepts only the user name and password the test sets.
@@ -39,6 +40,13 @@ setting with no default left as the literal ${user_config.…} placeholder.
 Then the MCP checks over stdio. manifest.json must carry the expected version
 and declare every setting its environment refers to.
 
+archive unpacks the release archive of the binary, which must hold only the
+binary (executable outside Windows), LICENSE and THIRD-PARTY-NOTICES.txt, all
+at its root. It starts the binary as
+a client configured with it would: no arguments, the Gramps settings in the
+environment and no MCP_TRANSPORT, so stdio must be the default. Then the MCP
+checks over stdio.
+
 Needs Python 3.9 or later and nothing else. Exit code: 0 when every check
 passes, 1 when one fails, 2 on a usage error.
 """
@@ -55,6 +63,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import threading
 import time
@@ -612,10 +621,46 @@ def smoke_mcpb(bundle: Path, version: str) -> None:
             raise
 
 
+def unpack(archive: Path, target: Path) -> None:
+    if archive.name.endswith(".zip"):
+        extract(archive, target)
+        return
+    with tarfile.open(archive) as tar:
+        # The data filter (Python 3.12+, backported to some older patch releases)
+        # refuses links and paths outside the target; executable bits stay.
+        if hasattr(tarfile, "data_filter"):
+            tar.extractall(target, filter="data")
+        else:
+            tar.extractall(target)
+
+
+def smoke_archive(archive: Path, version: str) -> None:
+    check(archive.is_file(), f"{archive} does not exist")
+    with tempfile.TemporaryDirectory(prefix="archive-smoke-") as tmp, \
+            FakeGramps(USERNAME, secrets.token_urlsafe(16)) as gramps:
+        heading(f"{archive.name} over stdio, as a client configured with the binary starts it")
+        target = Path(tmp)
+        unpack(archive, target)
+        binary_name = "GrampsWeb.Mcp.exe" if archive.name.endswith(".zip") else "GrampsWeb.Mcp"
+        expected = sorted((binary_name, "LICENSE", "THIRD-PARTY-NOTICES.txt"))
+        contents = sorted(path.name for path in target.iterdir())
+        check(contents == expected, f"{archive.name} holds {contents}, expected {expected}")
+        binary = target / binary_name
+        if os.name != "nt":
+            check(os.access(binary, os.X_OK), f"{archive.name} stores the server binary without the executable bit")
+        ok(f"{archive.name}: {', '.join(expected)} at its root")
+
+        try:
+            run_stdio([str(binary)], {**clean_environment(), **gramps_env(gramps)}, "stdio", version, read_only=False)
+        except CheckFailed:
+            print(f"--- stand-in Gramps Web requests ---\n" + "\n".join(gramps.log), flush=True)
+            raise
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
-    parser.add_argument("kind", choices=("image", "mcpb"), help="what to test")
-    parser.add_argument("target", help="the image reference, or the path of the .mcpb file")
+    parser.add_argument("kind", choices=("image", "mcpb", "archive"), help="what to test")
+    parser.add_argument("target", help="the image reference, or the path of the .mcpb file or the archive")
     parser.add_argument("--version", help="the version the server must report (default: the csproj <Version>)")
     args = parser.parse_args()
 
@@ -623,14 +668,16 @@ def main() -> int:
         version = args.version or project_version()
         if args.kind == "image":
             smoke_image(args.target, version)
-        else:
+        elif args.kind == "mcpb":
             smoke_mcpb(Path(args.target), version)
+        else:
+            smoke_archive(Path(args.target), version)
     except CheckFailed as ex:
         print(f"\nFAILED: {ex}", flush=True)
         if os.environ.get("GITHUB_ACTIONS") == "true":
             print(f"::error title=Smoke test::{ex}", flush=True)
         return 1
-    except (OSError, subprocess.SubprocessError, ValueError) as ex:
+    except (OSError, subprocess.SubprocessError, ValueError, tarfile.TarError, zipfile.BadZipFile) as ex:
         print(f"\nFAILED: {type(ex).__name__}: {ex}", flush=True)
         if os.environ.get("GITHUB_ACTIONS") == "true":
             print(f"::error title=Smoke test::{type(ex).__name__}: {ex}", flush=True)

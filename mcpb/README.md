@@ -17,23 +17,30 @@ Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```bash
 # macOS Apple Silicon
-./scripts/pack-mcpb.sh osx-arm64
+./scripts/pack-release.sh osx-arm64
 
 # macOS Intel
-./scripts/pack-mcpb.sh osx-x64
+./scripts/pack-release.sh osx-x64
 
 # Windows x64 (run on Windows or cross-publish from CI)
-./scripts/pack-mcpb.sh win-x64 2.6.0
+./scripts/pack-release.sh win-x64 2.6.0
 
 # Linux x64 / ARM64
-./scripts/pack-mcpb.sh linux-x64
-./scripts/pack-mcpb.sh linux-arm64
+./scripts/pack-release.sh linux-x64
+./scripts/pack-release.sh linux-arm64
 ```
 
 Output: `dist/gramps-web-mcp-claude-desktop-<rid>-v<version>.mcpb`
 
 The bundle holds the self-contained single-file server, `manifest.json`,
 `icon.png`, `LICENSE`, and `THIRD-PARTY-NOTICES.txt`.
+
+The script also packs the same server binary with `LICENSE` and
+`THIRD-PARTY-NOTICES.txt` for other MCP clients, as
+`dist/gramps-web-mcp-<rid>.tar.gz` (`.zip` for `win-x64`, which needs `zip` or
+`7z`). The name carries no version, so the release link
+`releases/latest/download/<name>` always fetches the newest one (see
+[Over stdio with the release binary](../README.md#over-stdio-with-the-release-binary)).
 
 Install by double-clicking the `.mcpb` file or dragging it into Claude Desktop.
 
@@ -74,9 +81,10 @@ permission to read that folder.
 
 ## GitHub Releases
 
-Tag pushes (`v*`) trigger [`.github/workflows/mcpb-release.yml`](../.github/workflows/mcpb-release.yml),
+Tag pushes (`v*`) trigger [`.github/workflows/release-assets.yml`](../.github/workflows/release-assets.yml),
 which builds five platform bundles (`osx-arm64`, `osx-x64`, `win-x64`, `linux-x64`,
-`linux-arm64`) and attaches them to the GitHub Release for that tag.
+`linux-arm64`) and the five binary archives, and attaches them to the GitHub
+Release for that tag with `SHA256SUMS`, their checksums.
 
 This workflow is independent of the Docker / MCP Registry pipeline in `docker.yml`.
 

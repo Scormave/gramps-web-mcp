@@ -17,8 +17,8 @@ public partial class ReleaseVersionTests
     private const string ImageName = "ghcr.io/scormave/gramps-web-mcp";
     private const string RepositoryUrl = "https://github.com/Scormave/gramps-web-mcp";
 
-    /// <summary>Files whose <c>pack-mcpb.sh &lt;rid&gt; x.y.z</c> examples name the current version.</summary>
-    private static readonly string[] PackExampleFiles = ["mcpb/README.md", "scripts/pack-mcpb.sh"];
+    /// <summary>Files whose <c>pack-release.sh &lt;rid&gt; x.y.z</c> examples name the current version.</summary>
+    private static readonly string[] PackExampleFiles = ["mcpb/README.md", "scripts/pack-release.sh"];
 
     private static readonly string Root = FindRepositoryRoot();
     private static readonly string ProjectVersion = ReadProjectVersion();
@@ -84,7 +84,7 @@ public partial class ReleaseVersionTests
     }
 
     [Fact]
-    public void Pack_Mcpb_Examples_Name_The_Project_Version()
+    public void Pack_Release_Examples_Name_The_Project_Version()
     {
         var stale = PackExampleFiles
             .SelectMany(path => PackExample().Matches(ReadText(path))
@@ -153,6 +153,6 @@ public partial class ReleaseVersionTests
     [GeneratedRegex(@"^\[([^\]]+)\]: (\S+)$", RegexOptions.Multiline)]
     private static partial Regex LinkDefinition();
 
-    [GeneratedRegex(@"pack-mcpb\.sh [\w-]+ (\d+\.\d+\.\d+\S*)")]
+    [GeneratedRegex(@"pack-release\.sh [\w-]+ (\d+\.\d+\.\d+\S*)")]
     private static partial Regex PackExample();
 }

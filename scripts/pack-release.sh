@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# Pack a platform-specific Claude Desktop MCPB bundle for gramps-web-mcp.
+# Pack a platform-specific Claude Desktop MCPB bundle for gramps-web-mcp, and
+# the same server binary as a plain archive for other MCP clients.
 #
 # Usage:
-#   ./scripts/pack-mcpb.sh <runtime-identifier> [version]
+#   ./scripts/pack-release.sh <runtime-identifier> [version]
 #
 # Examples:
-#   ./scripts/pack-mcpb.sh osx-arm64
-#   ./scripts/pack-mcpb.sh win-x64 2.6.0
-#   ./scripts/pack-mcpb.sh linux-x64
-#   ./scripts/pack-mcpb.sh linux-arm64 2.6.0
+#   ./scripts/pack-release.sh osx-arm64
+#   ./scripts/pack-release.sh win-x64 2.6.0
+#   ./scripts/pack-release.sh linux-x64
+#   ./scripts/pack-release.sh linux-arm64 2.6.0
 #
-# Requires: .NET 10 SDK. Optional: npm global @anthropic-ai/mcpb for validate/pack.
+# Requires: .NET 10 SDK; zip or 7z for the win-x64 archive. Optional: npm global
+# @anthropic-ai/mcpb for validate/pack.
 
 set -euo pipefail
 
@@ -94,3 +96,34 @@ else
 fi
 
 echo "Created: $OUTPUT_PATH"
+
+# The archive name carries no version, so .../releases/latest/download/<name>
+# always fetches the newest one, and the binary sits at its root, so unpacking a
+# newer release into the same folder replaces it in place.
+if [[ "$RID" == win-* ]]; then
+  ARCHIVE_NAME="gramps-web-mcp-${RID}.zip"
+else
+  ARCHIVE_NAME="gramps-web-mcp-${RID}.tar.gz"
+fi
+ARCHIVE_PATH="$DIST/$ARCHIVE_NAME"
+ARCHIVE_STAGING="$DIST/archive-staging-$RID"
+ARCHIVE_FILES=("$BINARY_NAME" LICENSE THIRD-PARTY-NOTICES.txt)
+
+echo "==> Packing $ARCHIVE_NAME"
+rm -rf "$ARCHIVE_STAGING" "$ARCHIVE_PATH"
+mkdir -p "$ARCHIVE_STAGING"
+cp -p "$STAGING/server/$BINARY_NAME" "$STAGING/LICENSE" "$STAGING/THIRD-PARTY-NOTICES.txt" "$ARCHIVE_STAGING/"
+
+if [[ "$RID" == win-* ]]; then
+  if command -v zip >/dev/null 2>&1; then
+    (cd "$ARCHIVE_STAGING" && zip -q "$ARCHIVE_PATH" "${ARCHIVE_FILES[@]}")
+  else
+    # Windows runners have 7-Zip but no zip.
+    (cd "$ARCHIVE_STAGING" && 7z a -tzip -bd "$ARCHIVE_PATH" "${ARCHIVE_FILES[@]}" >/dev/null)
+  fi
+else
+  # COPYFILE_DISABLE keeps macOS tar from adding ._ metadata entries.
+  COPYFILE_DISABLE=1 tar -czf "$ARCHIVE_PATH" -C "$ARCHIVE_STAGING" "${ARCHIVE_FILES[@]}"
+fi
+
+echo "Created: $ARCHIVE_PATH"

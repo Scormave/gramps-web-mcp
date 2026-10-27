@@ -11,7 +11,7 @@
 # <Version><version></Version>, and CHANGELOG.md has a dated
 # "## [<version>] - YYYY-MM-DD" section. The release workflows run it on v*
 # tags before they build anything; ReleaseVersionTests keeps server.json, the
-# changelog links and the pack-mcpb.sh examples in step with the csproj.
+# changelog links and the pack-release.sh examples in step with the csproj.
 
 set -euo pipefail
 

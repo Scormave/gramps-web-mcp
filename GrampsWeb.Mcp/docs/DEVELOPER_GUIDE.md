@@ -554,10 +554,11 @@ and exits with 0.
   amd64 image, then publish the Docker image to
   `ghcr.io/scormave/gramps-web-mcp` on pushes to `main`/`master` (`:latest`),
   `v*` tags (`:x.y.z`, plus the MCP Registry entry), or manual dispatch.
-- **GitHub Actions** (`.github/workflows/mcpb-release.yml`): on `v*` tags,
-  pack MCPB bundles for five platforms, smoke-test the `linux-x64` and
-  `osx-arm64` bundles, and attach them to the GitHub Release. A manual
-  dispatch on a branch packs and smoke-tests without a release.
+- **GitHub Actions** (`.github/workflows/release-assets.yml`): on `v*` tags,
+  pack MCPB bundles and plain binary archives for five platforms, smoke-test
+  the `linux-x64` and `osx-arm64` ones, and attach them to the GitHub Release
+  with `SHA256SUMS`. A manual dispatch on a branch packs and smoke-tests
+  without a release.
 - **GitHub Actions** (`.github/workflows/pages.yml`): deploy `site/` to GitHub
   Pages when it changes on `main`.
 - **GitHub Actions** (`.github/workflows/license-key.yml`): every Monday, open
@@ -570,11 +571,12 @@ and exits with 0.
   pinned to a commit SHA, not a tag.
 - **Gitea Actions** (`.gitea/workflows/docker.yml`): build and publish the
   Docker image to a private Gitea container registry.
-- On `v*` tags, `docker.yml`, `mcpb-release.yml` and the Gitea workflow
+- On `v*` tags, `docker.yml`, `release-assets.yml` and the Gitea workflow
   first run `scripts/check-release-version.sh`, which fails unless the tag
   matches the csproj `<Version>` and a dated `CHANGELOG.md` section;
   `ReleaseVersionTests` keeps `server.json`, the changelog links and the
-  `pack-mcpb.sh` examples on that version (see [RELEASING.md](RELEASING.md)).
+  `pack-release.sh` examples on that version (see
+  [RELEASING.md](RELEASING.md)).
 - `scripts/smoke-test.py` (Python 3.9+, standard library only) is the smoke
   test of both release workflows. It starts the built server against a
   stand-in for Gramps Web on `127.0.0.1` and runs MCP over it: `initialize`
@@ -583,7 +585,9 @@ and exits with 0.
   runs the image over HTTP, with the API key, origin check and `HEALTHCHECK`
   command, and over stdio; in `mcpb` mode it starts the bundle's binary from
   its `manifest.json` with the default `user_config` values passed literally,
-  as Claude Desktop does. Run it locally the same way (see
+  as Claude Desktop does; in `archive` mode it unpacks a binary archive and
+  starts the binary with only the Gramps settings in its environment. Run it
+  locally the same way (see
   [RELEASING.md](RELEASING.md#local-verification)).
 
 ### Six Labors license key
@@ -592,7 +596,7 @@ ImageSharp 4 checks for a Six Labors license key before it compiles
 `GrampsWeb.Mcp`. The free community key committed as
 `GrampsWeb.Mcp/sixlabors.lic` covers the `GrampsWeb.Mcp` and
 `GrampsWeb.Mcp.Tests` assemblies, and every build finds it on its own: local
-builds, CI, the Docker build stage and `scripts/pack-mcpb.sh`. Without it a
+builds, CI, the Docker build stage and `scripts/pack-release.sh`. Without it a
 Release build fails with "No Six Labors license found" and a Debug build only
 warns. `GrampsWeb.Mcp.IntegrationTests` uses ImageSharp only through
 `GrampsWeb.Mcp`, so the key needs no entry for it; referencing ImageSharp there

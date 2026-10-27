@@ -23,8 +23,8 @@ Registry publishing, so keep the version metadata aligned before tagging.
     default of `MCP_TRANSPORT=http` on port 8080 is documented in `README.md`
     instead, because a package transport of `streamable-http` would have to pin a
     fixed host port that not every deployment uses.
-- Update the example `pack-mcpb.sh <rid> x.y.z` commands in `mcpb/README.md`
-  and the usage comment of `scripts/pack-mcpb.sh`.
+- Update the example `pack-release.sh <rid> x.y.z` commands in `mcpb/README.md`
+  and the usage comment of `scripts/pack-release.sh`.
 - Check whether the Docker runtime surface changed:
   - Update `Dockerfile` comments, labels, exposed ports, health check, or default
     environment variables if needed.
@@ -41,8 +41,8 @@ Registry publishing, so keep the version metadata aligned before tagging.
     use; the test suite checks only the package names.
 - Check that the Six Labors license key in `GrampsWeb.Mcp/sixlabors.lic` is not
   due for renewal (see [Six Labors License Key](#six-labors-license-key)): Release
-  builds fail once it expires, so the tag would publish no Docker image and no
-  MCPB bundles.
+  builds fail once it expires, so the tag would publish no Docker image, no
+  MCPB bundles and no binary archives.
 - Check whether MCP Registry metadata changed:
   - Confirm `server.json` still matches the current schema and package layout.
   - Confirm the Docker image name in `server.json` matches the tag that will be
@@ -59,7 +59,7 @@ dotnet test gramps-web-mcp.sln --no-build -c Release --verbosity normal
 ```
 
 `ReleaseVersionTests` fails until `server.json`, the changelog and the
-`pack-mcpb.sh` examples follow the `<Version>` in the csproj: a dated
+`pack-release.sh` examples follow the `<Version>` in the csproj: a dated
 changelog section for it with entries, the compare links of every version,
 and the image tag in `server.json`.
 
@@ -76,19 +76,22 @@ the image test needs Docker on Linux:
 ```bash
 docker build -t gramps-web-mcp:smoke .
 python3 scripts/smoke-test.py image gramps-web-mcp:smoke
-./scripts/pack-mcpb.sh osx-arm64 x.y.z
+./scripts/pack-release.sh osx-arm64 x.y.z
 python3 scripts/smoke-test.py mcpb dist/gramps-web-mcp-claude-desktop-osx-arm64-vx.y.z.mcpb
+python3 scripts/smoke-test.py archive dist/gramps-web-mcp-osx-arm64.tar.gz
 ```
 
 `scripts/smoke-test.py` starts the server against a stand-in for Gramps Web
 and checks that it answers MCP: the image over HTTP, with its API key, origin
 check and `HEALTHCHECK` command, and over stdio; the bundle over stdio, started
-from its `manifest.json` with the default settings that Claude Desktop passes.
-Its header lists every check. A manual run of the MCPB workflow on `main`
-(`gh workflow run mcpb-release.yml`) packs and smoke-tests the bundles on
-GitHub without a release.
+from its `manifest.json` with the default settings that Claude Desktop passes;
+the binary archive over stdio, started with only the Gramps settings in its
+environment.
+Its header lists every check. A manual run of the release assets workflow on
+`main` (`gh workflow run release-assets.yml`) packs and smoke-tests the
+bundles and archives on GitHub without a release.
 
-If you have the MCPB CLI installed, `pack-mcpb.sh` validates the generated
+If you have the MCPB CLI installed, `pack-release.sh` validates the generated
 manifest before packing. The pack restores the project for one runtime, which
 adds runtime-only packages to `obj/project.assets.json`; run
 `dotnet restore gramps-web-mcp.sln` before testing again, or the
@@ -101,7 +104,7 @@ at minimum:
 
 ```bash
 git status
-git add CHANGELOG.md GrampsWeb.Mcp/GrampsWeb.Mcp.csproj server.json mcpb/README.md scripts/pack-mcpb.sh
+git add CHANGELOG.md GrampsWeb.Mcp/GrampsWeb.Mcp.csproj server.json mcpb/README.md scripts/pack-release.sh
 git commit -m "Release x.y.z"
 ./scripts/check-release-version.sh vx.y.z
 git tag vx.y.z
@@ -129,13 +132,15 @@ After the tag push, verify these GitHub Actions complete successfully:
     publishes `server.json` to the MCP Registry.
   - The `main` run builds and pushes `ghcr.io/scormave/gramps-web-mcp:latest`;
     tag runs never move `latest`.
-- `.github/workflows/mcpb-release.yml`
+- `.github/workflows/release-assets.yml`
   - Checks the tag with `scripts/check-release-version.sh`.
-  - Builds platform MCPB bundles for `osx-arm64`, `osx-x64`, `win-x64`,
-    `linux-x64`, and `linux-arm64`.
+  - Builds platform MCPB bundles and binary archives for `osx-arm64`,
+    `osx-x64`, `win-x64`, `linux-x64`, and `linux-arm64`.
   - Smoke-tests the `linux-x64` and `osx-arm64` bundles, which its runners can
-    start, as Claude Desktop starts them.
-  - Attaches `dist/*.mcpb` assets to the GitHub Release for the tag.
+    start, as Claude Desktop starts them, and their archives as other clients
+    start the binary.
+  - Attaches the bundles, the archives and `SHA256SUMS` to the GitHub Release
+    for the tag.
 
 If the Gitea mirror is in use, also verify `.gitea/workflows/docker.yml` pushes
 the equivalent tagged image to the configured container registry.
@@ -144,7 +149,8 @@ the equivalent tagged image to the configured container registry.
 
 - Open the GitHub Release for `vx.y.z`:
   - Confirm generated release notes look reasonable.
-  - Confirm all five MCPB assets are attached.
+  - Confirm all five MCPB bundles, all five binary archives and `SHA256SUMS`
+    are attached.
 - Check GHCR:
   - Confirm `ghcr.io/scormave/gramps-web-mcp:x.y.z` exists.
   - Confirm `latest` points at the image built from the release commit on the
