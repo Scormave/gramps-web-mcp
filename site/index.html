@@ -655,7 +655,7 @@ docker run -p 8080:8080 \
           <div id="panel-mcp" role="tabpanel" aria-labelledby="tab-mcp" class="tab-panel mt-4" hidden>
             <div class="overflow-hidden rounded-2xl border border-white/10 bg-ink-900 shadow-glow">
               <div class="flex items-center justify-between border-b border-white/5 px-4 py-2">
-                <span class="font-mono text-xs text-slate-500">stdio config</span>
+                <span class="font-mono text-xs text-slate-500">stdio config (Docker)</span>
                 <button type="button" class="copy-btn inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-400 transition hover:text-teal-400" data-copy="mcp-cmd" aria-label="Copy MCP config">
                   <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                   <span class="copy-label">Copy</span>
@@ -664,10 +664,17 @@ docker run -p 8080:8080 \
               <pre id="mcp-cmd" class="overflow-x-auto p-4 font-mono text-sm leading-relaxed text-teal-200/90"><code>{
   "mcpServers": {
     "gramps-web": {
-      "command": "dotnet",
-      "args": ["run", "--project", "/path/to/GrampsWeb.Mcp/GrampsWeb.Mcp.csproj"],
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "MCP_TRANSPORT=stdio",
+        "-e", "GRAMPS_API_URL",
+        "-e", "GRAMPS_USERNAME",
+        "-e", "GRAMPS_PASSWORD",
+        "-e", "GRAMPS_TREE_ID",
+        "ghcr.io/scormave/gramps-web-mcp:latest"
+      ],
       "env": {
-        "MCP_TRANSPORT": "stdio",
         "GRAMPS_API_URL": "https://your-gramps.example.com",
         "GRAMPS_USERNAME": "your-user",
         "GRAMPS_PASSWORD": "your-password",
@@ -677,7 +684,7 @@ docker run -p 8080:8080 \
   }
 }</code></pre>
             </div>
-            <p class="mt-3 text-sm text-slate-500">For refresh-token authentication, replace the username and password entries with <code class="text-slate-400">"GRAMPS_REFRESH_TOKEN": "your-refresh-token"</code>. For HTTP transport, point your client at <code class="text-slate-400">http://host:8080/mcp</code> and send <code class="text-slate-400">Authorization: Bearer &lt;MCP_API_KEY&gt;</code> when the key is set. Add <code class="text-slate-400">"GRAMPS_READ_ONLY": "true"</code> for a safer first session.</p>
+            <p class="mt-3 text-sm text-slate-500">The client starts the Docker image itself. For refresh-token authentication, replace the username and password entries in both lists with <code class="text-slate-400">GRAMPS_REFRESH_TOKEN</code>. Add <code class="text-slate-400">"-e", "GRAMPS_READ_ONLY=true"</code> before the image name for a safer first session. A server that already runs over HTTP needs no Docker on the client: point it at <code class="text-slate-400">http://host:8080/mcp</code> and send <code class="text-slate-400">Authorization: Bearer &lt;MCP_API_KEY&gt;</code>. The <a href="https://github.com/Scormave/gramps-web-mcp#other-mcp-clients" class="text-teal-400 hover:underline" rel="noopener" target="_blank">README</a> shows both setups for Claude Code, VS Code, Cursor, Codex, Antigravity CLI and Open WebUI.</p>
           </div>
         </div>
         <style>

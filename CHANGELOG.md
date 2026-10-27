@@ -74,6 +74,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `undo_change` with the deletion's transaction restores the record.
   The server instructions and the `get_recent_changes` description say
   when to use `undo_change` and where its transaction number comes from
+- The README shows how to connect Claude Code, VS Code, Cursor, Codex,
+  Antigravity CLI and Open WebUI: over HTTP to a running server with the
+  API key, or over stdio with the client starting the Docker image. It
+  replaces the `dotnet run` example, which needed a source checkout and
+  the .NET SDK; the GitHub Pages quick start follows
 
 ## [2.6.0] - 2026-10-16
 

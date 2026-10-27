@@ -162,7 +162,8 @@ Basic setup:
 
 For the easiest pairing, run Gramps Web and `gramps-web-mcp` on the same Unraid
 Docker network and set `GRAMPS_API_URL` to the Gramps Web container URL. The MCP
-endpoint for clients is `http://<unraid-host>:<mapped-port>/mcp`.
+endpoint for clients is `http://<unraid-host>:<mapped-port>/mcp`; see
+[Other MCP clients](#other-mcp-clients) to connect them.
 
 ### Gramps Web + MCP (Docker Compose)
 
@@ -212,18 +213,151 @@ To build a bundle locally:
 ./scripts/pack-mcpb.sh osx-arm64   # or osx-x64, win-x64, linux-x64, linux-arm64
 ```
 
-### MCP client configuration (manual)
+### Other MCP clients
 
-**stdio** (e.g. Claude Desktop, Cursor):
+Other MCP clients, such as Claude Code, VS Code, Cursor, Codex, Antigravity CLI
+and Open WebUI, connect in one of two ways:
+
+- **Over HTTP** to a server that already runs in [Docker](#docker), on
+  [Unraid](#unraid-installation) or with
+  [Docker Compose](#gramps-web--mcp-docker-compose). Each client needs only the
+  server's address and API key, nothing is installed on the client's machine,
+  and all clients share the one server.
+- **Over stdio**: the client starts the server in Docker for itself. Each
+  machine needs Docker and the Gramps Web credentials.
+
+Claude Desktop connects to servers added by URL from Anthropic's cloud, not
+from your computer, so it cannot reach a server on your home network. Use the
+[MCPB extension](#claude-desktop-mcpb-extension) there.
+
+#### Over HTTP
+
+Set `MCP_API_KEY` on the server (see [HTTP authentication](#http-authentication)),
+then give each client the address and the key. The examples use
+`http://192.168.1.10:8080/mcp` and `your-secret-api-key`; replace both with
+your own.
+
+**Claude Code:**
+
+```bash
+claude mcp add --transport http --scope user gramps-web http://192.168.1.10:8080/mcp \
+  --header "Authorization: Bearer your-secret-api-key"
+```
+
+**VS Code**, in the user `mcp.json` or a workspace's `.vscode/mcp.json`. VS Code
+asks for the key when the server starts for the first time:
+
+```json
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "gramps-web-mcp-key",
+      "description": "Gramps Web MCP API key",
+      "password": true
+    }
+  ],
+  "servers": {
+    "gramps-web": {
+      "type": "http",
+      "url": "http://192.168.1.10:8080/mcp",
+      "headers": { "Authorization": "Bearer ${input:gramps-web-mcp-key}" }
+    }
+  }
+}
+```
+
+**Cursor**, in `~/.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "gramps-web": {
-      "command": "dotnet",
-      "args": ["run", "--project", "/path/to/gramps-web-mcp/GrampsWeb.Mcp/GrampsWeb.Mcp.csproj"],
+      "url": "http://192.168.1.10:8080/mcp",
+      "headers": { "Authorization": "Bearer your-secret-api-key" }
+    }
+  }
+}
+```
+
+**Codex**, in `~/.codex/config.toml`. Codex reads the key from the environment
+variable that `bearer_token_env_var` names, so set `GRAMPS_WEB_MCP_KEY` before
+you start it:
+
+```toml
+[mcp_servers.gramps-web]
+url = "http://192.168.1.10:8080/mcp"
+bearer_token_env_var = "GRAMPS_WEB_MCP_KEY"
+```
+
+**Antigravity CLI**, in `~/.gemini/config/mcp_config.json`. Gemini CLI takes
+the same entry in `~/.gemini/settings.json`, with `httpUrl` in place of
+`serverUrl`:
+
+```json
+{
+  "mcpServers": {
+    "gramps-web": {
+      "serverUrl": "http://192.168.1.10:8080/mcp",
+      "headers": { "Authorization": "Bearer your-secret-api-key" }
+    }
+  }
+}
+```
+
+**Open WebUI** 0.6.31 or later: an administrator opens **Settings → Admin →
+Integrations**, and under **External Tool Servers** adds a connection of type
+**MCP (Streamable HTTP)** with the server URL, auth **Bearer** and the API key
+in **Key**. Open WebUI connects from its own container, where `localhost` is
+that container: use the host's address, or the MCP container's name when both
+share a Docker network.
+
+Keep in mind:
+
+- Plain HTTP carries the key and the tree data unencrypted. Keep the port on a
+  network you trust, and from elsewhere connect to that network through a VPN
+  rather than publishing the port on the internet.
+- The Cursor and Antigravity CLI files hold the key itself, so keep them out of
+  a project's repository.
+- Every client works as the Gramps Web account the server is configured with,
+  and Gramps Web records all their edits under that account.
+- Over stateless HTTP, the default, `delete_object` and `undo_change` cannot
+  show their confirmation dialog; see
+  [Confirming deletes and undos](#confirming-deletes-and-undos).
+
+To check the address and the key from a terminal, send an `initialize` request.
+The key also works as `X-Api-Key: <key>`:
+
+```bash
+curl -X POST http://192.168.1.10:8080/mcp \
+  -H "Authorization: Bearer $MCP_API_KEY" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}},"id":1}'
+```
+
+#### Over stdio in Docker
+
+The client starts a container for each session and removes it when the session
+ends. `MCP_TRANSPORT=stdio` is required because the image defaults to HTTP, and
+`-e NAME` without a value hands the container the variable from `env`, so the
+password stays off the `docker` command line:
+
+```json
+{
+  "mcpServers": {
+    "gramps-web": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "MCP_TRANSPORT=stdio",
+        "-e", "GRAMPS_API_URL",
+        "-e", "GRAMPS_USERNAME",
+        "-e", "GRAMPS_PASSWORD",
+        "-e", "GRAMPS_TREE_ID",
+        "ghcr.io/scormave/gramps-web-mcp:latest"
+      ],
       "env": {
-        "MCP_TRANSPORT": "stdio",
         "GRAMPS_API_URL": "https://your-gramps.example.com",
         "GRAMPS_USERNAME": "your-user",
         "GRAMPS_PASSWORD": "your-password",
@@ -234,25 +368,37 @@ To build a bundle locally:
 }
 ```
 
-To authenticate with a refresh token, omit `GRAMPS_USERNAME` and
-`GRAMPS_PASSWORD` from `env` and add
-`"GRAMPS_REFRESH_TOKEN": "your-refresh-token"` instead.
+- Cursor (`~/.cursor/mcp.json`), Antigravity CLI
+  (`~/.gemini/config/mcp_config.json`) and Gemini CLI
+  (`~/.gemini/settings.json`) take this entry as it is.
+- Claude Code: pass the `gramps-web` object to
+  `claude mcp add-json --scope user gramps-web '<object>'`.
+- VS Code: put the entry under `servers` instead of `mcpServers` and add
+  `"type": "stdio"`.
+- Codex: put the same `command`, `args` and `env` under
+  `[mcp_servers.gramps-web]` in `~/.codex/config.toml`.
+- Open WebUI connects over HTTP only.
 
-To run a stdio server in read-only mode, add `"GRAMPS_READ_ONLY": "true"` to `env`.
+Before the first start:
 
-**HTTP** (remote / Docker):
+- Pull the image once with `docker pull ghcr.io/scormave/gramps-web-mcp:latest`.
+  Some clients give a server only a few seconds to start, too few for the
+  download.
+- Inside the container `localhost` is the container itself. If Gramps Web runs
+  on the same computer, use `host.docker.internal` in `GRAMPS_API_URL`; on
+  Linux, also add `"--add-host=host.docker.internal:host-gateway"` to `args`.
+- For a refresh token, replace `GRAMPS_USERNAME` and `GRAMPS_PASSWORD` with
+  `GRAMPS_REFRESH_TOKEN` in both lists. For read-only mode, add
+  `"-e", "GRAMPS_READ_ONLY=true"` before the image name; other
+  [settings](#configuration) go the same way.
+- [Uploads](#media-upload) read files inside the container, so mount the
+  upload folder with `-v`.
 
-Point your MCP client at `http://host:8080/mcp` with Streamable HTTP transport.
-When `MCP_API_KEY` is set, send it as `Authorization: Bearer <key>` or
-`X-Api-Key: <key>` on every MCP request.
+To run the server from a source checkout instead, see
+[Local development](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md#local-development) in
+the developer guide.
 
-```bash
-curl -X POST http://host:8080/mcp \
-  -H "Authorization: Bearer $MCP_API_KEY" \
-  -H "Accept: application/json, text/event-stream" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}},"id":1}'
-```
+#### Images for vision-capable agents
 
 Vision-capable agents can read opt-in media through `read_media`
 or through binary MCP resources such as
