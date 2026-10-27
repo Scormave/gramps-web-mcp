@@ -550,12 +550,14 @@ and exits with 0.
 - **Dependabot** (`.github/dependabot.yml`): weekly pull requests that update
   NuGet packages, GitHub Actions and the Gramps Web image of the integration
   tests.
-- **GitHub Actions** (`.github/workflows/docker.yml`): test, then publish the
-  Docker image to `ghcr.io/scormave/gramps-web-mcp` on pushes to
-  `main`/`master` (`:latest`), `v*` tags (`:x.y.z`, plus the MCP Registry
-  entry), or manual dispatch.
+- **GitHub Actions** (`.github/workflows/docker.yml`): test, smoke-test the
+  amd64 image, then publish the Docker image to
+  `ghcr.io/scormave/gramps-web-mcp` on pushes to `main`/`master` (`:latest`),
+  `v*` tags (`:x.y.z`, plus the MCP Registry entry), or manual dispatch.
 - **GitHub Actions** (`.github/workflows/mcpb-release.yml`): on `v*` tags,
-  pack MCPB bundles for five platforms and attach them to the GitHub Release.
+  pack MCPB bundles for five platforms, smoke-test the `linux-x64` and
+  `osx-arm64` bundles, and attach them to the GitHub Release. A manual
+  dispatch on a branch packs and smoke-tests without a release.
 - **GitHub Actions** (`.github/workflows/pages.yml`): deploy `site/` to GitHub
   Pages when it changes on `main`.
 - **GitHub Actions** (`.github/workflows/license-key.yml`): every Monday, open
@@ -573,6 +575,16 @@ and exits with 0.
   matches the csproj `<Version>` and a dated `CHANGELOG.md` section;
   `ReleaseVersionTests` keeps `server.json`, the changelog links and the
   `pack-mcpb.sh` examples on that version (see [RELEASING.md](RELEASING.md)).
+- `scripts/smoke-test.py` (Python 3.9+, standard library only) is the smoke
+  test of both release workflows. It starts the built server against a
+  stand-in for Gramps Web on `127.0.0.1` and runs MCP over it: `initialize`
+  with the expected version, the tool, prompt and resource lists, and a
+  `get_reference` call that reads the stand-in's metadata. In `image` mode it
+  runs the image over HTTP, with the API key, origin check and `HEALTHCHECK`
+  command, and over stdio; in `mcpb` mode it starts the bundle's binary from
+  its `manifest.json` with the default `user_config` values passed literally,
+  as Claude Desktop does. Run it locally the same way (see
+  [RELEASING.md](RELEASING.md#local-verification)).
 
 ### Six Labors license key
 

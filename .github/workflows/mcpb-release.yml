@@ -29,15 +29,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # smoke: the runner can start this bundle's binary itself.
         include:
           - rid: osx-arm64
             runner: macos-latest
+            smoke: true
           - rid: osx-x64
             runner: macos-latest
           - rid: win-x64
             runner: windows-latest
           - rid: linux-x64
             runner: ubuntu-latest
+            smoke: true
           - rid: linux-arm64
             runner: ubuntu-latest
 
@@ -69,6 +72,16 @@ jobs:
         shell: bash
         run: ./scripts/pack-mcpb.sh "${{ matrix.rid }}" "${{ steps.version.outputs.version }}"
 
+      - name: Smoke-test the bundle
+        if: ${{ matrix.smoke }}
+        shell: bash
+        env:
+          RID: ${{ matrix.rid }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 scripts/smoke-test.py mcpb \
+            "dist/gramps-web-mcp-claude-desktop-${RID}-v${VERSION}.mcpb" --version "$VERSION"
+
       - name: Upload MCPB artifact
         uses: actions/upload-artifact@v7
         with:
@@ -76,9 +89,11 @@ jobs:
           path: dist/*.mcpb
           if-no-files-found: error
 
+  # A manual run on a branch packs and smoke-tests the bundles, and stops here.
   publish-release:
     name: Publish GitHub Release assets
     needs: build-mcpb
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8

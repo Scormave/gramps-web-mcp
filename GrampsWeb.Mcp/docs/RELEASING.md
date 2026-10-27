@@ -70,12 +70,23 @@ runs them too:
 GRAMPS_INTEGRATION_TESTS=true dotnet test GrampsWeb.Mcp.IntegrationTests --no-build -c Release
 ```
 
-Optionally smoke-test packaging before tagging:
+Optionally smoke-test packaging before tagging, as the release workflows do;
+the image test needs Docker on Linux:
 
 ```bash
-docker build -t ghcr.io/scormave/gramps-web-mcp:x.y.z .
+docker build -t gramps-web-mcp:smoke .
+python3 scripts/smoke-test.py image gramps-web-mcp:smoke
 ./scripts/pack-mcpb.sh osx-arm64 x.y.z
+python3 scripts/smoke-test.py mcpb dist/gramps-web-mcp-claude-desktop-osx-arm64-vx.y.z.mcpb
 ```
+
+`scripts/smoke-test.py` starts the server against a stand-in for Gramps Web
+and checks that it answers MCP: the image over HTTP, with its API key, origin
+check and `HEALTHCHECK` command, and over stdio; the bundle over stdio, started
+from its `manifest.json` with the default settings that Claude Desktop passes.
+Its header lists every check. A manual run of the MCPB workflow on `main`
+(`gh workflow run mcpb-release.yml`) packs and smoke-tests the bundles on
+GitHub without a release.
 
 If you have the MCPB CLI installed, `pack-mcpb.sh` validates the generated
 manifest before packing. The pack restores the project for one runtime, which
@@ -113,6 +124,7 @@ After the tag push, verify these GitHub Actions complete successfully:
 - `.github/workflows/docker.yml` (one run for the `main` push, one for the tag)
   - The tag run first checks the tag with `scripts/check-release-version.sh`.
   - Runs tests.
+  - Builds the amd64 image and smoke-tests it before it pushes anything.
   - The tag run builds and pushes `ghcr.io/scormave/gramps-web-mcp:x.y.z` and
     publishes `server.json` to the MCP Registry.
   - The `main` run builds and pushes `ghcr.io/scormave/gramps-web-mcp:latest`;
@@ -121,6 +133,8 @@ After the tag push, verify these GitHub Actions complete successfully:
   - Checks the tag with `scripts/check-release-version.sh`.
   - Builds platform MCPB bundles for `osx-arm64`, `osx-x64`, `win-x64`,
     `linux-x64`, and `linux-arm64`.
+  - Smoke-tests the `linux-x64` and `osx-arm64` bundles, which its runners can
+    start, as Claude Desktop starts them.
   - Attaches `dist/*.mcpb` assets to the GitHub Release for the tag.
 
 If the Gitea mirror is in use, also verify `.gitea/workflows/docker.yml` pushes
@@ -172,6 +186,9 @@ The alerts close on their own once a scan no longer finds them.
 - Do not move an existing release tag unless you are certain nobody has consumed
   it yet.
 - Prefer fixing the issue in a new patch release.
+- A failed smoke test stops its workflow before it publishes anything. The
+  step's log shows the checks that passed, the one that failed, the server's
+  log and the requests the stand-in Gramps Web received.
 - If a workflow failed before publishing public artifacts, fix the branch and
   re-run the failed workflow or push a replacement tag only after confirming the
   failed tag was not used externally.

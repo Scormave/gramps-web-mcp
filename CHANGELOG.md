@@ -55,6 +55,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   of the latest release and `latest` with Trivy, shows HIGH and CRITICAL
   vulnerabilities that have a fix in code scanning, and fails when it
   finds any
+- Smoke test: before the Docker workflow pushes an image, and before the
+  MCPB workflow attaches bundles to a release, `scripts/smoke-test.py`
+  starts the built server against a stand-in for Gramps Web and runs
+  MCP over it. The image is checked over HTTP (API key, origin check,
+  `HEALTHCHECK` command) and stdio; the `linux-x64` and `osx-arm64`
+  bundles are started from their manifest with the default settings
+  passed as Claude Desktop passes them, which would have caught the
+  2.5.0 `${HOME}` bug. A manual run of the MCPB workflow on a branch
+  packs and smoke-tests the bundles without a release
 - `delete_object` and `undo_change` carry the tool metadata
   `anthropic/requiresUserInteraction`, so clients that honour it ask
   their own permission before the call
