@@ -83,8 +83,10 @@ permission to read that folder.
 
 Tag pushes (`v*`) trigger [`.github/workflows/release-assets.yml`](../.github/workflows/release-assets.yml),
 which builds five platform bundles (`osx-arm64`, `osx-x64`, `win-x64`, `linux-x64`,
-`linux-arm64`) and the five binary archives, and attaches them to the GitHub
-Release for that tag with `SHA256SUMS`, their checksums.
+`linux-arm64`) and the five binary archives, writes their checksums to
+`SHA256SUMS`, attests all of these files (build provenance, checked with
+`gh attestation verify <file> --repo Scormave/gramps-web-mcp`) and attaches them
+to the GitHub Release for that tag.
 
 This workflow is independent of the Docker / MCP Registry pipeline in `docker.yml`.
 

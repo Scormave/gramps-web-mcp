@@ -99,6 +99,16 @@ docker run -p 8080:8080 \
 For refresh-token authentication, replace the `GRAMPS_USERNAME` and
 `GRAMPS_PASSWORD` lines with `-e GRAMPS_REFRESH_TOKEN=your-refresh-token`.
 
+Each published image has a build provenance attestation: a signed record,
+kept by GitHub and in the registry, of the repository, workflow and commit
+that built it. With the [GitHub CLI](https://cli.github.com/), check that an
+image was built by this repository's GitHub Actions (with Docker Desktop
+installed, start it first: `gh` asks it for registry credentials):
+
+```bash
+gh attestation verify oci://ghcr.io/scormave/gramps-web-mcp:latest --repo Scormave/gramps-web-mcp
+```
+
 The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
 container health, and other uptime monitors. It returns HTTP 200 when the MCP
 server can authenticate against Gramps Web, or HTTP 503 otherwise. Probes reuse
@@ -203,7 +213,9 @@ bundle for your platform:
 5. Complete installation and start a new chat.
 
 The extension runs locally over stdio and does not require the .NET SDK on your
-machine.
+machine. To check that a downloaded bundle came from this repository, see the
+attestation note under
+[the release binary](#over-stdio-with-the-release-binary).
 See [`mcpb/README.md`](mcpb/README.md) for packaging details and
 [`PRIVACY.md`](PRIVACY.md) for the privacy policy.
 
@@ -466,7 +478,12 @@ Docker entry above.
   `xattr -d com.apple.quarantine ~/.local/share/gramps-web-mcp/GrampsWeb.Mcp`.
 - On Linux it needs glibc and ICU (`libicu`), which desktop distributions
   include; on Alpine or a minimal system, use Docker.
-- `SHA256SUMS` in each release lists the checksums of its files.
+- `SHA256SUMS` in each release lists the checksums of its files, and every
+  file, the bundles included, has a build provenance attestation. To check a
+  download, save the archive instead of piping it to `tar` and run
+  `gh attestation verify gramps-web-mcp-osx-arm64.tar.gz --repo Scormave/gramps-web-mcp`
+  with the [GitHub CLI](https://cli.github.com/): it fails unless this
+  repository's release workflow built that file.
 
 The same binary can also serve the other machines over HTTP, like the image
 does; see [Transports](#transports). To run the server from a source checkout

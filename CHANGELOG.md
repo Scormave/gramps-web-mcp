@@ -81,6 +81,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   The README shows how to download, configure and update them. The MCPB
   workflow and `scripts/pack-mcpb.sh`, which now pack both, are renamed
   `release-assets.yml` ("Release assets") and `scripts/pack-release.sh`
+- Build provenance attestations: the release workflow attests every file
+  it attaches to a release (the MCPB bundles, the binary archives and
+  `SHA256SUMS`), and the image workflow attests each image it pushes,
+  with a copy in GHCR next to the image. With the GitHub CLI,
+  `gh attestation verify <file> --repo Scormave/gramps-web-mcp`, or
+  `oci://ghcr.io/scormave/gramps-web-mcp:<tag>` in place of the file,
+  checks that this repository's workflow built it. Releases up to 2.6.0
+  and the images pushed before this change have none
 
 ### Changed
 

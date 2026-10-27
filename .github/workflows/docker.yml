@@ -10,8 +10,10 @@ on:
   workflow_dispatch:
 
 # Each job gets only what it needs: only the image job can write packages and
-# only the registry job can request an OIDC token. Checkout keeps no token, so
-# the tests, the smoke test and mcp-publisher cannot read one from .git/config.
+# attestations, and only it and the registry job can request an OIDC token, to
+# sign the attestation and to log in to the MCP Registry. Checkout keeps no
+# token, so the tests, the smoke test and mcp-publisher cannot read one from
+# .git/config.
 permissions: {}
 
 jobs:
@@ -50,6 +52,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -93,6 +97,7 @@ jobs:
             type=semver,pattern={{version}}
 
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -100,6 +105,17 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # The attestation covers the multi-platform index by digest, so it holds
+      # for every tag of this push; GitHub keeps it and GHCR gets a copy next to
+      # the image. Storage records exist only for organization repositories.
+      - name: Attest the image
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
 
   mcp-registry:
     name: Publish to MCP Registry

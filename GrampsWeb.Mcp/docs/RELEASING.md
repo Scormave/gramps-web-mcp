@@ -132,6 +132,7 @@ After the tag push, verify these GitHub Actions complete successfully:
     publishes `server.json` to the MCP Registry.
   - The `main` run builds and pushes `ghcr.io/scormave/gramps-web-mcp:latest`;
     tag runs never move `latest`.
+  - Both runs attest the pushed image; the run summary links the attestation.
 - `.github/workflows/release-assets.yml`
   - Checks the tag with `scripts/check-release-version.sh`.
   - Builds platform MCPB bundles and binary archives for `osx-arm64`,
@@ -139,8 +140,8 @@ After the tag push, verify these GitHub Actions complete successfully:
   - Smoke-tests the `linux-x64` and `osx-arm64` bundles, which its runners can
     start, as Claude Desktop starts them, and their archives as other clients
     start the binary.
-  - Attaches the bundles, the archives and `SHA256SUMS` to the GitHub Release
-    for the tag.
+  - Attests the bundles, the archives and `SHA256SUMS`, then attaches them to
+    the GitHub Release for the tag.
 
 If the Gitea mirror is in use, also verify `.gitea/workflows/docker.yml` pushes
 the equivalent tagged image to the configured container registry.
@@ -151,10 +152,16 @@ the equivalent tagged image to the configured container registry.
   - Confirm generated release notes look reasonable.
   - Confirm all five MCPB bundles, all five binary archives and `SHA256SUMS`
     are attached.
+  - Download one archive and confirm
+    `gh attestation verify gramps-web-mcp-linux-x64.tar.gz --repo Scormave/gramps-web-mcp`
+    passes.
 - Check GHCR:
   - Confirm `ghcr.io/scormave/gramps-web-mcp:x.y.z` exists.
   - Confirm `latest` points at the image built from the release commit on the
     default branch.
+  - Confirm
+    `gh attestation verify oci://ghcr.io/scormave/gramps-web-mcp:x.y.z --repo Scormave/gramps-web-mcp`
+    passes.
 - Check the MCP Registry:
   - Confirm the published version is `x.y.z`.
   - Confirm the package identifier points to
@@ -195,6 +202,10 @@ The alerts close on their own once a scan no longer finds them.
 - A failed smoke test stops its workflow before it publishes anything. The
   step's log shows the checks that passed, the one that failed, the server's
   log and the requests the stand-in Gramps Web received.
+- If an attestation step fails, for example while Sigstore is down, re-run the
+  failed jobs. The release files are attached only after their attestation;
+  the image is already pushed, and the re-run pushes it again before it
+  attests, while the MCP Registry entry waits for the image job.
 - If a workflow failed before publishing public artifacts, fix the branch and
   re-run the failed workflow or push a replacement tag only after confirming the
   failed tag was not used externally.

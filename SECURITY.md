@@ -8,6 +8,23 @@ The Docker images of the latest release and of `latest` are scanned every
 week. A high or critical vulnerability with a fix in their Ubuntu packages or
 .NET libraries leads to a rebuilt image and a patch release.
 
+## Verifying downloads
+
+The release files (MCPB bundles, binary archives and `SHA256SUMS`) and the
+images in `ghcr.io/scormave/gramps-web-mcp` have build provenance
+attestations, signed through Sigstore for the GitHub Actions workflow that
+built them. The [GitHub CLI](https://cli.github.com/) checks a file or an
+image against this repository:
+
+```bash
+gh attestation verify gramps-web-mcp-linux-x64.tar.gz --repo Scormave/gramps-web-mcp
+gh attestation verify oci://ghcr.io/scormave/gramps-web-mcp:latest --repo Scormave/gramps-web-mcp
+```
+
+A passing check shows which workflow and commit built the file; it says
+nothing about vulnerabilities in the code itself. Releases up to 2.6.0 and
+the images pushed before attestations were added have none.
+
 ## Reporting a vulnerability
 
 **Please do not report security vulnerabilities through public GitHub issues.**
