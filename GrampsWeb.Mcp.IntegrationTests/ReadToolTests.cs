@@ -44,6 +44,36 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
         Assert.Contains(note.Handle, listed);
     }
 
+    // The gql description of list_objects promises this syntax; these two tests hold Gramps Web to it.
+    [IntegrationFact]
+    public async Task ListObjects_GqlComparesWithOneEqualsSignAndQuotedText()
+    {
+        var first = TestNames.Surname();
+        var man = await Session.CreateAsync("create_person", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "male" });
+        await Session.CreateAsync("create_person", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "female" });
+
+        var listed = await Session.CallAsync("list_objects", new { objectType = "people", gql = $"gender = 1 and primary_name.first_name = \"{first}\"" });
+        var error = await Session.CallErrorAsync("list_objects", new { objectType = "people", gql = $"gender == 1 and primary_name.first_name = \"{first}\"" });
+
+        Assert.Contains("Total: 1", listed);
+        Assert.Contains(man.Handle, listed);
+        Assert.Contains("Gramps API error 422", error);
+    }
+
+    [IntegrationFact]
+    public async Task ListObjects_GqlMatchesEventTypesByNumber()
+    {
+        var description = TestNames.Unique("birth");
+        var birth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1901", description });
+
+        var byNumber = await Session.CallAsync("list_objects", new { objectType = "events", gql = $"type.value = 12 and description = \"{description}\"" });
+        var byName = await Session.CallAsync("list_objects", new { objectType = "events", gql = $"type = \"Birth\" and description = \"{description}\"" });
+
+        Assert.Contains("Total: 1", byNumber);
+        Assert.Contains(birth.Handle, byNumber);
+        Assert.Equal("No events found.", byName);
+    }
+
     [IntegrationFact]
     public async Task ListObjects_InvalidGql_ReportsGrampsWebError()
     {

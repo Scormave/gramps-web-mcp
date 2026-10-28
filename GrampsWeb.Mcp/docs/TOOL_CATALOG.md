@@ -762,7 +762,7 @@ same summary and `handle | gramps_id` suffix as `search`. An empty page returns
 | `pagesize` | `int` | no | `20` | Page size (max 100) |
 | `grampsId` | `string?` | no | — | Filter by Gramps ID (I0001-style); not together with `rules` |
 | `sourceHandle` | `string?` | no | — | For citations only: filter by source |
-| `gql` | `string?` | no | — | Gramps QL expression |
+| `gql` | `string?` | no | — | Gramps QL expression: `=` for equality (`==` is a syntax error), text in double quotes, types as numbers (`type.value = 12` for Birth) |
 | `rules` | `object \| array \| string?` | no | — | Gramps filter rules, applied on the server before `gql`; not for tags |
 | `sort` | `string?` | no | — | Sort field (prefix `-` for descending) |
 

@@ -91,7 +91,11 @@ public static class SearchTools
         string? grampsId = null,
         [Description("With objectType citations only: list just the citations of this source; combined with gql by and (optional). " + ToolDescriptionFragments.HandleDiscovery)]
         string? sourceHandle = null,
-        [Description("Filter in Gramps Query Language, run on the server, e.g. gender == 1 or media_list.length >= 1 (optional).")]
+        [Description(
+            "Filter in Gramps Query Language, run on the server: field = value with a single = (not ==), also !=, <, <=, >, >=, " +
+            "~ (contains), !~, and, or and parentheses; text goes in double quotes. Types are numbers, not names, e.g. event " +
+            "type.value = 12 Birth, 13 Death, 1 Marriage, 15 Baptism, 19 Burial. Examples: gender = 1 (male), " +
+            "primary_name.first_name = \"Anna\", media_list.length >= 1 (optional).")]
         string? gql = null,
         [Description(
             "Gramps filter rules, run on the server before gql (a record must match both): " +

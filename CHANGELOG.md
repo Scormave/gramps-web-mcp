@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `list_objects`: the `gql` description gave the example `gender == 1`,
+  which Gramps Web rejects as a syntax error. It now shows `=` for
+  equality, lists the operators, says that text goes in double quotes
+  and that types are numbers (`type.value = 12` for Birth): a type name
+  matches nothing, and unquoted non-ASCII text fails to parse
+
 ## [2.7.0] - 2026-10-27
 
 ### Added
