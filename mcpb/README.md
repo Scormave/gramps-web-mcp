@@ -23,7 +23,7 @@ Prerequisites: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 ./scripts/pack-release.sh osx-x64
 
 # Windows x64 (run on Windows or cross-publish from CI)
-./scripts/pack-release.sh win-x64 2.6.0
+./scripts/pack-release.sh win-x64 2.7.0
 
 # Linux x64 / ARM64
 ./scripts/pack-release.sh linux-x64

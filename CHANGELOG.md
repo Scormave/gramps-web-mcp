@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-10-27
+
 ### Added
 
 - `undo_change`: undo one transaction listed by `get_recent_changes`, by
@@ -1025,7 +1027,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.2...v2.6.0
 [2.5.2]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.0...v2.5.1

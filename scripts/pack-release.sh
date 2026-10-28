@@ -7,9 +7,9 @@
 #
 # Examples:
 #   ./scripts/pack-release.sh osx-arm64
-#   ./scripts/pack-release.sh win-x64 2.6.0
+#   ./scripts/pack-release.sh win-x64 2.7.0
 #   ./scripts/pack-release.sh linux-x64
-#   ./scripts/pack-release.sh linux-arm64 2.6.0
+#   ./scripts/pack-release.sh linux-arm64 2.7.0
 #
 # Requires: .NET 10 SDK; zip or 7z for the win-x64 archive. Optional: npm global
 # @anthropic-ai/mcpb for validate/pack.
