@@ -94,6 +94,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   VS Code asks for the Gramps Web address, user name, password and tree
   ID when the server starts for the first time and keeps the password
   as a secret; Cursor adds the entry with placeholders to replace
+- "What to ask" in the README: twelve example requests in plain words,
+  from how two people are related to undoing the last edit, each with the
+  tools a typical run uses and what comes back. The GitHub Pages
+  features section shows six of them
 
 ### Changed
 

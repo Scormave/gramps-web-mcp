@@ -516,6 +516,45 @@
           html.light .feature-card h3 { color: #0f172a; }
           html.light .feature-card p { color: #64748b; }
         </style>
+
+        <div class="mx-auto mt-16 max-w-4xl">
+          <h3 id="ask-heading" class="text-center font-display text-2xl font-semibold text-white">What to ask</h3>
+          <p class="mt-2 text-center text-sm text-slate-400">Ask in your own words; the agent chooses the tools.</p>
+          <ul class="ask-list mt-6 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/5 bg-ink-800/60" aria-labelledby="ask-heading">
+            <li class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-6">
+              <p class="text-slate-100 sm:flex-1">“How is Ivan Petrov related to Maria García?”</p>
+              <p class="flex flex-wrap gap-1.5 sm:w-2/5 sm:shrink-0 sm:justify-end"><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">search</code><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">get_relations</code></p>
+            </li>
+            <li class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-6">
+              <p class="text-slate-100 sm:flex-1">“Who were Kenji Tanaka’s great-grandparents?”</p>
+              <p class="flex flex-wrap gap-1.5 sm:w-2/5 sm:shrink-0 sm:justify-end"><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">get_person_tree</code></p>
+            </li>
+            <li class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-6">
+              <p class="text-slate-100 sm:flex-1">“Who in the tree has no parents, spouse or children?”</p>
+              <p class="flex flex-wrap gap-1.5 sm:w-2/5 sm:shrink-0 sm:justify-end"><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">list_objects</code></p>
+            </li>
+            <li class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-6">
+              <p class="text-slate-100 sm:flex-1">“Transcribe the baptism scan O0012.”</p>
+              <p class="flex flex-wrap gap-1.5 sm:w-2/5 sm:shrink-0 sm:justify-end"><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">read_media</code></p>
+            </li>
+            <li class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-6">
+              <p class="text-slate-100 sm:flex-1">“Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber.”</p>
+              <p class="flex flex-wrap gap-1.5 sm:w-2/5 sm:shrink-0 sm:justify-end"><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">search</code><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">create_place</code><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">create_event</code><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">create_person</code><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">create_family</code></p>
+            </li>
+            <li class="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:gap-6">
+              <p class="text-slate-100 sm:flex-1">“What changed today? Undo the last edit.”</p>
+              <p class="flex flex-wrap gap-1.5 sm:w-2/5 sm:shrink-0 sm:justify-end"><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">get_recent_changes</code><code class="rounded bg-white/5 px-1.5 py-0.5 font-mono text-xs text-teal-300">undo_change</code></p>
+            </li>
+          </ul>
+          <p class="mt-4 text-center text-sm text-slate-500">The <a href="https://github.com/Scormave/gramps-web-mcp#what-to-ask" class="text-teal-400 hover:underline" rel="noopener" target="_blank">README</a> lists more requests and what each one returns.</p>
+        </div>
+        <style>
+          html.light #ask-heading { color: #0f172a; }
+          html.light .ask-list { background-color: white; border-color: #e7e5e4; }
+          html.light .ask-list > li:not([hidden]) ~ li:not([hidden]) { border-color: #e7e5e4; }
+          html.light .ask-list p.text-slate-100 { color: #0f172a; }
+          html.light .ask-list code { background-color: #f0fdfa; color: #0f766e; }
+        </style>
       </div>
     </section>
 
