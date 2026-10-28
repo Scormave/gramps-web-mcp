@@ -107,14 +107,16 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       # The attestation covers the multi-platform index by digest, so it holds
-      # for every tag of this push; GitHub keeps it and GHCR gets a copy next to
-      # the image. Storage records exist only for organization repositories.
+      # for every tag of this push. GitHub keeps it, and `gh attestation
+      # verify` reads it from there. No copy goes to GHCR: without the OCI
+      # referrers API it would add a `sha256-<digest>` tag for every push.
+      # Storage records exist only for organization repositories.
       - name: Attest the image
         uses: actions/attest@v4
         with:
           subject-name: ${{ steps.image.outputs.name }}
           subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          push-to-registry: false
           create-storage-record: false
 
   mcp-registry:

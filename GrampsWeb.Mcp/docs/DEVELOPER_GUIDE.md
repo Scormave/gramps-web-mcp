@@ -554,7 +554,7 @@ and exits with 0.
   amd64 image, then publish the Docker image to
   `ghcr.io/scormave/gramps-web-mcp` on pushes to `main`/`master` (`:latest`),
   `v*` tags (`:x.y.z`, plus the MCP Registry entry), or manual dispatch, and
-  attest it with `actions/attest` (build provenance, also pushed to GHCR).
+  attest it with `actions/attest` (build provenance, kept by GitHub only).
 - **GitHub Actions** (`.github/workflows/release-assets.yml`): on `v*` tags,
   pack MCPB bundles and plain binary archives for five platforms, smoke-test
   the `linux-x64` and `osx-arm64` ones, attest them and `SHA256SUMS`, and

@@ -140,8 +140,7 @@ For refresh-token authentication, replace the `GRAMPS_USERNAME` and
 `GRAMPS_PASSWORD` lines with `-e GRAMPS_REFRESH_TOKEN=your-refresh-token`.
 
 Each published image has a build provenance attestation: a signed record,
-kept by GitHub and in the registry, of the repository, workflow and commit
-that built it. With the [GitHub CLI](https://cli.github.com/), check that an
+kept by GitHub, of the repository, workflow and commit that built it. With the [GitHub CLI](https://cli.github.com/), check that an
 image was built by this repository's GitHub Actions (with Docker Desktop
 installed, start it first: `gh` asks it for registry credentials):
 
