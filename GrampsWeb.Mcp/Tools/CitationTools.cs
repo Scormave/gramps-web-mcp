@@ -75,30 +75,8 @@ public static class CitationTools
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(sourceHandle))
-                throw McpToolErrors.ValidationError("Error: sourceHandle is required");
-            if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
-                throw McpToolErrors.ValidationError(attributeError);
-            await KnownTypes.CheckSourceAttributesAsync(attributes, client);
-            var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
-
-            var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
-
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
-
-            var request = new CreateCitationRequest
-            {
-                Source = resolvedSourceHandle,
-                Page = page,
-                Confidence = confidenceLevel,
-                Date = dateRequest,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
-                NoteList = noteHandles,
-                TagList = tagHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
-                Private = isPrivate
-            };
-
+            var request = await BuildCitationRequestAsync(sourceHandle, page, confidence, date,
+                noteHandles, mediaHandles, tagHandles, attributes, isPrivate, client);
             var (handle, grampsId) = await client.PostMutationAsync("/api/citations/", request, "Citation");
             return ResponseEnvelope.CreateSuccess("Citation", handle, grampsId,
                 page, ResponseEnvelope.CitationCreateNextSteps(handle!));
@@ -107,6 +85,37 @@ public static class CitationTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>The checked request body of create_citation; create_records sends it too.</summary>
+    internal static async Task<CreateCitationRequest> BuildCitationRequestAsync(
+        string sourceHandle, FlexibleString? page, string confidence, string? date,
+        FlexibleHandleList? noteHandles, FlexibleMediaLinkList? mediaHandles, FlexibleHandleList? tagHandles,
+        FlexibleAttributeList? attributes, bool isPrivate, GrampsApiClient client)
+    {
+        if (string.IsNullOrWhiteSpace(sourceHandle))
+            throw McpToolErrors.ValidationError("Error: sourceHandle is required");
+        if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
+            throw McpToolErrors.ValidationError(attributeError);
+        await KnownTypes.CheckSourceAttributesAsync(attributes, client);
+        var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
+
+        var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
+
+        var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
+
+        return new CreateCitationRequest
+        {
+            Source = resolvedSourceHandle,
+            Page = page,
+            Confidence = confidenceLevel,
+            Date = dateRequest,
+            MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
+            NoteList = noteHandles,
+            TagList = tagHandles,
+            AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
+            Private = isPrivate
+        };
     }
 
     [McpServerTool(Title = "Update Citation", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]

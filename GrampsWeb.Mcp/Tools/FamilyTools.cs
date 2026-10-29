@@ -95,50 +95,64 @@ public static class FamilyTools
     {
         try
         {
-            if (relationshipType != null)
-                relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);
-
-            var childRefArr = (GrampsChildRef[]?)childRefs;
-            await KnownTypes.CheckChildRefsAsync(childRefArr, client);
-            var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
-            await EventRoles.CheckAsync(eventRefArr, client);
-            await KnownTypes.CheckAttributesAsync(attributes, client);
-            var resolvedFatherHandle = fatherHandle is null
-                ? null
-                : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
-            var resolvedMotherHandle = motherHandle is null
-                ? null
-                : await HandleResolver.ResolveToHandleAsync(motherHandle, client, "people");
-
-            var request = new CreateFamilyRequest
-            {
-                FatherHandle = resolvedFatherHandle,
-                MotherHandle = resolvedMotherHandle,
-                ChildRefList = childRefArr is { Length: > 0 } ? childRefArr : null,
-                EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
-                CitationList = citationHandles,
-                NoteList = noteHandles,
-                TagList = tagHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
-                Private = isPrivate,
-                Relationship = relationshipType
-            };
-
+            var request = await BuildFamilyRequestAsync(fatherHandle, motherHandle, relationshipType, childRefs, eventRefs,
+                mediaHandles, citationHandles, noteHandles, tagHandles, attributes, isPrivate, client);
             var (handle, grampsId) = await client.PostMutationAsync("/api/families/", request, "Family");
-            var relLabel = string.IsNullOrWhiteSpace(relationshipType)
-                ? "Unknown"
-                : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, relationshipType);
+            var relLabel = await FormatRelationshipAsync(request.Relationship, client);
             return ResponseEnvelope.CreateSuccess(
                 "Family", handle, grampsId,
                 relLabel, ResponseEnvelope.FamilyCreateNextSteps(handle,
-                    hasChildren: childRefArr is { Length: > 0 }, hasEvents: eventRefArr.Length > 0));
+                    hasChildren: request.ChildRefList is { Length: > 0 }, hasEvents: request.EventRefList is { Length: > 0 }));
         }
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
         }
     }
+
+    /// <summary>The checked request body of create_family; create_records sends it too.</summary>
+    internal static async Task<CreateFamilyRequest> BuildFamilyRequestAsync(
+        string? fatherHandle, string? motherHandle, string? relationshipType,
+        FlexibleChildRefList? childRefs, FlexibleEventRefList? eventRefs, FlexibleMediaLinkList? mediaHandles,
+        FlexibleHandleList? citationHandles, FlexibleHandleList? noteHandles, FlexibleHandleList? tagHandles,
+        FlexibleAttributeList? attributes, bool isPrivate, GrampsApiClient client)
+    {
+        if (relationshipType != null)
+            relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);
+
+        var childRefArr = (GrampsChildRef[]?)childRefs;
+        await KnownTypes.CheckChildRefsAsync(childRefArr, client);
+        var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
+        await EventRoles.CheckAsync(eventRefArr, client);
+        await KnownTypes.CheckAttributesAsync(attributes, client);
+        var resolvedFatherHandle = fatherHandle is null
+            ? null
+            : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
+        var resolvedMotherHandle = motherHandle is null
+            ? null
+            : await HandleResolver.ResolveToHandleAsync(motherHandle, client, "people");
+
+        return new CreateFamilyRequest
+        {
+            FatherHandle = resolvedFatherHandle,
+            MotherHandle = resolvedMotherHandle,
+            ChildRefList = childRefArr is { Length: > 0 } ? childRefArr : null,
+            EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
+            MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
+            CitationList = citationHandles,
+            NoteList = noteHandles,
+            TagList = tagHandles,
+            AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
+            Private = isPrivate,
+            Relationship = relationshipType
+        };
+    }
+
+    /// <summary>The label of a family's relationship type: Unknown when none is set.</summary>
+    internal static async Task<string> FormatRelationshipAsync(string? relationshipType, GrampsApiClient client) =>
+        string.IsNullOrWhiteSpace(relationshipType)
+            ? "Unknown"
+            : await GrampsDefaultTypeLabels.FormatFamilyRelationTypeAsync(client, relationshipType);
 
     [McpServerTool(Title = "Update Family", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(

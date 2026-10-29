@@ -122,6 +122,40 @@ public class UndoToolsTests
         Assert.DoesNotContain(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData(1, "conflicts: 0", "No conflicts")]
+    [InlineData(2, "conflicts: 1", "Person [handle: p1] was changed or deleted after this transaction added it.")]
+    public async Task Undo_CountsARecordChangedTwiceInTheTransactionOnce(int personConflicts, string header, string expected)
+    {
+        // Transaction 5 added person p1, then family f1, which linked p1 back in the same transaction. Gramps Web
+        // compares both changes of p1 with p1 now, so its first change conflicts even when nobody changed p1 later.
+        using var handler = new UndoServer();
+        handler.Get($"{HistoryPath}?old=true",
+            """
+            {
+              "id": 5, "description": "Add multiple objects", "undo": false, "timestamp": 1759242125.5,
+              "changes": [
+                {"id": 1, "obj_class": "Person", "trans_type": 0, "obj_handle": "p1", "old_data": null},
+                {"id": 2, "obj_class": "Person", "trans_type": 1, "obj_handle": "p1",
+                 "old_data": {"_class": "Person", "handle": "p1", "gramps_id": "I0001", "family_list": []}},
+                {"id": 3, "obj_class": "Family", "trans_type": 0, "obj_handle": "f1", "old_data": null}
+              ]
+            }
+            """);
+        var conflict = """{"object_class": "Person", "handle": "p1", "conflict_type": "object_changed"}""";
+        handler.Get(CheckPath,
+            $$"""{"transaction_id": 5, "conflicts": [{{string.Join(", ", Enumerable.Repeat(conflict, personConflicts))}}]}""");
+        handler.Get("/api/people/p1?keys=handle,backlinks&backlinks=true", """{"handle": "p1", "backlinks": {"family": ["f1"]}}""");
+
+        var result = await Undo(handler, dryRun: true);
+
+        Assert.Contains(header, result);
+        Assert.Contains(expected, result);
+        Assert.Single(result.Split('\n'), line => line.Contains("[handle: p1]") && line.StartsWith("   "));
+        Assert.Contains("   Delete Person [handle: p1]", result);
+        Assert.DoesNotContain("Restore the earlier version", result);
+    }
+
     [Fact]
     public async Task Undo_RefusesToDeleteARecordOthersNowLink()
     {
@@ -263,6 +297,37 @@ public class UndoToolsTests
         Assert.Contains("action: undone", result);
         Assert.Contains("   Restored the deleted Note N0001: [", result);
         Assert.Contains("] Born in Tver [handle: n1]", result);
+    }
+
+    [Fact]
+    public async Task DryRun_OfADeletion_NamesADeletedPersonWithTypedAttributes()
+    {
+        var handler = new UndoServer();
+        handler.Get($"{HistoryPath}?old=true",
+            """
+            {
+              "id": 5, "description": "Delete Person", "undo": false, "timestamp": 1759242125.5,
+              "changes": [
+                {"id": 1, "obj_class": "Person", "trans_type": 2, "obj_handle": "p1", "ref_handle": null,
+                 "old_data": {"_class": "Person", "handle": "p1", "gramps_id": "I0007", "gender": 0,
+                              "primary_name": {"_class": "Name", "first_name": "Maria",
+                                               "type": {"_class": "NameType", "value": 2, "string": ""},
+                                               "surname_list": [{"_class": "Surname", "surname": "Petrova",
+                                                                 "origintype": {"_class": "NameOriginType", "value": 1, "string": ""}}]},
+                              "attribute_list": [{"_class": "Attribute", "value": "MH:I7",
+                                                  "type": {"_class": "AttributeType", "value": 0, "string": "RIN"}}],
+                              "urls": [{"_class": "Url", "path": "https://example.org",
+                                        "type": {"_class": "UrlType", "value": 2, "string": ""}}],
+                              "event_ref_list": [], "family_list": [], "parent_family_list": [], "tag_list": []}}
+              ]
+            }
+            """);
+        handler.Get(CheckPath, NoConflicts);
+        handler.Get("/api/metadata/", """{"gramps_webapi": {"version": "3.23.0"}}""");
+
+        var result = await Undo(handler, dryRun: true);
+
+        Assert.Contains("   Restore the deleted Person I0007: Maria Petrova [handle: p1]", result);
     }
 
     [Fact]

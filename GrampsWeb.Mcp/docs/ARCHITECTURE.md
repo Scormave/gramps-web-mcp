@@ -212,9 +212,18 @@ URLs contain genealogy data, so `GrampsApiClient` logs them only at `Debug` or
 Each file exposes a set of `[McpServerTool]` static methods grouped by Gramps
 entity type (Person, Family, Event, Place, Source, Citation, Note, Media, Tag,
 Repository) plus cross-cutting tools (Search, System, Reference, Object, Timeline,
-Undo). There are no composite tools: each write tool changes one record, except
-`undo_change`, which reverts one transaction of the edit history as Gramps Web
-applies it, and multi-step workflows live in the MCP prompts and next-step hints.
+Record batch, Undo). Each write tool changes one record, except two that work on
+one Gramps transaction: `create_records` sends many new records to
+`POST /api/objects/` and `undo_change` reverts one transaction of the edit
+history, both applied by Gramps Web all or nothing. Multi-step workflows live
+in the MCP prompts and next-step hints.
+
+`RecordBatchTools.cs` builds each record with the checks of its create tool:
+the `Build*RequestAsync` methods of `PersonTools`, `EventTools`, … turn the
+arguments into the request body that both the single create tool and
+`create_records` send. `create_records` then gives every record a new handle,
+replaces each `"#key"` with the handle of the record it names, and posts the
+whole array.
 
 Tools are the **public API surface** of the MCP server.  They:
 - validate input parameters (with server-side type validation via `TypeCache`)
@@ -317,9 +326,10 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 - typed GET plus mutation POST/PUT/DELETE with `System.Text.Json`
 - mutation response parsing in `PostMutationAsync`, which reads the new
   handle and Gramps ID from Gramps' change-array response through
-  `GrampsMutationParser`; `PutMutationAsync` only checks the status
+  `GrampsMutationParser`; `PutMutationAsync` only checks the status, and
+  `PostObjectsAsync` returns the change array of a `create_records` call
 - read-only enforcement for mutation helpers (`PostMutationAsync`,
-  `PutMutationAsync`, `DeleteAsync`) before authentication or request creation
+  `PostObjectsAsync`, `PutMutationAsync`, `DeleteAsync`) before authentication or request creation
 - in-process write policy via singleton `MutationGate`: optional single-flight
   lock and minimum interval around the mutation HTTP send only (auth stays
   outside the write mutex). The gate does not cover other Gramps Web clients

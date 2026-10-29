@@ -68,23 +68,8 @@ public static class RepositoryTools
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(name))
-                throw McpToolErrors.ValidationError("Error: name is required");
-
-            if (repoType != null)
-                repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
-
-            var request = new CreateRepositoryRequest
-            {
-                Name = name,
-                Type = repoType,
-                AddressList = RepositoryAddressListFromStreet(address),
-                UrlList = RepositoryUrlListFromPath(url),
-                NoteList = noteHandles,
-                TagList = tagHandles,
-                Private = isPrivate
-            };
-
+            var request = await BuildRepositoryRequestAsync(name, repoType, address, url, noteHandles, tagHandles,
+                isPrivate, client);
             var (handle, grampsId) = await client.PostMutationAsync("/api/repositories/", request, "Repository");
             return ResponseEnvelope.CreateSuccess(
                 "Repository", handle, grampsId,
@@ -94,6 +79,29 @@ public static class RepositoryTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>The checked request body of create_repository; create_records sends it too.</summary>
+    internal static async Task<CreateRepositoryRequest> BuildRepositoryRequestAsync(
+        string name, string? repoType, string? address, string? url, FlexibleHandleList? noteHandles,
+        FlexibleHandleList? tagHandles, bool isPrivate, GrampsApiClient client)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw McpToolErrors.ValidationError("Error: name is required");
+
+        if (repoType != null)
+            repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
+
+        return new CreateRepositoryRequest
+        {
+            Name = name,
+            Type = repoType,
+            AddressList = RepositoryAddressListFromStreet(address),
+            UrlList = RepositoryUrlListFromPath(url),
+            NoteList = noteHandles,
+            TagList = tagHandles,
+            Private = isPrivate
+        };
     }
 
     [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]

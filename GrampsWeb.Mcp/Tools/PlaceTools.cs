@@ -94,47 +94,57 @@ public static class PlaceTools
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(name))
-                throw McpToolErrors.ValidationError("Error: name is required");
-
-            var nameDateRequest = AgentDateParser.ToDateRequestOrNull(nameDate, DateComponentOrder.Iso);
-
-            if (placeType != null)
-                placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
-
-            var placeRefList = await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client);
-
-            var request = new CreatePlaceRequest
-            {
-                Name = new PlaceNameRequest
-                {
-                    Value = name.Trim(),
-                    Lang = string.IsNullOrWhiteSpace(nameLang) ? null : nameLang.Trim(),
-                    Date = nameDateRequest
-                },
-                Type = placeType,
-                Code = code,
-                Latitude = ToCoordinate(lat),
-                Longitude = ToCoordinate(lon),
-                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
-                CitationList = citationHandles,
-                NoteList = noteHandles,
-                TagList = tagHandles,
-                Private = isPrivate,
-                PlaceRefList = placeRefList,
-                AltNames = (PlaceNameRequest[]?)alternateNames is { Length: > 0 } alts ? alts : null
-            };
-
+            var request = await BuildPlaceRequestAsync(name, placeType, lat, lon, enclosedBy, nameLang, nameDate,
+                alternateNames, noteHandles, code, mediaHandles, citationHandles, tagHandles, isPrivate, client);
             var (handle, grampsId) = await client.PostMutationAsync("/api/places/", request, "Place");
             return ResponseEnvelope.CreateSuccess(
                 "Place", handle, grampsId,
-                request.Name.Value, ResponseEnvelope.PlaceCreateNextSteps(handle!),
+                request.Name!.Value, ResponseEnvelope.PlaceCreateNextSteps(handle!),
                 StoredFields(request.Type, request.Latitude, request.Longitude, request.PlaceRefList?.Select(r => r.Ref)));
         }
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>The checked request body of create_place; create_records sends it too.</summary>
+    internal static async Task<CreatePlaceRequest> BuildPlaceRequestAsync(
+        string name, string? placeType, FlexibleString? lat, FlexibleString? lon, FlexiblePlaceRefList? enclosedBy,
+        string? nameLang, string? nameDate, FlexiblePlaceNameList? alternateNames, FlexibleHandleList? noteHandles,
+        string? code, FlexibleMediaLinkList? mediaHandles, FlexibleHandleList? citationHandles,
+        FlexibleHandleList? tagHandles, bool isPrivate, GrampsApiClient client)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw McpToolErrors.ValidationError("Error: name is required");
+
+        var nameDateRequest = AgentDateParser.ToDateRequestOrNull(nameDate, DateComponentOrder.Iso);
+
+        if (placeType != null)
+            placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
+
+        var placeRefList = await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client);
+
+        return new CreatePlaceRequest
+        {
+            Name = new PlaceNameRequest
+            {
+                Value = name.Trim(),
+                Lang = string.IsNullOrWhiteSpace(nameLang) ? null : nameLang.Trim(),
+                Date = nameDateRequest
+            },
+            Type = placeType,
+            Code = code,
+            Latitude = ToCoordinate(lat),
+            Longitude = ToCoordinate(lon),
+            MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
+            CitationList = citationHandles,
+            NoteList = noteHandles,
+            TagList = tagHandles,
+            Private = isPrivate,
+            PlaceRefList = placeRefList,
+            AltNames = (PlaceNameRequest[]?)alternateNames is { Length: > 0 } alts ? alts : null
+        };
     }
 
     [McpServerTool(Title = "Update Place", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]

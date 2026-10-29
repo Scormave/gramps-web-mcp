@@ -27,12 +27,13 @@ public class ToolAnnotationTests
                 Assert.False(attr.Destructive, $"Read-only tool {method.Name} must not be destructive");
         }
 
-        Assert.Equal(32, toolMethods.Count);
+        Assert.Equal(33, toolMethods.Count);
         Assert.Single(toolMethods, method => method.Name == "ReadMedia");
         Assert.Single(toolMethods, method => method.Name == "CreateMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
         Assert.Single(toolMethods, method => method.Name == "DeleteObject");
         Assert.Single(toolMethods, method => method.Name == "UndoChange");
+        Assert.Single(toolMethods, method => method.Name == "CreateRecords");
         Assert.Single(toolMethods, method => method.Name == "GetObject");
         Assert.Single(toolMethods, method => method.Name == "GetReference");
         Assert.Single(toolMethods, method => method.Name == "GetPersonTree");
@@ -63,7 +64,7 @@ public class ToolAnnotationTests
         string[] repeatable =
         [
             "create_citation", "create_event", "create_family", "create_note", "create_person", "create_place",
-            "create_repository", "create_source", "create_tag", "update_note", "undo_change"
+            "create_records", "create_repository", "create_source", "create_tag", "update_note", "undo_change"
         ];
 
         var tools = typeof(PersonTools).Assembly

@@ -238,6 +238,31 @@ public class GrampsApiClient
     }
 
     /// <summary>
+    /// POST <c>/api/objects/</c>: adds every object of <paramref name="objects"/> in one database transaction,
+    /// all or none, in the order given. Returns the response body, the transaction's changes
+    /// (<c>[{"_class","handle","type","old","new"}]</c>), which also list the people a new family updated.
+    /// </summary>
+    public async Task<string> PostObjectsAsync(JsonArray objects)
+    {
+        EnsureWritable();
+        var json = objects.ToJsonString();
+
+        try
+        {
+            using var response = await SendAuthorizedAsync(
+                () => new HttpRequestMessage(HttpMethod.Post, "/api/objects/") { Content = JsonContent(json) },
+                SendMutationAsync);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            ThrowIfMutationFailed(response, responseBody);
+            return responseBody;
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new GrampsApiException(System.Net.HttpStatusCode.BadGateway, ex.Message);
+        }
+    }
+
+    /// <summary>
     /// PUT to update an object. Throws <see cref="GrampsApiException"/> on any non-success status;
     /// on success returns without parsing the response body.
     /// </summary>

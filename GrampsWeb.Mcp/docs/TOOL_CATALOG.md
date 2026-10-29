@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 32 MCP tools exposed by the server.
+Complete catalog of up to 33 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -248,7 +248,7 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 | `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Start with the person record; retrieve extended details, a timeline, or the requested tree branch only when relevant. |
 | `add-family` | optional `father`, `mother`, `relationship` (default Married), optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_object` for the family. |
 | `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_person_tree` if no direct link. |
-| `import-from-text` | `text` | Parse free-form genealogy text: search for existing people and places, create places, events, people (`create_person` with `eventRefs`) and families, attach events to existing people with `linkMode: "add"`, add sources/citations as needed, then report import summary and gaps. |
+| `import-from-text` | `text` | Parse free-form genealogy text: search for existing people, places and the source, save the new places, source, citation, events, people and families in one `create_records` call linked by `"#key"`, attach new events to existing people and new children to existing families with `linkMode: "add"`, then report import summary and gaps. |
 | `change-link` | `ownerType`, `owner`, `linkField`, `target`, optional `action` (`add` by default) | Resolve existing records, add or remove one link with `linkMode`, then verify the owner. |
 | `cite-fact` | `recordType`, `record`, `source`, optional `page` | Reuse or create a source and citation, attach it with `linkMode: "add"`, and verify the target. |
 
@@ -734,6 +734,66 @@ header reports the stored `name`, `color` and `priority`.
 
 ---
 
+## Record batch (`RecordBatchTools.cs`) — 1 tool
+
+### C — `CreateRecords`
+Create many linked records in one call, such as a family from one metric-book
+entry: its source and citation, the events, the people and the family. The
+tool sends them to Gramps Web's `POST /api/objects/`, which saves them in one
+transaction, so either every record is created or none is.
+`get_recent_changes` lists the call as `Add multiple objects`, and one
+`undo_change` on it removes every record again.
+
+Each record takes the arguments of its create tool, plus an optional `key`:
+letters, digits, `_` and `-`, up to 64, unique in the call. Other records of
+the call link to it by writing `"#key"` wherever they take a handle: a
+citation's `sourceHandle`, an event's `citationHandles` or `placeHandle`, a
+person's `eventRefs` (`"#birth"`, `"#marriage::Witness"`), a family's
+`fatherHandle`, `motherHandle`, `childRefs` and `eventRefs`, a source's
+`repositoryHandles`, a place's `enclosedBy`. Existing records are linked as
+in the create tools, by handle or, where the create tool takes one, by
+Gramps ID. A `"#key"` must name a record of the call of the class the field
+links to; media and tags are not created here, so `mediaHandles` and
+`tagHandles` take existing handles only.
+
+People have no `familyHandles` or `parentFamilyHandles`: they join families
+through the family's `fatherHandle`, `motherHandle` and `childRefs`. Gramps
+Web saves the families after the people and writes the link back to each
+father, mother and child, existing people included. A link from an existing
+record to a new one, such as a new event on an existing person or a new child
+of an existing family, is made afterwards with `update_*` and `linkMode: "add"`.
+
+Every record is checked before anything is saved, with the same checks as its
+create tool (types, dates, names, handles), and an error names the record:
+`people[1] (key petr): …`. A call holds 1–50 records. Like the create tools,
+it does not check for duplicates.
+
+The reply header carries `type: Transaction`, `action: created` and
+`records`. The body lists each record in saving order with its handle, Gramps
+ID and key, then the existing people that now link back to a new family, the
+events, citations and notes no record of the call links to, and the people in
+no new family:
+
+```text
+Person: Petrov, Ivan — handle: 19a3c5e0f1d2b4a6c8e0 | gramps_id: I0412 | key: ivan
+```
+
+Parameters, each a list of records with the fields of the named create tool
+plus `key`:
+
+| Parameter | Records | Notes |
+|-----------|---------|-------|
+| `repositories` | `create_repository` | — |
+| `places` | `create_place` | `enclosedBy` may name a place of the call |
+| `sources` | `create_source` | `repositoryHandles` may name repositories of the call |
+| `notes` | `create_note` | Linked from other records' `noteHandles` |
+| `citations` | `create_citation` | `sourceHandle` may name a source of the call |
+| `events` | `create_event` | Linked from people's and families' `eventRefs` |
+| `people` | `create_person` | Without `familyHandles` and `parentFamilyHandles` |
+| `families` | `create_family` | Saved after the people, which get the link back |
+
+---
+
 ## Search (`SearchTools.cs`) — 2 tools
 
 ### R — `Search`
@@ -904,15 +964,16 @@ undo_change(transactionId: 412)
 | Media | 1 | 1 | 1 | 0 | 3 |
 | Repository | 0 | 1 | 1 | 0 | 2 |
 | Tag | 0 | 1 | 1 | 0 | 2 |
+| RecordBatch | 0 | 1 | 0 | 0 | 1 |
 | Object | 1 | 0 | 0 | 1 | 2 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
 | Undo | 0 | 0 | 1 | 0 | 1 |
-| **Total with media access and upload enabled** | **10** | **10** | **11** | **1** | **32** |
+| **Total with media access and upload enabled** | **10** | **11** | **11** | **1** | **33** |
 
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
-`create_media` are hidden: the default catalog contains 30 tools in read/write
+`create_media` are hidden: the default catalog contains 31 tools in read/write
 mode. With media access enabled, `create_media` also needs
 `GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 10 tools
 with media access enabled, or 9 with it disabled.

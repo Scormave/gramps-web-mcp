@@ -13,19 +13,16 @@ namespace GrampsWeb.Mcp.Hosting;
 /// </summary>
 internal static class ToolArgumentValidator
 {
-    /// <summary>Unknown and missing required argument names; null when every name matches the schema.</summary>
+    /// <summary>
+    /// Unknown and missing required argument names, also inside the objects of an array argument whose
+    /// items the schema describes (people[1].birthDate); null when every name matches the schema.
+    /// </summary>
     public static string? CheckNames(JsonElement schema, IDictionary<string, JsonElement>? arguments)
     {
-        var properties = Properties(schema);
-        var unknown = (arguments?.Keys ?? [])
-            .Where(name => !properties.ContainsKey(name))
-            .Select(name => Suggest(name, properties.Keys) is { } match ? $"{name} (did you mean {match}?)" : name)
-            .ToList();
-        var missing = Required(schema)
-            .Where(name => arguments == null
-                || !arguments.TryGetValue(name, out var value)
-                || value.ValueKind == JsonValueKind.Null && !AllowsNull(properties.GetValueOrDefault(name)))
-            .ToList();
+        var unknown = new List<string>();
+        var missing = new List<string>();
+        var described = new List<string>();
+        CheckNames(schema, arguments ?? new Dictionary<string, JsonElement>(), "", null, unknown, missing, described);
         if (unknown.Count == 0 && missing.Count == 0)
             return null;
 
@@ -34,8 +31,39 @@ internal static class ToolArgumentValidator
             problems.Add($"Unknown argument{(unknown.Count > 1 ? "s" : "")}: {string.Join(", ", unknown)}.");
         if (missing.Count > 0)
             problems.Add($"Missing required argument{(missing.Count > 1 ? "s" : "")}: {string.Join(", ", missing)}.");
-        problems.Add(DescribeParameters(schema, properties));
+        problems.AddRange(described.Distinct());
         return string.Join(" ", problems);
+    }
+
+    private static void CheckNames(JsonElement schema, IEnumerable<KeyValuePair<string, JsonElement>> arguments,
+        string path, string? arrayName, List<string> unknown, List<string> missing, List<string> described)
+    {
+        var properties = Properties(schema);
+        var given = arguments.ToList();
+        var found = unknown.Count + missing.Count;
+        unknown.AddRange(given
+            .Where(argument => !properties.ContainsKey(argument.Key))
+            .Select(argument => Suggest(argument.Key, properties.Keys) is { } match
+                ? $"{path}{argument.Key} (did you mean {match}?)"
+                : path + argument.Key));
+        // The SDK lists a required string of an array item as nullable, so null counts as missing there.
+        missing.AddRange(Required(schema)
+            .Where(name => given.All(argument => argument.Key != name)
+                || given.First(argument => argument.Key == name).Value.ValueKind == JsonValueKind.Null
+                && (arrayName != null || !AllowsNull(properties.GetValueOrDefault(name))))
+            .Select(name => path + name));
+        if (unknown.Count + missing.Count > found)
+            described.Add(DescribeParameters(schema, properties, arrayName));
+
+        foreach (var (name, value) in given)
+        {
+            if (properties.TryGetValue(name, out var property) && ItemObjects(property, value) is { } items)
+            {
+                foreach (var (index, item) in items)
+                    CheckNames(Items(property), item.EnumerateObject().Select(p => KeyValuePair.Create(p.Name, p.Value)),
+                        $"{path}{name}[{index}].", name, unknown, missing, described);
+            }
+        }
     }
 
     /// <summary>
@@ -54,7 +82,7 @@ internal static class ToolArgumentValidator
 
     /// <summary>
     /// The arguments with each JSON number given for a string parameter turned into its text
-    /// (1877 → "1877"); null when there is none.
+    /// (1877 → "1877"), also inside the objects of an array argument; null when there is none.
     /// </summary>
     public static Dictionary<string, JsonElement>? NumbersAsText(JsonElement schema, IDictionary<string, JsonElement>? arguments)
     {
@@ -64,38 +92,96 @@ internal static class ToolArgumentValidator
         Dictionary<string, JsonElement>? converted = null;
         foreach (var (name, value) in arguments)
         {
-            if (value.ValueKind != JsonValueKind.Number
-                || !properties.TryGetValue(name, out var property)
-                || !Types(property).Contains("string"))
+            if (!properties.TryGetValue(name, out var property) || NumbersAsText(property, value) is not { } text)
                 continue;
             converted ??= new Dictionary<string, JsonElement>(arguments);
-            converted[name] = JsonSerializer.SerializeToElement(value.GetRawText());
+            converted[name] = text;
         }
 
         return converted;
     }
 
+    /// <summary>The value with its numbers for string properties as text; null when nothing changes.</summary>
+    private static JsonElement? NumbersAsText(JsonElement property, JsonElement value)
+    {
+        if (value.ValueKind == JsonValueKind.Number)
+            return Types(property).Contains("string") ? JsonSerializer.SerializeToElement(value.GetRawText()) : null;
+        if (ItemObjects(property, value) is not { } items)
+            return null;
+
+        JsonElement[]? array = null;
+        foreach (var (index, item) in items)
+        {
+            var itemProperties = Properties(Items(property));
+            Dictionary<string, JsonElement>? fields = null;
+            foreach (var field in item.EnumerateObject())
+            {
+                if (!itemProperties.TryGetValue(field.Name, out var fieldProperty)
+                    || NumbersAsText(fieldProperty, field.Value) is not { } text)
+                    continue;
+                fields ??= item.EnumerateObject().ToDictionary(p => p.Name, p => p.Value, StringComparer.Ordinal);
+                fields[field.Name] = text;
+            }
+
+            if (fields == null)
+                continue;
+            array ??= value.EnumerateArray().ToArray();
+            array[index] = JsonSerializer.SerializeToElement(fields);
+        }
+
+        return array == null ? null : JsonSerializer.SerializeToElement(array);
+    }
+
     /// <summary>
-    /// The first argument whose JSON value has a type the schema does not allow; null when none does.
-    /// Numbers sent as strings pass, as the SDK converts them.
+    /// The first argument whose JSON value has a type the schema does not allow, also inside the objects
+    /// of an array argument; null when none does. Numbers sent as strings pass, as the SDK converts them.
     /// </summary>
-    public static string? FindTypeMismatch(JsonElement schema, IDictionary<string, JsonElement>? arguments)
+    public static string? FindTypeMismatch(JsonElement schema, IDictionary<string, JsonElement>? arguments) =>
+        FindTypeMismatch(schema, arguments ?? new Dictionary<string, JsonElement>(), "", null);
+
+    private static string? FindTypeMismatch(JsonElement schema, IEnumerable<KeyValuePair<string, JsonElement>> arguments,
+        string path, string? arrayName)
     {
         var properties = Properties(schema);
-        foreach (var (name, value) in arguments ?? new Dictionary<string, JsonElement>())
+        foreach (var (name, value) in arguments)
         {
             if (!properties.TryGetValue(name, out var property))
                 continue;
             var types = Types(property);
             if (types.Count == 0 || types.Any(type => Matches(type, value)))
+            {
+                if (ItemObjects(property, value) is not { } items)
+                    continue;
+                foreach (var (index, item) in items)
+                {
+                    if (FindTypeMismatch(Items(property), item.EnumerateObject().Select(p => KeyValuePair.Create(p.Name, p.Value)),
+                            $"{path}{name}[{index}].", name) is { } nested)
+                        return nested;
+                }
+
                 continue;
+            }
+
             var expected = string.Join(" or ", types.Where(t => t != "null").Select(t => DescribeType(t, property)));
-            return $"Argument {name} must be {Article(expected)}{expected}, not {DescribeKind(value)}. " +
-                   DescribeParameters(schema, properties);
+            return $"Argument {path}{name} must be {Article(expected)}{expected}, not {DescribeKind(value)}. " +
+                   DescribeParameters(schema, properties, arrayName);
         }
 
         return null;
     }
+
+    /// <summary>
+    /// The objects of an array value with their indexes, when the schema describes the fields of its items;
+    /// null for any other property or value.
+    /// </summary>
+    private static List<(int Index, JsonElement Item)>? ItemObjects(JsonElement property, JsonElement value) =>
+        value.ValueKind == JsonValueKind.Array && Properties(Items(property)).Count > 0
+            ? value.EnumerateArray().Select((item, index) => (index, item))
+                .Where(i => i.item.ValueKind == JsonValueKind.Object).ToList()
+            : null;
+
+    private static JsonElement Items(JsonElement property) =>
+        property.ValueKind == JsonValueKind.Object && property.TryGetProperty("items", out var items) ? items : default;
 
     private static Dictionary<string, JsonElement> Properties(JsonElement schema) =>
         schema.ValueKind == JsonValueKind.Object
@@ -144,8 +230,12 @@ internal static class ToolArgumentValidator
         _ => true
     };
 
-    /// <summary>"Parameters: identifier (string, required), objectType (string), extended (boolean)."</summary>
-    private static string DescribeParameters(JsonElement schema, Dictionary<string, JsonElement> properties)
+    /// <summary>
+    /// "Parameters: identifier (string, required), objectType (string), extended (boolean).", or for the
+    /// items of an array argument "Fields of people items: …".
+    /// </summary>
+    private static string DescribeParameters(JsonElement schema, Dictionary<string, JsonElement> properties,
+        string? arrayName = null)
     {
         if (properties.Count == 0)
             return "This tool takes no arguments.";
@@ -157,7 +247,7 @@ internal static class ToolArgumentValidator
                 details.Add("required");
             return details.Count == 0 ? p.Key : $"{p.Key} ({string.Join(", ", details)})";
         });
-        return $"Parameters: {string.Join(", ", parts)}.";
+        return $"{(arrayName == null ? "Parameters" : $"Fields of {arrayName} items")}: {string.Join(", ", parts)}.";
     }
 
     /// <summary>"array of strings" for a typed array, otherwise the type name.</summary>

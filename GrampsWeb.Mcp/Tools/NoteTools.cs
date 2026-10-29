@@ -64,26 +64,9 @@ public static class NoteTools
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(text))
-                throw McpToolErrors.ValidationError("Error: text is required");
-
-            noteType = await KnownTypes.ResolveAsync(noteType, "note_types", client);
-
-            var formatCode = NoteTextFormatParser.ParseRequired(format);
-
-            var request = new CreateNoteRequest
-            {
-                Text = new StyledTextRequest { Text = text, Tags = [] },
-                Type = noteType,
-                Format = formatCode,
-                TagList = tagHandles,
-                Private = isPrivate
-            };
-
+            var request = await BuildNoteRequestAsync(text, noteType, format, tagHandles, isPrivate, client);
             var (handle, grampsId) = await client.PostMutationAsync("/api/notes/", request, "Note");
-            var typeLabel = string.IsNullOrWhiteSpace(noteType)
-                ? "General"
-                : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, noteType);
+            var typeLabel = await FormatNoteTypeAsync(request.Type, client);
             return ResponseEnvelope.CreateSuccess(
                 "Note", handle, grampsId,
                 typeLabel, ResponseEnvelope.NoteCreateNextSteps(handle!));
@@ -93,6 +76,34 @@ public static class NoteTools
             throw McpToolErrors.ToMcpException(ex);
         }
     }
+
+    /// <summary>The checked request body of create_note; create_records sends it too.</summary>
+    internal static async Task<CreateNoteRequest> BuildNoteRequestAsync(
+        string text, string noteType, string format, FlexibleHandleList? tagHandles, bool isPrivate,
+        GrampsApiClient client)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            throw McpToolErrors.ValidationError("Error: text is required");
+
+        noteType = await KnownTypes.ResolveAsync(noteType, "note_types", client);
+
+        var formatCode = NoteTextFormatParser.ParseRequired(format);
+
+        return new CreateNoteRequest
+        {
+            Text = new StyledTextRequest { Text = text, Tags = [] },
+            Type = noteType,
+            Format = formatCode,
+            TagList = tagHandles,
+            Private = isPrivate
+        };
+    }
+
+    /// <summary>The label of a note type: General when none is set.</summary>
+    internal static async Task<string> FormatNoteTypeAsync(string? noteType, GrampsApiClient client) =>
+        string.IsNullOrWhiteSpace(noteType)
+            ? "General"
+            : await GrampsDefaultTypeLabels.FormatNoteTypeAsync(client, noteType);
 
     [McpServerTool(Title = "Update Note", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Description(

@@ -135,6 +135,79 @@ public class ToolArgumentValidatorTests
         Assert.Null(ToolArgumentValidator.NumbersAsText(Schema, null));
     }
 
+    /// <summary>An array argument whose items the schema describes, as the SDK writes it for create_records.</summary>
+    private static readonly JsonElement BatchSchema = JsonDocument.Parse("""
+        {
+          "type": "object",
+          "properties": {
+            "events": {
+              "type": ["array", "null"],
+              "items": {
+                "type": ["object", "null"],
+                "properties": {
+                  "key": { "type": ["string", "null"] },
+                  "eventType": { "type": ["string", "null"] },
+                  "date": { "type": ["string", "null"] },
+                  "isPrivate": { "type": "boolean" }
+                },
+                "required": ["eventType"]
+              },
+              "default": null
+            },
+            "tags": { "type": ["array", "null"], "items": { "type": ["string", "null"] }, "default": null }
+          }
+        }
+        """).RootElement;
+
+    private const string EventFields = "Fields of events items: key (string), eventType (string, required), " +
+                                       "date (string), isPrivate (boolean).";
+
+    [Fact]
+    public void CheckNames_Checks_The_Fields_Of_Array_Items()
+    {
+        Assert.Null(ToolArgumentValidator.CheckNames(BatchSchema,
+            Args("""{"events":[{"eventType":"Birth","date":"1877"},null],"tags":["x"]}""")));
+        Assert.Equal(
+            $"Unknown argument: events[1].event_type (did you mean eventType?). Missing required arguments: events[0].eventType, " +
+            $"events[1].eventType. {EventFields}",
+            ToolArgumentValidator.CheckNames(BatchSchema,
+                Args("""{"events":[{"date":"1877"},{"eventType":null,"event_type":"Birth"}]}""")));
+    }
+
+    [Fact]
+    public void CheckNames_Describes_The_Tool_And_The_Items_When_Both_Have_Problems()
+    {
+        Assert.Equal(
+            "Unknown arguments: evt, events[0].type. Missing required argument: events[0].eventType. " +
+            "Parameters: events (array of objects), tags (array of strings). " + EventFields,
+            ToolArgumentValidator.CheckNames(BatchSchema, Args("""{"evt":[],"events":[{"type":"Birth"}]}""")));
+    }
+
+    [Fact]
+    public void FindTypeMismatch_Names_The_Array_Item_Field()
+    {
+        Assert.Equal(
+            $"Argument events[1].isPrivate must be a boolean, not the string \"yes\". {EventFields}",
+            ToolArgumentValidator.FindTypeMismatch(BatchSchema,
+                Args("""{"events":[{"eventType":"Birth"},{"eventType":"Death","isPrivate":"yes"}]}""")));
+        Assert.Null(ToolArgumentValidator.FindTypeMismatch(BatchSchema, Args("""{"events":[{"eventType":"Birth"}]}""")));
+    }
+
+    [Fact]
+    public void NumbersAsText_Turns_Numbers_In_Array_Items_Into_Text()
+    {
+        var converted = ToolArgumentValidator.NumbersAsText(BatchSchema,
+            Args("""{"events":[{"eventType":"Birth","date":"1877"},{"eventType":"Death","date":1901,"isPrivate":false}]}"""));
+
+        Assert.NotNull(converted);
+        var events = converted["events"].EnumerateArray().ToList();
+        Assert.Equal("1877", events[0].GetProperty("date").GetString());
+        Assert.Equal("1901", events[1].GetProperty("date").GetString());
+        Assert.Equal("Death", events[1].GetProperty("eventType").GetString());
+        Assert.Equal(JsonValueKind.False, events[1].GetProperty("isPrivate").ValueKind);
+        Assert.Null(ToolArgumentValidator.NumbersAsText(BatchSchema, Args("""{"events":[{"eventType":"Birth"}]}""")));
+    }
+
     private static Dictionary<string, JsonElement> Args(string json) =>
         JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)!;
 }

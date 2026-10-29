@@ -6,8 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `create_records`: create up to 50 linked records in one call, such as a
+  family from one register entry with its source, citation and events.
+  Gramps Web saves them in one transaction (`POST /api/objects/`), so
+  either all are created or none, and one `undo_change` on that
+  transaction removes them all. Each record takes the arguments of its
+  create tool plus an optional `key`; other records of the call link to
+  it by `"#key"` wherever they take a handle. People join families
+  through the family's father, mother and children, which get the link
+  back, existing people included. Every record is checked before
+  anything is saved, and an error names the record, e.g. `people[1]`.
+  Argument names and types are checked inside each record as well: an
+  unknown field such as `people[1].birthDate` is named, with a
+  suggestion when one is close
+
+### Changed
+
+- The `import-from-text` prompt saves the new places, source, citation,
+  events, people and families in one `create_records` call instead of
+  one create call per record
+
 ### Fixed
 
+- `undo_change`: a record the transaction changed more than once, such
+  as a person added and then linked by a family added after it, counts
+  once. Gramps Web's check compares every change with the record as it
+  is now, so such a record was reported as changed after the
+  transaction and the undo was refused
+- `undo_change`: a deleted person, event, source, citation or media
+  record with an attribute, or a deleted person with a web link, is
+  listed by name again instead of by handle alone. Gramps Web stores the
+  attribute and link types as objects, which the record could not be
+  read with
 - `list_objects`: the `gql` description gave the example `gender == 1`,
   which Gramps Web rejects as a syntax error. It now shows `=` for
   equality, lists the operators, says that text goes in double quotes

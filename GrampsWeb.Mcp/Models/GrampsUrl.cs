@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
@@ -6,6 +7,7 @@ namespace GrampsWeb.Mcp.Models;
 public class GrampsUrl
 {
     [JsonPropertyName("type")]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Type { get; set; }
 
     [JsonPropertyName("path")]

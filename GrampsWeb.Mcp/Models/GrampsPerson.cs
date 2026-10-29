@@ -30,6 +30,7 @@ public class GrampsEventRef
 public class GrampsAttribute
 {
     [JsonPropertyName("type")]
+    [JsonConverter(typeof(GrampsWireTypeStringConverter))]
     public string? Type { get; set; }
 
     [JsonPropertyName("value")]

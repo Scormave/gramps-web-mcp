@@ -200,13 +200,21 @@ public static partial class UndoTools
     /// </summary>
     private static async Task<Plan> PlanAsync(GrampsApiClient client, GrampsTransaction transaction, bool needVersion)
     {
-        var changes = (transaction.Changes ?? [])
+        var all = (transaction.Changes ?? [])
             .Where(c => c.ObjClass?.Trim() is { Length: > 0 } cls && cls != ReferenceClass
                         && !string.IsNullOrWhiteSpace(c.ObjHandle)
                         && c.TransType is Added or Updated or Deleted
                         && SearchFormatter.CollectionOf(cls) != null)
             .Select(c => new Change(c, c.ObjClass!.Trim(), SearchFormatter.CollectionOf(c.ObjClass.Trim())!,
                 c.ObjHandle!.Trim(), c.TransType!.Value))
+            .ToList();
+        // A record changed more than once, such as a person added and then linked to a family added after it,
+        // counts once: as added when the transaction added it, else as its last change, with its version from
+        // before the transaction.
+        var changes = all.GroupBy(c => (c.Collection, c.Handle))
+            .Select(group => group.Count() == 1
+                ? group.First()
+                : group.First() with { Kind = group.First().Kind == Added ? Added : group.Last().Kind })
             .ToList();
         if (changes.Count == 0)
             return new Plan(transaction, changes, [], Names.None, false, false, null);
@@ -235,7 +243,7 @@ public static partial class UndoTools
         var names = new Names(labels, grampsIds);
 
         var conflicts = new List<string>();
-        foreach (var conflict in check.Conflicts ?? [])
+        foreach (var conflict in ChangedLater(check.Conflicts ?? [], all))
             conflicts.Add(FormatServerConflict(conflict, changes, names));
         foreach (var (record, sources) in danglingIn)
         {
@@ -253,6 +261,27 @@ public static partial class UndoTools
         }
 
         return new Plan(transaction, changes, conflicts, names, linksChecked, deletionNeedsForce, version);
+    }
+
+    /// <summary>
+    /// Gramps Web's conflicts, less those of records the transaction changed more than once and nobody changed
+    /// later. Its check compares every change with the record as it is now, so all but the last change of such a
+    /// record conflict; only when all of them do was the record changed after the transaction. The undo itself
+    /// reverts the changes one after another and passes.
+    /// </summary>
+    private static IEnumerable<GrampsUndoConflict> ChangedLater(IReadOnlyList<GrampsUndoConflict> conflicts,
+        IReadOnlyList<Change> changes)
+    {
+        var counts = changes.CountBy(c => (c.Collection, c.Handle)).ToDictionary();
+        return conflicts
+            .GroupBy(c => (Collection: SearchFormatter.CollectionOf(c.ObjectClass) ?? "", Handle: c.Handle?.Trim() ?? ""))
+            .SelectMany(group =>
+            {
+                var count = counts.GetValueOrDefault(group.Key);
+                if (count <= 1)
+                    return group;
+                return group.Count() < count ? Enumerable.Empty<GrampsUndoConflict>() : group.Take(1);
+            });
     }
 
     /// <summary>Records the undo deletes that records outside this transaction now link to.</summary>

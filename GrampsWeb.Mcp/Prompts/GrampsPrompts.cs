@@ -138,12 +138,14 @@ public sealed class GrampsPrompts
         sb.AppendLine("Steps:");
         sb.AppendLine("1. Identify all people mentioned: extract names, dates, places, and relationships.");
         sb.AppendLine("2. For each person, check if they already exist: use search(name).");
-        sb.AppendLine("3. Find each place with search; create it with create_place only if it is not in the tree.");
-        sb.AppendLine("4. Create the events (births, baptisms, marriages, deaths) with create_event, using the place handles.");
-        sb.AppendLine("5. Create missing people with create_person, passing their events in eventRefs with roles.");
-        sb.AppendLine("6. Create families to connect parents and children using create_family, with family events such as marriages.");
-        sb.AppendLine("7. Attach events to people who already existed with update_person (eventRefs, linkMode: \"add\").");
-        sb.AppendLine("8. Add sources and citations if the text mentions them.");
+        sb.AppendLine("3. Find each place with search, and the source if the text names one.");
+        sb.AppendLine("4. Save everything new in one create_records call: places and the source not in the tree, a citation, " +
+                      "the events (births, baptisms, marriages, deaths), the missing people with their events in eventRefs " +
+                      "with roles, and the families that connect parents and children, with family events such as marriages. " +
+                      "Give records keys and link them to each other by \"#key\"; link existing records by handle. " +
+                      "Over 50 records, split it and link the later calls by the handles the earlier ones return.");
+        sb.AppendLine("5. Attach new events to people who already existed with update_person (eventRefs, linkMode: \"add\"), " +
+                      "and new children to existing families with update_family (childRefs, linkMode: \"add\").");
         sb.AppendLine("After importing, provide a summary:");
         sb.AppendLine("- How many people were created vs. already existed");
         sb.AppendLine("- Families created");

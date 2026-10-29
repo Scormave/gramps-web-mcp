@@ -375,4 +375,119 @@ public class GrampsCompatibilityDeserializeTests
         Assert.Equal(2003, arr[2].GetInt32());
         Assert.False(arr[3].GetBoolean());
     }
+
+    private const string RawDate =
+        """{ "_class": "Date", "format": null, "calendar": 0, "modifier": 0, "quality": 0, "dateval": [0, 0, 1862, false], "text": "", "sortval": 2401142, "newyear": 0 }""";
+
+    private const string RawAttribute =
+        """{ "_class": "Attribute", "private": false, "type": { "_class": "AttributeType", "value": 0, "string": "RIN" }, "value": "MH:I178", "citation_list": [], "note_list": [] }""";
+
+    private const string RawSourceAttribute =
+        """{ "_class": "SrcAttribute", "private": false, "type": { "_class": "SrcAttributeType", "value": -1, "string": "Fond" }, "value": "Ф.230" }""";
+
+    private const string RawUrl =
+        """{ "_class": "Url", "private": false, "path": "https://example.org", "desc": "Home page", "type": { "_class": "UrlType", "value": 2, "string": "" } }""";
+
+    /// <summary>
+    /// Records as Gramps 6 stores them (transaction history old data, the new data POST /api/objects/ returns):
+    /// every typed field is an object, where a GET gives a string.
+    /// </summary>
+    public static TheoryData<Type, string> RawRecords => new()
+    {
+        { typeof(GrampsPerson), $$"""
+            {
+              "_class": "Person", "handle": "p1", "gramps_id": "I0178", "change": 1793295509, "private": false, "gender": 0,
+              "primary_name": {
+                "_class": "Name", "private": false, "first_name": "Maria", "suffix": "", "title": "", "call": "", "nick": "",
+                "famnick": "", "group_as": "", "sort_as": 0, "display_as": 0, "date": {{RawDate}},
+                "type": { "_class": "NameType", "value": 2, "string": "" }, "citation_list": [], "note_list": [],
+                "surname_list": [{ "_class": "Surname", "surname": "Petrova", "prefix": "", "primary": true, "connector": "",
+                                   "origintype": { "_class": "NameOriginType", "value": 1, "string": "" } }]
+              },
+              "alternate_names": [],
+              "event_ref_list": [{ "_class": "EventRef", "ref": "e1", "private": false, "citation_list": [], "note_list": [],
+                                   "attribute_list": [{{RawAttribute}}], "role": { "_class": "EventRoleType", "value": 1, "string": "" } }],
+              "birth_ref_index": 0, "death_ref_index": -1,
+              "attribute_list": [{{RawAttribute}}],
+              "urls": [{{RawUrl}}],
+              "address_list": [{ "_class": "Address", "private": false, "citation_list": [], "note_list": [], "date": {{RawDate}},
+                                 "street": "", "locality": "", "city": "Tver", "county": "", "state": "", "country": "", "postal": "", "phone": "" }],
+              "lds_ord_list": [],
+              "person_ref_list": [{ "_class": "PersonRef", "ref": "p2", "rel": "Godfather", "private": false, "citation_list": [], "note_list": [] }],
+              "family_list": ["f1"], "parent_family_list": [], "citation_list": [], "note_list": [], "media_list": [], "tag_list": []
+            }
+            """ },
+        { typeof(GrampsEvent), $$"""
+            {
+              "_class": "Event", "handle": "e1", "gramps_id": "E0001", "change": 1793295509, "private": false,
+              "type": { "_class": "EventType", "value": 12, "string": "" }, "date": {{RawDate}}, "place": "", "description": "",
+              "attribute_list": [{{RawAttribute}}], "citation_list": [], "note_list": [], "media_list": [], "tag_list": []
+            }
+            """ },
+        { typeof(GrampsSource), $$"""
+            {
+              "_class": "Source", "handle": "s1", "gramps_id": "S0001", "change": 1793295509, "private": false,
+              "title": "Metric book", "author": "", "pubinfo": "", "abbrev": "",
+              "attribute_list": [{{RawSourceAttribute}}],
+              "reporef_list": [{ "_class": "RepoRef", "ref": "r1", "call_number": "Д.2644", "private": false, "note_list": [],
+                                 "media_type": { "_class": "SourceMediaType", "value": 2, "string": "" } }],
+              "note_list": [], "media_list": [], "tag_list": []
+            }
+            """ },
+        { typeof(GrampsCitation), $$"""
+            {
+              "_class": "Citation", "handle": "c1", "gramps_id": "C0001", "change": 1793295509, "private": false,
+              "date": {{RawDate}}, "page": "fr. 232", "confidence": 2, "source_handle": "s1",
+              "attribute_list": [{{RawSourceAttribute}}], "note_list": [], "media_list": [], "tag_list": []
+            }
+            """ },
+        { typeof(GrampsMedia), $$"""
+            {
+              "_class": "Media", "handle": "o1", "gramps_id": "O0001", "change": 1793295509, "private": false,
+              "path": "scan.jpg", "mime": "image/jpeg", "desc": "Scan", "checksum": "", "date": {{RawDate}},
+              "attribute_list": [{{RawAttribute}}], "citation_list": [], "note_list": [], "tag_list": []
+            }
+            """ },
+        { typeof(GrampsRepository), $$"""
+            {
+              "_class": "Repository", "handle": "r1", "gramps_id": "R0001", "change": 1793295509, "private": false,
+              "name": "State archive", "type": { "_class": "RepositoryType", "value": 1, "string": "" },
+              "urls": [{{RawUrl}}], "address_list": [], "note_list": [], "tag_list": []
+            }
+            """ },
+        { typeof(GrampsPlace), $$"""
+            {
+              "_class": "Place", "handle": "pl1", "gramps_id": "P0001", "change": 1793295509, "private": false,
+              "title": "", "long": "", "lat": "", "code": "",
+              "name": { "_class": "PlaceName", "value": "Tver", "date": {{RawDate}}, "lang": "" }, "alt_names": [],
+              "place_type": { "_class": "PlaceType", "value": 5, "string": "" },
+              "placeref_list": [{ "_class": "PlaceRef", "ref": "pl2", "date": {{RawDate}} }], "alt_loc": [],
+              "urls": [{{RawUrl}}], "citation_list": [], "note_list": [], "media_list": [], "tag_list": []
+            }
+            """ }
+    };
+
+    [Theory]
+    [MemberData(nameof(RawRecords))]
+    public void Deserialize_RawStoredRecord_ReadsTypedFieldsAsStrings(Type model, string json)
+    {
+        var record = JsonSerializer.Deserialize(json, model, GrampsJson.Options);
+
+        Assert.NotNull(record);
+        var attributes = model.GetProperty("AttributeList")?.GetValue(record) as GrampsAttribute[];
+        if (attributes != null)
+            Assert.Contains(attributes[0].Type, new[] { "RIN", "Fond" });
+        var urls = model.GetProperty("UrlList")?.GetValue(record) as GrampsUrl[];
+        if (urls != null)
+            Assert.Equal("2", urls[0].Type);
+    }
+
+    [Fact]
+    public void Deserialize_RawStoredPerson_KeepsTheName()
+    {
+        var person = (GrampsPerson)JsonSerializer.Deserialize(RawRecords.First()[1].ToString()!, typeof(GrampsPerson), GrampsJson.Options)!;
+
+        Assert.Equal("Maria Petrova", GrampsValueFormatter.FormatName(person.PrimaryName));
+        Assert.Equal("RIN", person.AttributeList![0].Type);
+    }
 }

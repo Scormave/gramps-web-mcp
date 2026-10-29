@@ -146,33 +146,10 @@ public static class EventTools
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(eventType))
-                throw McpToolErrors.ValidationError("Error: eventType is required. See gramps://types for valid values.");
-
-            eventType = await KnownTypes.ResolveAsync(eventType, "event_types", client);
-            await KnownTypes.CheckAttributesAsync(attributes, client);
-
-            var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
-            var resolvedPlaceHandle = placeHandle is null
-                ? null
-                : await HandleResolver.ResolveToHandleAsync(placeHandle, client, "places");
-
-            var request = new CreateEventRequest
-            {
-                Type = eventType,
-                Date = dateRequest,
-                Place = resolvedPlaceHandle,
-                Description = description,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
-                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
-                CitationList = citationHandles,
-                NoteList = noteHandles,
-                TagList = tagHandles,
-                Private = isPrivate
-            };
-
+            var request = await BuildEventRequestAsync(eventType, date, placeHandle, description,
+                citationHandles, noteHandles, tagHandles, mediaHandles, attributes, isPrivate, client);
             var (handle, grampsId) = await client.PostMutationAsync("/api/events/", request, "Event");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, eventType);
+            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, request.Type);
             return ResponseEnvelope.CreateSuccess(
                 "Event", handle, grampsId,
                 typeLabel, ResponseEnvelope.EventCreateNextSteps(handle!));
@@ -181,6 +158,39 @@ public static class EventTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>The checked request body of create_event; create_records sends it too.</summary>
+    internal static async Task<CreateEventRequest> BuildEventRequestAsync(
+        string eventType, string? date, string? placeHandle, string? description,
+        FlexibleHandleList? citationHandles, FlexibleHandleList? noteHandles, FlexibleHandleList? tagHandles,
+        FlexibleMediaLinkList? mediaHandles, FlexibleAttributeList? attributes, bool isPrivate,
+        GrampsApiClient client)
+    {
+        if (string.IsNullOrWhiteSpace(eventType))
+            throw McpToolErrors.ValidationError("Error: eventType is required. See gramps://types for valid values.");
+
+        eventType = await KnownTypes.ResolveAsync(eventType, "event_types", client);
+        await KnownTypes.CheckAttributesAsync(attributes, client);
+
+        var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
+        var resolvedPlaceHandle = placeHandle is null
+            ? null
+            : await HandleResolver.ResolveToHandleAsync(placeHandle, client, "places");
+
+        return new CreateEventRequest
+        {
+            Type = eventType,
+            Date = dateRequest,
+            Place = resolvedPlaceHandle,
+            Description = description,
+            MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
+            AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
+            CitationList = citationHandles,
+            NoteList = noteHandles,
+            TagList = tagHandles,
+            Private = isPrivate
+        };
     }
 
     [McpServerTool(Title = "Update Event", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]

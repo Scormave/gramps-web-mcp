@@ -74,29 +74,8 @@ public static class SourceTools
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(title))
-                throw McpToolErrors.ValidationError("Error: title is required");
-            if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
-                throw McpToolErrors.ValidationError(attributeError);
-            await KnownTypes.CheckSourceAttributesAsync(attributes, client);
-
-            var repoRefList = (GrampsRepositoryRef[]?)repositoryHandles;
-            await KnownTypes.CheckRepositoryRefsAsync(repoRefList, client);
-
-            var request = new CreateSourceRequest
-            {
-                Title = title,
-                Author = author,
-                PubInfo = pubinfo,
-                Abbrev = abbrev,
-                RepositoryRefList = repoRefList,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
-                NoteList = noteHandles,
-                TagList = tagHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
-                Private = isPrivate
-            };
-
+            var request = await BuildSourceRequestAsync(title, author, pubinfo, abbrev, repositoryHandles,
+                noteHandles, mediaHandles, tagHandles, attributes, isPrivate, client);
             var (handle, grampsId) = await client.PostMutationAsync("/api/sources/", request, "Source");
             return ResponseEnvelope.CreateSuccess("Source", handle, grampsId,
                 title, ResponseEnvelope.SourceCreateNextSteps(handle!));
@@ -105,6 +84,36 @@ public static class SourceTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>The checked request body of create_source; create_records sends it too.</summary>
+    internal static async Task<CreateSourceRequest> BuildSourceRequestAsync(
+        string title, string? author, string? pubinfo, string? abbrev, FlexibleRepositoryRefList? repositoryHandles,
+        FlexibleHandleList? noteHandles, FlexibleMediaLinkList? mediaHandles, FlexibleHandleList? tagHandles,
+        FlexibleAttributeList? attributes, bool isPrivate, GrampsApiClient client)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            throw McpToolErrors.ValidationError("Error: title is required");
+        if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
+            throw McpToolErrors.ValidationError(attributeError);
+        await KnownTypes.CheckSourceAttributesAsync(attributes, client);
+
+        var repoRefList = (GrampsRepositoryRef[]?)repositoryHandles;
+        await KnownTypes.CheckRepositoryRefsAsync(repoRefList, client);
+
+        return new CreateSourceRequest
+        {
+            Title = title,
+            Author = author,
+            PubInfo = pubinfo,
+            Abbrev = abbrev,
+            RepositoryRefList = repoRefList,
+            MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
+            NoteList = noteHandles,
+            TagList = tagHandles,
+            AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
+            Private = isPrivate
+        };
     }
 
     [McpServerTool(Title = "Update Source", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]

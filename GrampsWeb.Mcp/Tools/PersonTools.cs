@@ -234,50 +234,18 @@ public static class PersonTools
     {
         try
         {
-            if (primaryName?.Name == null)
-                throw McpToolErrors.ValidationError("Error: primaryName is required");
-
-            var primary = primaryName.Name;
-            var genderCode = GrampsGenderParser.ParseRequired(gender);
-
-            await KnownTypes.CheckNameAsync(primary, "primaryName", client);
-            await KnownTypes.CheckNamesAsync(alternateNames, "alternateNames", client);
-            var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
-            await EventRoles.CheckAsync(eventRefArr, client);
-            await KnownTypes.CheckAttributesAsync(attributes, client);
-            await KnownTypes.CheckUrlsAsync(urls, client);
-
-            var parentFamilyHandleArray = (string[]?)parentFamilyHandles;
-
-            var request = new CreatePersonRequest
-            {
-                Gender = genderCode,
-                PrimaryName = ConvertNameToRequest(primary),
-                AlternateNames = (GrampsName[]?)alternateNames is { Length: > 0 } alts
-                    ? alts.Select(ConvertNameToRequest).ToArray()
-                    : null,
-                EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
-                FamilyList = familyHandles,
-                ParentFamilyList = parentFamilyHandleArray?.Length > 0 ? parentFamilyHandleArray : null,
-                MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
-                CitationList = citationHandles,
-                NoteList = noteHandles,
-                TagList = tagHandles,
-                AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
-                AddressList = (GrampsAddress[]?)addresses is { Length: > 0 } a ? a : null,
-                UrlList = (GrampsUrl[]?)urls is { Length: > 0 } u ? u : null,
-                PersonRefList = (GrampsPersonRef[]?)personAssociations is { Length: > 0 } p ? p : null,
-                Private = isPrivate
-            };
+            var request = await BuildPersonRequestAsync(primaryName, gender, alternateNames, eventRefs, familyHandles,
+                parentFamilyHandles, mediaHandles, citationHandles, noteHandles, tagHandles, attributes, addresses, urls,
+                personAssociations, isPrivate, client);
 
             await SetVitalEventIndexesAsync(client, request);
 
             var (handle, grampsId) = await client.PostMutationAsync("/api/people/", request, "Person");
             return ResponseEnvelope.CreateSuccess(
                 "Person", handle, grampsId,
-                GrampsValueFormatter.FormatName(primary),
+                GrampsValueFormatter.FormatName(primaryName!.Name),
                 ResponseEnvelope.PersonCreateNextSteps(handle,
-                    hasEvents: eventRefArr.Length > 0,
+                    hasEvents: request.EventRefList is { Length: > 0 },
                     hasFamily: request.FamilyList is { Length: > 0 } || request.ParentFamilyList is { Length: > 0 },
                     hasNotes: request.NoteList is { Length: > 0 }));
         }
@@ -285,6 +253,54 @@ public static class PersonTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>
+    /// The checked request body of create_person, without the birth and death indexes, which depend on the
+    /// linked events' types; create_records sends it too.
+    /// </summary>
+    internal static async Task<CreatePersonRequest> BuildPersonRequestAsync(
+        FlexibleGrampsName? primaryName, string gender, FlexibleAlternateNameList? alternateNames,
+        FlexibleEventRefList? eventRefs, FlexibleHandleList? familyHandles, FlexibleHandleList? parentFamilyHandles,
+        FlexibleMediaLinkList? mediaHandles, FlexibleHandleList? citationHandles, FlexibleHandleList? noteHandles,
+        FlexibleHandleList? tagHandles, FlexibleAttributeList? attributes, FlexibleAddressList? addresses,
+        FlexibleUrlList? urls, FlexiblePersonRefList? personAssociations, bool isPrivate, GrampsApiClient client)
+    {
+        if (primaryName?.Name == null)
+            throw McpToolErrors.ValidationError("Error: primaryName is required");
+
+        var primary = primaryName.Name;
+        var genderCode = GrampsGenderParser.ParseRequired(gender);
+
+        await KnownTypes.CheckNameAsync(primary, "primaryName", client);
+        await KnownTypes.CheckNamesAsync(alternateNames, "alternateNames", client);
+        var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
+        await EventRoles.CheckAsync(eventRefArr, client);
+        await KnownTypes.CheckAttributesAsync(attributes, client);
+        await KnownTypes.CheckUrlsAsync(urls, client);
+
+        var parentFamilyHandleArray = (string[]?)parentFamilyHandles;
+
+        return new CreatePersonRequest
+        {
+            Gender = genderCode,
+            PrimaryName = ConvertNameToRequest(primary),
+            AlternateNames = (GrampsName[]?)alternateNames is { Length: > 0 } alts
+                ? alts.Select(ConvertNameToRequest).ToArray()
+                : null,
+            EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
+            FamilyList = familyHandles,
+            ParentFamilyList = parentFamilyHandleArray?.Length > 0 ? parentFamilyHandleArray : null,
+            MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
+            CitationList = citationHandles,
+            NoteList = noteHandles,
+            TagList = tagHandles,
+            AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
+            AddressList = (GrampsAddress[]?)addresses is { Length: > 0 } a ? a : null,
+            UrlList = (GrampsUrl[]?)urls is { Length: > 0 } u ? u : null,
+            PersonRefList = (GrampsPersonRef[]?)personAssociations is { Length: > 0 } p ? p : null,
+            Private = isPrivate
+        };
     }
 
     [McpServerTool(Title = "Update Person", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
@@ -384,23 +400,30 @@ public static class PersonTools
     /// new person would show no birth or death until its next update. Like Gramps <c>set_birth_death_index</c>, takes
     /// the first Birth and the first Death the person has the Primary role in; -1 when there is none.
     /// </summary>
-    private static async Task SetVitalEventIndexesAsync(GrampsApiClient client, CreatePersonRequest request)
+    /// <summary>
+    /// Points the birth and death indexes at the first Birth and Death event the person takes part in as Primary.
+    /// <paramref name="newEventTypes"/> gives the types of events not saved yet, by handle; the others are read.
+    /// </summary>
+    internal static async Task SetVitalEventIndexesAsync(GrampsApiClient client, CreatePersonRequest request,
+        IReadOnlyDictionary<string, string?>? newEventTypes = null)
     {
         var refs = request.EventRefList ?? [];
-        var primary = refs.Where(r => PersonFormatter.IsPrimaryRole(r.Role)).Select(r => r.Ref).ToArray();
-        if (primary.Length == 0)
-            return;
+        var primary = refs.Where(r => PersonFormatter.IsPrimaryRole(r.Role)).Select(r => r.Ref?.Trim())
+            .Where(h => h != null && newEventTypes?.ContainsKey(h) != true).ToArray();
 
-        var events = await client.GetByHandlesAsync<GrampsEvent>("events", primary, e => e.Handle);
+        var events = primary.Length == 0
+            ? new Dictionary<string, GrampsEvent>()
+            : await client.GetByHandlesAsync<GrampsEvent>("events", primary, e => e.Handle);
         for (var i = 0; i < refs.Length; i++)
         {
-            if (!PersonFormatter.IsPrimaryRole(refs[i].Role)
-                || refs[i].Ref?.Trim() is not { } eventHandle
-                || !events.TryGetValue(eventHandle, out var evt))
+            if (!PersonFormatter.IsPrimaryRole(refs[i].Role) || refs[i].Ref?.Trim() is not { } eventHandle)
                 continue;
-            if (evt.Type == "Birth" && request.BirthRefIndex < 0)
+            var type = newEventTypes?.TryGetValue(eventHandle, out var newType) == true ? newType
+                : events.TryGetValue(eventHandle, out var evt) ? evt.Type
+                : null;
+            if (type == "Birth" && request.BirthRefIndex < 0)
                 request.BirthRefIndex = i;
-            else if (evt.Type == "Death" && request.DeathRefIndex < 0)
+            else if (type == "Death" && request.DeathRefIndex < 0)
                 request.DeathRefIndex = i;
         }
     }

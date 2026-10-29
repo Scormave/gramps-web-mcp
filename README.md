@@ -33,7 +33,7 @@ Docker image, so Docker must be installed. Details are under
 
 ## Features
 
-- **Up to 32 MCP tools** — read, create, update, and delete people, families, events, places,
+- **Up to 33 MCP tools** — read, create, update, and delete people, families, events, places,
   sources, citations, notes, media, repositories, and tags
 - **Search and browse** — full-text search and paginated object listing,
   filtered by Gramps QL or by Gramps filter rules (everyone related to a
@@ -41,6 +41,9 @@ Docker image, so Docker must be installed. Details are under
 - **Kinship tools** — ancestors, descendants, relationships, and timelines
 - **Incremental links** — add or remove one event, child, citation, or note
   with `linkMode`, keeping every other link
+- **One-transaction entry** — `create_records` saves a whole register entry
+  (people, family, events, source and citation) all or nothing, and one undo
+  takes it back
 - **Undo** — revert one transaction of the edit history, deletions included,
   after a check that it would not overwrite later edits or break links
 - **Confirmation dialogs** — `delete_object` and `undo_change` ask the user, not
@@ -82,6 +85,7 @@ tree, and a Gramps ID such as `I0012` works as well.
 | "Who was born in Dublin before 1900? Oldest first." | `list_objects` with the filter rule `HasBirth` and `sort` | The matching people in order of birth |
 | "Transcribe the baptism scan O0012." | `read_media`, with `region` to zoom in on one entry | The scan for the agent to read, and the transcription in its reply |
 | "Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber." | `search` for each person and place, then `create_place`, `create_event`, `create_person` and `create_family` | The new records with their Gramps IDs, people already in the tree reused, and what the text left open |
+| "Enter entry 12 of the 1884 marriage register: the couple, their fathers and the witnesses." | `search` for each person, then `create_records` | The citation, the marriage, the new people and families saved in one transaction, which one `undo_change` takes back |
 | "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source or `create_source`, then `create_citation` and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
 | "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `create_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
 | "Add today's findings to my research note." | `update_note` with `appendText` | The note extended at the end, its earlier text, styling and links untouched |
