@@ -20,21 +20,24 @@ Registry publishing, so keep the version metadata aligned before tagging.
     `"ghcr.io/scormave/gramps-web-mcp:x.y.z"`.
   - The package intentionally declares `stdio` with `MCP_TRANSPORT=stdio`: the
     registry describes containers that a client spawns itself. The image's own
-    default of `MCP_TRANSPORT=http` on port 8080 is documented in `README.md`
-    instead, because a package transport of `streamable-http` would have to pin a
-    fixed host port that not every deployment uses.
+    default of `MCP_TRANSPORT=http` on port 8080 is documented in
+    `GrampsWeb.Mcp/docs/INSTALLATION.md` instead, because a package transport
+    of `streamable-http` would have to pin a fixed host port that not every
+    deployment uses.
 - Update the example `pack-release.sh <rid> x.y.z` commands in `mcpb/README.md`
   and the usage comment of `scripts/pack-release.sh`.
 - Check whether the Docker runtime surface changed:
   - Update `Dockerfile` comments, labels, exposed ports, health check, or default
     environment variables if needed.
-  - Update `docker-compose.example.yml`, `.env.example`, `README.md`, and
-    `site/index.html` if new runtime configuration is user-visible.
+  - Update `docker-compose.example.yml`, `.env.example`,
+    `GrampsWeb.Mcp/docs/CONFIGURATION.md`, the main settings table in
+    `README.md`, and `site/index.html` if new runtime configuration is
+    user-visible.
 - Check whether the MCPB surface changed:
   - Update `mcpb/manifest.template.json` for new prompts, tools, user config,
     compatibility, privacy policy links, or descriptions.
-  - Update `mcpb/README.md` and `README.md` if install or configuration steps
-    changed.
+  - Update `mcpb/README.md`, `GrampsWeb.Mcp/docs/INSTALLATION.md` and
+    `README.md` if install or configuration steps changed.
 - Check whether server dependencies changed:
   - Confirm `THIRD-PARTY-NOTICES.txt` lists each new package with its license
     and copyright, and that its upstream notice links point at the versions in

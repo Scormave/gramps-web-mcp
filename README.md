@@ -12,825 +12,157 @@
 > stored data that the call did not mention
 > ([#5](https://github.com/Scormave/gramps-web-mcp/issues/5)). If you edited a
 > tree with an earlier version,
-> [check it for dropped data](#data-dropped-by-updates-before-231).
+> [check it for dropped data](GrampsWeb.Mcp/docs/INSTALLATION.md#data-dropped-by-updates-before-231).
 
 Companion MCP server for the [Gramps Web](https://www.grampsweb.org/)
-open-source genealogy platform. It gives AI agents structured, tool-based
-access to family trees through the Model Context Protocol.
-
-This project is **not** a standalone genealogy UI or replacement for Gramps
-Web. Run it alongside an existing Gramps Web instance; your users, trees,
-media, permissions, and genealogy editing UI stay in Gramps Web.
+open-source genealogy platform. It lets AI agents read and edit your family
+tree through the Model Context Protocol. It is **not** a genealogy UI: run it
+alongside an existing Gramps Web instance, where your users, trees, media and
+permissions stay.
 
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_Server-0098FF)][install-vscode]
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Install_Server-24bfa5)][install-vscode-insiders]
 [![Add to Cursor](https://img.shields.io/badge/Cursor-Install_Server-000000)][install-cursor]
 
 The buttons add the server to VS Code or Cursor, which start it from the
-Docker image, so Docker must be installed. Details are under
-[Over stdio in Docker](#over-stdio-in-docker); for Claude Desktop, install the
-[MCPB extension](#claude-desktop-mcpb-extension).
+Docker image, so Docker must be installed. For Claude Desktop, install the
+[MCPB extension](#claude-desktop); other clients are listed under
+[Install](#install).
 
 ## Features
 
-- **Up to 33 MCP tools** — read, create, update, and delete people, families, events, places,
-  sources, citations, notes, media, repositories, and tags
-- **Search and browse** — full-text search and paginated object listing,
-  filtered by Gramps QL or by Gramps filter rules (everyone related to a
-  person, people with no family links)
-- **Kinship tools** — ancestors, descendants, relationships, and timelines
-- **Incremental links** — add or remove one event, child, citation, or note
-  with `linkMode`, keeping every other link
-- **One-transaction entry** — `create_records` saves a whole register entry
-  (people, family, events, source and citation) all or nothing, and one undo
-  takes it back
-- **Undo** — revert one transaction of the edit history, deletions included,
-  after a check that it would not overwrite later edits or break links
-- **Confirmation dialogs** — `delete_object` and `undo_change` ask the user, not
-  the model, before they change the tree, in clients that support MCP elicitation
-- **Dates as Gramps writes them** — ranges, before/after/about, and every Gramps
-  calendar (`1856-07-20 (Julian)`), stored with the sort value Gramps computes
-- **8 MCP resources** — type vocabularies, input guide, tree metadata, name
-  settings, filter rules, and opt-in media previews/files for vision-capable
-  agents
-- **Media safeguards** — size limits, private-record defaults, and previews with
-  EXIF/GPS metadata stripped
-- **MCP prompts** — guided workflows for research, finding connections, adding
-  people/families, imports, changing links, and citing facts
-- **Multiple transports** — stdio (local clients), Streamable HTTP, legacy SSE
+- **Up to 33 MCP tools** — read, create, update, and delete people, families,
+  events, places, sources, citations, notes, media, repositories, and tags
+- **Search and kinship** — full-text search, listings filtered by Gramps QL or
+  Gramps filter rules, ancestors, descendants, relationships, and timelines
+- **Careful edits** — add or remove one link with `linkMode` and keep the
+  rest; save a whole register entry in one transaction with `create_records`;
+  dates in every Gramps form and calendar
+- **Undo and confirmation** — `undo_change` reverts one transaction of the
+  edit history; it and `delete_object` ask the user, not the model, before
+  they change the tree, in clients that support MCP elicitation
+- **Scans and photos** — opt-in previews that vision-capable agents can read,
+  with EXIF/GPS metadata stripped, and uploads from a folder you choose
+- **8 MCP resources and guided prompts** — type vocabularies, tree metadata,
+  filter rules, and workflows for research, imports, and citing facts
 - **Read-only mode** — publish only read tools and block direct mutation calls
+- **Any MCP client** — stdio, Streamable HTTP, and legacy SSE, from a Claude
+  Desktop extension, a Docker image, or a single-file release binary
 
-See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) for the full list.
-Upgrading from 1.x? Follow the [2.0 migration guide](GrampsWeb.Mcp/docs/MIGRATING_TO_2.md)
-to update saved tool calls and client settings.
-
-All outgoing requests to Gramps Web, including authentication, media downloads,
-and health checks, automatically identify this application with
-`User-Agent: gramps-web-mcp/<version> (+https://github.com/Scormave/gramps-web-mcp)`.
-The version comes from the application build; no configuration is required.
+The [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) describes every tool,
+resource and prompt. Upgrading from 1.x? Follow the
+[2.0 migration guide](GrampsWeb.Mcp/docs/MIGRATING_TO_2.md).
 
 ## What to ask
 
-Ask in your own words; the agent chooses the tools. The table shows what a
-typical request uses and what comes back. The names stand for people in your
-tree, and a Gramps ID such as `I0012` works as well.
+Ask in your own words; the agent chooses the tools. The names stand for people
+in your tree, and a Gramps ID such as `I0012` works as well.
 
-| You ask | The agent uses | You get |
-|---------|----------------|---------|
-| "Tell me about Maria García." | `search`, then `get_object` with `extended: true` | Her names, events with dates and places, parents, spouses and children, citations and notes |
-| "Who were Kenji Tanaka's great-grandparents?" | `get_person_tree` with `direction: "ancestors"` and `generations: 3` | Each ancestor with a kinship label such as Father's mother, and birth and death dates and places |
-| "How is Ivan Petrov related to Maria García?" | `search` for both, then `get_relations` | The relationship in words, such as second cousin once removed, and the common ancestors by name |
-| "What happened in Liam Murphy's family from 1900 to 1920?" | `get_timeline` with `relatives` and `dates: "1900-1920"` | The dated events of Liam, his parents, siblings, wife and children, in date order |
-| "Who in the tree has no parents, spouse or children?" | `list_objects` with the filter rule `Disconnected` | The people with no family links, page by page |
-| "Who was born in Dublin before 1900? Oldest first." | `list_objects` with the filter rule `HasBirth` and `sort` | The matching people in order of birth |
-| "Transcribe the baptism scan O0012." | `read_media`, with `region` to zoom in on one entry | The scan for the agent to read, and the transcription in its reply |
-| "Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber." | `search` for each person and place, then `create_place`, `create_event`, `create_person` and `create_family` | The new records with their Gramps IDs, people already in the tree reused, and what the text left open |
-| "Enter entry 12 of the 1884 marriage register: the couple, their fathers and the witnesses." | `search` for each person, then `create_records` | The citation, the marriage, the new people and families saved in one transaction, which one `undo_change` takes back |
-| "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source or `create_source`, then `create_citation` and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
-| "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `create_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
-| "Add today's findings to my research note." | `update_note` with `appendText` | The note extended at the end, its earlier text, styling and links untouched |
-| "What changed today? Undo the last edit." | `get_recent_changes`, then `undo_change` once you confirm | The edit history, then the earlier versions back, or a refusal naming the later edits the undo would overwrite |
+| You ask | You get |
+|---------|---------|
+| "Tell me about Maria García." | Her names, events with dates and places, parents, spouses and children, citations and notes |
+| "Who were Kenji Tanaka's great-grandparents?" | Each ancestor with a kinship label such as Father's mother, and birth and death dates and places |
+| "How is Ivan Petrov related to Maria García?" | The relationship in words, such as second cousin once removed, and the common ancestors by name |
+| "Transcribe the baptism scan O0012." | The scan for the agent to read, and the transcription in its reply |
+| "Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber." | The new records with their Gramps IDs, people already in the tree reused, and what the text left open |
+| "Enter entry 12 of the 1884 marriage register: the couple, their fathers and the witnesses." | The citation, the marriage, the new people and families saved in one transaction, which one `undo_change` takes back |
+| "What changed today? Undo the last edit." | The edit history, then the earlier versions back, or a refusal naming the later edits the undo would overwrite |
 
-The requests that only read the tree also work in
-[read-only mode](#runtime-mode). Reading scans needs
-[media access](#media-file-access), and attaching them needs an
-[upload folder](#media-upload). `delete_object` and `undo_change` change the
-tree only after you confirm; see
-[Confirming deletes and undos](#confirming-deletes-and-undos). Clients that
-show MCP prompts also offer `research-person`, `find-connections`,
-`import-from-text` and `cite-fact` for these requests; the
-[tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md#prompts) lists every prompt.
+Reading scans needs [media access](GrampsWeb.Mcp/docs/CONFIGURATION.md#media-file-access).
+The [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md#what-to-ask) lists more
+requests and the tools each one uses.
 
-## Prerequisites
+## Install
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (for local development)
-- A running [Gramps Web](https://www.grampsweb.org/) instance with API access
-- Docker (optional, for container deployment)
+You need a running Gramps Web instance and an account on it. Choose the setup
+by client:
 
-## Quick start
+| Client | Setup |
+|--------|-------|
+| Claude Desktop | The [MCPB extension](#claude-desktop), installed from one file; no Docker |
+| VS Code, Cursor | The install buttons above; the client starts the Docker image |
+| Claude Code, Codex, Gemini CLI, Antigravity CLI, Open WebUI and others | [Connecting MCP clients](GrampsWeb.Mcp/docs/CLIENTS.md): over HTTP to a shared server, or started by the client from the Docker image or the release binary |
+| Several clients or machines | One server in [Docker](#docker), [Docker Compose](GrampsWeb.Mcp/docs/INSTALLATION.md#gramps-web--mcp-docker-compose) or on [Unraid](GrampsWeb.Mcp/docs/INSTALLATION.md#unraid), reached over HTTP |
 
-### Local development (demo server)
+### Claude Desktop
 
-`run-local-server.sh` connects to the public [demo.grampsweb.org](https://demo.grampsweb.org)
-instance using well-known demo credentials (`owner` / `owner`):
-
-```bash
-./run-local-server.sh
-```
-
-The server starts with HTTP transport at `http://127.0.0.1:8080/mcp`. No API key is
-required when binding to loopback only.
-
-### Docker
-
-Pre-built multi-arch images (`linux/amd64`, `linux/arm64`) are published to
-GitHub Container Registry. Docker picks the matching architecture automatically;
-`amd64` covers most Unraid and x86 hosts, `arm64` covers Apple Silicon and ARM
-SBCs:
-
-```bash
-docker pull ghcr.io/scormave/gramps-web-mcp:latest
-
-docker run -p 8080:8080 \
-  -e GRAMPS_API_URL=https://your-gramps.example.com \
-  -e GRAMPS_USERNAME=your-user \
-  -e GRAMPS_PASSWORD=your-password \
-  -e GRAMPS_TREE_ID=your-tree-uuid \
-  -e MCP_API_KEY=your-secret-api-key \
-  ghcr.io/scormave/gramps-web-mcp:latest
-```
-
-For refresh-token authentication, replace the `GRAMPS_USERNAME` and
-`GRAMPS_PASSWORD` lines with `-e GRAMPS_REFRESH_TOKEN=your-refresh-token`.
-
-Each published image has a build provenance attestation: a signed record,
-kept by GitHub, of the repository, workflow and commit that built it. With the [GitHub CLI](https://cli.github.com/), check that an
-image was built by this repository's GitHub Actions (with Docker Desktop
-installed, start it first: `gh` asks it for registry credentials):
-
-```bash
-gh attestation verify oci://ghcr.io/scormave/gramps-web-mcp:latest --repo Scormave/gramps-web-mcp
-```
-
-The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
-container health, and other uptime monitors. It returns HTTP 200 when the MCP
-server can authenticate against Gramps Web, or HTTP 503 otherwise. Probes reuse
-the token the tools use, so they do not log in to Gramps Web each time. The
-public response is minimal: `{ "status": "healthy" }` or
-`{ "status": "unhealthy" }`. Startup logs include a line such as
-`Connected to Gramps Web at …` once the API is reachable.
-
-The image is built on Ubuntu Chiseled and has no shell or `curl`. Its
-`HEALTHCHECK` runs `dotnet /app/GrampsWeb.Mcp.dll --health-check`, which
-requests `/health` on the port from `ASPNETCORE_URLS` and exits with 0 on
-HTTP 200 and 1 otherwise. A health check you define yourself, in Compose or in
-a NAS app template, runs the same command:
-
-```yaml
-healthcheck:
-  test: ["CMD", "dotnet", "/app/GrampsWeb.Mcp.dll", "--health-check"]
-```
-
-If the server listens on an address that `ASPNETCORE_URLS` does not give, pass
-the URL after the option, for example `--health-check http://localhost:9000`.
-
-The image defaults to Streamable HTTP (`MCP_TRANSPORT=http`) on port 8080, which
-is what the commands above use. Clients that spawn the container themselves
-(such as MCP Registry installs) instead run it over stdio with
-`-e MCP_TRANSPORT=stdio` and stdin kept open (`docker run -i`); that is the mode
-declared in `server.json`.
-
-For read-only mode, add `-e GRAMPS_READ_ONLY=true`:
-
-```bash
-docker run -p 8080:8080 \
-  -e GRAMPS_API_URL=https://your-gramps.example.com \
-  -e GRAMPS_USERNAME=your-user \
-  -e GRAMPS_PASSWORD=your-password \
-  -e GRAMPS_TREE_ID=your-tree-uuid \
-  -e MCP_API_KEY=your-secret-api-key \
-  -e GRAMPS_READ_ONLY=true \
-  ghcr.io/scormave/gramps-web-mcp:latest
-```
-
-### Unraid installation
-
-Unraid users can install `gramps-web-mcp` from **Community Applications**. The
-template source is maintained at
-[Scormave/gramps-web-mcp-unraid](https://github.com/Scormave/gramps-web-mcp-unraid).
-For Unraid-specific help, see the
-[support thread on the Unraid forums](https://forums.unraid.net/topic/199622-support-gramps-web-mcp-mcp-server-for-gramps-web-ai-genealogy).
-
-Basic setup:
-
-1. In Unraid, open **Apps** / **Community Applications**.
-2. Search for `gramps-web-mcp` and install the template.
-3. Set `GRAMPS_API_URL`, `GRAMPS_TREE_ID`, and either `GRAMPS_USERNAME` plus
-   `GRAMPS_PASSWORD` or `GRAMPS_REFRESH_TOKEN` for your Gramps Web instance.
-   Set `MCP_API_KEY` when the MCP port is reachable from other machines on your
-   network.
-4. Keep the default container port `8080`, or map it to another host port.
-5. Start the container and check `/health`; it returns HTTP 200 once the service
-   can authenticate to Gramps Web, with a minimal JSON response.
-
-For the easiest pairing, run Gramps Web and `gramps-web-mcp` on the same Unraid
-Docker network and set `GRAMPS_API_URL` to the Gramps Web container URL. The MCP
-endpoint for clients is `http://<unraid-host>:<mapped-port>/mcp`; see
-[Other MCP clients](#other-mcp-clients) to connect them.
-
-### Gramps Web + MCP (Docker Compose)
-
-To run Gramps Web and the MCP server on the same host and Docker network, use
-[`docker-compose.example.yml`](docker-compose.example.yml) as a starting point:
-
-```bash
-cp docker-compose.example.yml docker-compose.yml
-cp .env.example .env
-# Complete the Gramps Web setup wizard, then set an authentication method in .env
-docker compose up -d
-```
-
-Gramps Web is published on port **5055**; MCP is on **8080** (`/mcp` and
-`/health`). Inside the compose network the MCP container reaches Gramps Web at
-`http://grampsweb:5000`.
-
-### Claude Desktop (MCPB extension)
-
-One-click install for Claude Desktop is available as an **MCP Bundle** (`.mcpb`) from
-[GitHub Releases](https://github.com/Scormave/gramps-web-mcp/releases). Download the
-bundle for your platform:
-
-| Platform | Artifact |
-|----------|----------|
-| macOS Apple Silicon | `gramps-web-mcp-claude-desktop-osx-arm64-v*.mcpb` |
-| macOS Intel | `gramps-web-mcp-claude-desktop-osx-x64-v*.mcpb` |
-| Windows x64 | `gramps-web-mcp-claude-desktop-win-x64-v*.mcpb` |
-| Linux x64 | `gramps-web-mcp-claude-desktop-linux-x64-v*.mcpb` |
-| Linux ARM64 | `gramps-web-mcp-claude-desktop-linux-arm64-v*.mcpb` |
-
-1. Download the `.mcpb` file for your OS from the latest release.
+1. Download the `.mcpb` bundle for your platform from the
+   [latest release](https://github.com/Scormave/gramps-web-mcp/releases/latest),
+   such as `gramps-web-mcp-claude-desktop-osx-arm64-v*.mcpb` for Apple Silicon.
 2. Double-click it, or drag it into the Claude Desktop window.
 3. Enter your Gramps Web URL, username, password/token, and tree UUID.
 4. Leave **Read-only mode** enabled for your first session; disable it only when you
    want Claude to create or edit records.
 5. Complete installation and start a new chat.
 
-The extension runs locally over stdio and does not require the .NET SDK on your
-machine. To check that a downloaded bundle came from this repository, see the
-attestation note under
-[the release binary](#over-stdio-with-the-release-binary).
-See [`mcpb/README.md`](mcpb/README.md) for packaging details and
-[`PRIVACY.md`](PRIVACY.md) for the privacy policy.
-
-To build a bundle locally:
-
-```bash
-./scripts/pack-release.sh osx-arm64   # or osx-x64, win-x64, linux-x64, linux-arm64
-```
-
-### Other MCP clients
-
-Other MCP clients, such as Claude Code, VS Code, Cursor, Codex, Antigravity CLI
-and Open WebUI, connect in one of three ways:
-
-- **Over HTTP** to a server that already runs in [Docker](#docker), on
-  [Unraid](#unraid-installation) or with
-  [Docker Compose](#gramps-web--mcp-docker-compose). Each client needs only the
-  server's address and API key, nothing is installed on the client's machine,
-  and all clients share the one server.
-- **Over stdio in Docker**: the client starts the server's image for itself.
-  Each machine needs Docker and the Gramps Web credentials. VS Code and Cursor
-  add this setup with one click.
-- **Over stdio with the release binary**: the client starts the server from a
-  single file downloaded from the release. Each machine needs the Gramps Web
-  credentials, but neither Docker nor .NET.
-
 Claude Desktop connects to servers added by URL from Anthropic's cloud, not
-from your computer, so it cannot reach a server on your home network. Use the
-[MCPB extension](#claude-desktop-mcpb-extension) there.
+from your computer, so it cannot reach a server on your home network; use the
+extension there. [Installation](GrampsWeb.Mcp/docs/INSTALLATION.md#claude-desktop-mcpb-extension)
+lists the bundle for each platform.
 
-#### Over HTTP
+### Docker
 
-Set `MCP_API_KEY` on the server (see [HTTP authentication](#http-authentication)),
-then give each client the address and the key. The examples use
-`http://192.168.1.10:8080/mcp` and `your-secret-api-key`; replace both with
-your own.
-
-**Claude Code:**
+For one server that several clients share:
 
 ```bash
-claude mcp add --transport http --scope user gramps-web http://192.168.1.10:8080/mcp \
-  --header "Authorization: Bearer your-secret-api-key"
+docker run -p 8080:8080 \
+  -e GRAMPS_API_URL=https://your-gramps.example.com \
+  -e GRAMPS_USERNAME=your-user \
+  -e GRAMPS_PASSWORD=your-password \
+  -e GRAMPS_TREE_ID=your-tree-uuid \
+  -e MCP_API_KEY=your-secret-api-key \
+  ghcr.io/scormave/gramps-web-mcp:latest
 ```
 
-**VS Code**, in the user `mcp.json` or a workspace's `.vscode/mcp.json`. VS Code
-asks for the key when the server starts for the first time:
-
-```json
-{
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "gramps-web-mcp-key",
-      "description": "Gramps Web MCP API key",
-      "password": true
-    }
-  ],
-  "servers": {
-    "gramps-web": {
-      "type": "http",
-      "url": "http://192.168.1.10:8080/mcp",
-      "headers": { "Authorization": "Bearer ${input:gramps-web-mcp-key}" }
-    }
-  }
-}
-```
-
-**Cursor**, in `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "gramps-web": {
-      "url": "http://192.168.1.10:8080/mcp",
-      "headers": { "Authorization": "Bearer your-secret-api-key" }
-    }
-  }
-}
-```
-
-**Codex**, in `~/.codex/config.toml`. Codex reads the key from the environment
-variable that `bearer_token_env_var` names, so set `GRAMPS_WEB_MCP_KEY` before
-you start it:
-
-```toml
-[mcp_servers.gramps-web]
-url = "http://192.168.1.10:8080/mcp"
-bearer_token_env_var = "GRAMPS_WEB_MCP_KEY"
-```
-
-**Antigravity CLI**, in `~/.gemini/config/mcp_config.json`. Gemini CLI takes
-the same entry in `~/.gemini/settings.json`, with `httpUrl` in place of
-`serverUrl`:
-
-```json
-{
-  "mcpServers": {
-    "gramps-web": {
-      "serverUrl": "http://192.168.1.10:8080/mcp",
-      "headers": { "Authorization": "Bearer your-secret-api-key" }
-    }
-  }
-}
-```
-
-**Open WebUI** 0.6.31 or later: an administrator opens **Settings → Admin →
-Integrations**, and under **External Tool Servers** adds a connection of type
-**MCP (Streamable HTTP)** with the server URL, auth **Bearer** and the API key
-in **Key**. Open WebUI connects from its own container, where `localhost` is
-that container: use the host's address, or the MCP container's name when both
-share a Docker network.
-
-Keep in mind:
-
-- Plain HTTP carries the key and the tree data unencrypted. Keep the port on a
-  network you trust, and from elsewhere connect to that network through a VPN
-  rather than publishing the port on the internet.
-- The Cursor and Antigravity CLI files hold the key itself, so keep them out of
-  a project's repository.
-- Every client works as the Gramps Web account the server is configured with,
-  and Gramps Web records all their edits under that account.
-- Over stateless HTTP, the default, `delete_object` and `undo_change` cannot
-  show their confirmation dialog; see
-  [Confirming deletes and undos](#confirming-deletes-and-undos).
-
-To check the address and the key from a terminal, send an `initialize` request.
-The key also works as `X-Api-Key: <key>`:
-
-```bash
-curl -X POST http://192.168.1.10:8080/mcp \
-  -H "Authorization: Bearer $MCP_API_KEY" \
-  -H "Accept: application/json, text/event-stream" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"1.0"}},"id":1}'
-```
-
-#### Over stdio in Docker
-
-The client starts a container for each session and removes it when the session
-ends. `MCP_TRANSPORT=stdio` is required because the image defaults to HTTP, and
-`-e NAME` without a value hands the container the variable from `env`, so the
-password stays off the `docker` command line:
-
-```json
-{
-  "mcpServers": {
-    "gramps-web": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm",
-        "-e", "MCP_TRANSPORT=stdio",
-        "-e", "GRAMPS_API_URL",
-        "-e", "GRAMPS_USERNAME",
-        "-e", "GRAMPS_PASSWORD",
-        "-e", "GRAMPS_TREE_ID",
-        "ghcr.io/scormave/gramps-web-mcp:latest"
-      ],
-      "env": {
-        "GRAMPS_API_URL": "https://your-gramps.example.com",
-        "GRAMPS_USERNAME": "your-user",
-        "GRAMPS_PASSWORD": "your-password",
-        "GRAMPS_TREE_ID": "your-tree-uuid"
-      }
-    }
-  }
-}
-```
-
-The install buttons at the [top of this README](#gramps-web-mcp) add this
-entry to VS Code or Cursor. VS Code asks for the Gramps Web address, user name,
-password and tree ID when the server starts for the first time, and keeps the
-password in its secret storage. Cursor adds the placeholders shown above;
-replace them with your own before the first start.
-
-[install-vscode]: https://insiders.vscode.dev/redirect/mcp/install?name=gramps-web&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-api-url%22%2C%22description%22%3A%22Gramps%20Web%20address%2C%20such%20as%20https%3A%2F%2Fyour-gramps.example.com%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-username%22%2C%22description%22%3A%22Gramps%20Web%20user%20name%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-password%22%2C%22description%22%3A%22Gramps%20Web%20password%22%2C%22password%22%3Atrue%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-tree-id%22%2C%22description%22%3A%22Gramps%20Web%20tree%20ID%22%7D%5D&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-i%22%2C%22--rm%22%2C%22-e%22%2C%22MCP_TRANSPORT%3Dstdio%22%2C%22-e%22%2C%22GRAMPS_API_URL%22%2C%22-e%22%2C%22GRAMPS_USERNAME%22%2C%22-e%22%2C%22GRAMPS_PASSWORD%22%2C%22-e%22%2C%22GRAMPS_TREE_ID%22%2C%22ghcr.io%2Fscormave%2Fgramps-web-mcp%3Alatest%22%5D%2C%22env%22%3A%7B%22GRAMPS_API_URL%22%3A%22%24%7Binput%3Agramps-web-api-url%7D%22%2C%22GRAMPS_USERNAME%22%3A%22%24%7Binput%3Agramps-web-username%7D%22%2C%22GRAMPS_PASSWORD%22%3A%22%24%7Binput%3Agramps-web-password%7D%22%2C%22GRAMPS_TREE_ID%22%3A%22%24%7Binput%3Agramps-web-tree-id%7D%22%7D%7D
-[install-vscode-insiders]: https://insiders.vscode.dev/redirect/mcp/install?name=gramps-web&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-api-url%22%2C%22description%22%3A%22Gramps%20Web%20address%2C%20such%20as%20https%3A%2F%2Fyour-gramps.example.com%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-username%22%2C%22description%22%3A%22Gramps%20Web%20user%20name%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-password%22%2C%22description%22%3A%22Gramps%20Web%20password%22%2C%22password%22%3Atrue%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-tree-id%22%2C%22description%22%3A%22Gramps%20Web%20tree%20ID%22%7D%5D&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-i%22%2C%22--rm%22%2C%22-e%22%2C%22MCP_TRANSPORT%3Dstdio%22%2C%22-e%22%2C%22GRAMPS_API_URL%22%2C%22-e%22%2C%22GRAMPS_USERNAME%22%2C%22-e%22%2C%22GRAMPS_PASSWORD%22%2C%22-e%22%2C%22GRAMPS_TREE_ID%22%2C%22ghcr.io%2Fscormave%2Fgramps-web-mcp%3Alatest%22%5D%2C%22env%22%3A%7B%22GRAMPS_API_URL%22%3A%22%24%7Binput%3Agramps-web-api-url%7D%22%2C%22GRAMPS_USERNAME%22%3A%22%24%7Binput%3Agramps-web-username%7D%22%2C%22GRAMPS_PASSWORD%22%3A%22%24%7Binput%3Agramps-web-password%7D%22%2C%22GRAMPS_TREE_ID%22%3A%22%24%7Binput%3Agramps-web-tree-id%7D%22%7D%7D&quality=insiders
-[install-cursor]: https://cursor.com/en/install-mcp?name=gramps-web&config=eyJjb21tYW5kIjoiZG9ja2VyIiwiYXJncyI6WyJydW4iLCItaSIsIi0tcm0iLCItZSIsIk1DUF9UUkFOU1BPUlQ9c3RkaW8iLCItZSIsIkdSQU1QU19BUElfVVJMIiwiLWUiLCJHUkFNUFNfVVNFUk5BTUUiLCItZSIsIkdSQU1QU19QQVNTV09SRCIsIi1lIiwiR1JBTVBTX1RSRUVfSUQiLCJnaGNyLmlvL3Njb3JtYXZlL2dyYW1wcy13ZWItbWNwOmxhdGVzdCJdLCJlbnYiOnsiR1JBTVBTX0FQSV9VUkwiOiJodHRwczovL3lvdXItZ3JhbXBzLmV4YW1wbGUuY29tIiwiR1JBTVBTX1VTRVJOQU1FIjoieW91ci11c2VyIiwiR1JBTVBTX1BBU1NXT1JEIjoieW91ci1wYXNzd29yZCIsIkdSQU1QU19UUkVFX0lEIjoieW91ci10cmVlLXV1aWQifX0%3D
-
-- Cursor (`~/.cursor/mcp.json`), Antigravity CLI
-  (`~/.gemini/config/mcp_config.json`) and Gemini CLI
-  (`~/.gemini/settings.json`) take this entry as it is.
-- Claude Code: pass the `gramps-web` object to
-  `claude mcp add-json --scope user gramps-web '<object>'`.
-- VS Code: put the entry under `servers` instead of `mcpServers` and add
-  `"type": "stdio"`.
-- Codex: put the same `command`, `args` and `env` under
-  `[mcp_servers.gramps-web]` in `~/.codex/config.toml`.
-- Open WebUI connects over HTTP only.
-
-Before the first start:
-
-- Pull the image once with `docker pull ghcr.io/scormave/gramps-web-mcp:latest`.
-  Some clients give a server only a few seconds to start, too few for the
-  download.
-- Inside the container `localhost` is the container itself. If Gramps Web runs
-  on the same computer, use `host.docker.internal` in `GRAMPS_API_URL`; on
-  Linux, also add `"--add-host=host.docker.internal:host-gateway"` to `args`.
-- For a refresh token, replace `GRAMPS_USERNAME` and `GRAMPS_PASSWORD` with
-  `GRAMPS_REFRESH_TOKEN` in both lists. For read-only mode, add
-  `"-e", "GRAMPS_READ_ONLY=true"` before the image name; other
-  [settings](#configuration) go the same way.
-- [Uploads](#media-upload) read files inside the container, so mount the
-  upload folder with `-v`.
-
-#### Over stdio with the release binary
-
-Each [release](https://github.com/Scormave/gramps-web-mcp/releases) also carries
-the server as one self-contained file, the same one the Claude Desktop bundles
-hold. It starts over stdio unless told otherwise:
-
-| Platform | Archive |
-|----------|---------|
-| macOS Apple Silicon | `gramps-web-mcp-osx-arm64.tar.gz` |
-| macOS Intel | `gramps-web-mcp-osx-x64.tar.gz` |
-| Windows x64 | `gramps-web-mcp-win-x64.zip` |
-| Linux x64 | `gramps-web-mcp-linux-x64.tar.gz` |
-| Linux ARM64 | `gramps-web-mcp-linux-arm64.tar.gz` |
-
-Unpack the archive for your platform into a folder of its own. On macOS or
-Linux (here Apple Silicon; change the archive name for yours):
-
-```bash
-mkdir -p ~/.local/share/gramps-web-mcp
-curl -fL https://github.com/Scormave/gramps-web-mcp/releases/latest/download/gramps-web-mcp-osx-arm64.tar.gz \
-  | tar -xz -C ~/.local/share/gramps-web-mcp
-```
-
-On Windows, in PowerShell:
-
-```powershell
-curl.exe -fLo "$env:TEMP\gramps-web-mcp.zip" https://github.com/Scormave/gramps-web-mcp/releases/latest/download/gramps-web-mcp-win-x64.zip
-Expand-Archive -Force "$env:TEMP\gramps-web-mcp.zip" "$env:LOCALAPPDATA\gramps-web-mcp"
-```
-
-Then point the client at the binary by its full path, since clients start it
-without a shell that would expand `~`:
-
-```json
-{
-  "mcpServers": {
-    "gramps-web": {
-      "command": "/Users/you/.local/share/gramps-web-mcp/GrampsWeb.Mcp",
-      "env": {
-        "GRAMPS_API_URL": "https://your-gramps.example.com",
-        "GRAMPS_USERNAME": "your-user",
-        "GRAMPS_PASSWORD": "your-password",
-        "GRAMPS_TREE_ID": "your-tree-uuid"
-      }
-    }
-  }
-}
-```
-
-On Windows, `command` is
-`"C:\\Users\\you\\AppData\\Local\\gramps-web-mcp\\GrampsWeb.Mcp.exe"`: JSON
-needs each backslash doubled. Each client takes this entry the way it takes the
-Docker entry above.
-
-- Every [setting](#configuration) is an environment variable in `env`, such as
-  `GRAMPS_REFRESH_TOKEN` instead of the user name and password, or
-  `"GRAMPS_READ_ONLY": "true"`. Unlike in Docker, `localhost` in
-  `GRAMPS_API_URL` and the [upload](#media-upload) folders are those of your
-  own computer.
-- To update, close the client (Windows cannot replace a running binary), run
-  the same commands again and start the client: the archive name carries no
-  version, so the link always fetches the latest release, and the new binary
-  replaces the old one.
-- The binary is not notarized by Apple. `curl` does not mark the download, so
-  macOS runs it; if you downloaded the archive in a browser, macOS may refuse
-  to start the binary until you remove the mark with
-  `xattr -d com.apple.quarantine ~/.local/share/gramps-web-mcp/GrampsWeb.Mcp`.
-- On Linux it needs glibc and ICU (`libicu`), which desktop distributions
-  include; on Alpine or a minimal system, use Docker.
-- `SHA256SUMS` in each release lists the checksums of its files, and every
-  file, the bundles included, has a build provenance attestation. To check a
-  download, save the archive instead of piping it to `tar` and run
-  `gh attestation verify gramps-web-mcp-osx-arm64.tar.gz --repo Scormave/gramps-web-mcp`
-  with the [GitHub CLI](https://cli.github.com/): it fails unless this
-  repository's release workflow built that file.
-
-The same binary can also serve the other machines over HTTP, like the image
-does; see [Transports](#transports). To run the server from a source checkout
-instead, see
-[Local development](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md#local-development) in
-the developer guide.
-
-#### Images for vision-capable agents
-
-Vision-capable agents can read opt-in media through `read_media`
-or through binary MCP resources such as
-`gramps://media/{handle}/thumbnail/{size}` and `gramps://media/{handle}/file`.
-`read_media` defaults to a thumbnail: a JPEG preview (PNG when the image has
-transparency) rendered by the server from the original, 1568 pixels on the long
-edge so handwriting and small print in document scans stay legible. Pass `size`
-(1–4096) for a smaller or larger preview; images are never upscaled. Previews are
-re-encoded from pixels, so EXIF (including GPS), XMP, IPTC, and ICC metadata are
-not sent. They can be rendered from JPEG, PNG, GIF, WebP, BMP, TIFF, TGA, PBM, and
-QOI originals; multi-page files use the first page. PDF and other non-image
-media, and AVIF, HEIC/HEIF, JPEG XL, and SVG images, have no preview. Use
-`mode: "file"` for an original file and omit `size`.
-File mode returns image, audio, or embedded blob resource content depending on
-MIME type; images that MCP clients cannot display, such as TIFF, come back as
-an embedded blob with a hint to use the thumbnail. End-to-end analysis depends
-on the MCP client forwarding the typed tool content or binary resource content
-to a capable model.
+Clients then connect to `http://<host>:8080/mcp` with the API key, as shown
+in [Over HTTP](GrampsWeb.Mcp/docs/CLIENTS.md#over-http). Add
+`-e GRAMPS_READ_ONLY=true` for read-only mode.
+[Installation](GrampsWeb.Mcp/docs/INSTALLATION.md) covers refresh tokens,
+health checks, image verification, Docker Compose with Gramps Web, Unraid and
+upgrades.
 
 ## Configuration
 
-### Gramps connection
-
-| Variable | Description |
-|----------|-------------|
-| `GRAMPS_API_URL` | Base URL of your Gramps Web instance (no trailing slash) |
-| `GRAMPS_USERNAME` | API user name |
-| `GRAMPS_PASSWORD` | API password |
-| `GRAMPS_TREE_ID` | Tree UUID on that server |
-
-### Refresh token instead of a password
-
-If Gramps Web has password login turned off (`OIDC_DISABLE_LOCAL_AUTH=true`),
-set `GRAMPS_REFRESH_TOKEN` and leave `GRAMPS_USERNAME` and `GRAMPS_PASSWORD`
-unset. The server exchanges it for access tokens at `/api/token/refresh/`.
-
-Get one while password login is still on:
-
-```bash
-curl -s -X POST https://gramps.example.com/api/token/ \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"mcp","password":"..."}' | jq -r .refresh_token
-```
-
-Gramps Web refresh tokens do not expire. Treat it like a password. Deleting
-the user or rotating the Gramps Web secret key invalidates it.
-
-### Runtime mode
-
-| Variable | Default |
-|----------|---------|
-| `GRAMPS_READ_ONLY` | `false` |
-| `GRAMPS_MUTATION_SERIALIZE` | `true` |
-| `GRAMPS_MUTATION_MIN_INTERVAL_MS` | `0` |
-
-- `GRAMPS_READ_ONLY`: set to `true` to publish only read tools and block direct
-  create, update, and delete calls.
-- `GRAMPS_MUTATION_SERIALIZE`: runs create/update/delete HTTP calls one at a
-  time in this process. It also protects the complete read/modify/write sequence
-  of update tools against other such calls in this process.
-- `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum pause between mutation HTTP calls.
-
-Runtime notes:
-
-- `GRAMPS_READ_ONLY=false` means the server starts in read/write mode.
-- The Claude Desktop MCPB extension is the exception: its setup form defaults to
-  read-only for safer first use.
-- Write serialization and the optional interval protect typical Gramps Web
-  SQLite trees from agent write bursts.
-- The write gate is **in-process only**. It does not coordinate across multiple
-  MCP replicas, the Gramps Web UI, or other API clients.
-- SQLite deployments that still see `database is locked` on sequential edits
-  should set `GRAMPS_MUTATION_MIN_INTERVAL_MS=250` or `500`.
-- On SQLite lock errors or upstream HTTP 429, mutation tools return a retryable
-  MCP error with a short backoff hint instead of a generic 500.
-- Set `GRAMPS_MUTATION_SERIALIZE=false` when Gramps Web uses PostgreSQL and you
-  want parallel writes.
-
-### Confirming deletes and undos
-
-`delete_object` and `undo_change` ask the user to confirm in a dialog before
-they change the tree, when the client supports
-[MCP elicitation](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation).
-The dialog names the record, or lists what the undo will change, and the user
-ticks a box to go ahead. Declining or closing it changes nothing. Dry runs and
-refusals do not ask.
+Every setting is an environment variable. The main ones:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_CONFIRMATION` | `when-supported` asks clients that support elicitation and runs as before in the others; `required` refuses deletes and undos in clients that cannot ask; `off` never asks | `when-supported` |
+| `GRAMPS_API_URL` | Base URL of your Gramps Web instance (no trailing slash) | — |
+| `GRAMPS_USERNAME`, `GRAMPS_PASSWORD` | The Gramps Web account the server works as | — |
+| `GRAMPS_REFRESH_TOKEN` | Used instead of the user name and password when Gramps Web has password login turned off | — |
+| `GRAMPS_TREE_ID` | Tree UUID on that server | — |
+| `GRAMPS_READ_ONLY` | `true` publishes only read tools and blocks writes | `false` (the Claude Desktop extension: `true`) |
+| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Lets agents read scans and photos, and enables uploads | `false` |
+| `GRAMPS_MEDIA_UPLOAD_DIRS` | Folders that `create_media` may upload from | unset (off) |
+| `MCP_TRANSPORT` | `stdio`, `http` (Streamable HTTP) or `sse` | `stdio` (the Docker image: `http`) |
+| `MCP_API_KEY` | Key that HTTP clients must send; set it whenever other machines can reach the port | — |
 
-- Stateless Streamable HTTP (`MCP_STATELESS=true`, the default) cannot send
-  requests to the client, so it never asks, and `required` refuses every delete
-  and undo there. Set `MCP_STATELESS=false` to confirm over HTTP; stdio and
-  legacy SSE keep a session and can ask.
-- Both tools also carry the `anthropic/requiresUserInteraction` tool metadata,
-  whatever the setting. Clients that honour it, such as Claude Code, ask their
-  own permission first, so the user may confirm twice; `off` keeps only the
-  client's prompt.
-- The tool call lasts until the user answers. If the client cancels the call
-  first, nothing changes.
-- The server logs once per client whether it asks.
-
-See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md#confirmation-dialogs)
-for the dialog and the replies.
-
-### Updating linked records
-
-The nine `update_*` tools that accept link lists have a `linkMode` argument:
-`replace` (default), `add`, or `remove`. For example,
-`update_person(handle: "PERSON_HANDLE", noteHandles: ["NOTE_HANDLE"], linkMode: "add")`
-adds a note without copying the person's existing note list. `remove` takes the
-handles to unlink. An omitted list remains unchanged; `[]` clears a list only in
-`replace` mode. The mode applies to every supplied link list in the call.
-Existing link metadata is preserved by `add`; use `replace` to change that
-metadata. See the [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md#incremental-link-updates)
-for supported lists and concurrency limits.
-
-### Data dropped by updates before 2.3.1
-
-Before 2.3.1 the `update_*` tools could drop stored data the call did not
-mention ([#5](https://github.com/Scormave/gramps-web-mcp/issues/5)). If you
-edited a tree with an earlier version,
-[`scripts/find-update-losses.py`](scripts/find-update-losses.py) reads the
-Gramps Web transaction history and lists every value an update emptied, with
-the value it had and whether the record still lacks it:
-
-```bash
-GRAMPS_API_URL=https://gramps.example.com GRAMPS_USERNAME=me GRAMPS_PASSWORD=... \
-  python3 scripts/find-update-losses.py --user MCP_ACCOUNT --until 2026-10-07 --json losses.json
-```
-
-It needs Python 3.9 or later and an account that may see private records, and
-it only reads. The history also holds edits made in the Gramps Web interface,
-and a value cleared on purpose looks the same as a dropped one, so check each
-finding before you restore it.
-
-### Media file access
-
-Media byte tools/resources are disabled by default. `get_object` with
-`objectType: "media"` remains
-available for metadata without enabling file downloads.
-When disabled, `read_media` is omitted from
-`tools/list`; direct calls by a client that already knows its name return a
-configuration error without downloading bytes. The same setting switches
-[uploads](#media-upload) on and off.
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media tools/resources for thumbnails and full files, and uploads | `false` |
-| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by `read_media` or any media resource | `5242880` |
-| `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allows bytes for Gramps media records marked private | `false` |
-
-Prefer `read_media(mode: "thumbnail")` or `gramps://media/{handle}/thumbnail/{size}` for AI
-analysis. Full files can be large and sensitive, carry their original metadata,
-and are still subject to the size and private-record checks.
-
-`GRAMPS_MEDIA_MAX_BYTES` limits what is returned to the client. To render a
-thumbnail, the server downloads the original from Gramps Web into memory, up to
-50 MiB or `GRAMPS_MEDIA_MAX_BYTES`, whichever is larger, and up to 100
-megapixels; only the preview is returned.
-
-`GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer used. Remove it from your
-configuration; the server ignores it and logs a warning at startup if it is set.
-
-### Media upload
-
-`create_media` uploads a photo, document scan or PDF from a folder on the
-server and shows it on the records named in `attachTo`; `update_media` takes
-`filePath` to replace a record's file. Uploading needs media file access
-(`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and at least one folder in
-`GRAMPS_MEDIA_UPLOAD_DIRS`; until both are set, `create_media` is hidden. Only
-files inside those folders can be read, symbolic links included,
-and only JPEG, PNG, GIF, WebP, TIFF, BMP and PDF files, judged by content. A
-file the tree already stores is reused, not uploaded twice. In Docker, mount
-the folder into the container and set the path as seen inside it.
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from | unset (off) |
-| `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
-
-### Transports
-
-Set `GRAMPS_API_URL`, `GRAMPS_TREE_ID`, and either the username/password pair or
-`GRAMPS_REFRESH_TOKEN` as described above.
-
-| Value | Behavior |
-|-------|----------|
-| *(unset or `stdio`)* | JSON-RPC over stdin/stdout (default; local clients). |
-| `http` | Streamable HTTP at `MCP_PATH` (default `/mcp`). |
-| `sse` | Legacy MCP SSE: `GET {MCP_PATH}/sse` + `POST {MCP_PATH}/message`. Stateful; use for older clients only. |
-
-For HTTP transport, responses stream over SSE. See the
-[Streamable HTTP spec](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#streamable-http)
-for protocol details. Set `ASPNETCORE_URLS` to choose the listen address, for
-example `http://127.0.0.1:8080`.
-
-### Optional (MCP transport)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ASPNETCORE_URLS` | Listen URLs for HTTP/SSE | — |
-| `MCP_PATH` | URL prefix for MCP endpoints | `/mcp` |
-| `MCP_STATELESS` | Stateless mode for Streamable HTTP | `true` |
-| `MCP_ENABLE_LEGACY_SSE` | Expose legacy `/sse` with `http` transport | `false` |
-| `MCP_API_KEY` | Shared secret for HTTP/SSE transport (comma-separated for rotation; min 16 characters) | — |
-| `MCP_ALLOWED_ORIGINS` | Browser origins allowed to call HTTP/SSE endpoints, comma-separated; requests from other origins get 403 | — |
-
-### HTTP authentication
-
-When `MCP_API_KEY` is set, all MCP HTTP/SSE endpoints require the key on every
-request. `GET /health` stays anonymous for Docker and load-balancer probes.
-
-Generate a key:
-
-```bash
-openssl rand -base64 32
-```
-
-Without a key, the server still starts (backward compatible). If the listen
-address is not loopback-only, a warning is logged recommending that you set
-`MCP_API_KEY`, use a reverse proxy with its own authentication, or bind to
-`127.0.0.1` for local use only.
-
-Inside Docker, `ASPNETCORE_URLS` is typically `http://0.0.0.0:8080`, so the
-warning appears even when the host publishes the port on `127.0.0.1` only.
-That is expected when external access is already restricted.
-
-### Browser origins
-
-Browsers send an `Origin` header with their requests, and the server refuses
-with 403 every request whose origin is not listed in `MCP_ALLOWED_ORIGINS`.
-This keeps a web page on another site from calling tools with the server's
-Gramps credentials, also through DNS rebinding, which works even when the
-server listens on `127.0.0.1` only. MCP clients outside a browser, such as
-Claude Desktop, Claude Code and SDK clients, send no `Origin` and need no
-setting. For a browser-based MCP client you trust, list its origin:
-
-```bash
-MCP_ALLOWED_ORIGINS=https://app.example.com
-```
-
-[SECURITY.md](SECURITY.md) also describes the optional `AllowedHosts` check of
-the `Host` header.
-
-### Logging
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GRAMPS_LOG_LEVEL` | Log level for the server's own messages: `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`, `None` | `Information` |
-
-Logs go to stderr. Claude Desktop saves them to a local file
-(`~/Library/Logs/Claude/mcp-server-Gramps Web MCP.log` on macOS).
-
-At `Information`, each Gramps API call is logged as its method, path (without
-the query string), status, duration, and body length; media downloads log the
-content type and length instead of the body length. Request and response
-bodies and full URLs hold genealogy data (names, dates, search terms), so they
-are logged only at `Debug` or `Trace`. Fields that look like credentials are
-redacted even then. Use `Debug` only while troubleshooting, and delete the log
-file afterwards.
-
-## Development
-
-```bash
-dotnet test
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the [developer guide](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md).
+[Configuration](GrampsWeb.Mcp/docs/CONFIGURATION.md) describes every setting,
+including write pacing for SQLite, confirmation dialogs, media limits,
+transports, browser origins and logging.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [docs index](GrampsWeb.Mcp/docs/README.md) | All documentation files |
-| [Tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) | Complete MCP tool reference |
-| [Claude Desktop MCPB](mcpb/README.md) | Desktop extension packaging |
-| [Privacy policy](PRIVACY.md) | Data handling for the desktop extension |
+| [Installation](GrampsWeb.Mcp/docs/INSTALLATION.md) | Claude Desktop, Docker, Docker Compose, Unraid, health checks, and upgrades |
+| [Connecting MCP clients](GrampsWeb.Mcp/docs/CLIENTS.md) | Claude Code, VS Code, Cursor, Codex, Gemini and Antigravity CLI, and Open WebUI, over HTTP or stdio |
+| [Configuration](GrampsWeb.Mcp/docs/CONFIGURATION.md) | Every environment variable |
+| [Tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) | Every tool, resource and prompt, and more example requests |
 | [System prompt](GrampsWeb.Mcp/docs/SYSTEM_PROMPT.md) | Suggested prompt for MCP clients |
+| [Migrating to 2.0](GrampsWeb.Mcp/docs/MIGRATING_TO_2.md) | Tool replacements and setup changes for 1.x users |
+| [Claude Desktop MCPB](mcpb/README.md) | Desktop extension packaging |
 | [Architecture](GrampsWeb.Mcp/docs/ARCHITECTURE.md) | System design overview |
+| [Developer guide](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md) | Running from source, tests, and adding tools |
+| [docs index](GrampsWeb.Mcp/docs/README.md) | All documentation files |
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome. `./run-local-server.sh` runs the server from source
+against the public [demo.grampsweb.org](https://demo.grampsweb.org) tree at
+`http://127.0.0.1:8080/mcp`, and `dotnet test` runs the tests. See
+[CONTRIBUTING.md](CONTRIBUTING.md) and the
+[developer guide](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md).
 
 ## Security
 
@@ -855,3 +187,7 @@ Bundled third-party components, such as ImageSharp, the MCP C# SDK, and the .NET
 runtime, keep their own Apache 2.0 or MIT licenses; see
 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). The MCP Bundles and the
 Docker image ship that file next to `LICENSE`.
+
+[install-vscode]: https://insiders.vscode.dev/redirect/mcp/install?name=gramps-web&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-api-url%22%2C%22description%22%3A%22Gramps%20Web%20address%2C%20such%20as%20https%3A%2F%2Fyour-gramps.example.com%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-username%22%2C%22description%22%3A%22Gramps%20Web%20user%20name%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-password%22%2C%22description%22%3A%22Gramps%20Web%20password%22%2C%22password%22%3Atrue%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-tree-id%22%2C%22description%22%3A%22Gramps%20Web%20tree%20ID%22%7D%5D&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-i%22%2C%22--rm%22%2C%22-e%22%2C%22MCP_TRANSPORT%3Dstdio%22%2C%22-e%22%2C%22GRAMPS_API_URL%22%2C%22-e%22%2C%22GRAMPS_USERNAME%22%2C%22-e%22%2C%22GRAMPS_PASSWORD%22%2C%22-e%22%2C%22GRAMPS_TREE_ID%22%2C%22ghcr.io%2Fscormave%2Fgramps-web-mcp%3Alatest%22%5D%2C%22env%22%3A%7B%22GRAMPS_API_URL%22%3A%22%24%7Binput%3Agramps-web-api-url%7D%22%2C%22GRAMPS_USERNAME%22%3A%22%24%7Binput%3Agramps-web-username%7D%22%2C%22GRAMPS_PASSWORD%22%3A%22%24%7Binput%3Agramps-web-password%7D%22%2C%22GRAMPS_TREE_ID%22%3A%22%24%7Binput%3Agramps-web-tree-id%7D%22%7D%7D
+[install-vscode-insiders]: https://insiders.vscode.dev/redirect/mcp/install?name=gramps-web&inputs=%5B%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-api-url%22%2C%22description%22%3A%22Gramps%20Web%20address%2C%20such%20as%20https%3A%2F%2Fyour-gramps.example.com%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-username%22%2C%22description%22%3A%22Gramps%20Web%20user%20name%22%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-password%22%2C%22description%22%3A%22Gramps%20Web%20password%22%2C%22password%22%3Atrue%7D%2C%7B%22type%22%3A%22promptString%22%2C%22id%22%3A%22gramps-web-tree-id%22%2C%22description%22%3A%22Gramps%20Web%20tree%20ID%22%7D%5D&config=%7B%22type%22%3A%22stdio%22%2C%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-i%22%2C%22--rm%22%2C%22-e%22%2C%22MCP_TRANSPORT%3Dstdio%22%2C%22-e%22%2C%22GRAMPS_API_URL%22%2C%22-e%22%2C%22GRAMPS_USERNAME%22%2C%22-e%22%2C%22GRAMPS_PASSWORD%22%2C%22-e%22%2C%22GRAMPS_TREE_ID%22%2C%22ghcr.io%2Fscormave%2Fgramps-web-mcp%3Alatest%22%5D%2C%22env%22%3A%7B%22GRAMPS_API_URL%22%3A%22%24%7Binput%3Agramps-web-api-url%7D%22%2C%22GRAMPS_USERNAME%22%3A%22%24%7Binput%3Agramps-web-username%7D%22%2C%22GRAMPS_PASSWORD%22%3A%22%24%7Binput%3Agramps-web-password%7D%22%2C%22GRAMPS_TREE_ID%22%3A%22%24%7Binput%3Agramps-web-tree-id%7D%22%7D%7D&quality=insiders
+[install-cursor]: https://cursor.com/en/install-mcp?name=gramps-web&config=eyJjb21tYW5kIjoiZG9ja2VyIiwiYXJncyI6WyJydW4iLCItaSIsIi0tcm0iLCItZSIsIk1DUF9UUkFOU1BPUlQ9c3RkaW8iLCItZSIsIkdSQU1QU19BUElfVVJMIiwiLWUiLCJHUkFNUFNfVVNFUk5BTUUiLCItZSIsIkdSQU1QU19QQVNTV09SRCIsIi1lIiwiR1JBTVBTX1RSRUVfSUQiLCJnaGNyLmlvL3Njb3JtYXZlL2dyYW1wcy13ZWItbWNwOmxhdGVzdCJdLCJlbnYiOnsiR1JBTVBTX0FQSV9VUkwiOiJodHRwczovL3lvdXItZ3JhbXBzLmV4YW1wbGUuY29tIiwiR1JBTVBTX1VTRVJOQU1FIjoieW91ci11c2VyIiwiR1JBTVBTX1BBU1NXT1JEIjoieW91ci1wYXNzd29yZCIsIkdSQU1QU19UUkVFX0lEIjoieW91ci10cmVlLXV1aWQifX0%3D

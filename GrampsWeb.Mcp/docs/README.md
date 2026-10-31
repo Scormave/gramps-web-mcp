@@ -2,6 +2,9 @@
 
 | Document | Audience | Description |
 |----------|----------|-------------|
+| [INSTALLATION.md](INSTALLATION.md) | Users | Claude Desktop extension, Docker image, Docker Compose, Unraid, health checks, and upgrades |
+| [CLIENTS.md](CLIENTS.md) | Users | Connecting Claude Code, VS Code, Cursor, Codex, Gemini and Antigravity CLI, and Open WebUI over HTTP or stdio |
+| [CONFIGURATION.md](CONFIGURATION.md) | Users | Every environment variable: connection, runtime mode, confirmation, media, transports, authentication, logging |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Contributors | System design, layers, transport modes, read-only mode, deployment |
 | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | Contributors | How to add tools, models, tests, and conventions |
 | [RELEASING.md](RELEASING.md) | Maintainers and agents | Release checklist for changelog, version metadata, Docker, MCPB, GitHub Releases, and MCP Registry |

@@ -6,6 +6,38 @@ decorated with `[McpServerTool]`.
 
 > `GrampsApiClient client` is injected by the MCP host and is **not** a caller-supplied argument.
 
+## What to ask
+
+Ask in your own words; the agent chooses the tools. The table shows what a
+typical request uses and what comes back. The names stand for people in your
+tree, and a Gramps ID such as `I0012` works as well.
+
+| You ask | The agent uses | You get |
+|---------|----------------|---------|
+| "Tell me about Maria García." | `search`, then `get_object` with `extended: true` | Her names, events with dates and places, parents, spouses and children, citations and notes |
+| "Who were Kenji Tanaka's great-grandparents?" | `get_person_tree` with `direction: "ancestors"` and `generations: 3` | Each ancestor with a kinship label such as Father's mother, and birth and death dates and places |
+| "How is Ivan Petrov related to Maria García?" | `search` for both, then `get_relations` | The relationship in words, such as second cousin once removed, and the common ancestors by name |
+| "What happened in Liam Murphy's family from 1900 to 1920?" | `get_timeline` with `relatives` and `dates: "1900-1920"` | The dated events of Liam, his parents, siblings, wife and children, in date order |
+| "Who in the tree has no parents, spouse or children?" | `list_objects` with the filter rule `Disconnected` | The people with no family links, page by page |
+| "Who was born in Dublin before 1900? Oldest first." | `list_objects` with the filter rule `HasBirth` and `sort` | The matching people in order of birth |
+| "Transcribe the baptism scan O0012." | `read_media`, with `region` to zoom in on one entry | The scan for the agent to read, and the transcription in its reply |
+| "Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber." | `search` for each person and place, then `create_place`, `create_event`, `create_person` and `create_family` | The new records with their Gramps IDs, people already in the tree reused, and what the text left open |
+| "Enter entry 12 of the 1884 marriage register: the couple, their fathers and the witnesses." | `search` for each person, then `create_records` | The citation, the marriage, the new people and families saved in one transaction, which one `undo_change` takes back |
+| "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source or `create_source`, then `create_citation` and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
+| "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `create_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
+| "Add today's findings to my research note." | `update_note` with `appendText` | The note extended at the end, its earlier text, styling and links untouched |
+| "What changed today? Undo the last edit." | `get_recent_changes`, then `undo_change` once you confirm | The edit history, then the earlier versions back, or a refusal naming the later edits the undo would overwrite |
+
+The requests that only read the tree also work in
+[read-only mode](CONFIGURATION.md#runtime-mode). Reading scans needs
+[media access](CONFIGURATION.md#media-file-access), and attaching them needs an
+[upload folder](CONFIGURATION.md#media-upload). `delete_object` and `undo_change` change the
+tree only after you confirm; see
+[Confirming deletes and undos](CONFIGURATION.md#confirming-deletes-and-undos). Clients that
+show MCP prompts also offer `research-person`, `find-connections`,
+`import-from-text` and `cite-fact` for these requests;
+[Prompts](#prompts) lists every prompt.
+
 ## Legend
 
 | Symbol | Meaning |

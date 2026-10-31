@@ -27,6 +27,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `import-from-text` prompt saves the new places, source, citation,
   events, people and families in one `create_records` call instead of
   one create call per record
+- The README keeps the essentials: features, example requests, the
+  Claude Desktop and Docker setup and the main settings. Installation,
+  client setup and the full configuration moved to their own guides in
+  `GrampsWeb.Mcp/docs` (`INSTALLATION.md`, `CLIENTS.md`,
+  `CONFIGURATION.md`), and all example requests with the tools they use
+  to the tool catalog. Links to the old README sections in the site and
+  the MCPB README point to the guides
 
 ### Fixed
 

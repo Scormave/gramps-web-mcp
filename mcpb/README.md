@@ -40,7 +40,7 @@ The script also packs the same server binary with `LICENSE` and
 `dist/gramps-web-mcp-<rid>.tar.gz` (`.zip` for `win-x64`, which needs `zip` or
 `7z`). The name carries no version, so the release link
 `releases/latest/download/<name>` always fetches the newest one (see
-[Over stdio with the release binary](../README.md#over-stdio-with-the-release-binary)).
+[Over stdio with the release binary](../GrampsWeb.Mcp/docs/CLIENTS.md#over-stdio-with-the-release-binary)).
 
 Install by double-clicking the `.mcpb` file or dragging it into Claude Desktop.
 
