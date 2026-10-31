@@ -129,7 +129,7 @@ the folder into the container and set the path as seen inside it.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from | unset (the Claude Desktop extension: `~/Downloads`) |
+| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; a leading `~` or `${HOME}` stands for the home folder | unset (the Claude Desktop extension: `~/Downloads`) |
 | `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
 
 ## Transports
@@ -189,7 +189,7 @@ the `Host` header.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_LOG_LEVEL` | Log level for the server's own messages: `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`, `None` | `Information` |
+| `GRAMPS_LOG_LEVEL` | Log level for the server's own messages: `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`, `None` (case-insensitive); an unknown value means `Information` | `Information` |
 
 Logs go to stderr. Claude Desktop saves them to a local file
 (`~/Library/Logs/Claude/mcp-server-Gramps Web MCP.log` on macOS).

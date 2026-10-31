@@ -100,55 +100,25 @@ stays anonymous.
 
 ## Configuration
 
-Configuration is loaded from **environment variables** (no appsettings files).
+Configuration is loaded from **environment variables** (no appsettings files);
+[CONFIGURATION.md](CONFIGURATION.md) lists every variable with its default.
 The server's only command-line option of its own is `--health-check [url]`,
 which starts no server: it requests `GET /health` of a running one, on the
 address from `ASPNETCORE_URLS` unless a URL is given, and exits with 0 on
 success and 1 otherwise (`HealthCheckCommand`; the Docker `HEALTHCHECK` uses
 it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
 
-### Required (Gramps connection)
+### Runtime mode
 
-| Variable | Description |
-|----------|-------------|
-| `GRAMPS_API_URL` | Base URL of the Gramps Web instance |
-| `GRAMPS_USERNAME` | API user name |
-| `GRAMPS_PASSWORD` | API password |
-| `GRAMPS_REFRESH_TOKEN` | Refresh token; replaces username and password when set |
-| `GRAMPS_TREE_ID` | Tree UUID on that server |
-
-### Optional (MCP transport)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MCP_TRANSPORT` | `stdio`, `http`, or `sse` | `stdio` |
-| `ASPNETCORE_URLS` | Listen URLs for HTTP/SSE | — |
-| `MCP_PATH` | URL prefix for MCP endpoints | `/mcp` |
-| `MCP_STATELESS` | Stateless mode for Streamable HTTP | `true` |
-| `MCP_ENABLE_LEGACY_SSE` | Expose legacy `/sse` with `http` transport | `false` |
-| `MCP_API_KEY` | Shared secret for HTTP/SSE transport | — |
-| `MCP_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to call HTTP/SSE endpoints; requests from other origins get 403 | — |
-
-### Optional (runtime mode)
-
-| Variable | Default |
-|----------|---------|
-| `GRAMPS_READ_ONLY` | `false` |
-| `GRAMPS_MUTATION_SERIALIZE` | `true` |
-| `GRAMPS_MUTATION_MIN_INTERVAL_MS` | `0` |
-| `GRAMPS_CONFIRMATION` | `when-supported` |
-
-- `GRAMPS_READ_ONLY`: set to `true` to publish only read-only MCP tools and
-  block create/update/delete mutation calls, including direct calls to a
-  previously known write-tool name.
+- `GRAMPS_READ_ONLY=true` publishes only read-only MCP tools and blocks
+  create/update/delete mutation calls, including direct calls to a previously
+  known write-tool name.
 - `GRAMPS_MUTATION_SERIALIZE`: serializes mutation HTTP calls in-process, plus
   read/modify/write sequences of update tools and `undo_change`'s conflict
-  check and undo against each other using a separate lock. It does not coordinate with external clients.
-  Writes run in parallel only when this is `false` and
-  `GRAMPS_MUTATION_MIN_INTERVAL_MS` is `0`; a minimum interval keeps the
-  single-flight lock.
-- `GRAMPS_MUTATION_MIN_INTERVAL_MS`: minimum milliseconds between mutation HTTP
-  calls.
+  check and undo against each other using a separate lock. It does not
+  coordinate with external clients. Writes run in parallel only when this is
+  `false` and `GRAMPS_MUTATION_MIN_INTERVAL_MS` is `0`; a minimum interval
+  keeps the single-flight lock.
 - `GRAMPS_CONFIRMATION`: whether `delete_object` and `undo_change` ask the user
   through MCP elicitation before they change the tree. `when-supported` asks
   clients that advertise form elicitation and runs as before elsewhere;
@@ -157,53 +127,34 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
   request-scoped `McpServer`, and logs once per client whether it asks. Stateless
   HTTP has no client capabilities, so it never asks there.
 
-Runtime notes:
+### Media
 
-- `GRAMPS_READ_ONLY=false` starts the server in read/write mode.
-- SQLite users who still see `database is locked` on sequential edits often want
-  `GRAMPS_MUTATION_MIN_INTERVAL_MS=250`.
+When media access (`GRAMPS_MEDIA_RESOURCES_ENABLED`) is disabled, `tools/list`
+omits `read_media` and `create_media`; media metadata remains available through
+`get_object`. `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig`
+lists it as retired, and startup logs a warning when it is still set.
 
-### Optional (media resources)
+Uploading needs media access and `GRAMPS_MEDIA_UPLOAD_DIRS`:
+`GrampsConfig.MediaUploadEnabled` is true only with both, and startup logs why
+uploading is off when folders are set without media access. Until then
+`tools/list` omits `create_media`, and `update_media` rejects `filePath`.
+`GrampsConfig` expands a leading `~` or `${HOME}` in the folders, because Claude
+Desktop passes the MCPB default `${HOME}/Downloads` unexpanded until the user
+saves the setting. `MediaUploadFile` resolves symbolic links before checking
+that a file lies inside a folder, then reads the resolved path, and judges the
+type from the file's first bytes (JPEG, PNG, GIF, WebP, TIFF, BMP, PDF). Gramps
+Web's `POST /api/media/` creates a record without checking for duplicates, so
+`create_media` first looks for a record with the file's MD5 checksum and reuses
+it.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enable binary MCP media resources and image-content media tools; uploads need it too | `false` |
-| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by any media resource/tool | `5242880` |
-| `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allow bytes for Gramps media records marked private | `false` |
+### Logging
 
-When media access is disabled, `tools/list` omits `read_media` and
-`create_media`; media metadata remains available through `get_object`.
-`GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig` lists it as
-retired, and startup logs a warning when it is still set.
-
-### Optional (media upload)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; a leading `~` or `${HOME}` expands to the home folder | unset (off) |
-| `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
-
-Uploading needs media access too: `GrampsConfig.MediaUploadEnabled` is true
-only with both, and startup logs why uploading is off when folders are set
-without media access. Until then `tools/list` omits `create_media`, and
-`update_media` rejects `filePath`. `MediaUploadFile` resolves symbolic links
-before checking that a file lies inside a folder, then reads the resolved path,
-and judges the type from the file's first bytes (JPEG, PNG, GIF, WebP, TIFF,
-BMP, PDF). Gramps Web's `POST /api/media/` creates a record without checking
-for duplicates, so `create_media` first looks for a record with the file's MD5
-checksum and reuses it.
-
-### Optional (logging)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GRAMPS_LOG_LEVEL` | Log level for `GrampsWeb.Mcp` categories | `Information` |
-
-At `Information`, Gramps API calls are logged as method, path without query
-string, status, duration, and body length. Request and response bodies and full
-URLs contain genealogy data, so `GrampsApiClient` logs them only at `Debug` or
-`Trace`, after redacting credential-like fields. Blank, unknown, or unresolved
-`${...}` values fall back to `Information`.
+`GRAMPS_LOG_LEVEL` sets the level of the `GrampsWeb.Mcp` categories;
+`GrampsLogLevel` reads blank, unknown, or unresolved `${...}` values as
+`Information`. At `Information`, Gramps API calls are logged as method, path
+without query string, status, duration, and body length. Request and response
+bodies and full URLs contain genealogy data, so `GrampsApiClient` logs them
+only at `Debug` or `Trace`, after redacting credential-like fields.
 
 ## Architectural layers
 
@@ -516,42 +467,21 @@ the server sees them and the update would otherwise save the record unchanged.
 
 ### Local development
 
-```bash
-./run-local-server.sh
-# Connects to demo.grampsweb.org with HTTP transport on localhost:8080
-```
+`./run-local-server.sh` runs the server from source against demo.grampsweb.org
+with HTTP transport on `127.0.0.1:8080`; see
+[Local development](DEVELOPER_GUIDE.md#local-development).
 
 ### Docker
 
 ```bash
 docker build -t gramps-web-mcp .
-docker run -p 8080:8080 \
-  -e GRAMPS_API_URL=https://your-gramps.example.com \
-  -e GRAMPS_USERNAME=user \
-  -e GRAMPS_PASSWORD=pass \
-  -e GRAMPS_TREE_ID=uuid \
-  gramps-web-mcp
-```
-
-For instances with password login disabled, replace `GRAMPS_USERNAME` and
-`GRAMPS_PASSWORD` with `GRAMPS_REFRESH_TOKEN`.
-
-Enable read-only mode with the `GRAMPS_READ_ONLY` environment variable:
-
-```bash
-docker run -p 8080:8080 \
-  -e GRAMPS_API_URL=https://your-gramps.example.com \
-  -e GRAMPS_USERNAME=user \
-  -e GRAMPS_PASSWORD=pass \
-  -e GRAMPS_TREE_ID=uuid \
-  -e GRAMPS_READ_ONLY=true \
-  gramps-web-mcp
 ```
 
 The Dockerfile uses multi-stage build (SDK → ASP.NET runtime on Ubuntu
 Chiseled) and defaults to HTTP transport on port 8080. The runtime image has no
 shell or package manager, so its `HEALTHCHECK` runs the server's own
-`--health-check` option instead of curl.
+`--health-check` option instead of curl. [Installation](INSTALLATION.md#docker)
+shows how to run the image, with a refresh token or in read-only mode.
 
 ### CI
 
