@@ -33,7 +33,9 @@ public static class ObjectTools
         "read-only here). Use it once you know the Gramps ID or handle; to find a record by text use search, to browse " +
         "a type use list_objects, and for a person's relatives or dated events get_person_tree and get_timeline are shorter. " +
         "A Gramps ID names its type by prefix, so objectType is needed only with a handle; extended (people and families) " +
-        "also resolves the linked events, notes, citations and media in the same call. A missing record returns a " +
+        "also resolves the linked events, notes, citations and media in the same call. Returns plain text for one record, " +
+        "without paging: a header with its type, label, handle and Gramps ID, then its fields, its links one per line " +
+        "with label and handle, and \"Referenced by\" sections for the backlinks. A missing record returns a " +
         "not-found message with a hint.")]
     public static async Task<string> GetObject(
         [Description("Gramps ID (e.g. I0001) or handle. ID prefixes give the type: I person, F family, E event, P place, S source, C citation, N note, O media, R repository, T tag.")]

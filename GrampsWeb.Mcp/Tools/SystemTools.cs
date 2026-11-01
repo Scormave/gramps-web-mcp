@@ -47,7 +47,9 @@ public static class SystemTools
         "List the records bookmarked in this tree, grouped by type (people, families, events, places, " +
         "sources, citations, repositories, media, notes), each as a one-line summary with its handle. " +
         "Bookmarks belong to the tree and are shared by all its users; they are set in Gramps Web or Gramps desktop, " +
-        "not through this server, and a tree may have none. Use it to start from the records the tree's users marked; " +
+        "not through this server, and a tree may have none. All bookmarks come in one response, without paging: types in the " +
+        "order above, records in the tree's bookmark order, and a record that can no longer be read as its bare handle. " +
+        "Use it to start from the records the tree's users marked; " +
         "to find records by name use search, to browse one type use list_objects, for recent edits use get_recent_changes.")]
     public static async Task<string> GetBookmarks(GrampsApiClient client)
     {

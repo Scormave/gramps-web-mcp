@@ -117,7 +117,9 @@ public static class EventTools
         "Create a standalone event (Birth, Marriage, Residence, Census, …) with its date, place, description, citations, " +
         "notes and media. Returns the new handle, Gramps ID and type, with next steps. The event is linked to nobody yet: " +
         "attach it with update_person or update_family (eventRefs, linkMode add), which keeps their other events; several people " +
-        "can share one event, each with their own role. The place must exist: find it with search or create it with create_place. " +
+        "can share one event, each with their own role. The role is stored on their eventRefs (HANDLE::Role, default Primary), " +
+        "not on the event, and a Birth or Death becomes a person's birth or death only in the Primary role. " +
+        "The place must exist: find it with search or create it with create_place. " +
         "Change an existing event with update_event. " +
         "An unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]

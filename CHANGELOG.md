@@ -19,6 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   death, and that `familyHandles` and `parentFamilyHandles` link the
   person to a family but not back, so a person joins a family through
   the family's father, mother or children
+- Nine more tool descriptions say what their arguments mean together or
+  what comes back: `create_family` that Gramps Web refuses a family
+  whose father, mother or child does not exist and saves nothing;
+  `get_bookmarks` its order and that it does not page; `get_object` the
+  layout of a record; `search` the `*` wildcard, relevance order and the
+  missing type filter; `create_event` that roles are stored on each
+  person's `eventRefs`; `create_media` how `citationHandles` and
+  `attachTo` differ; `create_tag` why names should stay distinct; and
+  `update_citation` and `update_repository` that a change shows on every
+  record that cites or lists them
 
 ## [2.8.0] - 2026-11-01
 

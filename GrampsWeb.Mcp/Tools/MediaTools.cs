@@ -135,7 +135,10 @@ public static class MediaTools
     [Description(
         "Upload a photo, document scan or PDF from the server's upload folder as a new media record, and show it on " +
         "people, families, events, places, sources or citations with attachTo, whole or as a region such as one record on a page scan. " +
-        "Only files inside GRAMPS_MEDIA_UPLOAD_DIRS can be uploaded; the type (" + MediaUploadFile.SupportedTypes + ") is judged by content. " +
+        "Only files inside GRAMPS_MEDIA_UPLOAD_DIRS can be uploaded, and a relative filePath is looked up in each of them in turn; " +
+        "the type (" + MediaUploadFile.SupportedTypes + ") is judged by content. " +
+        "citationHandles cite where the file itself came from, while attachTo shows it on the records it documents, " +
+        "such as a citation with the region of its entry. " +
         "If the tree already stores an identical file (same MD5 checksum), nothing is uploaded: that record is returned with action existing, " +
         "its fields stay as they are and only attachTo is applied, so repeating a call is safe. " +
         "Returns the handle and Gramps ID; an unreadable date or unknown attachTo record is rejected before anything is uploaded. " +

@@ -110,7 +110,8 @@ public static class RepositoryTools
         "Change an existing repository's name, type, address, website or links to notes and tags. " +
         "For a new repository use create_repository; to remove one, delete_object. Which sources it holds, with their " +
         "call numbers, is stored on the sources: change that with update_source (repositoryHandles), not here. " +
-        "address and url each replace every stored value, and an empty string removes them. " +
+        "address becomes the street line of a single address and url a single Web Home link; each replaces every stored " +
+        "value, and an empty string removes them. A change shows on every source that lists the repository. " +
         ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing repository returns a not-found message, and an unknown type is " +
         "rejected before anything is saved. " + ToolDescriptionFragments.WriteAccess)]

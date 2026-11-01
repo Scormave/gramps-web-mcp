@@ -466,6 +466,9 @@ Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
 
 ### C — `CreateFamily`
 Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
+Gramps Web links the father, mother and children back to the family in the
+same transaction, and refuses the family when one of them does not exist, so
+nothing is saved.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -492,7 +495,9 @@ Update an existing family.  Same field set as create (all optional), plus
 
 ### C — `CreateEvent`
 Create an event.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
-Link to persons/families via their create/update tools' `eventRefs`.
+Link to persons/families via their create/update tools' `eventRefs`. The role
+is stored on each `eventRefs` entry, not on the event, and a Birth or Death
+becomes a person's birth or death only in the `Primary` role.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -590,7 +595,8 @@ Attach to persons/events/places via their `citationHandles`.
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update a citation (same field set, all optional). Omit `date` to keep the
-current date; an empty string removes it.
+current date; an empty string removes it. A change shows on every record that
+cites the citation; to cite another page for one record, create a new citation.
 
 ---
 
@@ -679,11 +685,13 @@ An unreadable date or an unknown `attachTo` record is rejected before anything
 is uploaded. Each `attachTo` record gets the media after its existing media,
 and a record that already shows it is left unchanged. An `attachTo` entry can
 be `{"ref": "I0001", "region": [left, top, right, bottom]}` to show only that
-part of the image; see [Image regions](#image-regions).
+part of the image; see [Image regions](#image-regions). `citationHandles` cite
+where the file itself came from; to show a scan as the evidence of a register
+entry, attach it to that entry's citation with `attachTo` instead.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `filePath` | `string` | yes | — | Absolute path inside an upload folder, `~/…`, or a name relative to a folder, such as `scan.jpg` |
+| `filePath` | `string` | yes | — | Absolute path inside an upload folder, `~/…`, or a name relative to a folder, such as `scan.jpg`, looked up in each folder in turn |
 | `description` | `string?` | no | file name without extension | Description (caption) |
 | `date` | `string?` | no | — | Date of the photo or document |
 | `attachTo` | `FlexibleMediaLinkList?` | no | — | Records to show the media on: Gramps IDs (`I`, `F`, `E`, `P`, `S`, `C`) or handles, or `{ref, region}` objects |
@@ -738,7 +746,9 @@ call number. `noteHandles` and `tagHandles` only link existing notes and tags.
 ### U — `UpdateRepository`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a repository (same field set, all optional).
+Update a repository (same field set, all optional). `address` and `url` each
+replace every stored address or link with one, as on create, and an empty
+string removes them. A change shows on every source that lists the repository.
 
 ---
 
@@ -749,7 +759,9 @@ Web and Gramps desktop read; both tools accept six hex digits with or without
 `#` and reject anything else before saving.
 
 ### C — `CreateTag`
-Create a tag.  Call `list_objects('tags')` first to avoid duplicates.
+Create a tag.  Call `list_objects('tags')` first to avoid duplicates, and keep
+names distinct: filters such as `HasTag` find tags by name, and `UpdateTag`
+rejects a name another tag uses.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -836,7 +848,9 @@ plus `key`:
 ## Search (`SearchTools.cs`) — 2 tools
 
 ### R — `Search`
-Full-text search across all object types.  Supports `*` wildcards. The header
+Full-text search across all object types.  Supports `*` wildcards: `Smith*`
+also finds `Smithson`. Hits of all types come ranked by relevance; there is no
+type filter, so use `ListObjects` for one type. The header
 reads `Search Results (Page 1 of 3, Total: 47):`; each row is a one-line
 summary such as `Person: …` or `Place: … (City)` followed by
 `— handle: … | gramps_id: …`. A page past the last one says so and gives the
@@ -921,7 +935,10 @@ The records bookmarked in the tree, under the header `BOOKMARKS (5)`, with
 one section per type that has any (`People (2):`, `Families (1):`, …) and each
 record as its one-line summary with `[handle: …]`. Bookmarks belong to the
 tree and are shared by all its users; they are set in Gramps Web or Gramps
-desktop, not through this server. A tree without bookmarks gets `No bookmarks
+desktop, not through this server. All bookmarks come in one response, without
+paging: types in the order above, records in the tree's bookmark order without
+repeats, and a record that cannot be read as its bare handle (as are records
+past 200 of one type). A tree without bookmarks gets `No bookmarks
 in this tree.`
 
 ---

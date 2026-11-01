@@ -22,6 +22,8 @@ public static class SearchTools
         "notes, media and tags. Start here when you have a name, place, title or other text but no Gramps ID; " +
         "to browse or filter one type by its fields (all people, citations of one source, sorted by change) use list_objects, " +
         "and to read a hit in full pass its Gramps ID or handle to get_object. " +
+        "Add * to a word to match any ending (Smith* also finds Smithson). There is no type filter: hits of all types come " +
+        "ranked by relevance, and page and pagesize (up to 100) step through them. " +
         "Returns one line per hit (type, Gramps ID, summary, handle) with the page and total count; a page past the end " +
         "says so with the total. Very long queries can fail on the server (HTTP 500): retry with one shorter term.")]
     public static async Task<string> Search(

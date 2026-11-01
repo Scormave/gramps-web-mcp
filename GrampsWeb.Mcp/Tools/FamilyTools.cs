@@ -64,7 +64,9 @@ public static class FamilyTools
     [Description(
         "Create a family: a couple (father and mother, each optional) with their relationship type, children and family events " +
         "such as Marriage. Returns the new handle, Gramps ID and a label, with next steps. People and events must already exist " +
-        "(create_person, create_event). Does not check for duplicates: look at the parents' families first, " +
+        "(create_person, create_event). Gramps Web links the father, mother and children back to the family in the same save, " +
+        "and if one of them does not exist it refuses the family and nothing is saved. " +
+        "Does not check for duplicates: look at the parents' families first, " +
         "and change an existing family with update_family. Children are added here through childRefs, " +
         "not through the child's parentFamilyHandles. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]

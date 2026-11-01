@@ -123,7 +123,8 @@ public static class CitationTools
     [Description(
         "Change an existing citation's source, page, date, confidence, attributes or links to notes, media and tags. " +
         "Which people, events and other records it supports is stored on them: attach or detach it with their update tool " +
-        "(citationHandles), not here. For a new citation use create_citation; to remove one, delete_object. " +
+        "(citationHandles), not here. A change shows on every record that cites it: to cite another page or entry " +
+        "for one record, create a new citation with create_citation; to remove one, delete_object. " +
         "sourceHandle moves the citation to another source, an empty string clears date, and attributes replace the whole " +
         "list whatever linkMode says. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing citation returns a not-found message. " +
