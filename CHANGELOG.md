@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-11-01
+
 ### Added
 
 - `create_records`: create up to 50 linked records in one call, such as a
@@ -45,6 +47,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `CONFIGURATION.md`), and all example requests with the tools they use
   to the tool catalog. Links to the old README sections in the site and
   the MCPB README point to the guides
+- Update the MCP C# SDK (`ModelContextProtocol` and
+  `ModelContextProtocol.AspNetCore`) from 2.2.0 to 2.3.0. Clients now get
+  the tools, prompts and resources in the order the server registers
+  them, and a request over Streamable HTTP that is not valid JSON gets a
+  400 reply that says what failed to parse. Over Streamable HTTP on
+  protocol version 2026-07-28, the reply headers now go out with the
+  first message of the reply instead of before it
+- The integration tests run against Gramps Web 26.11.0 (API 3.25)
+  instead of 26.10.1 and pass without changes to the server
 
 ### Fixed
 
@@ -1085,7 +1096,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.2...v2.6.0
 [2.5.2]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.1...v2.5.2
