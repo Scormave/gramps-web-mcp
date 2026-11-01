@@ -116,10 +116,13 @@ public static class PersonTools
     [McpServerTool(Title = "Get Relations", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Explain how two people are related, read as 'person 2 is the X of person 1' " +
-        "(e.g. 'third cousin twice removed', 'husband'): the closest relationship with generations to the common ancestor, " +
-        "then every relationship found with its common ancestors by name. Searches blood relatives up to 15 generations " +
-        "plus spouses; unrelated people get a clear message. Find both people first with search. " +
-        "To list a whole line of ancestors or descendants use get_person_tree.")]
+        "(e.g. 'third cousin twice removed', 'husband'); the order matters, and swapping handle1 and handle2 gives the " +
+        "inverse term, such as 'wife' instead of 'husband'. Returns both people with Gramps IDs, the closest relationship " +
+        "with the generations from each person to the common ancestor, then every relationship found, closest first, " +
+        "with its common ancestors (up to 10 by name, any more by handle), all in one response without paging. " +
+        "Searches blood relatives up to 15 generations plus spouses, a fixed depth. Unrelated people get a 'Not related' " +
+        "message, the same person twice is reported as such, and a missing person returns a not-found message. " +
+        "Find both people first with search. To list a whole line of ancestors or descendants use get_person_tree.")]
     public static async Task<string> GetRelations(
         [Description("Person 1, the one the relationship is told from. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle1,

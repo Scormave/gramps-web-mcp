@@ -34,6 +34,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `import-from-text` prompt saves the new places, source, citation,
   events, people and families in one `create_records` call instead of
   one create call per record
+- `get_relations` describes what swapping the two people changes, what
+  the response holds and its limits: up to 10 common ancestors by name,
+  no paging, a fixed search depth of 15 generations, and the messages
+  for unrelated people, the same person twice and a missing person
 - The README keeps the essentials: features, example requests, the
   Claude Desktop and Docker setup and the main settings. Installation,
   client setup and the full configuration moved to their own guides in

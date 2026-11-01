@@ -403,10 +403,12 @@ because birth or death is missing, the event type is named instead, such as
 
 ### R — `GetRelations`
 How two people are related, read as "person 2 is the X of person 1" (e.g.
-"third cousin twice removed", "husband"). Shows both people by name, generations
-from each to the common ancestor, and every relationship Gramps finds, closest
-first, with its common ancestors by name (up to 10 named, the rest by handle).
-Searches blood relatives up to 15 generations, plus spouses; unrelated people
+"third cousin twice removed", "husband"); swapping the two people gives the
+inverse term, such as "wife" instead of "husband". Shows both people by name,
+generations from each to the common ancestor, and every relationship Gramps
+finds, closest first, with its common ancestors by name (up to 10 named, the
+rest by handle), all in one response without paging. Searches blood relatives
+up to 15 generations, plus spouses; the depth is fixed. Unrelated people
 get a clear message. Two identifiers for the same person return "both handles
 refer to the same person" without a relationship lookup, and a missing person
 returns the usual not-found message.
