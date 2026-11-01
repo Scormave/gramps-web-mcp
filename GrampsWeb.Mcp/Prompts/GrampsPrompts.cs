@@ -76,7 +76,7 @@ public sealed class GrampsPrompts
     public static string AddFamily(
         [Description("Father: name, handle, or Gramps ID")] string? father = null,
         [Description("Mother: name, handle, or Gramps ID")] string? mother = null,
-        [Description("Relationship type: Married, Unmarried, Civil Union, Unknown")] string relationship = "Married",
+        [Description("Relationship type: Married, Unmarried, Civil Union, Unknown (optional)")] string? relationship = null,
         [Description("Marriage date (optional)")] string? marriageDate = null,
         [Description("Marriage place (optional)")] string? marriagePlace = null)
     {
@@ -86,7 +86,8 @@ public sealed class GrampsPrompts
             sb.AppendLine($"Father: {father}");
         if (mother != null)
             sb.AppendLine($"Mother: {mother}");
-        sb.AppendLine($"Relationship: {relationship}");
+        if (relationship != null)
+            sb.AppendLine($"Relationship: {relationship}");
         if (marriageDate != null)
         {
             sb.Append($"Marriage: {marriageDate}");
@@ -99,7 +100,9 @@ public sealed class GrampsPrompts
         sb.AppendLine("Steps:");
         sb.AppendLine("1. Find or verify each person exists. If a name is given instead of a handle/ID,");
         sb.AppendLine("   search for them first. If not found, ask whether to create them.");
-        sb.AppendLine("2. Create the family with create_family, passing the person handles.");
+        sb.AppendLine("2. Create the family with create_family, passing the person handles and relationshipType:");
+        sb.AppendLine("   the relationship above, or Married when a source records the marriage. Without one");
+        sb.AppendLine("   the family is Unknown, as in Gramps.");
         sb.AppendLine("3. If a marriage date is provided, create a Marriage event with create_event,");
         sb.AppendLine("   then link it to the family using update_family with eventRefs and linkMode: \"add\".");
         sb.AppendLine("4. Show the created family details with get_object(objectType: \"family\", ...).");

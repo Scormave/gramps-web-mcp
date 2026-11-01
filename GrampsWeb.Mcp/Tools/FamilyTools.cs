@@ -75,8 +75,9 @@ public static class FamilyTools
         string? fatherHandle = null,
         [Description("The mother, optional. " + ToolDescriptionFragments.HandleDiscovery)]
         string? motherHandle = null,
-        [Description("Relationship type: Married (default), Unmarried, Civil Union or Unknown. " + ToolDescriptionFragments.KnownType)]
-        string? relationshipType = "Married",
+        [Description("Relationship type: Married, Unmarried, Civil Union or Unknown (default, as in Gramps). Pass Married when " +
+                     "a source records the marriage. " + ToolDescriptionFragments.KnownType)]
+        string? relationshipType = "Unknown",
         [Description("Children, each with its relation to the father and mother (Birth by default; Adopted, Stepchild, …). " + FlexibleChildRefList.DescriptionHint)]
         FlexibleChildRefList? childRefs = null,
         [Description("Existing family events such as Marriage or Divorce. " + FlexibleEventRefList.DescriptionHint)]

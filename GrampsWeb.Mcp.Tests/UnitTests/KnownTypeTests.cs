@@ -117,6 +117,16 @@ public class KnownTypeTests
     }
 
     [Fact]
+    public async Task CreateFamily_Without_A_Relationship_Type_Stores_Unknown_As_Gramps_Does()
+    {
+        var handler = new TreeHandler(new Dictionary<string, string>());
+
+        await FamilyTools.CreateFamily(fatherHandle: "h-father", client: CreateClient(handler));
+
+        Assert.Equal("Unknown", handler.Body!["type"]!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task CreateFamily_Rejects_A_Misspelt_Child_Relation_Before_Saving()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());

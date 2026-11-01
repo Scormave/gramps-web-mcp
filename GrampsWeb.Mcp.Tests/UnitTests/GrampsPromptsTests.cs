@@ -39,6 +39,16 @@ public class GrampsPromptsTests
     }
 
     [Fact]
+    public void AddFamily_LeavesTheRelationshipToTheSources()
+    {
+        var text = GrampsPrompts.AddFamily("I0001", "I0002");
+
+        Assert.DoesNotContain("Relationship:", text);
+        Assert.Contains("Married when a source records the marriage", text);
+        Assert.Contains("Relationship: Unmarried", GrampsPrompts.AddFamily("I0001", "I0002", "Unmarried"));
+    }
+
+    [Fact]
     public void CiteFact_ReusesSourcesAndAttachesCitation()
     {
         var text = GrampsPrompts.CiteFact("event", "E0001", "Archive", "12");

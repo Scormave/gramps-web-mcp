@@ -161,8 +161,9 @@ public sealed class FamilyRecord : BatchRecord
     public string? MotherHandle { get; init; }
 
     [JsonPropertyName("relationshipType")]
-    [Description("Married (default), Unmarried, Civil Union or Unknown.")]
-    public string? RelationshipType { get; init; } = "Married";
+    [Description("Married, Unmarried, Civil Union or Unknown (default, as in Gramps). Pass Married when a source " +
+                 "records the marriage.")]
+    public string? RelationshipType { get; init; } = "Unknown";
 
     [JsonPropertyName("childRefs")]
     [Description("Children in birth order: handles or #keys, each optionally with a relation as \"#key::Adopted\" " +

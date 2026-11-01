@@ -135,7 +135,8 @@ public class RecordBatchToolsTests
         Assert.Contains($"Note: General — handle: {handles[0]} | gramps_id: N0001\n", result.ReplaceLineEndings("\n"));
         Assert.Contains($"Event: Birth — handle: {handles[1]} | gramps_id: E0002 | key: birth", result);
         Assert.Contains($"Person: Ivan Petrov — handle: {handles[3]} | gramps_id: I0004 | key: ivan", result);
-        Assert.Contains($"Family: Married — handle: {handles[5]} | gramps_id: F0006", result);
+        Assert.Contains($"Family: Unknown — handle: {handles[5]} | gramps_id: F0006", result);
+        Assert.Equal("Unknown", handler.Body!.AsArray()[5]!["type"]!.GetValue<string>());
         Assert.Contains("Existing records that now link back to a new family (1):", result);
         Assert.Contains("Person: Maria Petrova — handle: h-mother | gramps_id: I0007", result);
         Assert.Contains("Not linked from any record of this call (2): notes[0], events[1] (key death).", result);

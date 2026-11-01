@@ -280,7 +280,7 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 |------|------------|---------|
 | `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details: search for the person, find or create the places, `create_event` for birth and death, `create_person` with those events, then confirm with handle and Gramps ID. |
 | `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Start with the person record; retrieve extended details, a timeline, or the requested tree branch only when relevant. |
-| `add-family` | optional `father`, `mother`, `relationship` (default Married), optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_object` for the family. |
+| `add-family` | optional `father`, `mother`, `relationship`, optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_object` for the family. |
 | `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_person_tree` if no direct link. |
 | `import-from-text` | `text` | Parse free-form genealogy text: search for existing people, places and the source, save the new places, source, citation, events, people and families in one `create_records` call linked by `"#key"`, attach new events to existing people and new children to existing families with `linkMode: "add"`, then report import summary and gaps. |
 | `change-link` | `ownerType`, `owner`, `linkField`, `target`, optional `action` (`add` by default) | Resolve existing records, add or remove one link with `linkMode`, then verify the owner. |
@@ -476,7 +476,7 @@ nothing is saved.
 |-----------|------|----------|---------|-------------|
 | `fatherHandle` | `string?` | no | — | Father person handle |
 | `motherHandle` | `string?` | no | — | Mother person handle |
-| `relationshipType` | `string?` | no | `"Married"` | Married, Unmarried, Civil Union, Unknown |
+| `relationshipType` | `string?` | no | `"Unknown"` | Married, Unmarried, Civil Union, Unknown; Unknown by default, as in Gramps, so pass Married when a source records the marriage |
 | `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Family`) |
 | `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects; see [Image regions](#image-regions) |

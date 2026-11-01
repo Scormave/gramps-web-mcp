@@ -43,6 +43,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   a `{ref}` object without a role keeps the stored role. The hints after
   `create_family` and `create_event` suggest the Family role for family
   events
+- A new family without a relationship type, from `create_family` or a
+  family of `create_records`, is Unknown, as in Gramps and Gramps Web,
+  instead of Married, so a couple whose marriage no source records is
+  not stored as married. Pass `relationshipType: "Married"` when a
+  source records the marriage. The `add-family` prompt no longer
+  assumes Married either
 
 ## [2.8.0] - 2026-11-01
 
