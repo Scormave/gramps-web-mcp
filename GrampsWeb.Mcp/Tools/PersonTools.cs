@@ -195,12 +195,17 @@ public static class PersonTools
 
     [McpServerTool(Title = "Create Person", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
-        "Create one person with full control: names, gender, links to existing events (with roles), families, " +
+        "Create one person: names, gender, links to existing events with the person's role in each, families, " +
         "citations, notes, media and tags, plus attributes, addresses, URLs and associations. " +
         "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: search for the person first, " +
-        "and change an existing person with update_person. Events are separate records: create the Birth, Death and other " +
-        "events with create_event first and pass them in eventRefs, or attach them later with update_person (linkMode add). To make the person a child of a family, add them to the family's childRefs " +
-        "(create_family or update_family). " + ToolDescriptionFragments.BatchCreate + " " +
+        "and change an existing person with update_person. primaryName is the main name, usually the birth name, e.g. " +
+        "{\"given\": \"Ivan\", \"patronymic\": \"Petrovich\", \"surname\": \"Sidorov\"}; a married name or another spelling " +
+        "goes in alternateNames. Events are separate records: create the Birth, Death and other events with create_event " +
+        "first and pass them in eventRefs, or attach them later with update_person (linkMode add). The first Birth and the " +
+        "first Death in the Primary role, the default, become the person's birth and death in Gramps; in another role, " +
+        "such as Witness, the event is only linked. familyHandles and parentFamilyHandles link the person to a family but " +
+        "not the family to the person: name the person in the family's fatherHandle, motherHandle or childRefs instead " +
+        "(create_family or update_family), which links both ways. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreatePerson(
         [Description(FlexibleGrampsName.DescriptionHint)]
@@ -211,7 +216,7 @@ public static class PersonTools
         FlexibleAlternateNameList? alternateNames = null,
         [Description("Existing events this person takes part in, each with a role (Primary by default; Witness, Godparent, …). " + FlexibleEventRefList.DescriptionHint)]
         FlexibleEventRefList? eventRefs = null,
-        [Description("Families where this person is a parent or spouse. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Families where this person is a parent or spouse. Does not make the person the family's father or mother: use fatherHandle or motherHandle on the family for that. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
         [Description("Families where this person is a child. Does not add the person to the family's children: use childRefs on the family for that. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? parentFamilyHandles = null,

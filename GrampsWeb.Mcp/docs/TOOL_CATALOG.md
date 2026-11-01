@@ -428,8 +428,8 @@ Create a new person.  Returns handle and Gramps ID.
 | `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
 | `alternateNames` | `FlexibleAlternateNameList?` | no | — | Alternate names |
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
-| `familyHandles` | `FlexibleHandleList?` | no | — | Families (as parent/spouse) |
-| `parentFamilyHandles` | `FlexibleHandleList?` | no | — | Parent families (as child) |
+| `familyHandles` | `FlexibleHandleList?` | no | — | Families (as parent/spouse); the family's `fatherHandle` or `motherHandle` stays unset |
+| `parentFamilyHandles` | `FlexibleHandleList?` | no | — | Parent families (as child); the family's `childRefs` stay unchanged |
 | `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects to show part of an image; see [Image regions](#image-regions) |
 | `citationHandles` | `FlexibleHandleList?` | no | — | Citation handles |
 | `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
@@ -442,6 +442,11 @@ Create a new person.  Returns handle and Gramps ID.
 
 The first Birth and the first Death in `eventRefs` with the Primary role become
 the person's birth and death (`birth_ref_index`, `death_ref_index`), as in Gramps.
+
+`familyHandles` and `parentFamilyHandles` are stored on the person only. Gramps
+Web writes the link back the other way, from a family to its father, mother
+and children, so a person joins a family through the family's `fatherHandle`,
+`motherHandle` or `childRefs` (`create_family`, `update_family`).
 
 ### U — `UpdatePerson`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).

@@ -13,6 +13,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `create_repository` point to `create_records` for several new records
   that link to each other, such as the people, events, source and
   citation of one register entry
+- `create_person` describes how its arguments work together: the
+  primary name with an example and alternate names beside it, the first
+  Birth and Death in the Primary role becoming the person's birth and
+  death, and that `familyHandles` and `parentFamilyHandles` link the
+  person to a family but not back, so a person joins a family through
+  the family's father, mother or children
 
 ## [2.8.0] - 2026-11-01
 
