@@ -1,7 +1,8 @@
-# Weekly version-update pull requests for NuGet packages, GitHub Actions and
-# the Gramps Web image the integration tests run against. Security updates are
-# switched on separately, in the repository's Code security settings, and are
-# not delayed by the cooldown below.
+# Weekly version-update pull requests for NuGet packages, GitHub Actions, the
+# Gramps Web image the integration tests run against and the npm package of
+# the tool definition lint. Security updates are switched on separately, in
+# the repository's Code security settings, and are not delayed by the
+# cooldown below.
 #
 # The server's Docker base images are not listed: the Dockerfile uses the
 # floating 10.0-noble and 10.0-noble-chiseled tags, so every image build
@@ -69,4 +70,15 @@ updates:
       default-days: 7
     commit-message:
       prefix: test
+      include: scope
+
+  # mcp-tdqs, which lints the tool definitions in CI (scripts/lint-tools.sh).
+  - package-ecosystem: npm
+    directory: /scripts/tdqs
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
       include: scope

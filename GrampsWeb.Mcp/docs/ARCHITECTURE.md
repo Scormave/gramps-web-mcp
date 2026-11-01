@@ -492,11 +492,13 @@ shows how to run the image, with a refresh token or in read-only mode.
   server's line and branch coverage by folder on the job's summary page and
   fails the job when line coverage drops below the minimum set in the
   workflow. The `integration-tests` job runs `GrampsWeb.Mcp.IntegrationTests`
-  against the pinned Gramps Web image. CI also runs every Monday, so an
-  advisory for a package already in use shows up without a commit.
+  against the pinned Gramps Web image. The `tool-definitions` job runs
+  Glama's TDQS lint of the tool definitions (`scripts/lint-tools.sh`). CI also
+  runs every Monday, so an advisory for a package already in use shows up
+  without a commit.
 - **Dependabot** (`.github/dependabot.yml`): weekly pull requests that update
-  NuGet packages, GitHub Actions and the Gramps Web image of the integration
-  tests.
+  NuGet packages, GitHub Actions, the Gramps Web image of the integration
+  tests and `mcp-tdqs`.
 - **GitHub Actions** (`.github/workflows/docker.yml`): on pushes to
   `main`/`master`, `v*` tags, or manual dispatch, test, then build and publish
   the Docker image to `ghcr.io/scormave/gramps-web-mcp` (`:latest` from the

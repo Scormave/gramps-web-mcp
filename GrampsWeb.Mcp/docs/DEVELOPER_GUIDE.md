@@ -545,11 +545,15 @@ and exits with 0.
   server's line and branch coverage by folder on the job's summary page and
   fails the job when line coverage drops below the minimum set in the
   workflow. The `integration-tests` job runs `GrampsWeb.Mcp.IntegrationTests`
-  against the pinned Gramps Web image. CI also runs every Monday, so an
-  advisory for a package already in use shows up without a commit.
+  against the pinned Gramps Web image. The `tool-definitions` job runs
+  `scripts/lint-tools.sh`: Glama's TDQS lint (`mcp-tdqs`, pinned with its
+  dependencies in `scripts/tdqs/package-lock.json`) of every tool as a client
+  lists it, which fails on any error or warning, such as a parameter without a
+  description. CI also runs every Monday, so an advisory for a package already
+  in use shows up without a commit.
 - **Dependabot** (`.github/dependabot.yml`): weekly pull requests that update
-  NuGet packages, GitHub Actions and the Gramps Web image of the integration
-  tests.
+  NuGet packages, GitHub Actions, the Gramps Web image of the integration
+  tests and `mcp-tdqs`.
 - **GitHub Actions** (`.github/workflows/docker.yml`): test, smoke-test the
   amd64 image, then publish the Docker image to
   `ghcr.io/scormave/gramps-web-mcp` on pushes to `main`/`master` (`:latest`),

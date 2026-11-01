@@ -49,3 +49,6 @@ Thumbs.db
 
 # MCPB packaging output
 dist/
+
+# npm packages of scripts/tdqs (npm ci --prefix scripts/tdqs)
+node_modules/

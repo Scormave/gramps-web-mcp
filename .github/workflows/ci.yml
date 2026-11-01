@@ -99,3 +99,33 @@ jobs:
             exit 1
           fi
           echo "No known vulnerable packages, transitive ones included."
+
+  # Glama's TDQS lint of the tool definitions (see scripts/lint-tools.sh).
+  # mcp-tdqs comes from npm, pinned with its dependencies in
+  # scripts/tdqs/package-lock.json, and npm ci runs none of their scripts.
+  tool-definitions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Build
+        run: dotnet build GrampsWeb.Mcp -c Release
+
+      - name: Install mcp-tdqs
+        run: npm ci --prefix scripts/tdqs --ignore-scripts --no-audit --no-fund
+
+      # The report goes to the log and to the job's summary page.
+      - name: Lint tool definitions
+        run: |
+          set -o pipefail
+          scripts/lint-tools.sh --format markdown | tee -a "$GITHUB_STEP_SUMMARY"

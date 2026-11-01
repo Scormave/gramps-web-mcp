@@ -1,0 +1,8 @@
+{
+  "name": "gramps-web-mcp-tdqs",
+  "private": true,
+  "description": "Glama's TDQS lint of the tool definitions, run by CI (.github/workflows/ci.yml)",
+  "dependencies": {
+    "mcp-tdqs": "0.2.0"
+  }
+}

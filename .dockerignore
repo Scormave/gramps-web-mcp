@@ -7,3 +7,4 @@
 GrampsWeb.Mcp.Tests
 GrampsWeb.Mcp.IntegrationTests
 *.md
+**/node_modules

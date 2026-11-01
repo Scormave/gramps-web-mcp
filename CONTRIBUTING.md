@@ -43,6 +43,17 @@ python3 scripts/coverage-summary.py TestResults/coverage
 CI fails when line coverage drops below the minimum set in
 `.github/workflows/ci.yml`.
 
+Lint of the tool definitions, as CI runs it (needs Node.js 22 or later):
+
+```bash
+dotnet build GrampsWeb.Mcp -c Release
+npm ci --prefix scripts/tdqs --ignore-scripts
+./scripts/lint-tools.sh
+```
+
+It runs the checks of Glama's TDQS that need no model, such as parameters
+without a description, and fails on any error or warning.
+
 ## Development guide
 
 See [GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md) for:

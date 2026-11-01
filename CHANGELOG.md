@@ -21,6 +21,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   Argument names and types are checked inside each record as well: an
   unknown field such as `people[1].birthDate` is named, with a
   suggestion when one is close
+- Tool definition lint: CI runs Glama's TDQS lint, the checks behind the
+  quality score Glama shows that need no model, on every tool as a
+  client lists it, and fails on any error or warning, such as a
+  parameter without a description. `scripts/lint-tools.sh` runs it
+  locally. The npm package `mcp-tdqs` is pinned with its dependencies
+  in `scripts/tdqs/package-lock.json`, installed without running their
+  scripts, and Dependabot proposes its updates
 
 ### Changed
 
