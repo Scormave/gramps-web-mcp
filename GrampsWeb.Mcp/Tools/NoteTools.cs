@@ -48,7 +48,7 @@ public static class NoteTools
         "to the noteHandles of each person, family, event, place, source or citation it belongs to (their update tool, linkMode add). " +
         "For the transcript of a cited record use type Transcript and attach the note to that citation. " +
         "Change an existing note with update_note. An unknown type is rejected before anything is saved. " +
-        ToolDescriptionFragments.WriteAccess)]
+        ToolDescriptionFragments.BatchCreate + " " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> CreateNote(
         [Description("The note text (required).")]
         string text,

@@ -59,7 +59,7 @@ public static class PlaceTools
         "alternateNames the historical or other-language ones; an undated primary name hides dated alternate names. " +
         "Events point here afterwards through placeHandle on create_event or update_event. " +
         "Returns the new handle and Gramps ID with the stored name, type, coordinates and enclosing places, and next steps; " +
-        "an unknown type or unreadable date is rejected before anything is saved. " +
+        "an unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreatePlace(
         [Description("Primary name (required).")]

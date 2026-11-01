@@ -66,7 +66,7 @@ public static class FamilyTools
         "such as Marriage. Returns the new handle, Gramps ID and a label, with next steps. People and events must already exist " +
         "(create_person, create_event). Does not check for duplicates: look at the parents' families first, " +
         "and change an existing family with update_family. Children are added here through childRefs, " +
-        "not through the child's parentFamilyHandles. " +
+        "not through the child's parentFamilyHandles. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateFamily(
         [Description("The father, optional. " + ToolDescriptionFragments.HandleDiscovery)]

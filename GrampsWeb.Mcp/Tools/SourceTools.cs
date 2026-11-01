@@ -47,7 +47,7 @@ public static class SourceTools
         "source is changed with update_source. repositoryHandles takes existing repositories only (create_repository), " +
         "each with the source's call number there. A source alone proves nothing: cite a page or act of it with " +
         "create_citation, then attach that citation to people and events. " +
-        "Returns the new handle, Gramps ID and title, with next steps. " +
+        "Returns the new handle, Gramps ID and title, with next steps. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateSource(
         [Description("Title (required).")]

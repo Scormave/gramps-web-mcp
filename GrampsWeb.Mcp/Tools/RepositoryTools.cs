@@ -47,7 +47,8 @@ public static class RepositoryTools
         "change an existing repository with update_repository. Link sources to it afterwards through repositoryHandles " +
         "on create_source or update_source, which also carry the call number. noteHandles and tagHandles only link " +
         "existing notes and tags (create_note, create_tag); nothing else is created or changed. " +
-        "An unknown type is rejected before anything is saved. " + ToolDescriptionFragments.WriteAccess)]
+        "An unknown type is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
+        ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> CreateRepository(
         [Description("Name, e.g. \"State Archive in Warsaw\" (required).")]
         string name,

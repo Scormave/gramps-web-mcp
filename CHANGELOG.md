@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `create_person`, `create_family`, `create_event`, `create_place`,
+  `create_source`, `create_citation`, `create_note` and
+  `create_repository` point to `create_records` for several new records
+  that link to each other, such as the people, events, source and
+  citation of one register entry
+
 ## [2.8.0] - 2026-11-01
 
 ### Added

@@ -51,6 +51,7 @@ public static class CitationTools
         "attachTo, which can mark the entry's region on the page. The citation supports nothing until it is attached: " +
         "add it to each person, family, event or place it names (citationHandles, linkMode add, on their update tool). " +
         "Does not check for duplicates; change an existing citation with update_citation. " +
+        ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateCitation(
         [Description("The source being cited (required). " + ToolDescriptionFragments.HandleDiscovery)]

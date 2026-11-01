@@ -241,6 +241,23 @@ public class RecordBatchToolsTests
             p => Assert.NotNull(p.GetCustomAttribute<DescriptionAttribute>()));
     }
 
+    /// <summary>Each create tool whose records create_records takes points to it for linked records.</summary>
+    [Theory]
+    [InlineData(typeof(PersonTools), nameof(PersonTools.CreatePerson))]
+    [InlineData(typeof(EventTools), nameof(EventTools.CreateEvent))]
+    [InlineData(typeof(FamilyTools), nameof(FamilyTools.CreateFamily))]
+    [InlineData(typeof(CitationTools), nameof(CitationTools.CreateCitation))]
+    [InlineData(typeof(NoteTools), nameof(NoteTools.CreateNote))]
+    [InlineData(typeof(SourceTools), nameof(SourceTools.CreateSource))]
+    [InlineData(typeof(RepositoryTools), nameof(RepositoryTools.CreateRepository))]
+    [InlineData(typeof(PlaceTools), nameof(PlaceTools.CreatePlace))]
+    public void Create_Tools_Point_To_CreateRecords(Type tools, string method)
+    {
+        var description = tools.GetMethod(method)!.GetCustomAttribute<DescriptionAttribute>()!.Description;
+
+        Assert.Contains(ToolDescriptionFragments.BatchCreate, description);
+    }
+
     private static Task<string> CreateRecords(string json, TreeHandler handler)
     {
         var arguments = JsonNode.Parse(json)!.AsObject();

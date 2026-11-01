@@ -119,7 +119,7 @@ public static class EventTools
         "attach it with update_person or update_family (eventRefs, linkMode add), which keeps their other events; several people " +
         "can share one event, each with their own role. The place must exist: find it with search or create it with create_place. " +
         "Change an existing event with update_event. " +
-        "An unknown type or unreadable date is rejected before anything is saved. " +
+        "An unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateEvent(
         [Description("Event type, e.g. Birth, Baptism, Death, Burial, Marriage, Residence, Occupation. " + ToolDescriptionFragments.KnownType)]

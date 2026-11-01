@@ -200,7 +200,7 @@ public static class PersonTools
         "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: search for the person first, " +
         "and change an existing person with update_person. Events are separate records: create the Birth, Death and other " +
         "events with create_event first and pass them in eventRefs, or attach them later with update_person (linkMode add). To make the person a child of a family, add them to the family's childRefs " +
-        "(create_family or update_family). " +
+        "(create_family or update_family). " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreatePerson(
         [Description(FlexibleGrampsName.DescriptionHint)]
