@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.8.1] - 2026-11-01
+
 ### Changed
 
 - `create_person`, `create_family`, `create_event`, `create_place`,
@@ -1140,7 +1142,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.1...HEAD
+[2.8.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.5.2...v2.6.0
