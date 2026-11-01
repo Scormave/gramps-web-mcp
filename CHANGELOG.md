@@ -29,6 +29,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `attachTo` differ; `create_tag` why names should stay distinct; and
   `update_citation` and `update_repository` that a change shows on every
   record that cites or lists them
+- Update `Microsoft.Extensions.Hosting` and `Microsoft.Extensions.Http` to
+  10.0.14
 
 ### Fixed
 
