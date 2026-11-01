@@ -63,9 +63,15 @@ public static class FamilyTools
     [McpServerTool(Title = "Create Family", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a family: a couple (father and mother, each optional) with their relationship type, children and family events " +
-        "such as Marriage. Returns the new handle, Gramps ID and a label, with next steps. People and events must already exist " +
-        "(create_person, create_event). Gramps Web links the father, mother and children back to the family in the same save, " +
-        "and if one of them does not exist it refuses the family and nothing is saved. " +
+        "such as Marriage. People and events must already exist (create_person, create_event). Gramps Web links the father, " +
+        "mother and children back to the family in the same save, and if one of them does not exist it refuses the family and " +
+        "nothing is saved. relationshipType stays Unknown unless a source records the marriage: then pass Married and link the " +
+        "Marriage event in eventRefs, where a family event takes the Family role, which is what makes Gramps and Gramps Web " +
+        "show the family among the event's participants. Each child in childRefs carries its own relation to the father and " +
+        "to the mother, Birth unless the source says Adopted, Stepchild or another; children keep the order given, so list " +
+        "them by birth. Citations, notes, media, tags and attributes passed here belong to the family itself, not to its " +
+        "members or events. Returns the new handle, Gramps ID and stored relationship type; when children or events were " +
+        "left out, it also lists the update_family calls that add them with linkMode add. " +
         "Does not check for duplicates: look at the parents' families first, " +
         "and change an existing family with update_family. Children are added here through childRefs, " +
         "not through the child's parentFamilyHandles. " + ToolDescriptionFragments.BatchCreate + " " +

@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `create_family` says what it returns: the handle, Gramps ID and stored
+  relationship type, then the `update_family` calls that add the
+  children or events left out. It also says how its arguments work
+  together: Married goes with a recorded marriage and its Marriage event
+  in the Family role, each child carries its own relation to the father
+  and to the mother, children keep the order given, and citations,
+  notes, media, tags and attributes belong to the family itself
+
 ## [2.8.1] - 2026-11-01
 
 ### Changed

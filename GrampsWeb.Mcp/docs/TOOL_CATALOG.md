@@ -470,7 +470,9 @@ Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
 Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
 Gramps Web links the father, mother and children back to the family in the
 same transaction, and refuses the family when one of them does not exist, so
-nothing is saved.
+nothing is saved. Children keep the order given in `childRefs`. Returns the
+handle, Gramps ID and stored relationship type, and, for children or events
+not passed, the `update_family` calls that add them with `linkMode: "add"`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
