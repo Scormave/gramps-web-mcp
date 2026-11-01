@@ -31,8 +31,9 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
 
 ## Features
 
-- **Up to 33 MCP tools** — read, create, update, and delete people, families,
-  events, places, sources, citations, notes, media, repositories, and tags
+- **Up to 34 MCP tools** — read, create, update, merge, and delete people,
+  families, events, places, sources, citations, notes, media, repositories,
+  and tags
 - **Search and kinship** — full-text search, listings filtered by Gramps QL or
   Gramps filter rules, ancestors, descendants, relationships, and timelines
 - **Careful edits** — add or remove one link with `linkMode` and keep the

@@ -59,27 +59,27 @@ the user or rotating the Gramps Web secret key invalidates it.
 - Set `GRAMPS_MUTATION_SERIALIZE=false` when Gramps Web uses PostgreSQL and you
   want parallel writes.
 
-## Confirming deletes and undos
+## Confirming deletes, merges and undos
 
-`delete_object` and `undo_change` ask the user to confirm in a dialog before
-they change the tree, when the client supports
+`delete_object`, `merge_objects` and `undo_change` ask the user to confirm in a
+dialog before they change the tree, when the client supports
 [MCP elicitation](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation).
-The dialog names the record, or lists what the undo will change, and the user
-ticks a box to go ahead. Declining or closing it changes nothing. Dry runs and
-refusals do not ask.
+The dialog names the record, or both records of a merge, or lists what the
+undo will change, and the user ticks a box to go ahead. Declining or closing it
+changes nothing. Dry runs and refusals do not ask.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_CONFIRMATION` | `when-supported` asks clients that support elicitation and runs as before in the others; `required` refuses deletes and undos in clients that cannot ask; `off` never asks | `when-supported` |
+| `GRAMPS_CONFIRMATION` | `when-supported` asks clients that support elicitation and runs as before in the others; `required` refuses deletes, merges and undos in clients that cannot ask; `off` never asks | `when-supported` |
 
 - Stateless Streamable HTTP (`MCP_STATELESS=true`, the default) cannot send
-  requests to the client, so it never asks, and `required` refuses every delete
-  and undo there. Set `MCP_STATELESS=false` to confirm over HTTP; stdio and
-  legacy SSE keep a session and can ask.
-- Both tools also carry the `anthropic/requiresUserInteraction` tool metadata,
-  whatever the setting. Clients that honour it, such as Claude Code, ask their
-  own permission first, so the user may confirm twice; `off` keeps only the
-  client's prompt.
+  requests to the client, so it never asks, and `required` refuses every
+  delete, merge and undo there. Set `MCP_STATELESS=false` to confirm over
+  HTTP; stdio and legacy SSE keep a session and can ask.
+- All three tools also carry the `anthropic/requiresUserInteraction` tool
+  metadata, whatever the setting. Clients that honour it, such as Claude Code,
+  ask their own permission first, so the user may confirm twice; `off` keeps
+  only the client's prompt.
 - The tool call lasts until the user answers. If the client cancels the call
   first, nothing changes.
 - The server logs once per client whether it asks.

@@ -124,6 +124,16 @@ public static class ResponseEnvelope
         return $"---\ntype: {objectType}\naction: {action}\nhandle: {handle}\n---\n{reason}";
     }
 
+    /// <summary>
+    /// Formats a merge that did not happen because the user did not confirm it, Gramps refused it, or a record
+    /// changed meanwhile: <paramref name="action"/> such as <c>declined</c> or <c>refused</c>, then why.
+    /// </summary>
+    public static string MergeNotDone(string objectType, string handle, string duplicateHandle, string action,
+        string reason)
+    {
+        return $"---\ntype: {objectType}\naction: {action}\nhandle: {handle}\nduplicate_handle: {duplicateHandle}\n---\n{reason}";
+    }
+
     public static string[] PersonCreateNextSteps(string? handle,
         bool hasEvents = false, bool hasFamily = false, bool hasNotes = false)
     {

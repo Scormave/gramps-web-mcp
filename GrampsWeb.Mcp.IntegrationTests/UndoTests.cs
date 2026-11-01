@@ -136,7 +136,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     }
 
     /// <summary>Gramps Web images before 26.10 (API 3.23) undo a deletion only with force.</summary>
-    private static bool ImageBeforeDeletionFix()
+    internal static bool ImageBeforeDeletionFix()
     {
         var tag = GrampsWebImage.Name.Split(':').LastOrDefault() ?? "";
         return Version.TryParse(tag, out var version) && version < new Version(26, 10);

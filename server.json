@@ -66,7 +66,7 @@
         },
         {
           "name": "GRAMPS_CONFIRMATION",
-          "description": "Whether delete_object and undo_change ask the user to confirm through MCP elicitation: when-supported, required (refuse in clients that cannot ask), or off",
+          "description": "Whether delete_object, merge_objects and undo_change ask the user to confirm through MCP elicitation: when-supported, required (refuse in clients that cannot ask), or off",
           "default": "when-supported"
         },
         {

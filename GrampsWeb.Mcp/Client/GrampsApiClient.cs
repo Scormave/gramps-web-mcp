@@ -360,18 +360,23 @@ public class GrampsApiClient
     }
 
     /// <summary>
-    /// POST without a body to an action endpoint such as <c>/api/transactions/history/{id}/undo</c>.
-    /// Returns the status and body of a successful reply, e.g. 202 with a task reference when Gramps Web
-    /// runs the action in the background; throws <see cref="GrampsApiException"/> on any other status.
+    /// POST to an action endpoint such as <c>/api/transactions/history/{id}/undo</c>, without a body or with
+    /// the JSON <paramref name="json"/>. Returns the status and body of a successful reply, e.g. 202 with a
+    /// task reference when Gramps Web runs the action in the background; throws
+    /// <see cref="GrampsApiException"/> on any other status.
     /// </summary>
-    public async Task<(System.Net.HttpStatusCode StatusCode, string Body)> PostActionAsync(string path)
+    public async Task<(System.Net.HttpStatusCode StatusCode, string Body)> PostActionAsync(string path,
+        string? json = null)
     {
         EnsureWritable();
 
         try
         {
             using var response = await SendAuthorizedAsync(
-                () => new HttpRequestMessage(HttpMethod.Post, path), SendMutationAsync);
+                () => new HttpRequestMessage(HttpMethod.Post, path)
+                {
+                    Content = json is null ? null : JsonContent(json)
+                }, SendMutationAsync);
             var body = await response.Content.ReadAsStringAsync();
             ThrowIfMutationFailed(response, body);
             return (response.StatusCode, body);

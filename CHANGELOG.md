@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `merge_objects`: merge a duplicate into the record to keep, for
+  people, families, events, places, sources, citations, notes, media and
+  repositories, through Gramps Web's merge endpoint (API 3.15 or newer).
+  Gramps merges them in one transaction: the duplicate's details and
+  every link to it move to the kept record, and the duplicate is
+  deleted. The kept record keeps its own fields; a merged person keeps
+  the other name as an alternate name. Merging people also merges a
+  family with the same partner unless `mergeFamilies` is false, and
+  merging families merges their different fathers and mothers, keeping
+  `fatherHandle` and `motherHandle` when given. Spouses and a parent
+  with their child are refused before the user is asked. The user
+  confirms the merge in a dialog that names both records, as for
+  `delete_object` and `undo_change`, and the reply gives the
+  transaction that `undo_change` takes to restore the duplicate.
+
 ### Changed
 
 - `create_family` says what it returns: the handle, Gramps ID and stored

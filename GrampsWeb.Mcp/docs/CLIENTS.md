@@ -110,9 +110,9 @@ Keep in mind:
   a project's repository.
 - Every client works as the Gramps Web account the server is configured with,
   and Gramps Web records all their edits under that account.
-- Over stateless HTTP, the default, `delete_object` and `undo_change` cannot
-  show their confirmation dialog; see
-  [Confirming deletes and undos](CONFIGURATION.md#confirming-deletes-and-undos).
+- Over stateless HTTP, the default, `delete_object`, `merge_objects` and
+  `undo_change` cannot show their confirmation dialog; see
+  [Confirming deletes, merges and undos](CONFIGURATION.md#confirming-deletes-merges-and-undos).
 
 To check the address and the key from a terminal, send an `initialize` request.
 The key also works as `X-Api-Key: <key>`:

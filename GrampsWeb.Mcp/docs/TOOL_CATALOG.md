@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 33 MCP tools exposed by the server.
+Complete catalog of up to 34 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -26,14 +26,15 @@ tree, and a Gramps ID such as `I0012` works as well.
 | "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source or `create_source`, then `create_citation` and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
 | "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `create_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
 | "Add today's findings to my research note." | `update_note` with `appendText` | The note extended at the end, its earlier text, styling and links untouched |
+| "I0042 and I0107 are the same Anna Petrova. Merge them." | `get_object` for both, then `merge_objects` once you confirm | One person with the events, families, citations and notes of both, the other name kept as an alternate name, which one `undo_change` takes back |
 | "What changed today? Undo the last edit." | `get_recent_changes`, then `undo_change` once you confirm | The edit history, then the earlier versions back, or a refusal naming the later edits the undo would overwrite |
 
 The requests that only read the tree also work in
 [read-only mode](CONFIGURATION.md#runtime-mode). Reading scans needs
 [media access](CONFIGURATION.md#media-file-access), and attaching them needs an
-[upload folder](CONFIGURATION.md#media-upload). `delete_object` and `undo_change` change the
-tree only after you confirm; see
-[Confirming deletes and undos](CONFIGURATION.md#confirming-deletes-and-undos). Clients that
+[upload folder](CONFIGURATION.md#media-upload). `delete_object`, `merge_objects` and
+`undo_change` change the tree only after you confirm; see
+[Confirming deletes, merges and undos](CONFIGURATION.md#confirming-deletes-merges-and-undos). Clients that
 show MCP prompts also offer `research-person`, `find-connections`,
 `import-from-text` and `cite-fact` for these requests;
 [Prompts](#prompts) lists every prompt.
@@ -339,6 +340,73 @@ the records that will keep a link to it. A user who says no gets
 | `objectType` | `string` | yes | — | `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
 | `handle` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
 | `force` | `bool` | no | `false` | Delete despite backlinks |
+
+---
+
+## Merge (`MergeTools.cs`) — 1 tool
+
+### U — `MergeObjects`
+Merge a duplicate into the record to keep through Gramps Web's merge endpoint
+(`POST /api/{type}/{keep}/merge/{duplicate}`, Gramps Web API 3.15 or newer),
+which runs Gramps' own merge in one transaction: the duplicate's details and
+every link to it move to the kept record, and the duplicate is deleted. Works
+for people, families, events, places, sources, citations, notes, media and
+repositories; tags have no merge, and the tool says to move the tag with
+`tagHandles` and `linkMode: "add"` and then delete it.
+
+The kept record keeps its own fields, as Gramps' merge does:
+
+| Type | Kept from the record to keep | Added from the duplicate |
+|------|------------------------------|--------------------------|
+| person | primary name, gender, birth and death | its name as an alternate name, its Gramps ID in a `Merged Gramps ID` attribute, events, parent families, families, notes, citations, media, attributes, addresses, URLs, associations, tags |
+| family | relationship type, unless it is Unknown | children, events, notes, citations, media, attributes, tags |
+| event | type, date, place, description | notes, citations, media, attributes, and everyone who took part in it |
+| place | name, type, coordinates, code | its names as alternate names, enclosing places, notes, citations, media, URLs, and the events that happened there |
+| source | title, author, publication info, abbreviation | notes, media, attributes, repository references, and its citations |
+| citation | page, date, source; the more extreme confidence of the two | notes, media, attributes, and the records that cited it |
+| note | text and type | the records that showed it |
+| media | file, date, description | notes, citations, attributes, and the records that showed it |
+| repository | name and type | addresses, URLs, notes, and the sources held there |
+
+Merging two people with `mergeFamilies` (the default) also merges a family the
+duplicate had with the same partner as one of the kept person's families; the
+two parent families of people who both had parents stay separate, and the reply
+suggests merging them. Merging two families that name different fathers, or
+different mothers, merges those parents into one person as well, keeping
+`fatherHandle` and `motherHandle` or, by default, the kept family's parent, or
+the duplicate's when the kept family has none.
+
+Gramps refuses to merge two partners of one family, or a parent with their
+child. The tool checks both before asking and returns `action: refused` with
+nothing changed; it also returns `refused` for the same refusals from Gramps
+Web (HTTP 409) and for a record deleted meanwhile. A server older than API 3.15
+gets an error that names the version.
+
+When the client supports MCP elicitation, the user confirms the merge in a
+[dialog](#confirmation-dialogs) that names both records, says what the kept
+record keeps, and names the parents that become one person. A user who says no
+gets `action: declined` or `action: cancelled`, and nothing is merged.
+
+The reply header carries `type`, `action: merged`, `handle` and `gramps_id` of
+the kept record, `duplicate_handle` and `duplicate_gramps_id`, and the merge's
+`transaction`; the body names any family or parent the same merge joined and
+deleted, and the next steps: read the result, merge duplicate Birth, Death or
+Marriage events that came along, and `undo_change` with the transaction to
+restore the duplicate.
+
+```text
+merge_objects(objectType: "person", keepHandle: "I0042", duplicateHandle: "I0107")
+undo_change(transactionId: 415)
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `objectType` | `string` | yes | — | `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, or `repository` |
+| `keepHandle` | `string` | yes | — | The record that stays; handle or Gramps ID |
+| `duplicateHandle` | `string` | yes | — | The record merged into it and deleted; handle or Gramps ID |
+| `mergeFamilies` | `bool` | no | `true` | People only: also merge a family the duplicate had with the same partner |
+| `fatherHandle` | `string?` | no | kept family's father | Families only: the father who stays when the families name different fathers |
+| `motherHandle` | `string?` | no | kept family's mother | Families only: the mother who stays when the families name different mothers |
 
 ---
 
@@ -1049,14 +1117,15 @@ undo_change(transactionId: 412)
 | Tag | 0 | 1 | 1 | 0 | 2 |
 | RecordBatch | 0 | 1 | 0 | 0 | 1 |
 | Object | 1 | 0 | 0 | 1 | 2 |
+| Merge | 0 | 0 | 1 | 0 | 1 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
 | Undo | 0 | 0 | 1 | 0 | 1 |
-| **Total with media access and upload enabled** | **10** | **11** | **11** | **1** | **33** |
+| **Total with media access and upload enabled** | **10** | **11** | **12** | **1** | **34** |
 
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
-`create_media` are hidden: the default catalog contains 31 tools in read/write
+`create_media` are hidden: the default catalog contains 32 tools in read/write
 mode. With media access enabled, `create_media` also needs
 `GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 10 tools
 with media access enabled, or 9 with it disabled.
@@ -1083,13 +1152,15 @@ For structured write fields, request only the relevant subsection, such as
 referenced by other objects, deletion is **blocked** unless `force=true`.
 Using `force=true` can leave **dangling references** in the database.
 A deletion can be reverted with `undo_change`, which restores the record with
-its handle, Gramps ID and its own links.
+its handle, Gramps ID and its own links. `merge_objects` deletes the duplicate
+only after moving every link to the kept record, so it leaves no dangling
+references, and `undo_change` with its transaction restores the duplicate.
 
 ## Confirmation dialogs
 
-`delete_object` and `undo_change` ask the user, not the model, before they
-change the tree, through MCP elicitation. The client shows the question with a
-single checkbox, `confirm`, unticked by default:
+`delete_object`, `merge_objects` and `undo_change` ask the user, not the
+model, before they change the tree, through MCP elicitation. The client shows
+the question with a single checkbox, `confirm`, unticked by default:
 
 ```text
 Delete Note N0012: [General] Born in Tver?
@@ -1097,14 +1168,26 @@ Delete Note N0012: [General] Born in Tver?
 The change history keeps it: undo_change can restore it later.
 ```
 
+```text
+Merge Person I0107 into I0042?
+
+  • Keep I0042: Petrova, Anna Ivanovna
+  • Merge into it and delete I0107: Petrova, Anna
+
+The kept person keeps their primary name, gender, birth and death; …
+
+The change history keeps the duplicate: undo_change can undo the merge later.
+```
+
 Only an accepted dialog with the box ticked goes ahead. Accepting without the
 box or declining returns `action: declined`; closing the dialog returns
 `action: cancelled`. Both replies say that nothing was changed and tell the
-model to wait for the user before calling again. The tool reads the record (or
-the transaction's conflicts) again after the answer, and refuses with
-`action: refused` if it changed while the user was deciding. The tools ask
-only before writing: invalid arguments, a backlink refusal without `force`,
-`dryRun` and a conflict refusal return without a dialog.
+model to wait for the user before calling again. The tool reads the record
+(both records for a merge, or the transaction's conflicts) again after the
+answer, and refuses with `action: refused` if it changed while the user was
+deciding. The tools ask only before writing: invalid arguments, a backlink
+refusal without `force`, a merge Gramps would refuse, `dryRun` and a conflict
+refusal return without a dialog.
 
 `GRAMPS_CONFIRMATION` chooses when to ask:
 
@@ -1117,8 +1200,8 @@ only before writing: invalid arguments, a backlink refusal without `force`,
 The server logs once per client, at Information, whether it asks, and logs
 each answer. Stateless Streamable HTTP (`MCP_STATELESS=true`, the default for
 `http`) cannot send requests to the client, so there the server never asks,
-and with `required` it refuses every delete and undo; set
-`MCP_STATELESS=false` to confirm over HTTP. Both tools also carry the
+and with `required` it refuses every delete, merge and undo; set
+`MCP_STATELESS=false` to confirm over HTTP. All three tools also carry the
 `anthropic/requiresUserInteraction` tool meta, whatever the setting, so
 clients that honor it ask for their own permission first and keep these tools
 out of unattended runs. The tool call lasts until the user answers; if the

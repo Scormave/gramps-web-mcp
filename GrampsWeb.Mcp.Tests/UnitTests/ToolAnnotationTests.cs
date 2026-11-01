@@ -27,12 +27,13 @@ public class ToolAnnotationTests
                 Assert.False(attr.Destructive, $"Read-only tool {method.Name} must not be destructive");
         }
 
-        Assert.Equal(33, toolMethods.Count);
+        Assert.Equal(34, toolMethods.Count);
         Assert.Single(toolMethods, method => method.Name == "ReadMedia");
         Assert.Single(toolMethods, method => method.Name == "CreateMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
         Assert.Single(toolMethods, method => method.Name == "DeleteObject");
         Assert.Single(toolMethods, method => method.Name == "UndoChange");
+        Assert.Single(toolMethods, method => method.Name == "MergeObjects");
         Assert.Single(toolMethods, method => method.Name == "CreateRecords");
         Assert.Single(toolMethods, method => method.Name == "GetObject");
         Assert.Single(toolMethods, method => method.Name == "GetReference");
@@ -48,8 +49,8 @@ public class ToolAnnotationTests
 
     /// <summary>
     /// Every tool works on the one configured tree, so none is open-world. Creates only add, while updates
-    /// overwrite fields and replace mode removes links, so updates, delete and undo are destructive. A write tool
-    /// also states whether repeating the same call changes anything more: updates and delete settle on the same state
+    /// overwrite fields and replace mode removes links, so updates, delete, merge and undo are destructive. A write tool
+    /// also states whether repeating the same call changes anything more: updates, delete and merge settle on the same state
     /// (add mode skips handles already linked, an identical upload returns the stored media), while plain creates
     /// add another record, update_note can append the same text again and a forced undo_change writes again.
     /// </summary>
@@ -59,7 +60,7 @@ public class ToolAnnotationTests
         string[] idempotent =
         [
             "create_media", "update_citation", "update_event", "update_family", "update_media", "update_person",
-            "update_place", "update_repository", "update_source", "update_tag", "delete_object"
+            "update_place", "update_repository", "update_source", "update_tag", "delete_object", "merge_objects"
         ];
         string[] repeatable =
         [
@@ -95,11 +96,11 @@ public class ToolAnnotationTests
     }
 
     /// <summary>
-    /// delete_object and undo_change ask the user to confirm through the client, so they tell clients that
+    /// delete_object, merge_objects and undo_change ask the user to confirm through the client, so they tell clients that
     /// they need a person present; the server and cancellation token the SDK passes them are not arguments.
     /// </summary>
     [Fact]
-    public void Delete_And_Undo_Require_User_Interaction()
+    public void Delete_Merge_And_Undo_Require_User_Interaction()
     {
         var tools = typeof(PersonTools).Assembly
             .GetTypes()
@@ -109,11 +110,11 @@ public class ToolAnnotationTests
             .ToList();
 
         Assert.Equal(
-            ["delete_object", "undo_change"],
+            ["delete_object", "merge_objects", "undo_change"],
             tools.Where(tool => tool.Meta?["anthropic/requiresUserInteraction"]?.GetValue<bool>() == true)
                 .Select(tool => tool.Name)
                 .Order(StringComparer.Ordinal));
-        foreach (var tool in tools.Where(tool => tool.Name is "delete_object" or "undo_change"))
+        foreach (var tool in tools.Where(tool => tool.Name is "delete_object" or "merge_objects" or "undo_change"))
         {
             var properties = tool.InputSchema.GetProperty("properties");
             Assert.False(properties.TryGetProperty("server", out _), $"{tool.Name} exposes the server");
