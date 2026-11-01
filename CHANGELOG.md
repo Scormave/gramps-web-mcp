@@ -55,7 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   protocol version 2026-07-28, the reply headers now go out with the
   first message of the reply instead of before it
 - The integration tests run against Gramps Web 26.11.0 (API 3.25)
-  instead of 26.10.1 and pass without changes to the server
+  instead of 26.10.2 and pass without changes to the server
 
 ### Fixed
 
