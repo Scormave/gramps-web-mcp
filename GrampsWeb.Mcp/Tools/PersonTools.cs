@@ -404,14 +404,12 @@ public static class PersonTools
     }
 
     /// <summary>
-    /// Gramps Web sets birth_ref_index and death_ref_index when it saves a person with PUT but not with POST, so a
-    /// new person would show no birth or death until its next update. Like Gramps <c>set_birth_death_index</c>, takes
-    /// the first Birth and the first Death the person has the Primary role in; -1 when there is none.
+    /// Points the birth and death indexes at the first Birth and the first Death the person has the Primary role in,
+    /// like Gramps <c>set_birth_death_index</c>; -1 when there is none. Gramps Web sets birth_ref_index and
+    /// death_ref_index when it saves a person with PUT but not with POST, so a new person would show no birth or
+    /// death until its next update.
     /// </summary>
-    /// <summary>
-    /// Points the birth and death indexes at the first Birth and Death event the person takes part in as Primary.
-    /// <paramref name="newEventTypes"/> gives the types of events not saved yet, by handle; the others are read.
-    /// </summary>
+    /// <param name="newEventTypes">The types of events not saved yet, by handle; the others are read.</param>
     internal static async Task SetVitalEventIndexesAsync(GrampsApiClient client, CreatePersonRequest request,
         IReadOnlyDictionary<string, string?>? newEventTypes = null)
     {
