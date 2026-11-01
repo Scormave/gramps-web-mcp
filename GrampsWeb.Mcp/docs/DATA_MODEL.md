@@ -192,7 +192,7 @@ canonical model type.
 | `FlexiblePersonRefList` | `GrampsPersonRef[]` | Object array; `"HANDLE:: rel"` strings; multiline/pipe-separated |
 | `FlexibleString` | `string` | JSON string; JSON number (coerced to text) |
 | `FlexibleChildRefList` | `GrampsChildRef[]` | Object array; `"HANDLE::RelType"` strings (sets both frel/mrel; default Birth); comma/pipe/newline-separated |
-| `FlexibleEventRefList` | `EventRefRequest[]` | Object array; `"HANDLE::Role"` strings (default role Primary); comma/pipe/newline-separated |
+| `FlexibleEventRefList` | `EventRefRequest[]` | Object array; `"HANDLE::Role"` strings (default role Primary on a person, Family on a family); comma/pipe/newline-separated |
 | `FlexiblePlaceRefList` | `PlaceRefRequest[]` | Handle strings; `"HANDLE::date"`; objects `{ref, date?}` |
 | `FlexiblePlaceNameList` | `PlaceNameRequest[]` | Strings (`"Name"` or `"Name::lang"`); objects `{value, lang?, date?}`; multiline |
 | `FlexibleRepositoryRefList` | `GrampsRepositoryRef[]` | Object array; `"Ref : CallNumber : MediaType"` strings (call number and media type optional); multiline/pipe-separated string; JSON-array string |

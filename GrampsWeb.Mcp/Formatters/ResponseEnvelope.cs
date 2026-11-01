@@ -146,6 +146,7 @@ public static class ResponseEnvelope
     public static string[] EventCreateNextSteps(string handle) => new[]
     {
         $"Attach to person: update_person(handle: \"<person>\", eventRefs: [{{ref: \"{handle}\", role: \"Primary\"}}], linkMode: \"add\"). Existing event references and roles are preserved.",
+        $"Attach a family event (Marriage, Divorce, …) to its family instead: update_family(handle: \"<family>\", eventRefs: [{{ref: \"{handle}\", role: \"Family\"}}], linkMode: \"add\").",
     };
 
     public static string[] SourceCreateNextSteps(string handle) => new[]
@@ -189,7 +190,7 @@ public static class ResponseEnvelope
         if (!hasChildren)
             steps.Add($"If children are known: update_family(handle: \"{handle}\", childRefs: [{{ref: \"<person_handle>\", frel: \"Birth\", mrel: \"Birth\"}}], linkMode: \"add\")");
         if (!hasEvents)
-            steps.Add($"If family events are known: update_family(handle: \"{handle}\", eventRefs: [{{ref: \"<event_handle>\", role: \"Primary\"}}], linkMode: \"add\")");
+            steps.Add($"If family events are known: update_family(handle: \"{handle}\", eventRefs: [{{ref: \"<event_handle>\", role: \"Family\"}}], linkMode: \"add\")");
         return steps.ToArray();
     }
 

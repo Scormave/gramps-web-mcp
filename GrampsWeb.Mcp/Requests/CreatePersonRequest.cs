@@ -186,6 +186,13 @@ public class EventRefRequest
 
     [JsonPropertyName("attribute_list")]
     public object[]? AttributeList { get; set; }
+
+    /// <summary>
+    /// Set for a bare handle string (no <c>::Role</c>), which takes the default role of the record that links it:
+    /// Primary on a person, Family on a family. Not sent to Gramps.
+    /// </summary>
+    [JsonIgnore]
+    public bool BareHandle { get; init; }
 }
 
 public class AttributeRequest

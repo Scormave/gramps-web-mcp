@@ -8,7 +8,7 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleEventRefList
 {
     public const string DescriptionHint =
-        "Event references (handles, not Gramps IDs): JSON array of {ref, role}, strings \"HANDLE::Role\" (default role: Primary), " +
+        "Event references (handles, not Gramps IDs): JSON array of {ref, role}, strings \"HANDLE::Role\" (default role: Primary on a person, Family on a family), " +
         "comma/pipe/newline-separated, or a single handle. " +
         "A role must be a standard Gramps role or a custom one the tree already uses; anything else is rejected with suggestions. " +
         "JSON objects accept snake_case or camelCase list fields (note_list / noteList).";

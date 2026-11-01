@@ -80,18 +80,17 @@ public sealed class FlexibleEventRefListJsonConverter : JsonConverter<FlexibleEv
 
         var idx = line.IndexOf("::", StringComparison.Ordinal);
         var href = idx < 0 ? line : line[..idx];
-        var role = idx < 0 ? "Primary" : line[(idx + 2)..];
+        var role = idx < 0 ? "" : line[(idx + 2)..];
         href = href.Trim();
         role = role.Trim();
 
         if (string.IsNullOrEmpty(href))
             throw new JsonException($"Event handle cannot be empty. Line: \"{line}\"");
 
-        return new EventRefRequest
-        {
-            Ref = href,
-            Role = string.IsNullOrEmpty(role) ? "Primary" : role
-        };
+        // The person and family tools give a bare handle their own default role (see EventRoles.CheckAsync).
+        return string.IsNullOrEmpty(role)
+            ? new EventRefRequest { Ref = href, BareHandle = true }
+            : new EventRefRequest { Ref = href, Role = role };
     }
 
     private static FlexibleEventRefList ReadArray(ref Utf8JsonReader reader, JsonSerializerOptions options)

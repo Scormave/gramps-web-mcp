@@ -30,6 +30,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `update_citation` and `update_repository` that a change shows on every
   record that cites or lists them
 
+### Fixed
+
+- A family's event link without a role, such as a bare handle in
+  `eventRefs` of `create_family`, `update_family` or a family of
+  `create_records`, gets the Family role, as in Gramps, instead of
+  Primary. Gramps and Gramps Web name the family among a Marriage's
+  participants and in its summary only through a Family link. A person's
+  links keep Primary, a role given stays as given, and in `replace` mode
+  a `{ref}` object without a role keeps the stored role. The hints after
+  `create_family` and `create_event` suggest the Family role for family
+  events
+
 ## [2.8.0] - 2026-11-01
 
 ### Added

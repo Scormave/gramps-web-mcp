@@ -44,6 +44,77 @@ public class EventRoleTests
     }
 
     [Fact]
+    public async Task CreatePerson_Gives_A_Bare_Handle_The_Primary_Role()
+    {
+        var handler = new TreeHandler(new Dictionary<string, string>());
+
+        await PersonTools.CreatePerson(
+            Name(), eventRefs: Refs("""["e-birth", "e-baptism::Witness"]"""), client: CreateClient(handler));
+
+        Assert.Equal(
+            ["Primary", "Witness"],
+            handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
+    }
+
+    [Fact]
+    public async Task CreateFamily_Gives_Event_Links_Without_A_Role_The_Family_Role()
+    {
+        var handler = new TreeHandler(new Dictionary<string, string>());
+
+        await FamilyTools.CreateFamily(
+            eventRefs: Refs("""["e-marriage", { "ref": "e-banns" }, "e-engagement::primary"]"""),
+            client: CreateClient(handler));
+
+        Assert.Equal(
+            ["Family", "Family", "Primary"],
+            handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
+    }
+
+    [Fact]
+    public async Task UpdateFamily_Replace_Gives_Bare_Handles_The_Family_Role_And_Keeps_Stored_Roles_Of_Link_Objects()
+    {
+        var handler = new TreeHandler(new Dictionary<string, string>
+        {
+            ["/api/families/h-family"] = """
+                {
+                  "handle": "h-family", "gramps_id": "F0100",
+                  "event_ref_list": [{ "ref": "e-marriage", "role": "Primary" }, { "ref": "e-banns", "role": "Восприемник" }]
+                }
+                """
+        });
+
+        await FamilyTools.UpdateFamily(
+            "h-family", eventRefs: Refs("""["e-marriage", { "ref": "e-banns" }, { "ref": "e-divorce" }]"""),
+            client: CreateClient(handler));
+
+        Assert.Equal(
+            ["Family", "Восприемник", "Family"],
+            handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
+    }
+
+    [Fact]
+    public async Task UpdateFamily_Add_Gives_New_Links_The_Family_Role_And_Leaves_Stored_Ones()
+    {
+        var handler = new TreeHandler(new Dictionary<string, string>
+        {
+            ["/api/families/h-family"] = """
+                {
+                  "handle": "h-family", "gramps_id": "F0100",
+                  "event_ref_list": [{ "ref": "e-marriage", "role": "Primary" }]
+                }
+                """
+        });
+
+        await FamilyTools.UpdateFamily(
+            "h-family", eventRefs: Refs("""["e-marriage", { "ref": "e-divorce" }]"""), client: CreateClient(handler),
+            linkMode: "add");
+
+        Assert.Equal(
+            ["Primary", "Family"],
+            handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
+    }
+
+    [Fact]
     public async Task UpdateFamily_Rejects_An_Unknown_Role_Without_Reading_Or_Saving_The_Family()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
@@ -112,7 +183,9 @@ public class EventRoleTests
                 Body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
                 return Json(request.Method == HttpMethod.Put
                     ? "{}"
-                    : """[{ "_class": "Person", "type": "add", "old": null, "new": { "_class": "Person", "handle": "h-new", "gramps_id": "I0001" } }]""");
+                    : path.StartsWith("/api/families/", StringComparison.Ordinal)
+                        ? """[{ "_class": "Family", "type": "add", "old": null, "new": { "_class": "Family", "handle": "h-new", "gramps_id": "F0001" } }]"""
+                        : """[{ "_class": "Person", "type": "add", "old": null, "new": { "_class": "Person", "handle": "h-new", "gramps_id": "I0001" } }]""");
             }
 
             return path switch

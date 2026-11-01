@@ -170,7 +170,8 @@ public sealed class FamilyRecord : BatchRecord
     public FlexibleChildRefList? ChildRefs { get; init; }
 
     [JsonPropertyName("eventRefs")]
-    [Description("Family events such as Marriage: handles or #keys, optionally \"#key::Family\" or {ref, role}.")]
+    [Description("Family events such as Marriage: handles or #keys, each optionally with a role as \"#key::Role\" " +
+                 "or {ref, role} (default Family).")]
     public FlexibleEventRefList? EventRefs { get; init; }
 
     [JsonPropertyName("mediaHandles")]

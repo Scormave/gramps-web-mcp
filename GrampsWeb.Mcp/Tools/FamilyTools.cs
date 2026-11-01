@@ -125,7 +125,10 @@ public static class FamilyTools
         var childRefArr = (GrampsChildRef[]?)childRefs;
         await KnownTypes.CheckChildRefsAsync(childRefArr, client);
         var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
-        await EventRoles.CheckAsync(eventRefArr, client);
+        await EventRoles.CheckAsync(eventRefArr, client, defaultRole: EventRoles.Family);
+        // A new family has no stored roles to keep, so a link object without a role takes Family too.
+        foreach (var eventRef in eventRefArr.Where(r => string.IsNullOrWhiteSpace(r.Role)))
+            eventRef.Role = EventRoles.Family;
         await KnownTypes.CheckAttributesAsync(attributes, client);
         var resolvedFatherHandle = fatherHandle is null
             ? null
@@ -201,7 +204,7 @@ public static class FamilyTools
             LinkUpdates.Validate(linkMode);
             var sortedLists = LinkOrder.Parse(sort, LinkOrder.FamilyLists);
             await KnownTypes.CheckChildRefsAsync(childRefs, client, linkMode);
-            await EventRoles.CheckAsync(eventRefs, client, linkMode);
+            await EventRoles.CheckAsync(eventRefs, client, linkMode, EventRoles.Family);
             await KnownTypes.CheckAttributesAsync(attributes, client);
             using var updateLease = await client.BeginUpdateAsync();
             if (relationshipType != null)
@@ -223,6 +226,8 @@ public static class FamilyTools
             family.Set("type", relationshipType);
             family.ApplyRefs("child_ref_list", (GrampsChildRef[]?)childRefs, linkMode);
             family.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
+            if (eventRefs is not null)
+                EventRoles.SetMissingFamilyRoles(family.Root);
             family.ApplyMediaLinks(mediaHandles, linkMode);
             family.ReplaceAttributes(attributes);
             family.ApplyHandles("citation_list", citationHandles, linkMode);

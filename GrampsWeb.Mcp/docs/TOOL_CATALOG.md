@@ -212,7 +212,9 @@ is saved, and an unknown value is refused with suggestions. Case does not
 matter: an accepted value is stored in the vocabulary's spelling (`village`
 becomes `Village`). Event link roles in `eventRefs` of `create_person`,
 `update_person`, `create_family` and `update_family` are checked the same way
-(`witness` becomes `Witness`); an empty role stays Primary, and
+(`witness` becomes `Witness`). A bare handle takes the default role, `Primary`
+on a person and `Family` on a family as in Gramps; a `{ref}` object without a
+role takes it too on a new link and keeps the stored role in `replace` mode.
 `linkMode: "remove"` does not check roles.
 
 The types inside structured arguments are checked the same way, and the error
@@ -476,7 +478,7 @@ nothing is saved.
 | `motherHandle` | `string?` | no | — | Mother person handle |
 | `relationshipType` | `string?` | no | `"Married"` | Married, Unmarried, Civil Union, Unknown |
 | `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
-| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |
+| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Family`) |
 | `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region}` objects; see [Image regions](#image-regions) |
 | `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
@@ -496,8 +498,9 @@ Update an existing family.  Same field set as create (all optional), plus
 ### C — `CreateEvent`
 Create an event.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
 Link to persons/families via their create/update tools' `eventRefs`. The role
-is stored on each `eventRefs` entry, not on the event, and a Birth or Death
-becomes a person's birth or death only in the `Primary` role.
+is stored on each `eventRefs` entry, not on the event (default `Primary` on a
+person and `Family` on a family), and a Birth or Death becomes a person's birth
+or death only in the `Primary` role.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

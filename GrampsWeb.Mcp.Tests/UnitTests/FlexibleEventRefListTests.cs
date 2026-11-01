@@ -13,13 +13,23 @@ public class FlexibleEventRefListTests
     public void Null_Yields_Null() => Assert.Null(Deserialize("null"));
 
     [Fact]
-    public void Single_Handle_String_Defaults_Primary()
+    public void Single_Handle_String_Is_A_Bare_Handle()
     {
         var v = Deserialize("\"h1\"");
         Assert.NotNull(v);
         Assert.Single(v!.Items);
         Assert.Equal("h1", v.Items[0].Ref);
-        Assert.Equal("Primary", v.Items[0].Role);
+        Assert.Null(v.Items[0].Role);
+        Assert.True(v.Items[0].BareHandle);
+    }
+
+    [Fact]
+    public void Handle_With_Empty_Role_Is_A_Bare_Handle()
+    {
+        var v = Deserialize("\"h1::\"");
+        Assert.NotNull(v);
+        Assert.Null(Assert.Single(v!.Items).Role);
+        Assert.True(v.Items[0].BareHandle);
     }
 
     [Fact]
@@ -51,9 +61,11 @@ public class FlexibleEventRefListTests
         Assert.NotNull(v);
         Assert.Equal(2, v!.Items.Length);
         Assert.Equal("h1", v.Items[0].Ref);
-        Assert.Equal("Primary", v.Items[0].Role);
+        Assert.Null(v.Items[0].Role);
+        Assert.True(v.Items[0].BareHandle);
         Assert.Equal("h2", v.Items[1].Ref);
         Assert.Equal("Witness", v.Items[1].Role);
+        Assert.False(v.Items[1].BareHandle);
     }
 
     [Fact]
@@ -66,6 +78,15 @@ public class FlexibleEventRefListTests
         Assert.Equal("Primary", v.Items[0].Role);
         Assert.Equal("h2", v.Items[1].Ref);
         Assert.Equal("Witness", v.Items[1].Role);
+    }
+
+    [Fact]
+    public void Json_Object_Without_Role_Is_Not_A_Bare_Handle()
+    {
+        var v = Deserialize("""[{"ref":"h1"}]""");
+        Assert.NotNull(v);
+        Assert.Null(Assert.Single(v!.Items).Role);
+        Assert.False(v.Items[0].BareHandle);
     }
 
     [Fact]
