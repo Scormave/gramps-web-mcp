@@ -57,14 +57,14 @@ gramps-web-mcp.sln
 | Component | Version |
 |-----------|---------|
 | .NET SDK / Runtime | 10.0 |
-| `ModelContextProtocol` | 2.2.0 |
-| `ModelContextProtocol.AspNetCore` | 2.2.0 |
-| `Microsoft.Extensions.Hosting` | 10.0.12 |
-| `Microsoft.Extensions.Http` | 10.0.12 |
+| `ModelContextProtocol` | 2.3.0 |
+| `ModelContextProtocol.AspNetCore` | 2.3.0 |
+| `Microsoft.Extensions.Hosting` | 10.0.14 |
+| `Microsoft.Extensions.Http` | 10.0.14 |
 | `SixLabors.ImageSharp` | 4.1.3 (media thumbnails; Six Labors Split License, Apache 2.0 terms for open-source use) |
 
 Test-only: xUnit 2.9, Moq 4.21, YamlDotNet 18.1 (for OpenAPI spec parsing),
-Microsoft.AspNetCore.TestHost 10.0.12 (in-process MCP server tests),
+Microsoft.AspNetCore.TestHost 10.0.14 (in-process MCP server tests),
 Testcontainers 4.16 (the Gramps Web container of the integration tests).
 
 [`THIRD-PARTY-NOTICES.txt`](../../THIRD-PARTY-NOTICES.txt) lists every package the
