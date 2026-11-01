@@ -121,6 +121,11 @@ public static class EventTools
         "on a person and Family on a family), " +
         "not on the event, and a Birth or Death becomes a person's birth or death only in the Primary role. " +
         "The place must exist: find it with search or create it with create_place. " +
+        "A dated range such as 1890-1900 means the event happened once, some time within it; for something that " +
+        "lasted, such as a Residence or Occupation, write from 1890 to 1900. A register that gives both birth and " +
+        "baptism makes two events, Birth and Baptism. Citations, notes, media, tags and attributes passed here belong " +
+        "to the event and show for everyone who shares it; one participant's own details, such as their Age, go on " +
+        "that person's eventRefs entry (its attribute_list). " +
         "Change an existing event with update_event. " +
         "An unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]

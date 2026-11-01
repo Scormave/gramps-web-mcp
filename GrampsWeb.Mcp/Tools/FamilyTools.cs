@@ -173,7 +173,10 @@ public static class FamilyTools
         "To add one child, pass it in childRefs with linkMode add; in replace mode childRefs must hold every child the " +
         "family keeps. attributes replace the whole list whatever linkMode says, and sort reorders children, events, " +
         "citations or media by date without changing which are linked. " + ToolDescriptionFragments.UpdateSemantics + " " +
-        "Returns the handle and Gramps ID; a missing family returns a not-found message. " +
+        "Gramps Web keeps the people's side in step in the same save: a new father, mother or child gets the family on " +
+        "their record, and one replaced or removed loses it; a father, mother or new child that does not exist makes it " +
+        "refuse the change, and nothing is saved. Returns a short header with the type, action updated, handle and " +
+        "Gramps ID, not the changed family: read it back with get_object. A missing family returns a not-found message. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateFamily(
         [Description("The family to change. " + ToolDescriptionFragments.HandleDiscovery)]

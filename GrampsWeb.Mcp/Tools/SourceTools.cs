@@ -45,7 +45,12 @@ public static class SourceTools
         "Create a source: a book, register, archive unit or website that facts come from, with title, author, publication " +
         "info and the repositories that hold it. Search for the source first: no duplicate check is made, and an existing " +
         "source is changed with update_source. repositoryHandles takes existing repositories only (create_repository), " +
-        "each with the source's call number there. A source alone proves nothing: cite a page or act of it with " +
+        "each with the source's call number there. The arguments split a reference: title names the document, such as " +
+        "a parish register for one year; author is who made it; pubinfo is for a published work; abbrev is a short " +
+        "title for lists; the archive's shelf mark, such as fond, inventory and file, is the call number on " +
+        "repositoryHandles, with the media type (Book, Manuscript, Film, Electronic …) the archive holds it in; the page, " +
+        "frame or entry goes on the citation. Notes and media here describe the whole source; the scan of one entry " +
+        "belongs on its citation. A source alone proves nothing: cite a page or act of it with " +
         "create_citation, then attach that citation to people and events. " +
         "Returns the new handle, Gramps ID and title, with next steps. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]

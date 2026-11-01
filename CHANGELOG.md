@@ -15,6 +15,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   in the Family role, each child carries its own relation to the father
   and to the mother, children keep the order given, and citations,
   notes, media, tags and attributes belong to the family itself
+- Five more tool descriptions say what they left out. `update_family`
+  says that Gramps Web updates the father, mother and children in the
+  same save, refuses a person who does not exist, and returns only a
+  header. `create_event` says when to write a range and when a span, that
+  birth and baptism are two events, and that one participant's Age goes
+  on their event reference. `create_source` says which part of a
+  reference goes into which argument and what belongs on the citation.
+  `get_object` says that an `objectType` that disagrees with the ID is
+  rejected and what `extended` adds. `create_media` says it is the only
+  tool that uploads a file and where a transcription or a new file goes
 
 ## [2.8.1] - 2026-11-01
 

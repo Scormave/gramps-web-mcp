@@ -142,7 +142,9 @@ public static class MediaTools
         "If the tree already stores an identical file (same MD5 checksum), nothing is uploaded: that record is returned with action existing, " +
         "its fields stay as they are and only attachTo is applied, so repeating a call is safe. " +
         "Returns the handle and Gramps ID; an unreadable date or unknown attachTo record is rejected before anything is uploaded. " +
-        "Change the record later with update_media. " +
+        "It is the only tool that uploads a file: create_records takes no media, and a transcription of a document " +
+        "belongs in a note (create_note), not here. Change the record later, or swap its file, with update_media; " +
+        "check what a region shows with read_media. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateMedia(
         [Description("The file to upload: an absolute path inside an upload folder, ~/…, or a name relative to the folder, e.g. scan.jpg.")]

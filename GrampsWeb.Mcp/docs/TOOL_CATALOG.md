@@ -491,7 +491,12 @@ not passed, the `update_family` calls that add them with `linkMode: "add"`.
 
 Update an existing family.  Same field set as create (all optional), plus
 `sort` to put `Events`, `Children`, `Citations` or `Media` in date order; see
-[Incremental link updates](#incremental-link-updates).
+[Incremental link updates](#incremental-link-updates). Gramps Web updates the
+people's side in the same transaction: a new father, mother or child gets the
+family on their record, one replaced or removed loses it, and a father, mother
+or new child that does not exist makes it refuse the change, so nothing is
+saved. Returns the update header (type, `action: updated`, handle, Gramps ID),
+not the changed family; read it back with `get_object`.
 
 ---
 
@@ -502,7 +507,14 @@ Create an event.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
 Link to persons/families via their create/update tools' `eventRefs`. The role
 is stored on each `eventRefs` entry, not on the event (default `Primary` on a
 person and `Family` on a family), and a Birth or Death becomes a person's birth
-or death only in the `Primary` role.
+or death only in the `Primary` role. A dash date such as `1890-1900` is stored
+as a range (`between 1890 and 1900`: it happened once, some time within it);
+for something that lasted, such as a Residence or Occupation, write
+`from 1890 to 1900`. A register that gives both birth and baptism makes two
+events, Birth and Baptism. Citations, notes, media, tags and attributes passed
+here belong to the event and show for everyone who shares it; one participant's
+own details, such as their Age, go in the `attribute_list` of that person's
+`eventRefs` entry.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -558,6 +570,13 @@ Update a place. Same fields as create (all optional). `enclosedBy` is a link lis
 
 ### C — `CreateSource`
 Create a source.  Create sources **before** citations.
+The arguments split a reference: `title` names the document, such as a parish
+register for one year; `author` is who made it; `pubinfo` is for a published
+work; `abbrev` is a short title for lists. The archive's shelf mark (fond,
+inventory, file) is the call number on `repositoryHandles`, with the media
+type the archive holds it in; the page, frame or entry goes on the citation.
+Notes and media here describe the whole source; the scan of one entry belongs
+on its citation.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -692,7 +711,10 @@ and a record that already shows it is left unchanged. An `attachTo` entry can
 be `{"ref": "I0001", "region": [left, top, right, bottom]}` to show only that
 part of the image; see [Image regions](#image-regions). `citationHandles` cite
 where the file itself came from; to show a scan as the evidence of a register
-entry, attach it to that entry's citation with `attachTo` instead.
+entry, attach it to that entry's citation with `attachTo` instead. It is the
+only tool that uploads a file: `create_records` takes no media, and a
+transcription belongs in a note (`create_note`). Change the record later, or
+swap its file, with `update_media`; check a region with `read_media`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
