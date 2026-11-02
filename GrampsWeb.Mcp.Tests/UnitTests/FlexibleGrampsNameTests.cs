@@ -1,4 +1,5 @@
 using System.Text.Json;
+using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Serialization;
 using Xunit;
@@ -64,7 +65,7 @@ public class FlexibleGrampsNameTests
     [Fact]
     public void ParseSimpleLine_Empty_Throws()
     {
-        Assert.Throws<JsonException>(() => FlexibleGrampsNameParsing.ParseSimpleLine("   "));
+        Assert.Throws<JsonInputException>(() => FlexibleGrampsNameParsing.ParseSimpleLine("   "));
     }
 
     // ── AI-friendly object aliases ──────────────────────────────────────────
@@ -260,7 +261,7 @@ public class FlexibleGrampsNameTests
     public void Stringified_Invalid_Json_Throws()
     {
         const string json = "\"{\\\"given\\\":\\\"Broken\\\"\"";
-        Assert.Throws<JsonException>(() => Deserialize(json));
+        Assert.Throws<JsonInputException>(() => Deserialize(json));
     }
 
     [Fact]
@@ -299,5 +300,173 @@ public class FlexibleGrampsNameTests
         Assert.Equal("und", request.SurnameList[0].Connector);
         Assert.Equal("Inherited", request.SurnameList[0].OriginType);
         Assert.True(request.SurnameList[0].Primary);
+    }
+
+    [Fact]
+    public void Object_CamelCase_SurnameList_Keeps_Every_Surname()
+    {
+        // Used to come out as "Федор" alone: surnameList was not first_name/surname_list, so it was dropped.
+        const string json = """
+            {"first":"Федор","surnameList":[
+                {"surname":"Пробнякин","primary":true},
+                {"surname":"Иванович","originType":"Patronymic"}]}
+            """;
+        var name = Deserialize(json)!.Name;
+
+        Assert.Equal("Федор", name.FirstName);
+        Assert.Equal(2, name.SurnameList!.Length);
+        Assert.Equal("Пробнякин", name.SurnameList[0].Surname);
+        Assert.True(name.SurnameList[0].Primary);
+        Assert.Equal("Иванович", name.SurnameList[1].Surname);
+        Assert.Equal("Patronymic", name.SurnameList[1].OriginType);
+        Assert.False(name.SurnameList[1].Primary);
+    }
+
+    [Fact]
+    public void Object_CamelCase_Native_Fields()
+    {
+        const string json = """
+            {"firstName":"Anna","surnameList":[{"surname":"Berg","origin_type":"Taken"}],
+             "groupAs":"Berg","sortAs":1,"nickName":"Annie","familyNick":"Bergs"}
+            """;
+        var name = Deserialize(json)!.Name;
+
+        Assert.Equal("Anna", name.FirstName);
+        Assert.Equal("Berg", Assert.Single(name.SurnameList!).Surname);
+        Assert.Equal("Taken", name.SurnameList![0].OriginType);
+        Assert.True(name.SurnameList[0].Primary);
+        Assert.Equal("Berg", name.GroupAs);
+        Assert.Equal(1, name.SortAs);
+        Assert.Equal("Annie", name.Nick);
+        Assert.Equal("Bergs", name.FamNick);
+    }
+
+    [Fact]
+    public void Object_OriginType_Shortcut_In_CamelCase()
+    {
+        var name = Deserialize("""{"given":"Ola","surname":"Nordmann","originType":"Location"}""")!.Name;
+
+        Assert.Equal("Location", Assert.Single(name.SurnameList!).OriginType);
+    }
+
+    [Fact]
+    public void Object_Native_FirstName_With_Surname_And_Patronymic_Shortcuts()
+    {
+        var name = Deserialize("""{"first_name":"Петр","surname":"Соколов","patronymic":"Иванович"}""")!.Name;
+
+        Assert.Equal("Петр", name.FirstName);
+        Assert.Equal(["Соколов", "Иванович"], name.SurnameList!.Select(s => s.Surname));
+        Assert.Equal([true, false], name.SurnameList!.Select(s => s.Primary));
+    }
+
+    [Fact]
+    public void Object_SurnameList_With_Patronymic_Shortcut_Appends_It()
+    {
+        var name = Deserialize(
+            """{"given":"Петр","surname_list":[{"surname":"Соколов"}],"patronymic":"Иванович"}""")!.Name;
+
+        Assert.Equal(["Соколов", "Иванович"], name.SurnameList!.Select(s => s.Surname));
+        Assert.Equal([true, false], name.SurnameList!.Select(s => s.Primary));
+        Assert.Equal("Patronymic", name.SurnameList![1].OriginType);
+    }
+
+    [Fact]
+    public void Object_Whole_Name_With_Patronymic_And_Title()
+    {
+        var name = Deserialize("""{"name":"Федор Пробнякин","patronymic":"Иванович","title":"Купец"}""")!.Name;
+
+        Assert.Equal("Федор", name.FirstName);
+        Assert.Equal("Купец", name.Title);
+        Assert.Equal(["Пробнякин", "Иванович"], name.SurnameList!.Select(s => s.Surname));
+        Assert.Equal([true, false], name.SurnameList!.Select(s => s.Primary));
+    }
+
+    [Fact]
+    public void Object_SurnameList_Without_Primary_Flags_Gets_One_Primary()
+    {
+        var name = Deserialize("""{"first_name":"A","surname_list":[{"surname":"B"},{"surname":"C"}]}""")!.Name;
+
+        Assert.Equal([true, false], name.SurnameList!.Select(s => s.Primary));
+    }
+
+    [Fact]
+    public void Object_SurnameList_Explicit_Primary_Wins_Over_Order()
+    {
+        var name = Deserialize(
+            """{"first_name":"A","surname_list":[{"surname":"B"},{"surname":"C","primary":true}]}""")!.Name;
+
+        Assert.Equal([false, true], name.SurnameList!.Select(s => s.Primary));
+    }
+
+    [Fact]
+    public void Object_As_Returned_By_Gramps_Is_Accepted()
+    {
+        // A name copied from get_object: _class markers, wire types, empty strings and empty lists.
+        const string json = """
+            {"_class":"Name","private":false,"surname_list":[
+                {"_class":"Surname","surname":"Garcia","prefix":"","primary":true,
+                 "origintype":{"_class":"NameOriginType","string":"Patrilineal"},"connector":""}],
+             "citation_list":[],"note_list":[],"first_name":"Jose","suffix":"","title":"",
+             "type":{"_class":"NameType","string":"Birth Name"},"group_as":"","sort_as":0,"display_as":0,
+             "call":"","nick":"","famnick":""}
+            """;
+        var name = Deserialize(json)!.Name;
+
+        Assert.Equal("Jose", name.FirstName);
+        Assert.Equal("Birth Name", name.Type);
+        Assert.Equal("Patrilineal", Assert.Single(name.SurnameList!).OriginType);
+        Assert.Null(name.Title);
+    }
+
+    [Fact]
+    public void Object_Null_And_Blank_Fields_Count_As_Not_Sent()
+    {
+        var name = Deserialize("""{"given":"A","surname":"B","nick":"  ","title":null,"first":""}""")!.Name;
+
+        Assert.Equal("A", name.FirstName);
+        Assert.Null(name.Nick);
+        Assert.Null(name.Title);
+    }
+
+    [Theory]
+    [InlineData("""{"given":"Anna","surname":"Berg","maidenName":"Holm"}""", "Unknown field \"maidenName\" in name object.")]
+    [InlineData("""{"given":"Anna","foo":1,"bar":2}""", "Unknown fields \"foo\", \"bar\" in name object.")]
+    [InlineData("""{"given":"Anna","surname_list":[{"surname":"Berg","kind":"Taken"}]}""",
+        "Unknown field \"kind\" in surname_list[0].")]
+    public void Object_Unknown_Field_Throws_With_Accepted_Fields(string json, string start)
+    {
+        var ex = Assert.Throws<JsonInputException>(() => Deserialize(json));
+
+        Assert.StartsWith(start, ex.Message);
+        Assert.Contains("Accepted fields: ", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("""{"given":"A","first_name":"B","surname":"C"}""", "Fields \"given\" and \"first_name\"")]
+    [InlineData("""{"name":"Anna Berg","given":"Anna"}""", "Field \"name\" holds the whole name")]
+    [InlineData("""{"given":"A","surname":"B","surnameList":[{"surname":"C"}]}""", "Field \"surnameList\" cannot be combined with \"surname\"")]
+    [InlineData("""{"given":"Ludwig","prefix":"van"}""", "\"prefix\" describe the surname")]
+    [InlineData("""{"given":5,"surname":"B"}""", "Field \"given\" in name object must be a string, not a number.")]
+    [InlineData("""{"given":"A","surname_list":{"surname":"B"}}""", "Field \"surname_list\" in name object must be an array")]
+    [InlineData("""{"given":"A","surname_list":["B"]}""", "Entry surname_list[0] must be an object")]
+    [InlineData("""{"given":"A","surname_list":[{"surname":"B","primary":"yes"}]}""", "Field \"primary\" in surname_list[0] must be true or false")]
+    [InlineData("""{"title":"Dr."}""", "Name object has no name in it")]
+    [InlineData("""{}""", "Name object has no name in it")]
+    [InlineData("42", "Unexpected token Number for name")]
+    public void Object_Conflicting_Or_Empty_Name_Throws(string json, string start)
+    {
+        var ex = Assert.Throws<JsonInputException>(() => Deserialize(json));
+
+        Assert.StartsWith(start, ex.Message);
+    }
+
+    [Fact]
+    public void Stringified_Object_Unknown_Field_Throws()
+    {
+        const string json = "\"{\\\"given\\\":\\\"Anna\\\",\\\"lastname\\\":\\\"Berg\\\",\\\"maiden\\\":\\\"Holm\\\"}\"";
+
+        var ex = Assert.Throws<JsonInputException>(() => Deserialize(json));
+
+        Assert.StartsWith("Unknown field \"maiden\" in name object.", ex.Message);
     }
 }

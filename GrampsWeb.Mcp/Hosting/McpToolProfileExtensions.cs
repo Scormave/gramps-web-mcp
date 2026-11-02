@@ -1,6 +1,7 @@
 using System.Text.Json;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Exceptions;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -40,6 +41,11 @@ internal static class McpToolProfileExtensions
                 try
                 {
                     return await next(request, cancellationToken);
+                }
+                // An argument converter that knows what is wrong, such as an unknown field in a name object.
+                catch (JsonInputException ex)
+                {
+                    throw new McpException(ex.Path is null or "$" ? ex.Message : $"{ex.Message} At {ex.Path}.");
                 }
                 // The SDK hides the message of a value it cannot convert; name the argument instead.
                 catch (JsonException) when (ToolArgumentValidator.FindTypeMismatch(schema, arguments) is { } typeError)

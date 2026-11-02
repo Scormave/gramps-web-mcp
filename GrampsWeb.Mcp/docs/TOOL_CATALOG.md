@@ -236,6 +236,25 @@ Name and no origin. The unknown surname origin is sent as Gramps spells it,
 with a trailing space. `linkMode: "remove"` does not check `childRefs` or
 `repositoryHandles`.
 
+Name objects in `primaryName` and `alternateNames` (of `create_person`,
+`update_person` and the people of `create_records`) take the shortcut fields
+`given`, `surname`, `prefix`, `connector`, `origin_type`, `patronymic`,
+`matronymic` and `name` (the whole name as one string) together with the
+native Gramps name fields (`first_name`, `surname_list`, `title`, `type` and
+the rest), in snake_case or camelCase: `firstName`, `surnameList` and
+`originType` work too. Any other field is refused with an error that names it
+and lists the accepted fields, instead of being dropped, and so are two fields
+for the same thing (`given` and `first_name`), `name` with `given`, `surname`
+or `surname_list`, `surname_list` with `surname`, `prefix`, `connector` or
+`origin_type`, those three without a surname, and an object with no name in
+it. In `surname_list`, an entry without `primary` is the primary surname only
+when it comes first and no entry says `primary: true`. An error inside a
+record of `create_records` ends with where it is:
+
+```text
+An error occurred invoking 'create_records': Unknown field "maidenName" in name object. Accepted fields: given (or first_name), surname, … At $[0].primaryName.
+```
+
 ```text
 An error occurred invoking 'get_object': Unknown argument: extend (did you mean extended?). Parameters: identifier (string, required), objectType (string), extended (boolean).
 ```
@@ -545,7 +564,7 @@ Create a new person.  Returns handle and Gramps ID.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `primaryName` | `FlexibleGrampsName?` | yes | — | Primary name (JSON or shorthand) |
+| `primaryName` | `FlexibleGrampsName?` | yes | — | Primary name: a string or a name object; see [Argument validation](#argument-validation) for its fields |
 | `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
 | `alternateNames` | `FlexibleAlternateNameList?` | no | — | Alternate names |
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`) |

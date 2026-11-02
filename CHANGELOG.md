@@ -68,6 +68,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   rejected and what `extended` adds. `create_media` says it is the only
   tool that uploads a file and where a transcription or a new file goes
 
+### Fixed
+
+- A name object in `primaryName` or `alternateNames` of `create_person`,
+  `update_person` or `create_records` no longer loses fields without a
+  word. `{"first": "Федор", "surnameList": [...]}` used to save a person
+  named Федор with no surname, because only `first_name` and
+  `surname_list` were read as native Gramps fields. The native fields now
+  work in camelCase too (`firstName`, `surnameList`, `originType`) and
+  mix with the shortcuts `given`, `surname`, `patronymic` and the rest.
+  Any other field is refused with an error that names it and lists the
+  accepted fields, and so are two fields for the same thing, a whole-name
+  `name` with `given` or `surname`, `prefix`, `connector` or
+  `origin_type` without a surname, and an object with no name in it. The
+  error reaches the agent instead of a bare "An error occurred invoking"
+- `alternateNames` no longer skips an entry it cannot read: an object
+  without a name, a number, or a stringified array with invalid JSON,
+  which used to drop every alternate name, are errors now
+- In a `surname_list` sent without `primary` flags, only the first
+  surname is primary instead of every one; an entry with `primary: true`
+  wins over the order
+
 ## [2.8.1] - 2026-11-01
 
 ### Changed

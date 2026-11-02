@@ -12,27 +12,26 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleGrampsName
 {
     public const string DescriptionHint =
-        "Name: full Gramps name JSON (see gramps://input-guide), a plain string (\"Married Name:: Jane|Smith\"), " +
-        "or a simple object. Prefer a JSON object (not a quoted JSON string) when using structured name parts. " +
-        "Object fields: " +
-        "given/first (given name), " +
-        "surname/last (primary surname value), " +
-        "prefix/surname_prefix (particle before surname: von, de, van, del…), " +
-        "connector/surname_connector (joins compound surnames: - or y), " +
-        "origin_type/surname_origin (Gramps OriginType for the primary surname: " +
+        "Name: a plain string (\"Married Name:: Jane|Smith\", \"Given Middle Surname\") or a JSON object " +
+        "(not a quoted JSON string). Object fields: " +
+        "given (or first_name), " +
+        "surname (primary surname value), " +
+        "prefix (particle before the surname: von, de, van, del…), " +
+        "connector (joins compound surnames: - or y), " +
+        "origin_type (Gramps OriginType of that surname: " +
         "Inherited, Given, Taken, Patronymic, Matronymic, Feudal, Pseudonym, " +
         "Patrilineal, Matrilineal, Occupation, Location, Unknown), " +
-        "patronymic (shortcut: stored as a separate Patronymic surname entry), " +
-        "matronymic (shortcut: stored as a separate Matronymic surname entry), " +
+        "patronymic and matronymic (each stored as a surname entry of its own with that origin), " +
         "title (Dr./Prof./Sir), suffix (Jr./Sr./III/PhD), " +
-        "call (preferred call name), nick/nickname, famnick/family_nick, " +
-        "type (name type: Birth Name/Married Name/Also Known As/…). " +
+        "call (preferred call name), nick, famnick, " +
+        "type (name type: Birth Name/Married Name/Also Known As/…), " +
+        "name (the whole name as one string, instead of given and surname), " +
+        "and native Gramps fields such as surname_list for several surnames " +
+        "([{surname, prefix, connector, origintype, primary}], see gramps://input-guide). " +
         "Name types and origins must be standard Gramps ones or custom ones the tree already uses. " +
-        "Plain full-name strings (name/text/full or \"Given Middle Surname\") only split into given + surname; " +
-        "they cannot create structured name parts such as patronymic, matronymic, prefix, connector, origin_type, title, suffix, call, nick, or famnick. " +
-        "Use object fields or native surname_list instead. " +
-        "For complex multi-surname cases use native Gramps surname_list format. " +
-        "Also accepts: name/text/full as a full-name string with optional type field.";
+        "camelCase forms (firstName, surnameList, originType) work too; any other field is an error, not ignored. " +
+        "A plain string only splits into given name and surname: " +
+        "use object fields for a patronymic, prefix, title and the like.";
 
     public required GrampsName Name { get; init; }
 

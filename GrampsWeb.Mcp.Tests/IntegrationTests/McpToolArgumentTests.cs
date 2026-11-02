@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Hosting;
+using GrampsWeb.Mcp.Input;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
@@ -53,6 +54,22 @@ public class McpToolArgumentTests
         Assert.StartsWith(text, content);
     }
 
+    [Theory]
+    [InlineData("""{"name":{"first":"Федор","surnameList":[{"surname":"Пробнякин"}]}}""", false, "name Федор Пробнякин")]
+    [InlineData("""{"name":{"given":"Anna","maidenName":"Holm"}}""", true,
+        "An error occurred invoking 'name_probe': Unknown field \"maidenName\" in name object. Accepted fields: given")]
+    [InlineData("""{"people":[{"key":"p","primaryName":{"given":"Anna","maidenName":"Holm"}}]}""", true,
+        "An error occurred invoking 'name_probe': Unknown field \"maidenName\" in name object. Accepted fields: given")]
+    public async Task McpPipeline_Explains_A_Wrong_Name_Object(string arguments, bool isError, string text)
+    {
+        var (error, content) = await CallAsync("name_probe", arguments);
+
+        Assert.Equal(isError, error);
+        Assert.StartsWith(text, content);
+        if (arguments.Contains("people"))
+            Assert.EndsWith(" At $[0].primaryName.", content);
+    }
+
     private static async Task<(bool IsError, string? Text)> CallAsync(string tool, string arguments)
     {
         var config = new GrampsConfig("https://gramps.test", "user", "pass", "tree");
@@ -92,6 +109,11 @@ public class McpToolArgumentTests
         [Description("Echoes its arguments.")]
         public static string Probe(string identifier, bool extended = false, int? pagesize = null, string? date = null) =>
             $"probe {identifier} {extended} {pagesize}".TrimEnd() + (date == null ? "" : $" date {date}");
+
+        [McpServerTool(Name = "name_probe", ReadOnly = true)]
+        [Description("Echoes a name.")]
+        public static string NameProbe(FlexibleGrampsName? name = null, PersonRecord[]? people = null) =>
+            $"name {(name ?? people?[0].PrimaryName)?.Name.ToDisplayString()}";
 
         [McpServerTool(Name = "update_probe")]
         [Description("Echoes an update.")]

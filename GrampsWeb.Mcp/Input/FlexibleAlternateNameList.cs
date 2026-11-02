@@ -13,16 +13,16 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleAlternateNameList
 {
     public const string DescriptionHint =
-        "Alternate names: array of strings (\"Married Name:: Jane|Smith\"), simple objects, or full Gramps name objects. " +
-        "Object fields: given/first, surname/last, " +
-        "prefix/surname_prefix (von/de/van), connector/surname_connector, " +
-        "origin_type/surname_origin (Gramps OriginType: Inherited, Given, Taken, Patronymic, Matronymic, " +
+        "Alternate names: array of strings (\"Married Name:: Jane|Smith\") or name objects. " +
+        "Object fields, as in primaryName: given (or first_name), surname, " +
+        "prefix (von/de/van), connector, " +
+        "origin_type (Gramps OriginType: Inherited, Given, Taken, Patronymic, Matronymic, " +
         "Feudal, Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown), " +
-        "patronymic (→ separate Patronymic surname entry), " +
-        "matronymic (→ separate Matronymic surname entry), " +
-        "title, suffix (Jr./Sr./III), call, nick, famnick, type (name type). " +
+        "patronymic and matronymic (each a surname entry of its own), " +
+        "title, suffix (Jr./Sr./III), call, nick, famnick, type (name type), " +
+        "name (the whole name as one string), and native surname_list for several surnames. " +
         "Name types and origins must be standard Gramps ones or custom ones the tree already uses. " +
-        "For multi-surname names use native surname_list format. " +
+        "camelCase forms work too; any other field is an error, not ignored. " +
         "Multiple names in one string: separate with newlines (not |).";
 
     public required GrampsName[] Items { get; init; }

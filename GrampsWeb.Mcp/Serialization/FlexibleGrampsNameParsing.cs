@@ -1,11 +1,86 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Serialization;
 
-/// <summary>Parses simple string forms into <see cref="GrampsName"/>; full objects are deserialized via JSON elsewhere.</summary>
+/// <summary>Parses the string and object forms of a name argument into <see cref="GrampsName"/>.</summary>
 public static class FlexibleGrampsNameParsing
 {
+    // Name object fields, keyed by the sent name in lower case without underscores so that
+    // first_name, firstName and FirstName all reach the same field. Values are the canonical
+    // field: a native Gramps key, or one of the shortcuts surname, prefix, connector,
+    // origin_type, patronymic, matronymic and name.
+    private static readonly Dictionary<string, string> NameFields = new(StringComparer.Ordinal)
+    {
+        ["given"] = "first_name",
+        ["first"] = "first_name",
+        ["firstname"] = "first_name",
+        ["givenname"] = "first_name",
+        ["surname"] = "surname",
+        ["last"] = "surname",
+        ["lastname"] = "surname",
+        ["familyname"] = "surname",
+        ["prefix"] = "prefix",
+        ["surnameprefix"] = "prefix",
+        ["connector"] = "connector",
+        ["surnameconnector"] = "connector",
+        ["origintype"] = "origin_type",
+        ["surnameorigin"] = "origin_type",
+        ["patronymic"] = "patronymic",
+        ["matronymic"] = "matronymic",
+        ["name"] = "name",
+        ["text"] = "name",
+        ["full"] = "name",
+        ["fullname"] = "name",
+        ["surnamelist"] = "surname_list",
+        ["title"] = "title",
+        ["suffix"] = "suffix",
+        ["call"] = "call",
+        ["nick"] = "nick",
+        ["nickname"] = "nick",
+        ["famnick"] = "famnick",
+        ["familynick"] = "famnick",
+        ["familynickname"] = "famnick",
+        ["type"] = "type",
+        ["date"] = "date",
+        ["citationlist"] = "citation_list",
+        ["notelist"] = "note_list",
+        ["groupas"] = "group_as",
+        ["sortas"] = "sort_as",
+        ["displayas"] = "display_as",
+        ["private"] = "private"
+    };
+
+    // Surname entry fields inside surname_list, keyed the same way.
+    private static readonly Dictionary<string, string> SurnameFields = new(StringComparer.Ordinal)
+    {
+        ["surname"] = "surname",
+        ["prefix"] = "prefix",
+        ["connector"] = "connector",
+        ["origintype"] = "origintype",
+        ["primary"] = "primary"
+    };
+
+    // Shortcut fields that build the surname list; every other name field is passed to Gramps as sent.
+    private static readonly string[] ShortcutFields =
+        ["surname", "prefix", "connector", "origin_type", "patronymic", "matronymic", "name", "surname_list"];
+
+    private static readonly string[] StringNameFields =
+    [
+        "first_name", "surname", "prefix", "connector", "origin_type", "patronymic", "matronymic", "name",
+        "title", "suffix", "call", "nick", "famnick", "group_as"
+    ];
+
+    private const string AcceptedNameFields =
+        "given (or first_name), surname, prefix, connector, origin_type, patronymic, matronymic, " +
+        "name (the whole name as one string), title, suffix, call, nick, famnick, type, surname_list, " +
+        "and the other Gramps name fields date, citation_list, note_list, group_as, sort_as, display_as, private. " +
+        "camelCase forms such as firstName, surnameList and originType work too";
+
+    private const string AcceptedSurnameFields = "surname, prefix, connector, origintype (or origin_type), primary";
+
     /// <summary>
     /// Parses a name from a string that is either a JSON object (when it starts with <c>{</c>)
     /// or a simple name line (<see cref="ParseSimpleLine"/>).
@@ -13,30 +88,21 @@ public static class FlexibleGrampsNameParsing
     public static GrampsName ParseNameLineOrJsonObject(string line, JsonSerializerOptions options)
     {
         line = line.Trim();
-        if (line.Length > 0 && line[0] == '{')
+        if (line.Length == 0 || line[0] != '{')
+            return ParseSimpleLine(line);
+
+        JsonDocument doc;
+        try
         {
-            try
-            {
-                using var doc = JsonDocument.Parse(line);
-                if (doc.RootElement.ValueKind == JsonValueKind.Object)
-                {
-                    var parsed = ParseObjectElement(doc.RootElement, options);
-                    if (parsed != null)
-                        return parsed;
-                    throw new JsonException("Name object contained no recognisable name fields.");
-                }
-            }
-            catch (JsonException ex) when (ex.Message.Contains("recognisable", StringComparison.Ordinal))
-            {
-                throw;
-            }
-            catch (JsonException ex)
-            {
-                throw new JsonException($"Invalid JSON for name object: {ex.Message}", ex);
-            }
+            doc = JsonDocument.Parse(line);
+        }
+        catch (JsonException ex)
+        {
+            throw new JsonInputException($"Invalid JSON for name object: {ex.Message}", ex);
         }
 
-        return ParseSimpleLine(line);
+        using (doc)
+            return ParseObjectElement(doc.RootElement, options);
     }
 
     /// <summary>
@@ -62,7 +128,7 @@ public static class FlexibleGrampsNameParsing
     {
         line = line.Trim();
         if (string.IsNullOrEmpty(line))
-            throw new JsonException("Name line is empty.");
+            throw new JsonInputException("Name line is empty.");
 
         string? type = null;
         var body = line;
@@ -72,7 +138,7 @@ public static class FlexibleGrampsNameParsing
             type = line[..dc].Trim();
             body = line[(dc + 2)..].Trim();
             if (string.IsNullOrEmpty(body))
-                throw new JsonException(
+                throw new JsonInputException(
                     $"Name type prefix \"{type}\" must be followed by text after ::.");
         }
 
@@ -112,131 +178,207 @@ public static class FlexibleGrampsNameParsing
     }
 
     /// <summary>
-    /// Parses a <see cref="JsonElement"/> that is a JSON object into a <see cref="GrampsName"/>.
-    /// Handles both native Gramps field names (<c>first_name</c>, <c>surname_list</c>) and
-    /// AI-friendly aliases (<c>given</c>, <c>surname</c>, <c>patronymic</c>, <c>name</c>, <c>text</c>).
-    /// When AI sends aliases, builds the correct Gramps structure automatically.
-    /// Returns null when the element contains no usable name data.
+    /// Parses a name object. Accepts the native Gramps fields (<c>first_name</c>, <c>surname_list</c>, …)
+    /// in snake_case or camelCase, and the shortcuts <c>given</c>, <c>surname</c>, <c>prefix</c>,
+    /// <c>connector</c>, <c>origin_type</c>, <c>patronymic</c>, <c>matronymic</c> and <c>name</c>
+    /// (the whole name as one string), which build the surname list. Both kinds can be mixed.
+    /// Throws <see cref="JsonInputException"/> for unknown or conflicting fields and for an object with no name,
+    /// so nothing the caller sent is dropped silently.
     /// </summary>
-    public static GrampsName? ParseObjectElement(JsonElement el, JsonSerializerOptions options)
+    public static GrampsName ParseObjectElement(JsonElement el, JsonSerializerOptions options)
     {
-        // If the object already uses native Gramps field names, deserialize directly.
-        if (el.TryGetProperty("first_name", out _) || el.TryGetProperty("surname_list", out _))
-            return el.Deserialize<GrampsName>(options);
-
-        // Try AI-friendly "name" / "text" / "full" / "full_name" fields — parse as a simple string.
-        foreach (var key in (string[])["name", "text", "full", "full_name"])
+        var fields = ReadFields(el, NameFields, "name object", AcceptedNameFields);
+        foreach (var field in StringNameFields)
         {
-            if (el.TryGetProperty(key, out var prop) && prop.ValueKind == JsonValueKind.String)
+            if (fields.TryGetValue(field, out var f) && f.Value.ValueKind != JsonValueKind.String)
+                throw new JsonInputException(
+                    $"Field \"{f.Key}\" in name object must be a string, not {Describe(f.Value.ValueKind)}.");
+        }
+
+        string KeyOf(string field) => fields[field].Key;
+        string? Str(string field) => fields.TryGetValue(field, out var f) ? f.Value.GetString() : null;
+
+        var fullName = Str("name");
+        if (fullName != null)
+        {
+            var clash = ((string[])["first_name", "surname", "surname_list"]).Where(fields.ContainsKey).Select(KeyOf).ToList();
+            if (clash.Count > 0)
+                throw new JsonInputException(
+                    $"Field \"{KeyOf("name")}\" holds the whole name, so it cannot be combined with {Quote(clash)}; " +
+                    "send either the whole name or its parts.");
+        }
+
+        var qualifiers = ((string[])["prefix", "connector", "origin_type"]).Where(fields.ContainsKey).ToList();
+        if (fields.ContainsKey("surname_list"))
+        {
+            var clash = qualifiers.Prepend("surname").Where(fields.ContainsKey).Select(KeyOf).ToList();
+            if (clash.Count > 0)
+                throw new JsonInputException(
+                    $"Field \"{KeyOf("surname_list")}\" cannot be combined with {Quote(clash)}; " +
+                    "put them in the surname_list entries instead.");
+        }
+        else if (qualifiers.Count > 0 && fullName == null && !fields.ContainsKey("surname"))
+        {
+            throw new JsonInputException(
+                $"{Quote(qualifiers.Select(KeyOf))} describe the surname, so the name object needs \"surname\" as well.");
+        }
+
+        var native = new JsonObject();
+        foreach (var (field, f) in fields)
+        {
+            if (!ShortcutFields.Contains(field))
+                native[field] = JsonNode.Parse(f.Value.GetRawText());
+        }
+
+        var name = Deserialize<GrampsName>(native, "name object", options);
+        var surnames = fields.TryGetValue("surname_list", out var list)
+            ? ParseSurnameList(list.Key, list.Value, options)
+            : [];
+
+        var surname = Str("surname");
+        if (fullName != null)
+        {
+            var parsed = ParseSimpleLine(fullName);
+            name.FirstName = parsed.FirstName;
+            name.Type ??= parsed.Type;
+            surname = parsed.SurnameList![0].Surname;
+        }
+
+        if (!fields.ContainsKey("surname_list") && (!string.IsNullOrEmpty(surname) || qualifiers.Count > 0))
+        {
+            surnames.Add(new GrampsSurname
             {
-                var str = prop.GetString();
-                if (string.IsNullOrWhiteSpace(str))
-                    continue;
-                var parsed = ParseSimpleLine(str.Trim());
-                // Overlay explicit type if provided alongside.
-                var typeStr = GetStringProp(el, "type");
-                if (!string.IsNullOrWhiteSpace(typeStr))
-                    parsed.Type = typeStr;
-                return parsed;
+                Surname = surname ?? "",
+                Prefix = Str("prefix"),
+                Connector = Str("connector"),
+                OriginType = Str("origin_type"),
+                Primary = true
+            });
+        }
+
+        // Patronymic and matronymic become surname entries of their own, primary only when nothing else is.
+        foreach (var (field, origin) in ((string, string)[])[("patronymic", "Patronymic"), ("matronymic", "Matronymic")])
+        {
+            if (Str(field) is { } value)
+                surnames.Add(new GrampsSurname { Surname = value, OriginType = origin, Primary = surnames.Count == 0 });
+        }
+
+        if (string.IsNullOrWhiteSpace(name.FirstName) && surnames.All(s => string.IsNullOrWhiteSpace(s.Surname)))
+            throw new JsonInputException(
+                "Name object has no name in it: send given and surname, patronymic, matronymic, " +
+                "name (the whole name as one string) or surname_list.");
+
+        // Gramps needs at least one surname entry, even an empty one.
+        if (surnames.Count == 0)
+            surnames.Add(new GrampsSurname { Surname = "", Primary = true });
+
+        name.SurnameList = surnames.ToArray();
+        return name;
+    }
+
+    private static List<GrampsSurname> ParseSurnameList(string key, JsonElement list, JsonSerializerOptions options)
+    {
+        if (list.ValueKind != JsonValueKind.Array)
+            throw new JsonInputException(
+                $"Field \"{key}\" in name object must be an array of surname objects, not {Describe(list.ValueKind)}.");
+
+        var surnames = new List<GrampsSurname>();
+        var primarySent = new List<bool>();
+        foreach (var item in list.EnumerateArray())
+        {
+            var where = $"surname_list[{surnames.Count}]";
+            if (item.ValueKind != JsonValueKind.Object)
+                throw new JsonInputException(
+                    $"Entry {where} must be an object such as {{\"surname\": \"Smith\"}}, not {Describe(item.ValueKind)}.");
+
+            var fields = ReadFields(item, SurnameFields, where, AcceptedSurnameFields);
+            foreach (var field in (string[])["surname", "prefix", "connector"])
+            {
+                if (fields.TryGetValue(field, out var f) && f.Value.ValueKind != JsonValueKind.String)
+                    throw new JsonInputException(
+                        $"Field \"{f.Key}\" in {where} must be a string, not {Describe(f.Value.ValueKind)}.");
             }
+
+            if (fields.TryGetValue("primary", out var p) && p.Value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                throw new JsonInputException(
+                    $"Field \"{p.Key}\" in {where} must be true or false, not {Describe(p.Value.ValueKind)}.");
+
+            var entry = new JsonObject();
+            foreach (var (field, f) in fields)
+                entry[field] = JsonNode.Parse(f.Value.GetRawText());
+            surnames.Add(Deserialize<GrampsSurname>(entry, where, options));
+            primarySent.Add(fields.ContainsKey("primary"));
         }
 
-        // ── Component fields ────────────────────────────────────────────────
-        // Name-level
-        var given      = GetStringPropAny(el, "given", "first");
-        var title      = GetStringProp(el, "title");
-        var suffix     = GetStringProp(el, "suffix");
-        var nick       = GetStringPropAny(el, "nick", "nickname");
-        var call       = GetStringProp(el, "call");
-        var famNick    = GetStringPropAny(el, "famnick", "family_nick", "family_nickname");
-        var typeVal    = GetStringProp(el, "type");
-
-        // Primary surname — value + optional prefix, connector, Gramps OriginType
-        // Standard Gramps OriginType values: Inherited, Given, Taken, Patronymic, Matronymic,
-        //   Feudal, Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown
-        var surname       = GetStringPropAny(el, "surname", "last", "family_name");
-        var surnamePrefix = GetStringPropAny(el, "prefix", "surname_prefix"); // von, de, van, del…
-        var surnameConn   = GetStringPropAny(el, "connector", "surname_connector"); // - or y
-        var surnameOrigin = GetStringPropAny(el, "origin_type", "surname_origin");
-
-        // Patronymic / matronymic shortcuts — convenience for Slavic/Nordic traditions.
-        // Creates a separate surname_list entry with the corresponding Gramps OriginType.
-        var patronymic = GetStringProp(el, "patronymic");
-        var matronymic = GetStringProp(el, "matronymic");
-
-        bool anyData = !string.IsNullOrEmpty(given)
-            || !string.IsNullOrEmpty(surname)
-            || !string.IsNullOrEmpty(patronymic) || !string.IsNullOrEmpty(matronymic);
-        if (!anyData)
-            return null; // no useful data — let caller fall back
-
-        // ── Build surname_list ───────────────────────────────────────────────
-        var surnameList = new List<GrampsSurname>();
-
-        if (!string.IsNullOrWhiteSpace(surname))
+        // An entry without "primary" is the primary surname only when it is the first such entry
+        // and no entry says "primary": true; a list of two plain entries gets one primary surname, not two.
+        var hasPrimary = surnames.Where((_, i) => primarySent[i]).Any(s => s.Primary);
+        for (var i = 0; i < surnames.Count; i++)
         {
-            surnameList.Add(new GrampsSurname
-            {
-                Surname    = surname,
-                Prefix     = string.IsNullOrWhiteSpace(surnamePrefix) ? null : surnamePrefix,
-                Connector  = string.IsNullOrWhiteSpace(surnameConn)   ? null : surnameConn,
-                OriginType = string.IsNullOrWhiteSpace(surnameOrigin) ? null : surnameOrigin,
-                Primary    = true
-            });
+            if (primarySent[i])
+                continue;
+            surnames[i].Primary = !hasPrimary;
+            hasPrimary = true;
         }
 
-        // Patronymic — separate non-primary entry with OriginType "Patronymic"
-        if (!string.IsNullOrWhiteSpace(patronymic))
-        {
-            surnameList.Add(new GrampsSurname
-            {
-                Surname    = patronymic,
-                Primary    = surnameList.Count == 0,
-                OriginType = "Patronymic"
-            });
-        }
-
-        // Matronymic — separate non-primary entry with OriginType "Matronymic"
-        if (!string.IsNullOrWhiteSpace(matronymic))
-        {
-            surnameList.Add(new GrampsSurname
-            {
-                Surname    = matronymic,
-                Primary    = surnameList.Count == 0,
-                OriginType = "Matronymic"
-            });
-        }
-
-        // Ensure at least one surname entry exists (Gramps requires it)
-        if (surnameList.Count == 0)
-            surnameList.Add(new GrampsSurname { Surname = "", Primary = true });
-
-        return new GrampsName
-        {
-            Type      = string.IsNullOrWhiteSpace(typeVal)  ? null : typeVal,
-            Title     = string.IsNullOrWhiteSpace(title)    ? null : title,
-            FirstName = string.IsNullOrWhiteSpace(given)    ? null : given,
-            Call      = string.IsNullOrWhiteSpace(call)     ? null : call,
-            Nick      = string.IsNullOrWhiteSpace(nick)     ? null : nick,
-            FamNick   = string.IsNullOrWhiteSpace(famNick)  ? null : famNick,
-            Suffix    = string.IsNullOrWhiteSpace(suffix)   ? null : suffix,
-            SurnameList = surnameList.ToArray()
-        };
+        return surnames;
     }
 
-    private static string? GetStringProp(JsonElement el, string key) =>
-        el.TryGetProperty(key, out var p) && p.ValueKind == JsonValueKind.String
-            ? p.GetString()
-            : null;
-
-    private static string? GetStringPropAny(JsonElement el, params string[] keys)
+    /// <summary>
+    /// Maps each property of <paramref name="el"/> to its canonical field. Skips <c>_class</c>, nulls and blank strings;
+    /// throws for unknown fields and for two properties that set the same field.
+    /// </summary>
+    private static Dictionary<string, (string Key, JsonElement Value)> ReadFields(
+        JsonElement el, Dictionary<string, string> aliases, string where, string accepted)
     {
-        foreach (var k in keys)
+        var fields = new Dictionary<string, (string Key, JsonElement Value)>(StringComparer.Ordinal);
+        var unknown = new List<string>();
+        foreach (var prop in el.EnumerateObject())
         {
-            var v = GetStringProp(el, k);
-            if (v != null)
-                return v;
+            if (prop.Name == "_class")
+                continue;
+            if (!aliases.TryGetValue(prop.Name.Replace("_", "", StringComparison.Ordinal).ToLowerInvariant(), out var field))
+            {
+                unknown.Add(prop.Name);
+                continue;
+            }
+
+            if (prop.Value.ValueKind == JsonValueKind.Null
+                || prop.Value.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(prop.Value.GetString()))
+                continue;
+            if (fields.TryGetValue(field, out var earlier))
+                throw new JsonInputException(
+                    $"Fields \"{earlier.Key}\" and \"{prop.Name}\" in {where} set the same thing; send only one of them.");
+            fields[field] = (prop.Name, prop.Value);
         }
-        return null;
+
+        if (unknown.Count > 0)
+            throw new JsonInputException(
+                $"Unknown {(unknown.Count == 1 ? "field" : "fields")} {Quote(unknown)} in {where}. Accepted fields: {accepted}.");
+        return fields;
     }
+
+    private static T Deserialize<T>(JsonObject node, string where, JsonSerializerOptions options)
+    {
+        try
+        {
+            return node.Deserialize<T>(options)!;
+        }
+        catch (JsonException ex)
+        {
+            throw new JsonInputException($"Invalid value in {where}: {ex.Message}", ex);
+        }
+    }
+
+    private static string Quote(IEnumerable<string> keys) => string.Join(", ", keys.Select(k => $"\"{k}\""));
+
+    private static string Describe(JsonValueKind kind) => kind switch
+    {
+        JsonValueKind.Object => "an object",
+        JsonValueKind.Array => "an array",
+        JsonValueKind.String => "a string",
+        JsonValueKind.Number => "a number",
+        JsonValueKind.True or JsonValueKind.False => "a boolean",
+        _ => "null"
+    };
 }

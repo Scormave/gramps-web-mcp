@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 
@@ -18,7 +19,7 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
             case JsonTokenType.StartArray:
                 return ReadArray(ref reader, options);
             default:
-                throw new JsonException(
+                throw new JsonInputException(
                     $"Unexpected token {reader.TokenType} for alternate name list; use JSON array, string, or null.");
         }
     }
@@ -42,17 +43,18 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
         s = s.Trim();
         if (s.Length > 0 && s[0] == '[')
         {
+            JsonDocument doc;
             try
             {
-                using var doc = JsonDocument.Parse(s);
-                if (doc.RootElement.ValueKind != JsonValueKind.Array)
-                    return null;
-                return ReadFromJsonArray(doc.RootElement, options);
+                doc = JsonDocument.Parse(s);
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
-                return null;
+                throw new JsonInputException($"Invalid JSON for alternate name list: {ex.Message}", ex);
             }
+
+            using (doc)
+                return ReadFromJsonArray(doc.RootElement, options);
         }
 
         var lines = s.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -85,14 +87,12 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
                 case JsonTokenType.StartObject:
                 {
                     using var doc = JsonDocument.ParseValue(ref reader);
-                    var n = FlexibleGrampsNameParsing.ParseObjectElement(doc.RootElement, options);
-                    if (n != null)
-                        list.Add(n);
+                    list.Add(FlexibleGrampsNameParsing.ParseObjectElement(doc.RootElement, options));
                     break;
                 }
                 default:
-                    reader.Skip();
-                    break;
+                    throw new JsonInputException(
+                        $"Unexpected token {reader.TokenType} in alternate name list; each entry is a name string or a name object.");
             }
         }
 
@@ -113,9 +113,12 @@ public sealed class FlexibleAlternateNameListJsonConverter : JsonConverter<Flexi
             }
             else if (el.ValueKind == JsonValueKind.Object)
             {
-                var n = FlexibleGrampsNameParsing.ParseObjectElement(el, options);
-                if (n != null)
-                    list.Add(n);
+                list.Add(FlexibleGrampsNameParsing.ParseObjectElement(el, options));
+            }
+            else
+            {
+                throw new JsonInputException(
+                    $"Unexpected {el.ValueKind} in alternate name list; each entry is a name string or a name object.");
             }
         }
 

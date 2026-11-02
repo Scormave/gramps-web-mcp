@@ -451,6 +451,10 @@ Validation errors           →  McpToolErrors.ValidationError() →  McpExcepti
 Argument errors             →  ToolArgumentValidator           →  McpException
 (unknown or missing names,     (call-tool filter, input schema)
 values of the wrong type)
+
+Converter errors            →  JsonInputException              →  McpException
+(unknown field in a name       (thrown by the argument converter,
+object, and the like)           message kept by call-tool filter)
 ```
 
 All tool methods follow the same pattern: `try { ... } catch (Exception ex) { throw McpToolErrors.ToMcpException(ex); }`.
@@ -462,6 +466,9 @@ The same filter turns a JSON number sent for a string parameter into its text be
 so a year-only date such as `1877` works without quotes. An `update_*` call with no field to
 change besides `handle` and `linkMode` is refused, since clients drop unknown arguments before
 the server sees them and the update would otherwise save the record unchanged.
+An argument converter that knows what is wrong with a value, such as an unknown field in a name
+object, throws `JsonInputException`; the filter returns its message, with the JSON path when the
+value sits inside another argument (`At $[0].primaryName.` in `create_records`).
 
 ## Deployment
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 
@@ -24,12 +25,11 @@ public sealed class FlexibleGrampsNameJsonConverter : JsonConverter<FlexibleGram
             case JsonTokenType.StartObject:
             {
                 using var doc = JsonDocument.ParseValue(ref reader);
-                var name = FlexibleGrampsNameParsing.ParseObjectElement(doc.RootElement, options)
-                    ?? throw new JsonException("Name object contained no recognisable name fields.");
+                var name = FlexibleGrampsNameParsing.ParseObjectElement(doc.RootElement, options);
                 return new FlexibleGrampsName { Name = name };
             }
             default:
-                throw new JsonException(
+                throw new JsonInputException(
                     $"Unexpected token {reader.TokenType} for name; use JSON object or string, or null.");
         }
     }

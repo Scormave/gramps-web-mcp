@@ -565,23 +565,28 @@ public sealed class GrampsResources
             primary = new
             {
                 grammar =
-                    "Accepts three formats: " +
+                    "Accepts a string or an object. " +
                     "(1) Simple string — optional 'NameType:: given|surname' or 'given surname' (last word is surname). " +
                     "Plain strings only split into given + surname and cannot create structured name parts like patronymic, prefix, connector, origin_type, title, suffix, call, nick, or famnick. " +
-                    "(2) Simple object with AI-friendly fields (see object_fields below). Prefer a JSON object argument, " +
-                    "not a quoted JSON string; stringified JSON objects are also accepted for compatibility. " +
-                    "(3) Full native Gramps name object with first_name + surname_list (see name_schema).",
+                    "(2) Object with the fields below, freely mixed with the native Gramps name fields " +
+                    "(first_name, surname_list, date, citation_list, note_list, group_as, sort_as, display_as; see name_schema). " +
+                    "Field names may be snake_case or camelCase (firstName, surnameList, originType). " +
+                    "Any other field is rejected with an error that names it, so a misspelt field is never dropped silently; " +
+                    "so are two fields for the same thing (given and first_name) and an object with no name in it. " +
+                    "Prefer a JSON object argument, not a quoted JSON string; stringified JSON objects are also accepted for compatibility.",
                 object_fields = new
                 {
-                    given       = "Given/first name(s)",
+                    given       = "Given/first name(s) (aliases: first, first_name)",
                     surname     = "Primary surname value (aliases: last, family_name)",
-                    prefix      = "Particle before surname: von, de, van, del… (alias: surname_prefix)",
-                    connector   = "Connector between compound surnames: - or y (alias: surname_connector)",
+                    prefix      = "Particle before surname: von, de, van, del… (alias: surname_prefix). Needs surname or name",
+                    connector   = "Connector between compound surnames: - or y (alias: surname_connector). Needs surname or name",
                     origin_type = "Gramps OriginType of primary surname (alias: surname_origin). " +
                                   "Values: Inherited, Given, Taken, Patronymic, Matronymic, Feudal, " +
-                                  "Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown",
-                    patronymic  = "Shortcut: creates a separate surname entry with OriginType=Patronymic",
-                    matronymic  = "Shortcut: creates a separate surname entry with OriginType=Matronymic",
+                                  "Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown. Needs surname or name",
+                    patronymic  = "Shortcut: creates a separate surname entry with OriginType=Patronymic, " +
+                                  "primary only when the name has no other surname; also appended after surname_list",
+                    matronymic  = "Shortcut: creates a separate surname entry with OriginType=Matronymic, " +
+                                  "primary only when the name has no other surname; also appended after surname_list",
                     title       = "Name title: Dr., Prof., Sir, Count…",
                     suffix      = "Name suffix: Jr., Sr., III, PhD…",
                     call        = "Preferred call name (different from nick)",
@@ -589,8 +594,12 @@ public sealed class GrampsResources
                     famnick     = "Family nickname (alias: family_nick)",
                     type        = "Name type: Birth Name, Married Name, Also Known As, Patronymic… " +
                                   "See gramps://types for full list",
-                    name        = "Shortcut: full-name string parsed as 'given surname', with optional type field (aliases: text, full). " +
-                                  "Does not create structured name parts; use explicit object fields or native surname_list instead."
+                    name        = "Shortcut: the whole name as one string, parsed as 'given surname' or 'NameType:: given|surname' " +
+                                  "(aliases: text, full, full_name). Cannot be combined with given, surname or surname_list; " +
+                                  "patronymic, title and the other fields still apply, and a type field wins over the NameType prefix.",
+                    surname_list = "Native list of surname entries {surname, prefix, connector, origintype (or origin_type), primary} " +
+                                   "for several surnames. An entry without primary is the primary surname only when it comes first " +
+                                   "and no entry says primary: true. Cannot be combined with surname, prefix, connector or origin_type."
                 },
                 examples = new[]
                 {
@@ -599,14 +608,15 @@ public sealed class GrampsResources
                     "{\"given\":\"Ludwig\",\"surname\":\"Beethoven\",\"prefix\":\"van\",\"type\":\"Birth Name\"}",
                     "{\"given\":\"Ivan\",\"surname\":\"Petrov\",\"patronymic\":\"Petrovich\",\"type\":\"Birth Name\"}",
                     "{\"title\":\"Dr.\",\"given\":\"John\",\"surname\":\"Smith\",\"suffix\":\"Jr.\",\"call\":\"Jack\"}",
-                    "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}"
+                    "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}",
+                    "{\"firstName\":\"Fyodor\",\"surnameList\":[{\"surname\":\"Probnyakin\"},{\"surname\":\"Ivanovich\",\"originType\":\"Patronymic\"}]}"
                 },
-                tools = "create_person (primaryName required), update_person (primaryName optional)"
+                tools = "create_person (primaryName required), update_person (primaryName optional), create_records (people[].primaryName)"
             },
             alternate_names = new
             {
                 grammar =
-                    "JSON array where each item uses the same three formats as primaryName (string, simple object, or native Gramps object). " +
+                    "JSON array where each item uses the same formats as primaryName (a string or an object with the same fields). " +
                     "One multiline string: separate names with newlines — do not use | between names (| separates given|surname within one name).",
                 examples = new[]
                 {
@@ -615,7 +625,7 @@ public sealed class GrampsResources
                     "[{\"given\":\"Johnny\",\"surname\":\"Smith\",\"type\":\"Also Known As\"}]",
                     "[{\"given\":\"Ivan\",\"patronymic\":\"Petrovich\",\"type\":\"Patronymic\"}]"
                 },
-                tools = "create_person, update_person"
+                tools = "create_person, update_person, create_records (people[].alternateNames)"
             }
         },
         attributes = new
@@ -909,7 +919,9 @@ public sealed class GrampsResources
                 primary = new
                 {
                     type = "boolean",
-                    description = "Is this the primary surname for sorting/display? Usually true for the first surname.",
+                    description = "Is this the primary surname for sorting/display? Usually true for the first surname. " +
+                                  "When sent through a name argument, an entry without primary is primary only if it comes first " +
+                                  "and no entry says primary: true.",
                     examples = new[] { "true", "false" }
                 }
             }
