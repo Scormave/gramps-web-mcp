@@ -509,6 +509,7 @@ Create a new person.  Returns handle and Gramps ID.
 | `urls` | `FlexibleUrlList?` | no | — | URLs |
 | `personAssociations` | `FlexiblePersonRefList?` | no | — | Person associations |
 | `isPrivate` | `bool` | no | `false` | Mark record private |
+| `notDuplicateOf` | `FlexibleHandleList?` | no | — | People of the tree who are someone else, from the possible duplicates of a refused call |
 
 The first Birth and the first Death in `eventRefs` with the Primary role become
 the person's birth and death (`birth_ref_index`, `death_ref_index`), as in Gramps.
@@ -517,6 +518,27 @@ the person's birth and death (`birth_ref_index`, `death_ref_index`), as in Gramp
 Web writes the link back the other way, from a family to its father, mother
 and children, so a person joins a family through the family's `fatherHandle`,
 `motherHandle` or `childRefs` (`create_family`, `update_family`).
+
+Before creating, it looks for the same person in the tree with Gramps Web's
+`RegExpName` rule. Names compare across spellings: case, ё and ѣ, і and ѵ, ѳ,
+Latin accents, a final ъ, doubled letters, -ия and -ья, -ий and -ей, and the
+male and female forms of a surname (Пугин and Пугина, Вознесенский and
+Вознесенская, Kowalski and Kowalska). Alternate names count on both sides. A
+namesake of the other gender, or with another patronymic, is not the same
+person. The birth year is the birth's, else the first baptism's or
+christening's in the Primary role.
+
+| Namesake | Result |
+|----------|--------|
+| Born up to two years apart, or a child of the same parents when either year is missing | Possible duplicate: nothing is created, `action: refused`, with the candidates and next steps |
+| Born three to five years apart, or either year missing | Similar person: the person is created and the reply lists them with a `merge_objects` hint |
+| Born more than five years apart | Not listed |
+
+`notDuplicateOf` takes the Gramps IDs or handles from a refusal that are
+someone else, and the check passes over them. A check that Gramps Web fails
+does not stop the person from being created; the reply says it did not run.
+The check reads up to 100 people with a matching name and says so when there
+are more.
 
 ### U — `UpdatePerson`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
@@ -911,8 +933,17 @@ of an existing family, is made afterwards with `update_*` and `linkMode: "add"`.
 
 Every record is checked before anything is saved, with the same checks as its
 create tool (types, dates, names, handles), and an error names the record:
-`people[1] (key petr): …`. A call holds 1–50 records. Like the create tools,
-it does not check for duplicates.
+`people[1] (key petr): …`. A call holds 1–50 records.
+
+Each new person is checked for duplicates as in `create_person`, but not
+against the other people of the call. A possible duplicate of any of them
+stops the whole call before saving: the reply header carries `type:
+Transaction`, `action: refused` and `duplicates`, then the candidates per
+record and the `notDuplicateOf` to add to each record that is someone else.
+Existing parents for the same-parents test come from the call's families
+that list the person in `childRefs`. Similar people come after the saved
+records, with the new person's handle for `merge_objects`. Other record
+types are not checked for duplicates.
 
 The reply header carries `type: Transaction`, `action: created` and
 `records`. The body lists each record in saving order with its handle, Gramps
@@ -935,7 +966,7 @@ plus `key`:
 | `notes` | `create_note` | Linked from other records' `noteHandles` |
 | `citations` | `create_citation` | `sourceHandle` may name a source of the call |
 | `events` | `create_event` | Linked from people's and families' `eventRefs` |
-| `people` | `create_person` | Without `familyHandles` and `parentFamilyHandles` |
+| `people` | `create_person` | Without `familyHandles` and `parentFamilyHandles`; `notDuplicateOf` per person |
 | `families` | `create_family` | Saved after the people, which get the link back |
 
 ---

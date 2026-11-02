@@ -197,8 +197,13 @@ public static class PersonTools
     [Description(
         "Create one person: names, gender, links to existing events with the person's role in each, families, " +
         "citations, notes, media and tags, plus attributes, addresses, URLs and associations. " +
-        "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: search for the person first, " +
-        "and change an existing person with update_person. primaryName is the main name, usually the birth name, e.g. " +
+        "Returns the new handle, Gramps ID and name, with next steps. Checks the tree for the same person first: someone " +
+        "with the same given name and surname (spelling variants, old letters and male and female forms count as one), " +
+        "not the other gender, without another patronymic, and born within two years, or a child of the same parents " +
+        "when there are no two years to compare, stops the call with action \"refused\" and the possible duplicates; " +
+        "namesakes born up to five years apart, or without a year, are listed after the person is created. Add to an " +
+        "existing person with update_person; create a different person anyway with notDuplicateOf. " +
+        "primaryName is the main name, usually the birth name, e.g. " +
         "{\"given\": \"Ivan\", \"patronymic\": \"Petrovich\", \"surname\": \"Sidorov\"}; a married name or another spelling " +
         "goes in alternateNames. Events are separate records: create the Birth, Death and other events with create_event " +
         "first and pass them in eventRefs, or attach them later with update_person (linkMode add). The first Birth and the " +
@@ -238,6 +243,9 @@ public static class PersonTools
         FlexiblePersonRefList? personAssociations = null,
         [Description("Mark the person private (default false).")]
         bool isPrivate = false,
+        [Description("People of the tree who are someone else, from the possible duplicates of a refused call: " +
+                     "Gramps IDs or handles, e.g. [\"I0012\"]. The duplicate check passes over them.")]
+        FlexibleHandleList? notDuplicateOf = null,
         GrampsApiClient client = null!)
     {
         try
@@ -246,16 +254,22 @@ public static class PersonTools
                 parentFamilyHandles, mediaHandles, citationHandles, noteHandles, tagHandles, attributes, addresses, urls,
                 personAssociations, isPrivate, client);
 
-            await SetVitalEventIndexesAsync(client, request);
+            var birthYear = await SetVitalEventIndexesAsync(client, request);
+
+            client.EnsureWritable();
+            var name = GrampsValueFormatter.FormatName(primaryName!.Name);
+            var check = await DuplicatePeople.CheckAsync(client,
+                DuplicatePeople.Describe(request, birthYear, notDuplicateOf: notDuplicateOf?.Handles));
+            if (check.Strong.Count > 0)
+                return DuplicatePeople.Refusal(name, check);
 
             var (handle, grampsId) = await client.PostMutationAsync("/api/people/", request, "Person");
             return ResponseEnvelope.CreateSuccess(
-                "Person", handle, grampsId,
-                GrampsValueFormatter.FormatName(primaryName!.Name),
+                "Person", handle, grampsId, name,
                 ResponseEnvelope.PersonCreateNextSteps(handle,
                     hasEvents: request.EventRefList is { Length: > 0 },
                     hasFamily: request.FamilyList is { Length: > 0 } || request.ParentFamilyList is { Length: > 0 },
-                    hasNotes: request.NoteList is { Length: > 0 }));
+                    hasNotes: request.NoteList is { Length: > 0 })) + DuplicatePeople.CreatedNote(check, handle);
         }
         catch (Exception ex)
         {
@@ -409,29 +423,45 @@ public static class PersonTools
     /// death_ref_index when it saves a person with PUT but not with POST, so a new person would show no birth or
     /// death until its next update.
     /// </summary>
-    /// <param name="newEventTypes">The types of events not saved yet, by handle; the others are read.</param>
-    internal static async Task SetVitalEventIndexesAsync(GrampsApiClient client, CreatePersonRequest request,
-        IReadOnlyDictionary<string, string?>? newEventTypes = null)
+    /// <param name="newEvents">Events not saved yet, by handle; the others are read.</param>
+    /// <returns>
+    /// The birth year for the duplicate check: the birth's, else the first Primary baptism's or christening's;
+    /// null when none has a year.
+    /// </returns>
+    internal static async Task<int?> SetVitalEventIndexesAsync(GrampsApiClient client, CreatePersonRequest request,
+        IReadOnlyDictionary<string, CreateEventRequest>? newEvents = null)
     {
         var refs = request.EventRefList ?? [];
         var primary = refs.Where(r => PersonFormatter.IsPrimaryRole(r.Role)).Select(r => r.Ref?.Trim())
-            .Where(h => h != null && newEventTypes?.ContainsKey(h) != true).ToArray();
+            .Where(h => h != null && newEvents?.ContainsKey(h) != true).ToArray();
 
         var events = primary.Length == 0
             ? new Dictionary<string, GrampsEvent>()
             : await client.GetByHandlesAsync<GrampsEvent>("events", primary, e => e.Handle);
+        int? birthYear = null, baptismYear = null;
         for (var i = 0; i < refs.Length; i++)
         {
             if (!PersonFormatter.IsPrimaryRole(refs[i].Role) || refs[i].Ref?.Trim() is not { } eventHandle)
                 continue;
-            var type = newEventTypes?.TryGetValue(eventHandle, out var newType) == true ? newType
-                : events.TryGetValue(eventHandle, out var evt) ? evt.Type
-                : null;
+            var (type, year) = newEvents?.TryGetValue(eventHandle, out var newEvent) == true ? (newEvent.Type, newEvent.Date?.Year)
+                : events.TryGetValue(eventHandle, out var evt) ? (evt.Type, evt.Date?.Year)
+                : (null, null);
             if (type == "Birth" && request.BirthRefIndex < 0)
+            {
                 request.BirthRefIndex = i;
+                birthYear = year > 0 ? year : null;
+            }
             else if (type == "Death" && request.DeathRefIndex < 0)
+            {
                 request.DeathRefIndex = i;
+            }
+            else if (type is "Baptism" or "Christening" && baptismYear == null && year > 0)
+            {
+                baptismYear = year;
+            }
         }
+
+        return birthYear ?? baptismYear;
     }
 
     internal static GrampsNameRequest ConvertNameToRequest(GrampsName name)

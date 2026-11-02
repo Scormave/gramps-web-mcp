@@ -64,9 +64,11 @@ public static class RecordBatchTools
         "the arguments of its create tool (create_person, create_event, …), except that people join families only " +
         "through families: a new family's father, mother and children get the link back. Links from existing records " +
         "to new ones, such as a new child of an existing family, are made afterwards with update_* and linkMode " +
-        "\"add\". Media and tags are not created here: create them first with create_media and create_tag. Does not " +
-        "check for duplicates: search first. Up to 50 records per call; every record is checked before anything is " +
-        "saved, and an error names the record, e.g. people[1]. Returns each record's handle and Gramps ID. " +
+        "\"add\". Media and tags are not created here: create them first with create_media and create_tag. Each new " +
+        "person is checked for duplicates in the tree as in create_person: a possible duplicate stops the whole call " +
+        "with action \"refused\", and notDuplicateOf on that person lets it through; other record types are not " +
+        "checked, so search first. Up to 50 records per call; every record is checked before anything is saved, and " +
+        "an error names the record, e.g. people[1]. Returns each record's handle and Gramps ID. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateRecords(
         [Description("New repositories; fields as in create_repository.")]
@@ -124,15 +126,24 @@ public static class RecordBatchTools
                 SubstituteKeys(entry.Json, null, entry, keys, used);
             }
 
-            var newEventTypes = entries.Where(e => e.Key != null && e.Request is CreateEventRequest)
-                .ToDictionary(e => "#" + e.Key, e => ((CreateEventRequest)e.Request).Type, StringComparer.Ordinal);
+            var newEvents = entries.Where(e => e.Key != null && e.Request is CreateEventRequest)
+                .ToDictionary(e => "#" + e.Key, e => (CreateEventRequest)e.Request, StringComparer.Ordinal);
+            client.EnsureWritable();
+            var checks = new List<DuplicatePeople.BatchCheck>();
             foreach (var entry in entries.Where(e => e.Request is CreatePersonRequest))
             {
                 var person = (CreatePersonRequest)entry.Request;
-                await PersonTools.SetVitalEventIndexesAsync(client, person, newEventTypes);
+                var birthYear = await PersonTools.SetVitalEventIndexesAsync(client, person, newEvents);
                 entry.Json["birth_ref_index"] = person.BirthRefIndex;
                 entry.Json["death_ref_index"] = person.DeathRefIndex;
+                var newPerson = DuplicatePeople.Describe(person, birthYear, ExistingParents(entry.Key, entries),
+                    ((PersonRecord)entry.Record).NotDuplicateOf?.Handles);
+                checks.Add(new DuplicatePeople.BatchCheck(entry.Where, entry.Label, entry.Handle,
+                    await DuplicatePeople.CheckAsync(client, newPerson)));
             }
+
+            if (checks.Any(c => c.Result.Strong.Count > 0))
+                return DuplicatePeople.BatchRefusal(checks);
 
             string body;
             try
@@ -144,7 +155,7 @@ public static class RecordBatchTools
                 // One transaction: a refused call leaves the tree as it was.
                 throw new McpException($"Gramps Web refused the call and saved none of the records. {ex.Message}", ex);
             }
-            return FormatResult(entries, used, ParseChanges(body));
+            return FormatResult(entries, used, ParseChanges(body), checks);
         }
         catch (Exception ex)
         {
@@ -354,7 +365,8 @@ public static class RecordBatchTools
     private static string? StringValue(JsonNode? node) =>
         node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
 
-    private static string FormatResult(List<Entry> entries, HashSet<string> used, Dictionary<string, Change> changes)
+    private static string FormatResult(List<Entry> entries, HashSet<string> used, Dictionary<string, Change> changes,
+        IReadOnlyList<DuplicatePeople.BatchCheck> checks)
     {
         var sb = new StringBuilder();
         sb.AppendLine("---");
@@ -391,6 +403,8 @@ public static class RecordBatchTools
             sb.AppendLine($"Not linked from any record of this call ({unlinked.Count}): " +
                           string.Join(", ", unlinked.Select(e => e.Where)) + ".");
         }
+
+        sb.Append(DuplicatePeople.BatchNotes(checks));
 
         var unplaced = entries.Where(e => e.Record is PersonRecord && (e.Key == null || !InNewFamily(e.Key, entries)))
             .ToList();
@@ -434,6 +448,15 @@ public static class RecordBatchTools
             return "";
         }
     }
+
+    /// <summary>The existing fathers and mothers of the new families that list the person as a child.</summary>
+    private static IEnumerable<string?> ExistingParents(string? key, List<Entry> entries) =>
+        key == null
+            ? []
+            : entries.Where(e => e.Request is CreateFamilyRequest).Select(e => (CreateFamilyRequest)e.Request)
+                .Where(f => f.ChildRefList?.Any(c => c.Ref?.Trim() == "#" + key) == true)
+                .SelectMany(f => new[] { f.FatherHandle, f.MotherHandle })
+                .Where(h => h?.StartsWith('#') == false);
 
     /// <summary>Whether a family of the call names the person as father, mother or child.</summary>
     private static bool InNewFamily(string key, List<Entry> entries) =>

@@ -87,6 +87,11 @@ public sealed class PersonRecord : BatchRecord
     [Description(PrivateText)]
     public bool IsPrivate { get; init; }
 
+    [JsonPropertyName("notDuplicateOf")]
+    [Description("People of the tree who are someone else, from the possible duplicates of a refused call: " +
+                 "Gramps IDs or handles, e.g. [\"I0012\"]. The duplicate check passes over them.")]
+    public FlexibleHandleList? NotDuplicateOf { get; init; }
+
     internal override string GrampsClass => "Person";
 
     internal override async Task<(object Request, string Label)> BuildAsync(GrampsApiClient client)

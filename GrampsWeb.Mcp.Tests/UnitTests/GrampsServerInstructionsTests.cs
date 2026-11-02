@@ -13,7 +13,7 @@ public class GrampsServerInstructionsTests
 
         Assert.Contains("start with search", text);
         Assert.Contains("Changing the tree:", text);
-        Assert.Contains("do not check for duplicates", text);
+        Assert.Contains("check for duplicates", text);
         Assert.DoesNotContain("read_media", text);
         Assert.DoesNotContain("read-only: no tool", text);
     }

@@ -22,6 +22,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   confirms the merge in a dialog that names both records, as for
   `delete_object` and `undo_change`, and the reply gives the
   transaction that `undo_change` takes to restore the duplicate.
+- `create_person` and `create_records` check the tree for the new
+  person first. Names compare across spellings: old letters (ѣ, і, ѵ,
+  ѳ, a final ъ), ё, doubled letters, -ия and -ья, Latin accents, and the
+  male and female forms of a surname. A namesake of the same gender and
+  patronymic born up to two years apart, or a child of the same parents
+  when there are no two years to compare, stops the call with `action:
+  refused` and the possible duplicates; `create_records` then saves
+  none of its records. `notDuplicateOf` names the people who are someone
+  else and lets the person through. Namesakes born up to five years
+  apart, or without a year, are listed after creating, with a
+  `merge_objects` hint for the new person
 
 ### Changed
 

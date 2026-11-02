@@ -215,6 +215,61 @@ public class RecordBatchToolsTests
         Assert.Empty(handler.Posts);
     }
 
+    [Fact]
+    public async Task CreateRecords_Saves_None_Of_The_Records_When_A_New_Person_May_Already_Be_In_The_Tree()
+    {
+        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Пугин", 1, birth: "1881")}]" };
+
+        var result = await CreateRecords(Ivan(birth: "1880"), handler);
+
+        Assert.Empty(handler.Posts);
+        Assert.StartsWith("---\ntype: Transaction\naction: refused\nduplicates: 1\n---\n", result);
+        Assert.Contains("Created none of the records: the tree may already have one of the new people.", result);
+        Assert.Contains("people[0] (key ivan), Иван Пугин:\n  Possible duplicates (1):\n" +
+                        "    • Пугин, Иван (I0012) [handle: h-ivan], b. 1881 — same name, born 1 year apart", result);
+        Assert.Contains("people[0] (key ivan) notDuplicateOf: [\"I0012\"]", result);
+    }
+
+    [Fact]
+    public async Task CreateRecords_Takes_The_Existing_Parents_Of_A_New_Family_For_The_Duplicate_Check()
+    {
+        var handler = new TreeHandler
+        {
+            People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Пугин", 1, fatherHandle: "h-petr")}]"
+        };
+
+        var result = await CreateRecords(Ivan(families: """[{ "fatherHandle": "h-petr", "childRefs": ["#ivan"] }]"""), handler);
+
+        Assert.Empty(handler.Posts);
+        Assert.Contains("same name and parents, no birth years to compare", result);
+    }
+
+    [Fact]
+    public async Task CreateRecords_Saves_The_Records_And_Lists_Similar_People()
+    {
+        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Пугин", 1, birth: "1884")}]" };
+
+        var result = await CreateRecords(Ivan(birth: "1880"), handler);
+
+        var person = handler.Body!.AsArray().Single(o => o!["_class"]!.GetValue<string>() == "Person")!;
+        Assert.Equal(["/api/objects/"], handler.Posts);
+        Assert.Contains("Similar people already in the tree, possibly the same as a new person:\n" +
+                        $"  people[0] (key ivan), Иван Пугин — handle: {person["handle"]!.GetValue<string>()} (1):\n" +
+                        "    • Пугин, Иван (I0012) [handle: h-ivan], b. 1884 — same name, born 4 years apart", result);
+        Assert.Contains("merge_objects(objectType: \"person\"", result);
+    }
+
+    [Fact]
+    public async Task CreateRecords_Passes_Over_The_People_In_NotDuplicateOf()
+    {
+        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Пугин", 1, birth: "1880")}]" };
+
+        var result = await CreateRecords(Ivan(birth: "1880", notDuplicateOf: """["i0012"]"""), handler);
+
+        Assert.Equal(["/api/objects/"], handler.Posts);
+        Assert.DoesNotContain("I0012", result);
+    }
+
     [Theory]
     [InlineData(typeof(PersonRecord), typeof(PersonTools), nameof(PersonTools.CreatePerson))]
     [InlineData(typeof(EventRecord), typeof(EventTools), nameof(EventTools.CreateEvent))]
@@ -257,6 +312,21 @@ public class RecordBatchToolsTests
         var description = tools.GetMethod(method)!.GetCustomAttribute<DescriptionAttribute>()!.Description;
 
         Assert.Contains(ToolDescriptionFragments.BatchCreate, description);
+    }
+
+    /// <summary>create_records arguments for Иван Пугин (key ivan), born in <paramref name="birth"/> if given.</summary>
+    private static string Ivan(string? birth = null, string? notDuplicateOf = null, string families = "[]")
+    {
+        var events = birth == null ? "[]" : $$"""[{ "key": "birth", "eventType": "Birth", "date": "{{birth}}" }]""";
+        var eventRefs = birth == null ? "[]" : """["#birth"]""";
+        return $$"""
+            {
+              "events": {{events}},
+              "people": [{ "key": "ivan", "primaryName": { "given": "Иван", "surname": "Пугин" }, "gender": "Male",
+                           "eventRefs": {{eventRefs}}, "notDuplicateOf": {{notDuplicateOf ?? "null"}} }],
+              "families": {{families}}
+            }
+            """;
     }
 
     private static Task<string> CreateRecords(string json, TreeHandler handler)
@@ -317,6 +387,9 @@ public class RecordBatchToolsTests
         /// <summary>When set, the POST is answered with this status and body instead.</summary>
         public (HttpStatusCode Status, string Body)? Refusal { get; init; }
 
+        /// <summary>The answer to the duplicate check's people searches.</summary>
+        public string People { get; init; } = "[]";
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.PathAndQuery;
@@ -352,6 +425,7 @@ public class RecordBatchToolsTests
             {
                 "/api/types/default/" => Json(DefaultTypes),
                 "/api/types/custom/" => Json("{}"),
+                _ when path.StartsWith("/api/people/?rules=", StringComparison.Ordinal) => Json(People),
                 _ => bodies?.TryGetValue(path, out var body) == true ? Json(body) : new HttpResponseMessage(HttpStatusCode.NotFound)
             };
         }
