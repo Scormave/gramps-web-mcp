@@ -88,6 +88,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - In a `surname_list` sent without `primary` flags, only the first
   surname is primary instead of every one; an entry with `primary: true`
   wins over the order
+- `undo_change` names the transaction by its description. Gramps
+  Web's response for one transaction leaves the description out, so the
+  dry run, the confirmation question and the reply said "(no
+  description)", and the undo was saved as "Undo transaction N" without
+  it. The description now comes from the history list: the one row by
+  its number on Gramps Web API 3.21 or newer, the newest ten rows on
+  older versions. When neither has it, "(no description)" stays
 
 ## [2.8.1] - 2026-11-01
 

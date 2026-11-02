@@ -14,6 +14,8 @@ public class UndoToolsTests
 {
     private const string HistoryPath = "/api/transactions/history/5";
     private const string CheckPath = "/api/transactions/history/5/undo";
+    private const string HistoryRowPath = "/api/transactions/history/?page=1&pagesize=1&after_id=4&before_id=6";
+    private const string NewestPagePath = "/api/transactions/history/?page=1&pagesize=10&sort=-id";
     private const string NoConflicts =
         """{"transaction_id":5,"can_undo_without_force":true,"total_changes":2,"conflicts_count":0,"conflicts":[]}""";
 
@@ -61,6 +63,55 @@ public class UndoToolsTests
         Assert.Contains("   Restore the earlier version of Person [handle: p1]", result);
         Assert.Contains("No conflicts", result);
         Assert.DoesNotContain(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
+        Assert.DoesNotContain(handler.Requests, r => r.StartsWith("GET /api/transactions/history/?", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Undo_ReadsTheDescriptionFromTheHistoryList_WhenTheTransactionLeavesItOut()
+    {
+        using var handler = AddNoteEditPersonServer(withDescription: false);
+        handler.Get(HistoryRowPath, """[{"id": 5, "description": "Add Note", "changes": []}]""");
+        handler.Post(CheckPath, HttpStatusCode.OK, "[]");
+        handler.Get(NewestPagePath, """[{"id": 6, "description": "Undo transaction 5: Add Note"}]""");
+        var user = new FakeConfirmation(ConfirmationAnswer.Confirmed);
+
+        var result = await Undo(handler, user: user);
+
+        Assert.StartsWith("Undo transaction 5 (2025-09-30 14:22:05 UTC — Add Note — by Jane Doe)?", Assert.Single(user.Questions));
+        var post = Assert.Single(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
+        Assert.Equal($"POST {CheckPath}?message=Undo transaction 5: Add Note", post);
+        Assert.Contains("Undid transaction 5 (2025-09-30 14:22:05 UTC — Add Note — by Jane Doe):", result);
+        Assert.Contains("undo_transaction: 6", result);
+    }
+
+    [Fact]
+    public async Task DryRun_ReadsTheDescriptionFromTheNewestPage_BeforeGrampsWeb321()
+    {
+        using var handler = AddNoteEditPersonServer(withDescription: false);
+        handler.Get(HistoryRowPath, HttpStatusCode.UnprocessableEntity,
+            """{"error": {"code": 422, "message": "query: after_id: Unknown field."}}""");
+        handler.Get(NewestPagePath, """[{"id": 6, "description": "Edit Event"}, {"id": 5, "description": "Add Note"}]""");
+
+        var result = await Undo(handler, dryRun: true);
+
+        Assert.Contains("Undoing transaction 5 (2025-09-30 14:22:05 UTC — Add Note — by Jane Doe) would:", result);
+    }
+
+    [Fact]
+    public async Task Undo_LeavesTheDescriptionOut_WhenTheHistoryListFails()
+    {
+        using var handler = AddNoteEditPersonServer(withDescription: false);
+        const string failure = """{"error": {"code": 500, "message": "Internal Server Error"}}""";
+        handler.Get(HistoryRowPath, HttpStatusCode.InternalServerError, failure);
+        handler.Get(NewestPagePath, HttpStatusCode.InternalServerError, failure);
+        handler.Post(CheckPath, HttpStatusCode.OK, "[]");
+
+        var result = await Undo(handler);
+
+        var post = Assert.Single(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
+        Assert.Equal($"POST {CheckPath}?message=Undo transaction 5", post);
+        Assert.Contains("action: undone", result);
+        Assert.Contains("Undid transaction 5 (2025-09-30 14:22:05 UTC — (no description) — by Jane Doe):", result);
     }
 
     [Fact]
@@ -513,12 +564,16 @@ public class UndoToolsTests
         UndoTools.UndoChangeAsync(transactionId, dryRun, force, CreateClient(handler),
             TimeSpan.FromMilliseconds(1), waitLimit ?? TimeSpan.FromSeconds(5), user);
 
-    /// <summary>Transaction 5 of <see cref="AddNoteEditPerson"/> with the reads its checks and labels make.</summary>
+    /// <summary>
+    /// Transaction 5 of <see cref="AddNoteEditPerson"/> with the reads its checks and labels make; without
+    /// <paramref name="withDescription"/> it comes as Gramps Web sends a single transaction, with no description.
+    /// </summary>
     private static UndoServer AddNoteEditPersonServer(string check = NoConflicts, string noteBacklinks = "{}",
-        bool eventExists = true)
+        bool eventExists = true, bool withDescription = true)
     {
         var handler = new UndoServer();
-        handler.Get($"{HistoryPath}?old=true", AddNoteEditPerson);
+        handler.Get($"{HistoryPath}?old=true",
+            withDescription ? AddNoteEditPerson : AddNoteEditPerson.Replace("\"description\": \"Add Note\", ", ""));
         handler.Get(CheckPath, check);
         handler.Get("/api/notes/n1?keys=handle,backlinks&backlinks=true", $$"""{"handle": "n1", "backlinks": {{noteBacklinks}}}""");
         if (eventExists)
@@ -555,7 +610,9 @@ public class UndoToolsTests
 
         public List<string> Requests { get; } = [];
 
-        public void Get(string path, string body) => _routes[$"GET {path}"] = new([(HttpStatusCode.OK, body)]);
+        public void Get(string path, string body) => Get(path, HttpStatusCode.OK, body);
+
+        public void Get(string path, HttpStatusCode status, string body) => _routes[$"GET {path}"] = new([(status, body)]);
 
         /// <summary>Answers each body in turn, then repeats the last.</summary>
         public void GetSequence(string path, params string[] bodies) =>

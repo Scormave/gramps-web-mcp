@@ -173,6 +173,8 @@ public static partial class UndoTools
             $"/api/transactions/history/{transactionId}?old=true");
         if (transaction is null)
             return ($"Transaction not found: {transactionId}\n\nHint: get_recent_changes lists the latest transactions with their numbers.", null);
+        if (string.IsNullOrWhiteSpace(transaction.Description))
+            transaction.Description = await ReadDescriptionAsync(client, transactionId);
 
         var plan = await PlanAsync(client, transaction, needVersion: !force);
         if (plan.Changes.Count == 0)
@@ -186,6 +188,34 @@ public static partial class UndoTools
         if (!force && plan.DeletionNeedsForce)
             return (FormatOldServerRefusal(plan), null);
         return (null, plan);
+    }
+
+    /// <summary>
+    /// The transaction's description from the history list: the single transaction leaves it out, as its
+    /// response schema has no description. Gramps Web 3.21 and later select the transaction by its number;
+    /// earlier versions refuse those arguments, and only the newest page is read then. Null when neither has it.
+    /// </summary>
+    private static async Task<string?> ReadDescriptionAsync(GrampsApiClient client, int transactionId)
+    {
+        string[] paths =
+        [
+            $"/api/transactions/history/?page=1&pagesize=1&after_id={transactionId - 1}&before_id={transactionId + 1}",
+            "/api/transactions/history/?page=1&pagesize=10&sort=-id"
+        ];
+        foreach (var path in paths)
+        {
+            try
+            {
+                var page = await client.GetPagedListAsync<GrampsTransaction>(path);
+                return (page.Objects ?? []).FirstOrDefault(t => t.Id == transactionId)?.Description;
+            }
+            catch (GrampsApiException)
+            {
+                // Try the newest page, or leave the description out.
+            }
+        }
+
+        return null;
     }
 
     /// <summary>What the user confirmed: the records, what undoing does to each, and the conflicts forced past.</summary>
