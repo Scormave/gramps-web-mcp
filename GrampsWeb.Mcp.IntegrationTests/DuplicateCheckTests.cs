@@ -27,9 +27,9 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
 
         Assert.Equal("refused", McpSession.Header(refused, "action"));
         Assert.Equal("1", McpSession.Header(refused, "duplicates"));
-        Assert.Contains($"{stem}овъ Ивановъ, Ѳедоръ ({existing.GrampsId}) [handle: {existing.Handle}], b. 1880 — " +
+        AssertContains($"{stem}овъ Ивановъ, Ѳедоръ ({existing.GrampsId}) [handle: {existing.Handle}], b. 1880 — " +
                         "same name, born 1 year apart", refused);
-        Assert.Contains($"notDuplicateOf: [\"{existing.GrampsId}\"]", refused);
+        AssertContains($"notDuplicateOf: [\"{existing.GrampsId}\"]", refused);
         Assert.Equal(before, await LatestTransactionAsync());
 
         var created = await Session.CreateAsync("create_person", new
@@ -41,7 +41,7 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
         });
 
         Assert.Equal("created", created.Action);
-        Assert.DoesNotContain(existing.GrampsId, created.Text);
+        AssertDoesNotContain(existing.GrampsId, created.Text);
     }
 
     [IntegrationFact]
@@ -53,10 +53,10 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
         var created = await CreatePersonAsync("Anna", surname + "a", "female", "1884");
 
         Assert.Equal("created", created.Action);
-        Assert.Contains("Similar people already in the tree (1), possibly the same person:", created.Text);
-        Assert.Contains($"({existing.GrampsId}) [handle: {existing.Handle}], b. 1880 — same name, born 4 years apart",
+        AssertContains("Similar people already in the tree (1), possibly the same person:", created.Text);
+        AssertContains($"({existing.GrampsId}) [handle: {existing.Handle}], b. 1880 — same name, born 4 years apart",
             created.Text);
-        Assert.Contains($"keepHandle: \"<their handle>\", duplicateHandle: \"{created.Handle}\"", created.Text);
+        AssertContains($"keepHandle: \"<their handle>\", duplicateHandle: \"{created.Handle}\"", created.Text);
     }
 
     [IntegrationFact]
@@ -77,10 +77,10 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
         var refused = await Session.CallAsync("create_records", Records(null));
 
         Assert.Equal("refused", McpSession.Header(refused, "action"));
-        Assert.Contains("Created none of the records: the tree may already have one of the new people.", refused);
-        Assert.Contains($"({son.GrampsId}) [handle: {son.Handle}], child of {surname}, Ivan ({father.GrampsId}) — " +
+        AssertContains("Created none of the records: the tree may already have one of the new people.", refused);
+        AssertContains($"({son.GrampsId}) [handle: {son.Handle}], child of {surname}, Ivan ({father.GrampsId}) — " +
                         "same name and parents, no birth years to compare", refused);
-        Assert.Contains($"people[0] (key petr) notDuplicateOf: [\"{son.GrampsId}\"]", refused);
+        AssertContains($"people[0] (key petr) notDuplicateOf: [\"{son.GrampsId}\"]", refused);
         Assert.Equal(before, await LatestTransactionAsync());
 
         var created = await Session.CallAsync("create_records", Records([son.GrampsId]));
@@ -101,13 +101,13 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
         var pairs = await Session.CallAsync("find_duplicates", new { surname });
 
         Assert.Equal("created", namesake.Action);
-        Assert.DoesNotContain(infant.GrampsId, namesake.Text);
-        Assert.Contains("1 possible duplicate and 0 similar pairs; showing 1–1.", pairs);
-        Assert.Contains("1. Same name, born 1 year apart:", pairs);
-        Assert.Contains($"({existing.GrampsId}) [handle: {existing.Handle}], b. 1880", pairs);
-        Assert.Contains($"({twin.GrampsId}) [handle: {twin.Handle}], b. 1881", pairs);
-        Assert.DoesNotContain(infant.GrampsId, pairs);
-        Assert.DoesNotContain(namesake.GrampsId, pairs);
+        AssertDoesNotContain(infant.GrampsId, namesake.Text);
+        AssertContains("1 possible duplicate and 0 similar pairs; showing 1–1.", pairs);
+        AssertContains("1. Same name, born 1 year apart:", pairs);
+        AssertContains($"({existing.GrampsId}) [handle: {existing.Handle}], b. 1880", pairs);
+        AssertContains($"({twin.GrampsId}) [handle: {twin.Handle}], b. 1881", pairs);
+        AssertDoesNotContain(infant.GrampsId, pairs);
+        AssertDoesNotContain(namesake.GrampsId, pairs);
     }
 
     /// <summary>A person with a birth and a death in the years given, and a patronymic when given.</summary>
@@ -130,6 +130,16 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
         letters[0] = char.ToUpperInvariant(letters[0]);
         return new string(letters);
     }
+
+    /// <summary>
+    /// Assert.Contains that shows the whole reply when it fails: xUnit cuts the string to its first 40 characters,
+    /// and the reply says why the duplicate check found no one, such as a failed name search.
+    /// </summary>
+    private static void AssertContains(string expected, string reply) =>
+        Assert.True(reply.Contains(expected, StringComparison.Ordinal), $"Not found: {expected}\nin:\n{reply}");
+
+    private static void AssertDoesNotContain(string unexpected, string reply) =>
+        Assert.False(reply.Contains(unexpected, StringComparison.Ordinal), $"Found: {unexpected}\nin:\n{reply}");
 
     private async Task<int> LatestTransactionAsync()
     {
