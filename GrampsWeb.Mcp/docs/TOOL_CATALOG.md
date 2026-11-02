@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 34 MCP tools exposed by the server.
+Complete catalog of up to 35 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -26,6 +26,7 @@ tree, and a Gramps ID such as `I0012` works as well.
 | "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source or `create_source`, then `create_citation` and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
 | "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `create_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
 | "Add today's findings to my research note." | `update_note` with `appendText` | The note extended at the end, its earlier text, styling and links untouched |
+| "Is anyone in the tree entered twice?" | `find_duplicates`, then `get_object` for both people of a pair | The pairs with the same name in any spelling, possible duplicates first, each person with birth, death and parents |
 | "I0042 and I0107 are the same Anna Petrova. Merge them." | `get_object` for both, then `merge_objects` once you confirm | One person with the events, families, citations and notes of both, the other name kept as an alternate name, which one `undo_change` takes back |
 | "What changed today? Undo the last edit." | `get_recent_changes`, then `undo_change` once you confirm | The edit history, then the earlier versions back, or a refusal naming the later edits the undo would overwrite |
 
@@ -343,6 +344,56 @@ the records that will keep a link to it. A user who says no gets
 
 ---
 
+## Duplicates (`DuplicateTools.cs`) — 1 tool
+
+### R — `FindDuplicates`
+Find people entered twice across the whole tree. It reads every person with
+their profile (`GET /api/people/?profile=self`, 500 per request, up to 20000
+people), pairs the people where the first word of one's given name is a word
+of the other's, and compares each pair with the rule of the [duplicate check
+of `create_person`](#c--createperson): names compare across spellings and the
+male and female forms of a surname, alternate names count, and a pair of the
+other gender, with other patronymics, born or dead more than five years apart,
+or where one died before the other was born, is not the same person.
+
+People recorded with a patronymic but no surname, as in many Russian
+registers, pair by given name and patronymic instead, and only when their
+birth years or parents can be compared. Spouses, and a person and their
+parent, grandparent or earlier ancestor, are never paired: Gramps refuses to
+merge spouses or a parent with their child, and a namesake grandfather is
+someone else. People without a given name, or with neither a surname nor a
+patronymic, are left out and counted. Reading is most of the time: the 4700
+people of demo.grampsweb.org take 13 to 20 seconds.
+
+| Pair | Listed as |
+|------|-----------|
+| Born up to two years apart, or children of the same parents when either year is missing | Possible duplicate |
+| Born three to five years apart, or either year missing | Similar pair |
+
+Possible duplicates come first, then pairs by how close the births are. Pairs
+are numbered across pages; `limit` and `offset` step through them. Each person
+shows the Gramps ID, handle, birth, death and parents, and the next steps name
+`get_object` for the first pair and `merge_objects`, which needs the user's
+confirmation. Nothing in the tree changes. Gramps keeps no record that two
+people are not the same, so a pair the user rejected is listed again; children
+given the name of an earlier child who died show up when the tree has no death
+date for the first.
+
+```text
+find_duplicates()
+find_duplicates(surname: "Kowalski")
+find_duplicates(personHandle: "I0012")
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `personHandle` | `string?` | no | — | Only pairs with this person; handle or Gramps ID |
+| `surname` | `string?` | no | — | Only pairs where one of the people has this surname, in any spelling or form |
+| `limit` | `int` | no | `20` | Pairs to show, 1–100 |
+| `offset` | `int` | no | `0` | Pairs to skip |
+
+---
+
 ## Merge (`MergeTools.cs`) — 1 tool
 
 ### U — `MergeObjects`
@@ -522,11 +573,15 @@ and children, so a person joins a family through the family's `fatherHandle`,
 Before creating, it looks for the same person in the tree with Gramps Web's
 `RegExpName` rule. Names compare across spellings: case, ё and ѣ, і and ѵ, ѳ,
 Latin accents, a final ъ, doubled letters, -ия and -ья, -ий and -ей, and the
-male and female forms of a surname (Пугин and Пугина, Вознесенский and
-Вознесенская, Kowalski and Kowalska). Alternate names count on both sides. A
-namesake of the other gender, or with another patronymic, is not the same
-person. The birth year is the birth's, else the first baptism's or
-christening's in the Primary role.
+male and female forms of a surname (Kowalski and Kowalska; -ов and -ова, -ин
+and -ина, -ский and -ская, -ой and -ая). Alternate names count on both sides.
+Given names are the same when the first word of one is a word of the other:
+Мария and Анна Мария, but not Иван Петрович and Петр Петрович, or Robert de
+and Gilbert de. A namesake of the other gender, with another patronymic, or
+who died before the new person's birth year, is not the same person. The birth
+year is the birth's, else the first baptism's or christening's in the Primary
+role; the death year is the death's, else a burial's or cremation's.
+`find_duplicates` compares the people already in the tree the same way.
 
 | Namesake | Result |
 |----------|--------|
@@ -1148,18 +1203,19 @@ undo_change(transactionId: 412)
 | Tag | 0 | 1 | 1 | 0 | 2 |
 | RecordBatch | 0 | 1 | 0 | 0 | 1 |
 | Object | 1 | 0 | 0 | 1 | 2 |
+| Duplicate | 1 | 0 | 0 | 0 | 1 |
 | Merge | 0 | 0 | 1 | 0 | 1 |
 | Search | 2 | 0 | 0 | 0 | 2 |
 | System | 2 | 0 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
 | Undo | 0 | 0 | 1 | 0 | 1 |
-| **Total with media access and upload enabled** | **10** | **11** | **12** | **1** | **34** |
+| **Total with media access and upload enabled** | **11** | **11** | **12** | **1** | **35** |
 
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
-`create_media` are hidden: the default catalog contains 32 tools in read/write
+`create_media` are hidden: the default catalog contains 33 tools in read/write
 mode. With media access enabled, `create_media` also needs
-`GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 10 tools
-with media access enabled, or 9 with it disabled.
+`GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 11 tools
+with media access enabled, or 10 with it disabled.
 
 ## Prerequisites for write tools
 

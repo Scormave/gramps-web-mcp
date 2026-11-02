@@ -218,15 +218,15 @@ public class RecordBatchToolsTests
     [Fact]
     public async Task CreateRecords_Saves_None_Of_The_Records_When_A_New_Person_May_Already_Be_In_The_Tree()
     {
-        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Пугин", 1, birth: "1881")}]" };
+        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1881")}]" };
 
         var result = await CreateRecords(Ivan(birth: "1880"), handler);
 
         Assert.Empty(handler.Posts);
         Assert.StartsWith("---\ntype: Transaction\naction: refused\nduplicates: 1\n---\n", result);
         Assert.Contains("Created none of the records: the tree may already have one of the new people.", result);
-        Assert.Contains("people[0] (key ivan), Иван Пугин:\n  Possible duplicates (1):\n" +
-                        "    • Пугин, Иван (I0012) [handle: h-ivan], b. 1881 — same name, born 1 year apart", result);
+        Assert.Contains("people[0] (key ivan), Иван Образцов:\n  Possible duplicates (1):\n" +
+                        "    • Образцов, Иван (I0012) [handle: h-ivan], b. 1881 — same name, born 1 year apart", result);
         Assert.Contains("people[0] (key ivan) notDuplicateOf: [\"I0012\"]", result);
     }
 
@@ -235,7 +235,7 @@ public class RecordBatchToolsTests
     {
         var handler = new TreeHandler
         {
-            People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Пугин", 1, fatherHandle: "h-petr")}]"
+            People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Образцов", 1, fatherHandle: "h-petr")}]"
         };
 
         var result = await CreateRecords(Ivan(families: """[{ "fatherHandle": "h-petr", "childRefs": ["#ivan"] }]"""), handler);
@@ -247,22 +247,22 @@ public class RecordBatchToolsTests
     [Fact]
     public async Task CreateRecords_Saves_The_Records_And_Lists_Similar_People()
     {
-        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Пугин", 1, birth: "1884")}]" };
+        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1884")}]" };
 
         var result = await CreateRecords(Ivan(birth: "1880"), handler);
 
         var person = handler.Body!.AsArray().Single(o => o!["_class"]!.GetValue<string>() == "Person")!;
         Assert.Equal(["/api/objects/"], handler.Posts);
         Assert.Contains("Similar people already in the tree, possibly the same as a new person:\n" +
-                        $"  people[0] (key ivan), Иван Пугин — handle: {person["handle"]!.GetValue<string>()} (1):\n" +
-                        "    • Пугин, Иван (I0012) [handle: h-ivan], b. 1884 — same name, born 4 years apart", result);
+                        $"  people[0] (key ivan), Иван Образцов — handle: {person["handle"]!.GetValue<string>()} (1):\n" +
+                        "    • Образцов, Иван (I0012) [handle: h-ivan], b. 1884 — same name, born 4 years apart", result);
         Assert.Contains("merge_objects(objectType: \"person\"", result);
     }
 
     [Fact]
     public async Task CreateRecords_Passes_Over_The_People_In_NotDuplicateOf()
     {
-        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Пугин", 1, birth: "1880")}]" };
+        var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1880")}]" };
 
         var result = await CreateRecords(Ivan(birth: "1880", notDuplicateOf: """["i0012"]"""), handler);
 
@@ -314,7 +314,7 @@ public class RecordBatchToolsTests
         Assert.Contains(ToolDescriptionFragments.BatchCreate, description);
     }
 
-    /// <summary>create_records arguments for Иван Пугин (key ivan), born in <paramref name="birth"/> if given.</summary>
+    /// <summary>create_records arguments for Иван Образцов (key ivan), born in <paramref name="birth"/> if given.</summary>
     private static string Ivan(string? birth = null, string? notDuplicateOf = null, string families = "[]")
     {
         var events = birth == null ? "[]" : $$"""[{ "key": "birth", "eventType": "Birth", "date": "{{birth}}" }]""";
@@ -322,7 +322,7 @@ public class RecordBatchToolsTests
         return $$"""
             {
               "events": {{events}},
-              "people": [{ "key": "ivan", "primaryName": { "given": "Иван", "surname": "Пугин" }, "gender": "Male",
+              "people": [{ "key": "ivan", "primaryName": { "given": "Иван", "surname": "Образцов" }, "gender": "Male",
                            "eventRefs": {{eventRefs}}, "notDuplicateOf": {{notDuplicateOf ?? "null"}} }],
               "families": {{families}}
             }

@@ -24,6 +24,7 @@ public class GrampsServerInstructionsTests
         var text = GrampsServerInstructions.For(Config(readOnly: true, mediaResourcesEnabled: false));
 
         Assert.Contains("This server is read-only", text);
+        Assert.Contains("find_duplicates", text);
         Assert.DoesNotContain("Changing the tree:", text);
         Assert.DoesNotContain("delete_object", text);
     }

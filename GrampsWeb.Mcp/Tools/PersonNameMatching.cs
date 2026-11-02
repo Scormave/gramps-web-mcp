@@ -8,7 +8,7 @@ namespace GrampsWeb.Mcp.Tools;
 /// <summary>
 /// The name comparison of the duplicate check. Names are folded so that spellings of one name compare equal
 /// (ё and pre-reform letters, Latin accents, doubled letters, Мария and Марья, Дмитрий and Дмитрей), surnames
-/// are cut to the stem the male and female forms share (Пугин and Пугина, Kowalski and Kowalska), and
+/// are cut to the stem the male and female forms share (Образцов and Образцова, Kowalski and Kowalska), and
 /// patronymics to the father's name (Петрович, Петровна and the old Петров). The same rules give the Python
 /// regular expressions Gramps Web's RegExpName filter rule takes, so the server returns the candidates.
 /// </summary>
@@ -68,8 +68,8 @@ internal static class PersonNameMatching
     };
 
     /// <summary>
-    /// The stem of a surname, shared by its male and female forms: Пугин for Пугин and Пугина, Вознесенск for
-    /// Вознесенский and Вознесенская, Толст for Толстой and Толстая, Kowalsk for Kowalski and Kowalska. Null when
+    /// The stem of a surname, shared by its male and female forms: Образцов for Образцов and Образцова, Дубровск for
+    /// Дубровский and Дубровская, Толст for Толстой and Толстая, Kowalsk for Kowalski and Kowalska. Null when
     /// less than two letters are left.
     /// </summary>
     internal static string? SurnameStem(string? surname)
@@ -120,8 +120,8 @@ internal static class PersonNameMatching
 
     /// <summary>
     /// A Python regular expression for RegExpName matching a word that begins with one of the stems, in any
-    /// spelling that folds to it, with up to three more letters: Пугин, Пугина, Пугинъ. A word, not the whole
-    /// field: RegExpName matches the surnames of a name joined into one text with their prefixes, so Пугинъ
+    /// spelling that folds to it, with up to three more letters: Образцов, Образцова, Образцовъ. A word, not the whole
+    /// field: RegExpName matches the surnames of a name joined into one text with their prefixes, so Образцовъ
     /// Ивановъ for a surname with a patronymic.
     /// </summary>
     internal static string SurnamePattern(IEnumerable<string> stems) =>
@@ -189,12 +189,19 @@ internal static class PersonNameMatching
         && (origin.Equals("Patronymic", StringComparison.OrdinalIgnoreCase) || origin == "5"
             || !patronymicOnly && (origin.Equals("Matronymic", StringComparison.OrdinalIgnoreCase) || origin == "6"));
 
-    /// <summary>The parts of a person's names the duplicate check compares, over all names.</summary>
+    /// <summary>
+    /// The parts of a person's names the duplicate check compares, over all names; <paramref name="FirstGiven"/>
+    /// holds the first word of each given name.
+    /// </summary>
     internal sealed record NameKeys(
-        IReadOnlySet<string> Given, IReadOnlySet<string> SurnameStems, IReadOnlySet<string> PatronymicRoots)
+        IReadOnlySet<string> Given, IReadOnlySet<string> FirstGiven, IReadOnlySet<string> SurnameStems,
+        IReadOnlySet<string> PatronymicRoots)
     {
-        /// <summary>The same given name and the same surname, in any of the names.</summary>
-        public bool SameName(NameKeys other) => Given.Overlaps(other.Given) && SurnameStems.Overlaps(other.SurnameStems);
+        /// <summary>
+        /// The first word of one's given name is a word of the other's: Мария and Анна Мария, but not Robert de and
+        /// Gilbert de, or Иван Петрович and Петр Петрович.
+        /// </summary>
+        public bool SameGivenName(NameKeys other) => FirstGiven.Overlaps(other.Given) || other.FirstGiven.Overlaps(Given);
 
         /// <summary>Both have patronymics, and no father's name is the same.</summary>
         public bool OtherPatronymic(NameKeys other) =>
@@ -213,11 +220,15 @@ internal static class PersonNameMatching
         IEnumerable<(string? FirstName, IEnumerable<(string? Surname, string? OriginType)> Surnames)> names)
     {
         var given = new HashSet<string>(StringComparer.Ordinal);
+        var first = new HashSet<string>(StringComparer.Ordinal);
         var stems = new HashSet<string>(StringComparer.Ordinal);
         var roots = new HashSet<string>(StringComparer.Ordinal);
         foreach (var (firstName, surnames) in names)
         {
-            given.UnionWith(GivenTokens(firstName));
+            var tokens = GivenTokens(firstName).ToList();
+            given.UnionWith(tokens);
+            if (tokens.Count > 0)
+                first.Add(tokens[0]);
             foreach (var (surname, originType) in surnames)
             {
                 if (string.IsNullOrWhiteSpace(surname))
@@ -234,6 +245,6 @@ internal static class PersonNameMatching
             }
         }
 
-        return new NameKeys(given, stems, roots);
+        return new NameKeys(given, first, stems, roots);
     }
 }

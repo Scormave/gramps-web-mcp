@@ -25,14 +25,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `create_person` and `create_records` check the tree for the new
   person first. Names compare across spellings: old letters (ѣ, і, ѵ,
   ѳ, a final ъ), ё, doubled letters, -ия and -ья, Latin accents, and the
-  male and female forms of a surname. A namesake of the same gender and
+  male and female forms of a surname. Given names are the same when the
+  first word of one is a word of the other: Мария and Анна Мария, but
+  not Иван Петрович and Петр Петрович. A namesake of the same gender and
   patronymic born up to two years apart, or a child of the same parents
   when there are no two years to compare, stops the call with `action:
   refused` and the possible duplicates; `create_records` then saves
   none of its records. `notDuplicateOf` names the people who are someone
   else and lets the person through. Namesakes born up to five years
   apart, or without a year, are listed after creating, with a
-  `merge_objects` hint for the new person
+  `merge_objects` hint for the new person. A namesake who died before
+  the new person's birth year is someone else.
+- `find_duplicates`: list the people entered twice across the whole
+  tree, with the comparison of the create check; namesakes who died
+  more than five years apart are someone else. People with a
+  patronymic but no surname pair by given name and patronymic when
+  their birth years or parents can be compared; spouses, and a person
+  and their parent, grandparent or earlier ancestor, are never paired.
+  Possible duplicates come first, each person with birth, death and
+  parents, and the reply names `get_object` and `merge_objects` as the
+  next steps. `personHandle` and `surname` narrow the pairs; `limit`
+  and `offset` page through them. It reads up to 20000 people, 500 per
+  request, and changes nothing.
 
 ### Changed
 

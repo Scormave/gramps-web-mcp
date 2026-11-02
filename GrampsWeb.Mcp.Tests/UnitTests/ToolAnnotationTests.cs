@@ -27,13 +27,14 @@ public class ToolAnnotationTests
                 Assert.False(attr.Destructive, $"Read-only tool {method.Name} must not be destructive");
         }
 
-        Assert.Equal(34, toolMethods.Count);
+        Assert.Equal(35, toolMethods.Count);
         Assert.Single(toolMethods, method => method.Name == "ReadMedia");
         Assert.Single(toolMethods, method => method.Name == "CreateMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
         Assert.Single(toolMethods, method => method.Name == "DeleteObject");
         Assert.Single(toolMethods, method => method.Name == "UndoChange");
         Assert.Single(toolMethods, method => method.Name == "MergeObjects");
+        Assert.Single(toolMethods, method => method.Name == "FindDuplicates");
         Assert.Single(toolMethods, method => method.Name == "CreateRecords");
         Assert.Single(toolMethods, method => method.Name == "GetObject");
         Assert.Single(toolMethods, method => method.Name == "GetReference");

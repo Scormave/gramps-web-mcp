@@ -16,6 +16,7 @@ internal static class GrampsServerInstructions
         - With a name or other text, start with search; to browse or filter one type, use list_objects. Read one record with get_object.
         - Gramps IDs show the type by prefix: I person, F family, E event, P place, S source, C citation, R repository, N note, O media, T tag. Arguments that take one record accept a Gramps ID or a handle; link lists (…Handles, …Refs) take handles.
         - Kinship: get_person_tree for ancestors or descendants, get_relations for how two people are related, get_timeline for the dated events around a person, family or place; list_objects with rules selects by kinship across the tree, such as everyone related to a person or people with no family links.
+        - find_duplicates lists people who may be entered twice, across spellings and the male and female forms of their names.
         - Report what the tree records, and say so when something is not recorded instead of guessing.
         """;
 
@@ -37,7 +38,7 @@ internal static class GrampsServerInstructions
         - update_* tools change only the arguments passed. Link lists follow linkMode, and replace (the default) overwrites every link of that kind, so use add or remove to change one link.
         - Argument formats (dates, names, structured fields) and valid types: get_reference.
         - Use delete_object only after the user confirmed that exact record, and force past backlinks only after a separate confirmation.
-        - When two records describe the same person, family, event, place or other record, merge_objects joins the duplicate into the record to keep, only after the user confirmed both: links move to the kept record, the duplicate is deleted, and undo_change reverts the merge.
+        - When two records describe the same person, family, event, place or other record, merge_objects joins the duplicate into the record to keep (find_duplicates finds such people), only after the user confirmed both: links move to the kept record, the duplicate is deleted, and undo_change reverts the merge.
         - undo_change reverts one transaction from get_recent_changes, deletions included: only after the user confirmed it, newest first, and force past conflicts only after a separate confirmation.
         """;
 

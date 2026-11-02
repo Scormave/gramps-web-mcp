@@ -22,7 +22,7 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 public class DuplicatePeopleTests
 {
     [Theory]
-    [InlineData("Пугинъ", false, "пугин")]
+    [InlineData("Образцовъ", false, "образцов")]
     [InlineData("Алёна", false, "алена")]
     [InlineData("Ѳеодоръ", false, "феодор")]
     [InlineData("Аввакум", false, "авакум")]
@@ -35,11 +35,11 @@ public class DuplicatePeopleTests
         Assert.Equal(expected, PersonNameMatching.Fold(text, givenName));
 
     [Theory]
-    [InlineData("Пугин", "пугин")]
-    [InlineData("Пугина", "пугин")]
+    [InlineData("Образцов", "образцов")]
+    [InlineData("Образцова", "образцов")]
     [InlineData("Иванова", "иванов")]
-    [InlineData("Вознесенский", "вознесенск")]
-    [InlineData("Вознесенская", "вознесенск")]
+    [InlineData("Дубровский", "дубровск")]
+    [InlineData("Дубровская", "дубровск")]
     [InlineData("Толстой", "толст")]
     [InlineData("Толстая", "толст")]
     [InlineData("Kowalski", "kowalsk")]
@@ -59,17 +59,17 @@ public class DuplicatePeopleTests
         Assert.Equal(expected, PersonNameMatching.PatronymicRoot(patronymic));
 
     [Theory]
-    [InlineData("Пугин", true)]
-    [InlineData("ПУГИНА", true)]
-    [InlineData("Пугинъ", true)]
-    [InlineData("Пуггина", true)]
-    [InlineData("Пугинъ Ивановъ", true)]
-    [InlineData("de Пугин", true)]
-    [InlineData("Пугинский", false)]
-    [InlineData("Пугинский Иванов", false)]
-    [InlineData("Спугин", false)]
+    [InlineData("Образцов", true)]
+    [InlineData("ОБРАЗЦОВА", true)]
+    [InlineData("Образцовъ", true)]
+    [InlineData("Обрразцова", true)]
+    [InlineData("Образцовъ Ивановъ", true)]
+    [InlineData("de Образцов", true)]
+    [InlineData("Образцовский", false)]
+    [InlineData("Образцовский Иванов", false)]
+    [InlineData("Собразцов", false)]
     public void SurnamePattern_Matches_Forms_Of_The_Stem(string surname, bool matches) =>
-        Assert.Equal(matches, Matches(PersonNameMatching.SurnamePattern(["пугин"]), surname));
+        Assert.Equal(matches, Matches(PersonNameMatching.SurnamePattern(["образцов"]), surname));
 
     [Theory]
     [InlineData("Мария", true)]
@@ -83,7 +83,7 @@ public class DuplicatePeopleTests
     [Fact]
     public void SearchPath_Selects_By_Surname_And_Given_Name_In_One_Request()
     {
-        var path = DuplicatePeople.SearchPath(Keys("""{ "given": "Иван", "surname": "Пугин", "patronymic": "Петрович" }"""));
+        var path = DuplicatePeople.SearchPath(Keys("""{ "given": "Иван", "surname": "Образцов", "patronymic": "Петрович" }"""));
 
         Assert.NotNull(path);
         Assert.StartsWith("/api/people/?rules=", path);
@@ -93,7 +93,7 @@ public class DuplicatePeopleTests
         Assert.Equal("and", rules["function"]!.GetValue<string>());
         Assert.Equal(["RegExpName", "RegExpName"], rules["rules"]!.AsArray().Select(r => r!["name"]!.GetValue<string>()));
         var patterns = rules["rules"]!.AsArray().Select(r => r!["values"]![0]!.GetValue<string>()).ToList();
-        Assert.True(Matches(patterns[0], "Пугина"));
+        Assert.True(Matches(patterns[0], "Образцова"));
         Assert.True(Matches(patterns[1], "Анна Иван"));
     }
 
@@ -101,36 +101,36 @@ public class DuplicatePeopleTests
     public void SearchPath_Drops_The_Given_Name_When_The_Rules_Get_Too_Long()
     {
         var given = "абвг".Select(c => new string('е', 30) + c).ToHashSet();
-        var names = new PersonNameMatching.NameKeys(given, new HashSet<string> { "пугин" }, new HashSet<string>());
+        var names = new PersonNameMatching.NameKeys(given, given, new HashSet<string> { "образцов" }, new HashSet<string>());
 
         var path = DuplicatePeople.SearchPath(names);
 
         Assert.NotNull(path);
         var rules = Rules(path)["rules"]!.AsArray();
         Assert.Single(rules);
-        Assert.True(Matches(rules[0]!["values"]![0]!.GetValue<string>(), "Пугин"));
+        Assert.True(Matches(rules[0]!["values"]![0]!.GetValue<string>(), "Образцов"));
     }
 
     [Theory]
     [InlineData("""{ "given": "Иван" }""")]
-    [InlineData("""{ "surname": "Пугин" }""")]
+    [InlineData("""{ "surname": "Образцов" }""")]
     public void SearchPath_Needs_A_Surname_And_A_Given_Name(string name) =>
         Assert.Null(DuplicatePeople.SearchPath(Keys(name)));
 
     [Fact]
     public void Classify_Sorts_Namesakes_Into_Strong_And_Weak_And_Drops_The_Others()
     {
-        var person = NewPerson("""{ "given": "Иван", "surname": "Пугин", "patronymic": "Петрович" }""", gender: 1,
+        var person = NewPerson("""{ "given": "Иван", "surname": "Образцов", "patronymic": "Петрович" }""", gender: 1,
             birthYear: 1880);
         var people = People(
-            Person("h-same-year", "I0001", "Іван", "Пугинъ", 1, birth: "1880"),
-            Person("h-two-years", "I0002", "Иван", "Пугин", 1, birth: "1882-03-01", patronymic: "Петров"),
-            Person("h-four-years", "I0003", "Иван", "Пугин", 2, birth: "1876"),
-            Person("h-no-year", "I0004", "Иван", "Пугин", 1),
-            Person("h-six-years", "I0005", "Иван", "Пугин", 1, birth: "1886"),
-            Person("h-woman", "I0006", "Иван", "Пугина", 0, birth: "1880"),
-            Person("h-other-father", "I0007", "Иван", "Пугин", 1, birth: "1880", patronymic: "Николаевич"),
-            Person("h-other-name", "I0008", "Петр", "Пугин", 1, birth: "1880"));
+            Person("h-same-year", "I0001", "Іван", "Образцовъ", 1, birth: "1880"),
+            Person("h-two-years", "I0002", "Иван", "Образцов", 1, birth: "1882-03-01", patronymic: "Петров"),
+            Person("h-four-years", "I0003", "Иван", "Образцов", 2, birth: "1876"),
+            Person("h-no-year", "I0004", "Иван", "Образцов", 1),
+            Person("h-six-years", "I0005", "Иван", "Образцов", 1, birth: "1886"),
+            Person("h-woman", "I0006", "Иван", "Образцова", 0, birth: "1880"),
+            Person("h-other-father", "I0007", "Иван", "Образцов", 1, birth: "1880", patronymic: "Николаевич"),
+            Person("h-other-name", "I0008", "Петр", "Образцов", 1, birth: "1880"));
 
         var candidates = DuplicatePeople.Classify(person, people);
 
@@ -147,10 +147,10 @@ public class DuplicatePeopleTests
     [Fact]
     public void Classify_Makes_A_Child_Of_The_Same_Parents_Without_Years_A_Strong_Match()
     {
-        var person = NewPerson("""{ "given": "Анна", "surname": "Пугина" }""", gender: 0, parents: ["h-father"]);
+        var person = NewPerson("""{ "given": "Анна", "surname": "Образцова" }""", gender: 0, parents: ["h-father"]);
         var people = People(
-            Person("h-sister", "I0001", "Анна", "Пугина", 0, fatherHandle: "h-father"),
-            Person("h-namesake", "I0002", "Анна", "Пугина", 0, fatherHandle: "h-someone"));
+            Person("h-sister", "I0001", "Анна", "Образцова", 0, fatherHandle: "h-father"),
+            Person("h-namesake", "I0002", "Анна", "Образцова", 0, fatherHandle: "h-someone"));
 
         var candidates = DuplicatePeople.Classify(person, people);
 
@@ -162,22 +162,72 @@ public class DuplicatePeopleTests
     [Fact]
     public void Classify_Passes_Over_People_Named_In_NotDuplicateOf()
     {
-        var person = NewPerson("""{ "given": "Иван", "surname": "Пугин" }""", gender: 1, birthYear: 1880,
+        var person = NewPerson("""{ "given": "Иван", "surname": "Образцов" }""", gender: 1, birthYear: 1880,
             notDuplicateOf: ["i0001", "h-two"]);
         var people = People(
-            Person("h-one", "I0001", "Иван", "Пугин", 1, birth: "1880"),
-            Person("h-two", "I0002", "Иван", "Пугин", 1, birth: "1880"),
-            Person("h-three", "I0003", "Иван", "Пугин", 1, birth: "1880"));
+            Person("h-one", "I0001", "Иван", "Образцов", 1, birth: "1880"),
+            Person("h-two", "I0002", "Иван", "Образцов", 1, birth: "1880"),
+            Person("h-three", "I0003", "Иван", "Образцов", 1, birth: "1880"));
 
         Assert.Equal(["h-three"], DuplicatePeople.Classify(person, people).Select(c => c.Person.Handle));
+    }
+
+    [Theory]
+    [InlineData("Мария", "Анна Мария", true)]
+    [InlineData("Анна Мария", "Мария Анна", true)]
+    [InlineData("Іоаннъ", "Иоанн", true)]
+    [InlineData("Robert de", "Gilbert de", false)]
+    [InlineData("Walter (Master of)", "John (Sir; of That Ilk)", false)]
+    [InlineData("Иван Петрович", "Петр Петрович", false)]
+    public void Compare_Needs_The_First_Word_Of_One_Given_Name_In_The_Other(string first, string second, bool matches)
+    {
+        var match = DuplicatePeople.Compare(
+            new DuplicatePeople.Side(Keys($$"""{ "given": "{{first}}", "surname": "Образцов" }"""), 1, 1880, null),
+            new DuplicatePeople.Side(Keys($$"""{ "given": "{{second}}", "surname": "Образцов" }"""), 1, 1880, null),
+            sameParents: false);
+
+        Assert.Equal(matches, match != null);
+    }
+
+    [Theory]
+    [InlineData(1880, 1881, 1882, null, false)]
+    [InlineData(1882, null, 1880, 1881, false)]
+    [InlineData(1880, 1883, 1882, null, true)]
+    [InlineData(1880, 1881, null, null, true)]
+    [InlineData(1880, null, 1882, null, true)]
+    public void Compare_Passes_Over_A_Namesake_Who_Died_Before_The_Other_Was_Born(int? firstBirth, int? firstDeath,
+        int? secondBirth, int? secondDeath, bool matches)
+    {
+        var names = Keys("""{ "given": "Иван", "surname": "Образцов" }""");
+
+        var match = DuplicatePeople.Compare(new DuplicatePeople.Side(names, 1, firstBirth, firstDeath),
+            new DuplicatePeople.Side(names, 1, secondBirth, secondDeath), sameParents: true);
+
+        Assert.Equal(matches, match != null);
+    }
+
+    [Theory]
+    [InlineData(1880, 1920, 1881, 1926, false)]
+    [InlineData(null, 1555, null, 1581, false)]
+    [InlineData(1880, 1920, 1881, 1925, true)]
+    [InlineData(1880, 1920, 1881, null, true)]
+    public void Compare_Passes_Over_Namesakes_Who_Died_More_Than_Five_Years_Apart(int? firstBirth, int? firstDeath,
+        int? secondBirth, int? secondDeath, bool matches)
+    {
+        var names = Keys("""{ "given": "Иван", "surname": "Образцов" }""");
+
+        var match = DuplicatePeople.Compare(new DuplicatePeople.Side(names, 1, firstBirth, firstDeath),
+            new DuplicatePeople.Side(names, 1, secondBirth, secondDeath), sameParents: true);
+
+        Assert.Equal(matches, match != null);
     }
 
     [Fact]
     public async Task CreatePerson_Refuses_A_Strong_Match_And_Saves_Nothing()
     {
         var handler = new TreeHandler(PeopleJson(
-            Person("h-ivan", "I0012", "Иван", "Пугин", 1, birth: "1881", fatherHandle: "h-petr"),
-            Person("h-namesake", "I0013", "Иван", "Пугин", 1)));
+            Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1881", fatherHandle: "h-petr"),
+            Person("h-namesake", "I0013", "Иван", "Образцов", 1)));
 
         var result = await CreateIvan(handler);
 
@@ -185,9 +235,9 @@ public class DuplicatePeopleTests
         Assert.StartsWith("---\ntype: Person\naction: refused\nname: \"Иван ", result.ReplaceLineEndings("\n"));
         Assert.Contains("\nduplicates: 1\n---\n", result.ReplaceLineEndings("\n"));
         Assert.Matches(@"Did not create Иван \S+ \S+: the tree may already have this person\.", result);
-        Assert.Contains("Possible duplicates (1):\n  • Пугин, Иван (I0012) [handle: h-ivan], b. 1881, " +
-                        "child of Пугин, Петр (I0100) — same name, born 1 year apart\n", result.ReplaceLineEndings("\n"));
-        Assert.Contains("Similar people (1):\n  • Пугин, Иван (I0013) [handle: h-namesake]", result.ReplaceLineEndings("\n"));
+        Assert.Contains("Possible duplicates (1):\n  • Образцов, Иван (I0012) [handle: h-ivan], b. 1881, " +
+                        "child of Образцов, Петр (I0100) — same name, born 1 year apart\n", result.ReplaceLineEndings("\n"));
+        Assert.Contains("Similar people (1):\n  • Образцов, Иван (I0013) [handle: h-namesake]", result.ReplaceLineEndings("\n"));
         Assert.Contains("get_object(objectType: \"person\", identifier: \"I0012\", extended: true)", result);
         Assert.Contains("notDuplicateOf: [\"I0012\"]", result);
     }
@@ -196,15 +246,15 @@ public class DuplicatePeopleTests
     public async Task CreatePerson_With_NotDuplicateOf_Creates_And_Lists_The_Others()
     {
         var handler = new TreeHandler(PeopleJson(
-            Person("h-ivan", "I0012", "Иван", "Пугин", 1, birth: "1881"),
-            Person("h-namesake", "I0013", "Иван", "Пугин", 1)));
+            Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1881"),
+            Person("h-namesake", "I0013", "Иван", "Образцов", 1)));
 
         var result = await CreateIvan(handler, notDuplicateOf: """["I0012"]""");
 
         Assert.Equal(["/api/people/"], handler.Posts);
         Assert.Contains("action: created", result);
         Assert.Contains("Similar people already in the tree (1), possibly the same person:\n" +
-                        "  • Пугин, Иван (I0013) [handle: h-namesake] — same name, no birth years to compare\n",
+                        "  • Образцов, Иван (I0013) [handle: h-namesake] — same name, no birth years to compare\n",
             result.ReplaceLineEndings("\n"));
         Assert.Contains("merge_objects(objectType: \"person\", keepHandle: \"<their handle>\", duplicateHandle: \"h-new\")", result);
         Assert.DoesNotContain("h-ivan", result);
@@ -238,7 +288,7 @@ public class DuplicatePeopleTests
     [Fact]
     public async Task CreatePerson_Says_When_More_People_Matched_Than_Were_Compared()
     {
-        var handler = new TreeHandler(PeopleJson(Person("h-other", "I0012", "Иван", "Пугин", 1, birth: "1870")), total: 240);
+        var handler = new TreeHandler(PeopleJson(Person("h-other", "I0012", "Иван", "Образцов", 1, birth: "1870")), total: 240);
 
         var result = await CreateIvan(handler);
 
@@ -247,11 +297,11 @@ public class DuplicatePeopleTests
                         "search the tree for the others.", result);
     }
 
-    /// <summary>create_person for Иван Петрович Пугин, born 1880.</summary>
+    /// <summary>create_person for Иван Петрович Образцов, born 1880.</summary>
     private static Task<string> CreateIvan(TreeHandler handler, string? notDuplicateOf = null) =>
         PersonTools.CreatePerson(
             JsonSerializer.Deserialize<FlexibleGrampsName>(
-                """{ "given": "Иван", "surname": "Пугин", "patronymic": "Петрович" }""")!,
+                """{ "given": "Иван", "surname": "Образцов", "patronymic": "Петрович" }""")!,
             gender: "Male",
             eventRefs: JsonSerializer.Deserialize<FlexibleEventRefList>("""["e-birth"]"""),
             notDuplicateOf: notDuplicateOf == null ? null : JsonSerializer.Deserialize<FlexibleHandleList>(notDuplicateOf),
@@ -297,7 +347,7 @@ public class DuplicatePeopleTests
             profile["primary_parent_family"] = new JsonObject
             {
                 ["handle"] = $"f-{fatherHandle}",
-                ["father"] = new JsonObject { ["handle"] = fatherHandle, ["gramps_id"] = "I0100", ["name_display"] = "Пугин, Петр" }
+                ["father"] = new JsonObject { ["handle"] = fatherHandle, ["gramps_id"] = "I0100", ["name_display"] = "Образцов, Петр" }
             };
         return new JsonObject
         {

@@ -31,7 +31,7 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
 
 ## Features
 
-- **Up to 34 MCP tools** — read, create, update, merge, and delete people,
+- **Up to 35 MCP tools** — read, create, update, merge, and delete people,
   families, events, places, sources, citations, notes, media, repositories,
   and tags
 - **Search and kinship** — full-text search, listings filtered by Gramps QL or
@@ -39,6 +39,9 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
 - **Careful edits** — add or remove one link with `linkMode` and keep the
   rest; save a whole register entry in one transaction with `create_records`;
   dates in every Gramps form and calendar
+- **Duplicates** — `find_duplicates` pairs people entered twice, across
+  spellings and name forms, and the create tools refuse a person the tree
+  already has
 - **Undo and confirmation** — `undo_change` reverts one transaction of the
   edit history; it and `delete_object` ask the user, not the model, before
   they change the tree, in clients that support MCP elicitation

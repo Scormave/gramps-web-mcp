@@ -4,8 +4,8 @@ using Xunit;
 namespace GrampsWeb.Mcp.IntegrationTests;
 
 /// <summary>
-/// The duplicate check of create_person and create_records against a real Gramps Web: its name search runs as
-/// regular expressions on the server.
+/// The duplicate check of create_person and create_records against a real Gramps Web, where its name search runs
+/// as regular expressions on the server, and find_duplicates over the whole tree.
 /// </summary>
 [Collection(GrampsWebCollection.Name)]
 public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
@@ -47,7 +47,7 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task CreatePerson_OfANamesakeBornYearsApart_CreatesThePerson_AndListsTheNamesake()
     {
-        var surname = TestNames.Surname();
+        var surname = TestNames.Surname() + "ov";
         var existing = await CreatePersonAsync("Anna", surname, "female", "1880");
 
         var created = await CreatePersonAsync("Anna", surname + "a", "female", "1884");
@@ -89,15 +89,38 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
         Assert.Equal("2", McpSession.Header(created, "records"));
     }
 
-    /// <summary>A person with a birth in <paramref name="birthYear"/> and a patronymic when given.</summary>
-    private async Task<CreatedRecord> CreatePersonAsync(
-        string first, string surname, string gender, string? birthYear = null, string? patronymic = null)
+    [IntegrationFact]
+    public async Task FindDuplicates_ListsAPersonEnteredTwice_ButNotANamesakeWhoDiedBeforeTheOtherWasBorn()
+    {
+        var surname = TestNames.Surname() + "ov";
+        var existing = await CreatePersonAsync("Anna", surname + "a", "female", "1880");
+        var twin = await CreatePersonAsync("Anna", surname, "female", "1881", notDuplicateOf: [existing.GrampsId]);
+        var infant = await CreatePersonAsync("Ivan", surname, "male", "1890", deathYear: "1890");
+
+        var namesake = await CreatePersonAsync("Ivan", surname, "male", "1892");
+        var pairs = await Session.CallAsync("find_duplicates", new { surname });
+
+        Assert.Equal("created", namesake.Action);
+        Assert.DoesNotContain(infant.GrampsId, namesake.Text);
+        Assert.Contains("1 possible duplicate and 0 similar pairs; showing 1–1.", pairs);
+        Assert.Contains("1. Same name, born 1 year apart:", pairs);
+        Assert.Contains($"({existing.GrampsId}) [handle: {existing.Handle}], b. 1880", pairs);
+        Assert.Contains($"({twin.GrampsId}) [handle: {twin.Handle}], b. 1881", pairs);
+        Assert.DoesNotContain(infant.GrampsId, pairs);
+        Assert.DoesNotContain(namesake.GrampsId, pairs);
+    }
+
+    /// <summary>A person with a birth and a death in the years given, and a patronymic when given.</summary>
+    private async Task<CreatedRecord> CreatePersonAsync(string first, string surname, string gender,
+        string? birthYear = null, string? patronymic = null, string? deathYear = null, string[]? notDuplicateOf = null)
     {
         var eventRefs = new List<string>();
         if (birthYear != null)
             eventRefs.Add((await Session.CreateAsync("create_event", new { eventType = "Birth", date = birthYear })).Handle);
+        if (deathYear != null)
+            eventRefs.Add((await Session.CreateAsync("create_event", new { eventType = "Death", date = deathYear })).Handle);
         return await Session.CreateAsync("create_person",
-            new { primaryName = new { first, surname, patronymic }, gender, eventRefs });
+            new { primaryName = new { first, surname, patronymic }, gender, eventRefs, notDuplicateOf });
     }
 
     /// <summary>A capitalised word of random Cyrillic letters.</summary>

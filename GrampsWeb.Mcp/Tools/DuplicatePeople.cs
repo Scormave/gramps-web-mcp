@@ -12,11 +12,12 @@ using static GrampsWeb.Mcp.Tools.PersonNameMatching;
 namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
-/// The duplicate check of create_person and create_records. Gramps Web's RegExpName rule selects the people whose
-/// names hold the new person's surname stem and given name in one request (see <see cref="PersonNameMatching"/>);
-/// they are then compared here. Anyone of the other gender, with another patronymic or born more than five years
-/// apart is dropped. A birth within two years, or the same parents when there are no two years to compare, makes a
-/// strong match, which the create tools refuse; the others are reported as similar people.
+/// The duplicate check of create_person and create_records, and the comparison find_duplicates shares. Gramps Web's
+/// RegExpName rule selects the people whose names hold the new person's surname stem and given name in one request
+/// (see <see cref="PersonNameMatching"/>); they are then compared here. Anyone of the other gender, with another
+/// patronymic, born or dead more than five years apart, or dead before the other was born is dropped. A birth within
+/// two years, or the same parents when there are no two years to compare, makes a strong match, which the create
+/// tools refuse; the others are reported as similar people.
 /// </summary>
 internal static partial class DuplicatePeople
 {
@@ -47,6 +48,12 @@ internal static partial class DuplicatePeople
 
     /// <summary>A person of the tree who may be the new person, and why.</summary>
     internal sealed record Candidate(GrampsPerson Person, Level Level, string Reason, int? YearGap);
+
+    /// <summary>One person as <see cref="Compare"/> sees them: names, gender, and the years of birth and death.</summary>
+    internal sealed record Side(NameKeys Names, int Gender, int? BirthYear, int? DeathYear);
+
+    /// <summary>Two people who may be one: how likely, why, and how many years apart they were born.</summary>
+    internal sealed record Match(Level Level, string Reason, int? YearGap);
 
     /// <summary>
     /// The candidates, strong first; <paramref name="Matching"/> people matched the search and
@@ -142,28 +149,55 @@ internal static partial class DuplicatePeople
                 || other.GrampsId is { } id && person.NotDuplicateOf.Contains(id.Trim()))
                 continue;
 
-            var names = Keys(other.PrimaryName, other.AlternateNames);
-            if (!person.Names.SameName(names) || person.Names.OtherPatronymic(names)
-                || (person.Gender, other.Gender) is (0, 1) or (1, 0))
-                continue;
-
-            int? gap = person.BirthYear is { } year && BirthYear(other.Profile) is { } otherYear
-                ? Math.Abs(year - otherYear)
-                : null;
-            if (gap > MaxYearGap)
-                continue;
-
-            var sameParents = SameParents(person, other);
-            var strong = gap <= StrongYearGap || sameParents && gap == null;
-            candidates.Add(new Candidate(other, strong ? Level.Strong : Level.Weak, Reason(gap, sameParents), gap));
+            var match = Compare(new Side(person.Names, person.Gender, person.BirthYear, null), SideOf(other),
+                SameParents(person, other));
+            if (match != null)
+                candidates.Add(new Candidate(other, match.Level, match.Reason, match.YearGap));
         }
 
         return candidates.OrderBy(c => c.Level).ThenBy(c => c.YearGap ?? int.MaxValue).ToList();
     }
 
-    /// <summary>The first year in the profile's birth date, which falls back to a baptism; null without one.</summary>
-    private static int? BirthYear(GrampsPersonProfile? profile) =>
-        YearRegex().Match(profile?.Birth?.Date ?? "") is { Success: true } match ? int.Parse(match.Value) : null;
+    /// <summary>
+    /// Whether two people may be one, and how likely; null when not. They need the first word of one's given name
+    /// among the other's, no other gender and no other patronymic, births and deaths at most five years apart, and
+    /// neither dead before the other was born.
+    /// When both have surnames, a surname must be the same; when either has none, the patronymic must, and their
+    /// birth years or parents must be known to compare. Births at most two years apart, or the same parents without
+    /// two years to compare, make a strong match.
+    /// </summary>
+    internal static Match? Compare(Side a, Side b, bool sameParents)
+    {
+        if ((a.Gender, b.Gender) is (0, 1) or (1, 0)
+            || !a.Names.SameGivenName(b.Names) || a.Names.OtherPatronymic(b.Names))
+            return null;
+
+        int? gap = a.BirthYear is { } year && b.BirthYear is { } otherYear ? Math.Abs(year - otherYear) : null;
+        if (gap > MaxYearGap || a.DeathYear - b.DeathYear is > MaxYearGap or < -MaxYearGap
+            || a.DeathYear < b.BirthYear || b.DeathYear < a.BirthYear)
+            return null;
+
+        var surnamed = a.Names.SurnameStems.Count > 0 && b.Names.SurnameStems.Count > 0;
+        if (surnamed
+                ? !a.Names.SurnameStems.Overlaps(b.Names.SurnameStems)
+                : !a.Names.PatronymicRoots.Overlaps(b.Names.PatronymicRoots) || gap == null && !sameParents)
+            return null;
+
+        var strong = gap <= StrongYearGap || sameParents && gap == null;
+        return new Match(strong ? Level.Strong : Level.Weak, Reason(gap, sameParents, surnamed), gap);
+    }
+
+    /// <summary>A person of the tree as <see cref="Compare"/> sees them; the years come from the profile.</summary>
+    internal static Side SideOf(GrampsPerson person) =>
+        new(Keys(person.PrimaryName, person.AlternateNames), person.Gender, Year(person.Profile?.Birth),
+            Year(person.Profile?.Death));
+
+    /// <summary>
+    /// The first year in a profile event's date; the profile's birth falls back to a baptism and its death to a
+    /// burial. Null without a date.
+    /// </summary>
+    private static int? Year(GrampsEventProfile? evt) =>
+        YearRegex().Match(evt?.Date ?? "") is { Success: true } match ? int.Parse(match.Value) : null;
 
     /// <summary>Whether the other person is a child of one of the new person's families or of one of the parents.</summary>
     private static bool SameParents(NewPerson person, GrampsPerson other)
@@ -180,9 +214,15 @@ internal static partial class DuplicatePeople
                    .Any(h => h != null && person.Parents.Contains(h.Trim()));
     }
 
-    private static string Reason(int? gap, bool sameParents)
+    private static string Reason(int? gap, bool sameParents, bool surnamed)
     {
-        var same = sameParents ? "same name and parents" : "same name";
+        var same = (surnamed, sameParents) switch
+        {
+            (true, false) => "same name",
+            (true, true) => "same name and parents",
+            (false, false) => "same given name and patronymic",
+            (false, true) => "same given name, patronymic and parents"
+        };
         return gap switch
         {
             null => $"{same}, no birth years to compare",
