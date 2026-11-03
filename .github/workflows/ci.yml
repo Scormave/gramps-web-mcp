@@ -44,6 +44,28 @@ jobs:
       - name: Coverage
         run: python3 scripts/coverage-summary.py "$RUNNER_TEMP/coverage" --min-line 75
 
+  # The unit tests on Windows, where the server ends the lines of its replies
+  # with CRLF. The release files are packed on Windows too, so a test that
+  # passes only with LF would stop the release files of every platform.
+  windows-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore gramps-web-mcp.sln
+
+      - name: Build
+        run: dotnet build gramps-web-mcp.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test GrampsWeb.Mcp.Tests/GrampsWeb.Mcp.Tests.csproj --no-build -c Release --verbosity normal
+
   # The tools against a real Gramps Web server: the image pinned in
   # GrampsWeb.Mcp.IntegrationTests/grampsweb.Dockerfile, started by
   # Testcontainers on the runner's Docker.

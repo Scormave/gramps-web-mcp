@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Windows tests: CI runs the unit tests on Windows as well, on every
+  push and pull request. A test that passes only with Unix line endings
+  now fails there, before a release, instead of stopping the release
+  files as in 2.9.0
+
 ## [2.9.1] - 2026-11-03
 
 ### Fixed

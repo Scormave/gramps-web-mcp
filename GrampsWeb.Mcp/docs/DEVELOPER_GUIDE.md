@@ -544,7 +544,9 @@ and exits with 0.
   code coverage of the unit tests; `scripts/coverage-summary.py` puts the
   server's line and branch coverage by folder on the job's summary page and
   fails the job when line coverage drops below the minimum set in the
-  workflow. The `integration-tests` job runs `GrampsWeb.Mcp.IntegrationTests`
+  workflow. The `windows-tests` job runs the unit tests on Windows, where
+  replies end their lines with CRLF and where the release files are packed
+  too. The `integration-tests` job runs `GrampsWeb.Mcp.IntegrationTests`
   against the pinned Gramps Web image. The `tool-definitions` job runs
   `scripts/lint-tools.sh`: Glama's TDQS lint (`mcp-tdqs`, pinned with its
   dependencies in `scripts/tdqs/package-lock.json`) of every tool as a client

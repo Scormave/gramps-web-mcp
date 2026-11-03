@@ -498,7 +498,9 @@ shows how to run the image, with a refresh token or in read-only mode.
   code coverage of the unit tests; `scripts/coverage-summary.py` puts the
   server's line and branch coverage by folder on the job's summary page and
   fails the job when line coverage drops below the minimum set in the
-  workflow. The `integration-tests` job runs `GrampsWeb.Mcp.IntegrationTests`
+  workflow. The `windows-tests` job runs the unit tests on Windows, where
+  replies end their lines with CRLF and where the release files are packed
+  too. The `integration-tests` job runs `GrampsWeb.Mcp.IntegrationTests`
   against the pinned Gramps Web image. The `tool-definitions` job runs
   Glama's TDQS lint of the tool definitions (`scripts/lint-tools.sh`). CI also
   runs every Monday, so an advisory for a package already in use shows up
