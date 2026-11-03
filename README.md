@@ -48,7 +48,8 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
 - **Scans and photos** — opt-in previews that vision-capable agents can read,
   with EXIF/GPS metadata stripped, and uploads from a folder you choose
 - **8 MCP resources and guided prompts** — type vocabularies, tree metadata,
-  filter rules, and workflows for research, imports, and citing facts
+  filter rules, and workflows for research, imports, citing facts, and
+  tree audits
 - **Read-only mode** — publish only read tools and block direct mutation calls
 - **Any MCP client** — stdio, Streamable HTTP, and legacy SSE, from a Claude
   Desktop extension, a Docker image, or a single-file release binary

@@ -202,4 +202,69 @@ public sealed class GrampsPrompts
         sb.AppendLine("4. Attach with the target's update_* tool: handle: TARGET_HANDLE, citationHandles: [CITATION_HANDLE], linkMode: \"add\". Read the target again to verify it is linked.");
         return sb.ToString();
     }
+
+    [McpServerPrompt(Name = "audit-tree")]
+    [Description("Check the tree or one person's branch for impossible dates, duplicates, unsourced facts, unlinked records and missing data, without changing anything")]
+    public static string AuditTree(
+        [Description("Audit only this person's ancestors and descendants: name, handle, or Gramps ID (optional; the whole tree when omitted)")]
+        string? person = null,
+        [Description("Checks to run, any of: dates, duplicates, sources, links, gaps (optional; all when omitted)")]
+        string? checks = null)
+    {
+        var branch = !string.IsNullOrWhiteSpace(person);
+        var sb = new StringBuilder();
+        sb.AppendLine(branch
+            ? $"Audit the branch of \"{person}\" in the Gramps tree: their ancestors, their descendants and the descendants' spouses."
+            : "Audit the Gramps tree for likely errors and gaps.");
+        if (!string.IsNullOrWhiteSpace(checks))
+            sb.AppendLine($"Run only these checks: {checks}.");
+        sb.AppendLine("This is a report: change nothing in the tree.");
+        sb.AppendLine();
+        if (branch)
+        {
+            sb.AppendLine("Scope: resolve the person to a Gramps ID with search or get_object, and confirm an ambiguous name. BRANCH below is the filter " +
+                          "{\"function\": \"or\", \"rules\": [{\"name\": \"IsAncestorOf\", \"values\": [ID, true]}, {\"name\": \"IsDescendantFamilyOf\", \"values\": [ID, true]}]}: " +
+                          "list_objects(objectType: \"people\", rules: BRANCH) lists the branch, and BRANCH as one more item of a check's rules keeps the check inside it. " +
+                          "Checks marked whole tree run only without a person.");
+        }
+        else
+        {
+            sb.AppendLine("Scope: the whole tree; leave BRANCH out of the rules below.");
+        }
+
+        sb.AppendLine("Lists come from list_objects with pagesize 100; rules are Gramps filter rules, explained by get_reference(topic: \"filter-rules\", section: type).");
+        sb.AppendLine();
+        sb.AppendLine("Checks:");
+        sb.AppendLine("1. dates: impossible or unlikely dates.");
+        sb.AppendLine("   - People: each line of a people list shows birth and death. Flag a death before the birth, and people who died older than 105: " +
+                      "rules [{\"name\": \"AgeAtDeath\", \"values\": [\"greater than\", \"105\"]}].");
+        sb.AppendLine("   - Parents and children: get_timeline(objectType: \"family\") shows a family's events in order with the father's age, and get_person_tree(direction: \"ancestors\") " +
+                      "labels each ancestor as father or mother. Flag a parent born after a child, a mother under 13 or over 55 or a father under 15 at a birth, a child born after " +
+                      "the mother's death or more than 10 months after the father's, and a marriage before 13 or after a death. Check the families of people already flagged first, " +
+                      (branch
+                          ? "then the person's ancestors, "
+                          : "then the ancestors of the home person if the tree has one (rules [{\"name\": \"IsDefaultPerson\"}]), ") +
+                      "then other families as far as the work allows, and say how many families were checked.");
+        sb.AppendLine("   - get_timeline(objectType: \"person\") for each flagged person: events after the death other than burial, cremation or probate, and baptism long before birth.");
+        if (branch)
+            sb.AppendLine("   - Loop in the pedigree: rules [{\"name\": \"HasIdOf\", \"values\": [ID]}, {\"name\": \"IsAncestorOf\", \"values\": [ID, false]}] finds the person only when they are their own ancestor.");
+        sb.AppendLine("   - A date marked about, before, after or a range conflicts only when no reading of it fits. Julian and Gregorian dates of one day differ by 10 to 13 days.");
+        sb.AppendLine("2. duplicates: find_duplicates lists people who may be entered twice, a page at a time with offset; with a person, keep the pairs with someone in the branch.");
+        sb.AppendLine("3. sources: people with an event that has no citation, rules [BRANCH, {\"namespace\": \"Event\", \"rules\": [{\"name\": \"HasSourceCount\", \"values\": [\"0\", \"equal to\"]}]}]; " +
+                      "people with no citation at all, on themselves or any event, rules [BRANCH, {\"name\": \"HasSourceCount\", \"values\": [\"0\", \"equal to\"]}, " +
+                      "{\"invert\": true, \"rules\": [{\"namespace\": \"Event\", \"rules\": [{\"name\": \"HasSourceCount\", \"values\": [\"0\", \"greater than\"]}]}]}]. " +
+                      "Whole tree: the number of events without a citation, list_objects(objectType: \"events\", gql: \"citation_list.length = 0\").");
+        sb.AppendLine("4. links: people with no family links, rules [BRANCH, {\"name\": \"Disconnected\"}]. Whole tree: records that nothing links to, " +
+                      "rules [{\"name\": \"HasReferenceCountOf\", \"values\": [\"equal to\", \"0\"]}] for events, families, places, citations, sources, notes and media. " +
+                      "An unlinked event, family or citation is usually left over from an edit; a source, note or media file can stand alone on purpose, so list those as information.");
+        sb.AppendLine("5. gaps: people with a given name or surname missing (IncompleteNames), unknown gender (HasUnknownGender), or an event without a date or place " +
+                      "(PersonWithIncompleteEvent), each with BRANCH. Whole tree: places without coordinates, places rules [{\"name\": \"HasNoLatOrLon\"}].");
+        sb.AppendLine();
+        sb.AppendLine("Report:");
+        sb.AppendLine("- Group the findings by check, most serious first: impossible dates and loops, likely duplicates, unsourced facts, unlinked records, missing data.");
+        sb.AppendLine("- One line per finding: the person's name and dates with the Gramps ID, and what is wrong. For a long list give the count and the first ten.");
+        sb.AppendLine("- Say which checks ran, how many records each covered, and what was skipped.");
+        sb.AppendLine("- Offer fixes, such as update_person, update_family or merge_objects, and make each only after the user confirms it.");
+        return sb.ToString();
+    }
 }

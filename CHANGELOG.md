@@ -52,6 +52,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   next steps. `personHandle` and `surname` narrow the pairs; `limit`
   and `offset` page through them. It reads up to 20000 people, 500 per
   request, and changes nothing.
+- The `audit-tree` prompt checks the tree, or with `person` only that
+  person's ancestors and descendants, and reports what it finds
+  without changing anything: impossible dates (a death before the
+  birth, a parent born after a child or too young or old at a birth, a
+  child born after a parent's death, events after a death) and a loop
+  in the pedigree, possible duplicates from `find_duplicates`, people
+  and events without citations, people with no family links and
+  records that nothing links to, and missing names, gender, dates,
+  places and coordinates. It runs Gramps filter rules on the server
+  through `list_objects`, reads timelines for the people it flags,
+  orders the findings by check, most serious first, and offers fixes
+  only for the user to confirm. `checks` runs only some of the checks.
 
 ### Changed
 

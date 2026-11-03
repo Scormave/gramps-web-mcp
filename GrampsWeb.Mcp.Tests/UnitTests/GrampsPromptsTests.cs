@@ -58,4 +58,30 @@ public class GrampsPromptsTests
         Assert.Contains("create_citation", text);
         Assert.Contains("citationHandles: [CITATION_HANDLE], linkMode: \"add\"", text);
     }
+
+    [Fact]
+    public void AuditTree_ReportsWithoutChangingTheTree()
+    {
+        var text = GrampsPrompts.AuditTree();
+
+        Assert.Contains("change nothing in the tree", text);
+        Assert.Contains("leave BRANCH out", text);
+        Assert.Contains("find_duplicates", text);
+        Assert.Contains("\"name\": \"Disconnected\"", text);
+        Assert.Contains("only after the user confirms it", text);
+        Assert.DoesNotContain("own ancestor", text);
+        Assert.DoesNotContain("Run only these checks", text);
+    }
+
+    [Fact]
+    public void AuditTree_KeepsTheChecksInsideThePersonsBranch()
+    {
+        var text = GrampsPrompts.AuditTree("I0001", "dates, sources");
+
+        Assert.Contains("Audit the branch of \"I0001\"", text);
+        Assert.Contains("Run only these checks: dates, sources.", text);
+        Assert.Contains("\"IsDescendantFamilyOf\", \"values\": [ID, true]", text);
+        Assert.Contains("their own ancestor", text);
+        Assert.DoesNotContain("IsDefaultPerson", text);
+    }
 }

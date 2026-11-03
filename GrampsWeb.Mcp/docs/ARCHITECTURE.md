@@ -259,7 +259,7 @@ The MCP SDK discovers resources at startup via `WithResources<GrampsResources>()
 
 `GrampsPrompts.cs` exposes workflow templates as MCP prompts (`add-person`,
 `research-person`, `add-family`, `find-connections`, `import-from-text`,
-`change-link`, `cite-fact`).
+`change-link`, `cite-fact`, `audit-tree`).
 Each prompt expands to a user-role chat message that guides an agent through
 typical tool usage.
 
