@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-11-03
+
 ### Added
 
 - `merge_objects`: merge a duplicate into the record to keep, for
@@ -1249,7 +1251,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.1...v2.9.0
 [2.8.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.6.0...v2.7.0

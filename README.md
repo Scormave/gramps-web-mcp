@@ -43,8 +43,9 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
   spellings and name forms, and the create tools refuse a person the tree
   already has
 - **Undo and confirmation** — `undo_change` reverts one transaction of the
-  edit history; it and `delete_object` ask the user, not the model, before
-  they change the tree, in clients that support MCP elicitation
+  edit history; it, `delete_object` and `merge_objects` ask the user, not
+  the model, before they change the tree, in clients that support MCP
+  elicitation
 - **Scans and photos** — opt-in previews that vision-capable agents can read,
   with EXIF/GPS metadata stripped, and uploads from a folder you choose
 - **8 MCP resources and guided prompts** — type vocabularies, tree metadata,
