@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.9.1] - 2026-11-03
+
+### Fixed
+
+- The 2.9.0 release published its Docker image and MCP Registry entry
+  but no MCPB bundles or binary archives: three unit tests of
+  `merge_objects` and `create_records` compared replies with Unix line
+  endings and failed in the Windows build, which stopped the release
+  files of every platform. The tests now compare text with the line
+  endings normalized, and 2.9.1 publishes the files. The server is the
+  same as in 2.9.0
+
 ## [2.9.0] - 2026-11-03
 
 ### Added
@@ -1251,7 +1263,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.1...HEAD
+[2.9.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.1...v2.9.0
 [2.8.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.0...v2.8.1
 [2.8.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.7.0...v2.8.0
