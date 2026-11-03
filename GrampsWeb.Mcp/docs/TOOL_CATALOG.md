@@ -370,8 +370,9 @@ Find people entered twice across the whole tree. It reads every person with
 their profile (`GET /api/people/?profile=self`, 500 per request, up to 20000
 people), pairs the people where the first word of one's given name is a word
 of the other's, and compares each pair with the rule of the [duplicate check
-of `create_person`](#c--createperson): names compare across spellings and the
-male and female forms of a surname, alternate names count, and a pair of the
+of `create_person`](#c--createperson): names compare across spellings, Cyrillic
+and Latin letters, and the male, female and daughter's forms of a surname in
+Slavic, Baltic, Greek and Hungarian, alternate names count, and a pair of the
 other gender, with other patronymics, born or dead more than five years apart,
 or where one died before the other was born, is not the same person.
 
@@ -400,14 +401,14 @@ date for the first.
 
 ```text
 find_duplicates()
-find_duplicates(surname: "Kowalski")
+find_duplicates(surname: "Nováková")
 find_duplicates(personHandle: "I0012")
 ```
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `personHandle` | `string?` | no | — | Only pairs with this person; handle or Gramps ID |
-| `surname` | `string?` | no | — | Only pairs where one of the people has this surname, in any spelling or form |
+| `surname` | `string?` | no | — | Only pairs where one of the people has this surname, in any spelling, alphabet or form: Nováková also finds Novák, Nowak and Новак |
 | `limit` | `int` | no | `20` | Pairs to show, 1–100 |
 | `offset` | `int` | no | `0` | Pairs to skip |
 
@@ -591,9 +592,28 @@ and children, so a person joins a family through the family's `fatherHandle`,
 
 Before creating, it looks for the same person in the tree with Gramps Web's
 `RegExpName` rule. Names compare across spellings: case, ё and ѣ, і and ѵ, ѳ,
-Latin accents, a final ъ, doubled letters, -ия and -ья, -ий and -ей, and the
-male and female forms of a surname (Kowalski and Kowalska; -ов and -ова, -ин
-and -ина, -ский and -ская, -ой and -ая). Alternate names count on both sides.
+Latin accents, a final ъ, doubled letters, -ия and -ья, -ий and -ей, and
+Cyrillic and Latin letters in English, Polish and Czech spelling (Novák, Nowak
+and Новак; Maria, Мария and Марья). A surname is cut to one or more stems, and
+two surnames match when they share one, so it also matches its male, female
+and daughter's forms:
+
+| Language | Forms |
+|----------|-------|
+| Russian, Ukrainian, Belarusian | -ов and -ова, -ин and -ина, -ский and -ская, -ой and -ая |
+| Polish | Kowalski and Kowalska; Nowak, Nowakowa and Nowakówna |
+| Czech, Slovak | Novák and Nováková, Hájek and Hájková, Svoboda and Svobodová |
+| Lithuanian | Kazlauskas, Kazlauskienė and Kazlauskaitė |
+| Latvian | Ozols and Ozola |
+| Greek | Papadopoulos and Papadopoulou |
+| Hungarian | Kovács and Kovácsné |
+
+The search sends the stems as `RegExpName` patterns that allow up to eight
+more letters, so it finds every form; the comparison afterwards decides.
+The rules that cut Latin endings (-ová to the bare stem, the e of Hájek, the
+-s of Kazlauskas) apply to Latin letters only, so a Czech or Lithuanian female
+form written in Cyrillic letters does not match the male form. Alternate names
+count on both sides.
 Given names are the same when the first word of one is a word of the other:
 Мария and Анна Мария, but not Иван Петрович and Петр Петрович, or Robert de
 and Gilbert de. A namesake of the other gender, with another patronymic, or

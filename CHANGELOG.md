@@ -24,8 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   transaction that `undo_change` takes to restore the duplicate.
 - `create_person` and `create_records` check the tree for the new
   person first. Names compare across spellings: old letters (ѣ, і, ѵ,
-  ѳ, a final ъ), ё, doubled letters, -ия and -ья, Latin accents, and the
-  male and female forms of a surname. Given names are the same when the
+  ѳ, a final ъ), ё, doubled letters, -ия and -ья, Latin accents, and
+  Cyrillic and Latin letters in English, Polish and Czech spelling
+  (Novák, Nowak and Новак). A surname also matches its male, female and
+  daughter's forms: Kowalski and Kowalska, -ов and -ова, Novák and
+  Nováková, Hájek and Hájková, Nowak and Nowakówna, Kazlauskas,
+  Kazlauskienė and Kazlauskaitė, Ozols and Ozola, Papadopoulos and
+  Papadopoulou, Kovács and Kovácsné. Given names are the same when the
   first word of one is a word of the other: Мария and Анна Мария, but
   not Иван Петрович and Петр Петрович. A namesake of the same gender and
   patronymic born up to two years apart, or a child of the same parents

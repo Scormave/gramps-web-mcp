@@ -30,9 +30,12 @@ public static class DuplicateTools
     [McpServerTool(Title = "Find Duplicates", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Find people entered twice in the tree: pairs with the same given name (the first word of one's among the " +
-        "other's, so Мария pairs with Анна Мария) and surname in any spelling (ё and pre-reform letters, Latin " +
-        "accents, Мария and Марья, male and female forms such as Kowalski and Kowalska or -ов and -ова), not of the " +
-        "other gender, without different patronymics, born and dead at most five years apart, and neither dead before the other was born. " +
+        "other's, so Мария pairs with Анна Мария) and surname in any spelling (Cyrillic or Latin letters, so Мария, " +
+        "Марья and Maria, or Kowalski written in Cyrillic; ё and pre-reform letters, Latin accents, Polish w, sz and " +
+        "cz) and in the male, female or daughter's form (Kowalski and Kowalska, Novák and Nováková, Hájek and " +
+        "Hájková, Kazlauskas, Kazlauskienė and Kazlauskaitė, Ozols and Ozola, Papadopoulos and Papadopoulou, Kovács " +
+        "and Kovácsné), not of the other gender, without different patronymics, born and dead at most five years " +
+        "apart, and neither dead before the other was born. " +
         "People with a patronymic but no surname pair by given name and patronymic when their birth years or parents " +
         "can be compared. Spouses, and a person and their parent, grandparent or earlier ancestor, are never paired. " +
         "Pairs born at most two years apart, or children of the same parents without two years to compare, are " +
@@ -46,7 +49,7 @@ public static class DuplicateTools
         [Description("Only pairs with this person. " + ToolDescriptionFragments.HandleDiscovery)]
         string? personHandle = null,
         [Description("Only pairs where one of the people has this surname, in any spelling or form: Kowalski also " +
-                     "finds Kowalska, and a surname in -ов also its -ова and pre-reform -овъ.")]
+                     "finds Kowalska and Kowalski in Cyrillic letters, and Novák also finds Nováková.")]
         string? surname = null,
         [Description("How many pairs to show, 1–100 (default 20); other values are clamped.")]
         int limit = 20,
@@ -62,8 +65,8 @@ public static class DuplicateTools
         {
             limit = Math.Clamp(limit, 1, 100);
             offset = Math.Max(offset, 0);
-            string? stem = null;
-            if (!string.IsNullOrWhiteSpace(surname) && (stem = SurnameStem(surname)) == null)
+            IReadOnlySet<string>? stems = null;
+            if (!string.IsNullOrWhiteSpace(surname) && (stems = SurnameStems(surname)).Count == 0)
                 throw McpToolErrors.ValidationError($"surname needs at least two letters: \"{surname.Trim()}\".");
             var handle = string.IsNullOrWhiteSpace(personHandle)
                 ? null
@@ -74,7 +77,7 @@ public static class DuplicateTools
             if (handle != null && person == null)
                 throw McpToolErrors.ValidationError(NotFoundHelper.NotFoundMessage("Person", personHandle!.Trim()));
 
-            var scan = Scan(people, handle, stem);
+            var scan = Scan(people, handle, stems);
             return Format(scan, people, total, person, surname?.Trim(), limit, offset);
         }
         catch (Exception ex)
@@ -123,10 +126,11 @@ public static class DuplicateTools
 
     /// <summary>
     /// Compares every two people where the first word of one's given name is a word of the other's.
-    /// <paramref name="personHandle"/> keeps the pairs with that person, <paramref name="surnameStem"/> the pairs where
-    /// one of the people has that surname stem.
+    /// <paramref name="personHandle"/> keeps the pairs with that person, <paramref name="surnameStems"/> the pairs where
+    /// one of the people has one of those surname stems.
     /// </summary>
-    internal static ScanResult Scan(IEnumerable<GrampsPerson> people, string? personHandle = null, string? surnameStem = null)
+    internal static ScanResult Scan(
+        IEnumerable<GrampsPerson> people, string? personHandle = null, IReadOnlySet<string>? surnameStems = null)
     {
         var all = people.Where(p => !string.IsNullOrWhiteSpace(p.Handle)).ToList();
 
@@ -170,8 +174,8 @@ public static class DuplicateTools
             var (a, b) = (entries[i], entries[j]);
             if (i == j
                 || personHandle != null && a.Handle != personHandle && b.Handle != personHandle
-                || surnameStem != null && !a.Side.Names.SurnameStems.Contains(surnameStem)
-                                       && !b.Side.Names.SurnameStems.Contains(surnameStem)
+                || surnameStems != null && !a.Side.Names.SurnameStems.Overlaps(surnameStems)
+                                        && !b.Side.Names.SurnameStems.Overlaps(surnameStems)
                 || !seen.Add((Math.Min(i, j), Math.Max(i, j))))
                 continue;
 

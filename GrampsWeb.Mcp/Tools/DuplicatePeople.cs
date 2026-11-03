@@ -13,8 +13,8 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// The duplicate check of create_person and create_records, and the comparison find_duplicates shares. Gramps Web's
-/// RegExpName rule selects the people whose names hold the new person's surname stem and given name in one request
-/// (see <see cref="PersonNameMatching"/>); they are then compared here. Anyone of the other gender, with another
+/// RegExpName rule selects the people whose names hold one of the new person's surname stems and given names, in
+/// either alphabet, in one request (see <see cref="PersonNameMatching"/>); they are then compared here. Anyone of the other gender, with another
 /// patronymic, born or dead more than five years apart, or dead before the other was born is dropped. A birth within
 /// two years, or the same parents when there are no two years to compare, makes a strong match, which the create
 /// tools refuse; the others are reported as similar people.
@@ -112,12 +112,15 @@ internal static partial class DuplicatePeople
 
     /// <summary>
     /// The people search: RegExpName for one of the surname stems and RegExpName for one of the given-name words.
-    /// A search too long for one request line drops the given name, then all stems but one; null when the name
-    /// has no surname or no given name to search by.
+    /// A stem the pattern of a shorter one matches is not searched, as that pattern finds its forms too (Novák
+    /// covers Nováková). A search too long for one request line drops the given name, then all stems but one; null
+    /// when the name has no surname or no given name to search by.
     /// </summary>
     internal static string? SearchPath(NameKeys names)
     {
-        var stems = names.SurnameStems.Order(StringComparer.Ordinal).Take(MaxNameParts).ToList();
+        var stems = names.SurnameStems
+            .Where(s => !names.SurnameStems.Any(t => t.Length < s.Length && Regex.IsMatch(s, SurnamePattern([t]))))
+            .Order(StringComparer.Ordinal).Take(MaxNameParts).ToList();
         var given = names.Given.Order(StringComparer.Ordinal).Take(MaxNameParts).ToList();
         if (stems.Count == 0 || given.Count == 0)
             return null;

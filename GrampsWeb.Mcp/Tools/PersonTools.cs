@@ -198,7 +198,8 @@ public static class PersonTools
         "Create one person: names, gender, links to existing events with the person's role in each, families, " +
         "citations, notes, media and tags, plus attributes, addresses, URLs and associations. " +
         "Returns the new handle, Gramps ID and name, with next steps. Checks the tree for the same person first: someone " +
-        "with the same given name and surname (spelling variants, old letters and male and female forms count as one), " +
+        "with the same given name and surname (spelling variants, old letters, Cyrillic and Latin letters, and male, " +
+        "female and daughter's forms such as Novák, Nováková and Новак count as one), " +
         "not the other gender, without another patronymic, and born within two years, or a child of the same parents " +
         "when there are no two years to compare, stops the call with action \"refused\" and the possible duplicates; " +
         "namesakes born up to five years apart, or without a year, are listed after the person is created. Add to an " +

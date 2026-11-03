@@ -23,40 +23,111 @@ public class DuplicatePeopleTests
 {
     [Theory]
     [InlineData("Образцовъ", false, "образцов")]
+    [InlineData("Obraztsov", false, "образцов")]
+    [InlineData("Obrazcow", false, "образцов")]
     [InlineData("Алёна", false, "алена")]
     [InlineData("Ѳеодоръ", false, "феодор")]
     [InlineData("Аввакум", false, "авакум")]
-    [InlineData("Łukasz", false, "lukasz")]
-    [InlineData("Müller", false, "muler")]
-    [InlineData("Мария", true, "марья")]
-    [InlineData("Дмитрий", true, "дмитрей")]
-    [InlineData("Іоаннъ", true, "иоан")]
+    [InlineData("Łukasz", false, "лукаш")]
+    [InlineData("Müller", false, "мулер")]
+    [InlineData("Мария", true, "мара")]
+    [InlineData("Марья", true, "мара")]
+    [InlineData("Marija", true, "мара")]
+    [InlineData("Дмитрий", true, "дмитри")]
+    [InlineData("Дмитрей", true, "дмитри")]
+    [InlineData("Dmitriy", true, "дмитри")]
+    [InlineData("Andrei", true, "андри")]
+    [InlineData("Piotr", true, "петр")]
+    [InlineData("Іоаннъ", true, "еан")]
     public void Fold_Gives_Spellings_Of_One_Name_One_Form(string text, bool givenName, string expected) =>
         Assert.Equal(expected, PersonNameMatching.Fold(text, givenName));
 
     [Theory]
-    [InlineData("Образцов", "образцов")]
-    [InlineData("Образцова", "образцов")]
-    [InlineData("Иванова", "иванов")]
-    [InlineData("Дубровский", "дубровск")]
-    [InlineData("Дубровская", "дубровск")]
-    [InlineData("Толстой", "толст")]
-    [InlineData("Толстая", "толст")]
-    [InlineData("Kowalski", "kowalsk")]
-    [InlineData("Kowalska", "kowalsk")]
-    [InlineData("Я", null)]
-    public void SurnameStem_Is_Shared_By_Male_And_Female_Forms(string surname, string? expected) =>
-        Assert.Equal(expected, PersonNameMatching.SurnameStem(surname));
+    [InlineData("Агнешка", "Agnieszka")]
+    [InlineData("Войцех", "Wojciech")]
+    [InlineData("Гжегож", "Grzegorz")]
+    [InlineData("Чеслав", "Czesław")]
+    [InlineData("Ядвига", "Jadwiga")]
+    [InlineData("Ксения", "Xenia")]
+    [InlineData("Евгений", "Jewgienij")]
+    [InlineData("Евгений", "Yevgeniy")]
+    [InlineData("Алексей", "Aleksiej")]
+    [InlineData("Алексей", "Alexei")]
+    [InlineData("Майя", "Maja")]
+    [InlineData("Мая", "Maja")]
+    public void Folds_Of_A_Given_Name_In_Cyrillic_And_Latin_Letters_Overlap(string cyrillic, string latin) =>
+        Assert.True(PersonNameMatching.Folds(cyrillic, givenName: true)
+            .Overlaps(PersonNameMatching.Folds(latin, givenName: true)));
+
+    [Theory]
+    [InlineData("Горбачёв", "Gorbaczow")]
+    [InlineData("Горбачёв", "Gorbachev")]
+    [InlineData("Горбачёв", "Gorbatschow")]
+    [InlineData("Заяц", "Zając")]
+    public void Folds_Of_A_Surname_In_Cyrillic_And_Latin_Letters_Overlap(string cyrillic, string latin) =>
+        Assert.True(PersonNameMatching.Folds(cyrillic, givenName: false)
+            .Overlaps(PersonNameMatching.Folds(latin, givenName: false)));
+
+    [Theory]
+    [InlineData("Образцов", "Образцова", true)]
+    [InlineData("Образцов", "Obraztsova", true)]
+    [InlineData("Образцова", "Obrazcow", true)]
+    [InlineData("Образцовъ", "OBRAZTSOV", true)]
+    [InlineData("Дубровский", "Дубровская", true)]
+    [InlineData("Дубровский", "Dubrowska", true)]
+    [InlineData("Дубровская", "Dubrovsky", true)]
+    [InlineData("Дубровской", "Dubrovskaya", true)]
+    [InlineData("Kowalski", "Kowalska", true)]
+    [InlineData("Novák", "Nováková", true)]
+    [InlineData("Novák", "Новак", true)]
+    [InlineData("Nowak", "Nowakowa", true)]
+    [InlineData("Nowak", "Nowakówna", true)]
+    [InlineData("Svoboda", "Svobodová", true)]
+    [InlineData("Свобода", "Svobodová", true)]
+    [InlineData("Kazlauskas", "Kazlauskienė", true)]
+    [InlineData("Kazlauskas", "Kazlauskaitė", true)]
+    [InlineData("Kazlauskienė", "Kazlauskaitė", true)]
+    [InlineData("Ozols", "Ozola", true)]
+    [InlineData("Papadopoulos", "Papadopoulou", true)]
+    [InlineData("Kovács", "Kovácsné", true)]
+    [InlineData("Hájek", "Hájková", true)]
+    [InlineData("Němec", "Němcová", true)]
+    [InlineData("Образцов", "Образцовский", false)]
+    [InlineData("Образцов", "Собразцов", false)]
+    [InlineData("Kowalski", "Kowalczyk", false)]
+    [InlineData("Ozols", "Ozoliņš", false)]
+    [InlineData("Novák", "Novotný", false)]
+    public void SurnameStems_Of_Forms_Of_One_Surname_Overlap(string surname, string other, bool overlap) =>
+        Assert.Equal(overlap, PersonNameMatching.SurnameStems(surname).Overlaps(PersonNameMatching.SurnameStems(other)));
+
+    [Theory]
+    [InlineData("Образцова", "образцова,образцов")]
+    [InlineData("Nováková", "новакова,новаков,новак")]
+    [InlineData("Kovács", "ковацс,ковац")]
+    [InlineData("Я", "")]
+    [InlineData("", "")]
+    public void SurnameStems_Are_The_Surname_And_Its_Stems(string surname, string expected) =>
+        Assert.Equal(expected.Split(',', StringSplitOptions.RemoveEmptyEntries).Order(),
+            PersonNameMatching.SurnameStems(surname).Order());
 
     [Theory]
     [InlineData("Петрович", "петр")]
     [InlineData("Петровна", "петр")]
     [InlineData("Петров", "петр")]
-    [InlineData("Ильич", "иль")]
-    [InlineData("Ильинична", "иль")]
-    [InlineData("", null)]
-    public void PatronymicRoot_Is_The_Fathers_Name(string patronymic, string? expected) =>
-        Assert.Equal(expected, PersonNameMatching.PatronymicRoot(patronymic));
+    [InlineData("Петрівна", "петр")]
+    [InlineData("Petrovich", "петр")]
+    [InlineData("Pietrowicz", "петр")]
+    [InlineData("Ильич", "ил")]
+    [InlineData("Ильинична", "ил")]
+    [InlineData("Юрьевич", "ур")]
+    [InlineData("Николаевич", "никола")]
+    [InlineData("Nikolajewicz", "никола")]
+    public void PatronymicRoots_Hold_The_Fathers_Name(string patronymic, string expected) =>
+        Assert.Contains(expected, PersonNameMatching.PatronymicRoots(patronymic));
+
+    [Fact]
+    public void PatronymicRoots_Of_Nothing_Are_Empty() =>
+        Assert.Empty(PersonNameMatching.PatronymicRoots(" "));
 
     [Theory]
     [InlineData("Образцов", true)]
@@ -65,20 +136,102 @@ public class DuplicatePeopleTests
     [InlineData("Обрразцова", true)]
     [InlineData("Образцовъ Ивановъ", true)]
     [InlineData("de Образцов", true)]
-    [InlineData("Образцовский", false)]
-    [InlineData("Образцовский Иванов", false)]
+    [InlineData("Obraztsov", true)]
+    [InlineData("Obrazcowa", true)]
+    [InlineData("Образцовский", true)]
     [InlineData("Собразцов", false)]
-    public void SurnamePattern_Matches_Forms_Of_The_Stem(string surname, bool matches) =>
+    [InlineData("Obrazek", false)]
+    public void SurnamePattern_Matches_The_Stem_In_Any_Spelling_With_An_Ending(string surname, bool matches) =>
         Assert.Equal(matches, Matches(PersonNameMatching.SurnamePattern(["образцов"]), surname));
+
+    [Theory]
+    [InlineData("Kazlauskas", true)]
+    [InlineData("Kazlauskienė", true)]
+    [InlineData("Kazlauskaitė", true)]
+    [InlineData("Казлаускас", true)]
+    [InlineData("Kazlauskis", true)]
+    [InlineData("Kazlowski", false)]
+    public void SurnamePattern_Of_A_Stem_Matches_The_Male_And_Female_Forms(string surname, bool matches) =>
+        Assert.Equal(matches,
+            Matches(PersonNameMatching.SurnamePattern(PersonNameMatching.SurnameStems("Kazlauskienė")), surname));
+
+    [Theory]
+    [InlineData("Hájková", "Hájek", true)]
+    [InlineData("Hájek", "Hájková", true)]
+    [InlineData("Němcová", "Němec", true)]
+    [InlineData("Němcová", "Немец", true)]
+    [InlineData("Němec", "Němcová", true)]
+    [InlineData("Němcová", "Němeček", false)]
+    public void SurnamePattern_Finds_The_Male_Form_With_The_E_The_Female_Form_Drops(string surname, string other,
+        bool matches) =>
+        Assert.Equal(matches, Matches(PersonNameMatching.SurnamePattern(PersonNameMatching.SurnameStems(surname)), other));
+
+    [Theory]
+    [InlineData("Горбачёв", "Gorbaczow")]
+    [InlineData("Горбачёв", "Gorbachev")]
+    [InlineData("Горбачёв", "Gorbatschow")]
+    [InlineData("Gorbaczow", "Горбачева")]
+    [InlineData("Zając", "Заяц")]
+    [InlineData("Zając", "Zajac")]
+    [InlineData("Заяц", "Zając")]
+    public void SurnamePattern_Matches_The_Surname_In_The_Other_Alphabet(string surname, string other) =>
+        Assert.True(Matches(PersonNameMatching.SurnamePattern(PersonNameMatching.SurnameStems(surname)), other));
+
+
+    /// <summary>
+    /// The server runs the pattern on every name in the tree, so a long run of letters it can match more than one
+    /// way must not make it try every split of the run before it fails.
+    /// </summary>
+    [Theory]
+    [InlineData("Kazlauskienė", "àéìòùąęįų")]
+    [InlineData("Hájková", "áéíóúýěů")]
+    [InlineData("Zając", "ąęóàáâãä")]
+    [InlineData("Gorbaczow", "óòôõöøeo")]
+    [InlineData("Образцова", "аяеёоиыйij")]
+    [InlineData("Kxnhxbkard", "xkqsx")]
+    public void SurnamePattern_Fails_Fast_On_A_Long_Run_Of_Letters_It_Could_Split_Many_Ways(string surname, string letters)
+    {
+        var pattern = new Regex(PersonNameMatching.SurnamePattern(PersonNameMatching.SurnameStems(surname)),
+            RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
+        var run = string.Concat(Enumerable.Repeat(letters, 40 / letters.Length + 1));
+
+        foreach (var text in new[] { surname + run, surname[..3] + run + surname[3..] + run, run + "1" })
+            pattern.IsMatch(text);
+    }
 
     [Theory]
     [InlineData("Мария", true)]
     [InlineData("Марья", true)]
+    [InlineData("Марія", true)]
+    [InlineData("Maria", true)]
+    [InlineData("Marija", true)]
+    [InlineData("María", true)]
     [InlineData("Анна Мария", true)]
     [InlineData("Марьяна", false)]
+    [InlineData("Mariana", false)]
     [InlineData("Анна", false)]
-    public void GivenPattern_Matches_A_Word_Of_The_Given_Name(string firstName, bool matches) =>
-        Assert.Equal(matches, Matches(PersonNameMatching.GivenPattern(["марья"]), firstName));
+    public void GivenPattern_Matches_A_Word_Of_The_Given_Name_In_Any_Spelling(string firstName, bool matches) =>
+        Assert.Equal(matches, Matches(PersonNameMatching.GivenPattern(["мара"]), firstName));
+
+    [Theory]
+    [InlineData("Андрей", true)]
+    [InlineData("Андрий", true)]
+    [InlineData("Andrei", true)]
+    [InlineData("Andrey", true)]
+    [InlineData("Andrej", true)]
+    [InlineData("Андриан", false)]
+    public void GivenPattern_Matches_Ей_And_Ий(string firstName, bool matches) =>
+        Assert.Equal(matches, Matches(PersonNameMatching.GivenPattern(["андри"]), firstName));
+
+    [Theory]
+    [InlineData("Maja", true)]
+    [InlineData("Maya", true)]
+    [InlineData("Майя", true)]
+    [InlineData("Мая", true)]
+    [InlineData("Мария", false)]
+    public void GivenPattern_Matches_A_J_Between_Vowels_In_Any_Spelling(string firstName, bool matches) =>
+        Assert.Equal(matches,
+            Matches(PersonNameMatching.GivenPattern(PersonNameMatching.Folds("Maja", givenName: true)), firstName));
 
     [Fact]
     public void SearchPath_Selects_By_Surname_And_Given_Name_In_One_Request()
@@ -94,7 +247,59 @@ public class DuplicatePeopleTests
         Assert.Equal(["RegExpName", "RegExpName"], rules["rules"]!.AsArray().Select(r => r!["name"]!.GetValue<string>()));
         var patterns = rules["rules"]!.AsArray().Select(r => r!["values"]![0]!.GetValue<string>()).ToList();
         Assert.True(Matches(patterns[0], "Образцова"));
+        Assert.True(Matches(patterns[0], "Obraztsova"));
         Assert.True(Matches(patterns[1], "Анна Иван"));
+        Assert.True(Matches(patterns[1], "Iwan"));
+    }
+
+    [Fact]
+    public void SearchPath_Sends_Only_The_Shortest_Of_Stems_That_Begin_With_Another()
+    {
+        var path = DuplicatePeople.SearchPath(Keys("""{ "given": "Agnieszka", "surname": "Nowakówna" }"""));
+
+        Assert.NotNull(path);
+        var pattern = Rules(path)["rules"]![0]!["values"]![0]!.GetValue<string>();
+        Assert.Equal(PersonNameMatching.SurnamePattern(["новак"]), pattern);
+        Assert.All(new[] { "Nowak", "Nowakowa", "Nowakówna", "Novák", "Nováková", "Новак" },
+            surname => Assert.True(Matches(pattern, surname), surname));
+    }
+
+    [Fact]
+    public void SearchPath_Sends_Only_The_Stem_Whose_Pattern_Matches_The_Others()
+    {
+        var path = DuplicatePeople.SearchPath(Keys("""{ "given": "Agnieszka", "surname": "Hájková" }"""));
+
+        Assert.NotNull(path);
+        var pattern = Rules(path)["rules"]![0]!["values"]![0]!.GetValue<string>();
+        Assert.Equal(PersonNameMatching.SurnamePattern(["гаик"]), pattern);
+        Assert.All(new[] { "Hájek", "Hájková" },
+            surname => Assert.True(Matches(pattern, surname), surname));
+    }
+
+    /// <summary>
+    /// An x folds to кс, which joins a k before it or an s after it, and cutting an ending can split it; the fleeting
+    /// е of a stem can also be spelled io or ie. The search must still find the surname itself and its other form.
+    /// </summary>
+    [Theory]
+    [InlineData("Qndiehnthx")]
+    [InlineData("Aaaqqkxbyr")]
+    [InlineData("Kxnhxbkard")]
+    [InlineData("Hcoxscbhey")]
+    [InlineData("Gcanmdpfxx")]
+    [InlineData("Iqqtoarqex")]
+    [InlineData("Zrtossmyoc")]
+    [InlineData("Qsuhnbpioq")]
+    [InlineData("Zedahxeyec")]
+    public void SearchPath_Finds_The_Surname_It_Searches_For(string surname)
+    {
+        foreach (var (form, other) in new[] { (surname, surname), (surname + "ova", surname + "ov"),
+                     (surname + "ov", surname + "ova") })
+        {
+            var path = DuplicatePeople.SearchPath(Keys($$"""{ "given": "Anna", "surname": "{{form}}" }"""));
+
+            Assert.NotNull(path);
+            Assert.True(Matches(Rules(path)["rules"]![0]!["values"]![0]!.GetValue<string>(), other), $"{form} -> {other}");
+        }
     }
 
     [Fact]
@@ -142,6 +347,21 @@ public class DuplicatePeopleTests
             ["same name, born the same year", "same name, born 2 years apart", "same name, born 4 years apart",
              "same name, no birth years to compare"],
             candidates.Select(c => c.Reason));
+    }
+
+    [Fact]
+    public void Classify_Matches_A_Name_Written_In_The_Other_Alphabet()
+    {
+        var person = NewPerson("""{ "given": "Jadwiga", "surname": "Dubrowska" }""", gender: 0, birthYear: 1880);
+        var people = People(
+            Person("h-cyrillic", "I0001", "Ядвига", "Дубровская", 0, birth: "1881"),
+            Person("h-male-form", "I0002", "Ядвига", "Dubrovskiy", 0, birth: "1880"),
+            Person("h-other", "I0003", "Ядвига", "Дубовская", 0, birth: "1880"));
+
+        var candidates = DuplicatePeople.Classify(person, people);
+
+        Assert.Equal(["h-male-form", "h-cyrillic"], candidates.Select(c => c.Person.Handle));
+        Assert.All(candidates, c => Assert.Equal(DuplicatePeople.Level.Strong, c.Level));
     }
 
     [Fact]

@@ -40,6 +40,25 @@ public class DuplicateToolsTests
     }
 
     [Fact]
+    public void Scan_Pairs_Forms_Of_A_Surname_In_Other_Languages_And_Alphabets()
+    {
+        var people = People(
+            Person("h1", "I0001", "Иван", "Образцов", birth: "1880"),
+            Person("h2", "I0002", "Iwan", "Obrazcow", birth: "1881"),
+            Person("h3", "I0003", "Maria", "Hájková", gender: 0, birth: "1890"),
+            Person("h4", "I0004", "Maria", "Hájek", gender: 0, birth: "1890"),
+            Person("h5", "I0005", "Maria", "Kazlauskienė", gender: 0),
+            Person("h6", "I0006", "Maria", "Kazlauskaitė", gender: 0),
+            Person("h7", "I0007", "Maria", "Kowalczyk", gender: 0));
+
+        var scan = DuplicateTools.Scan(people);
+
+        Assert.Equal([("h3", "h4"), ("h1", "h2"), ("h5", "h6")], Handles(scan));
+        Assert.Equal(["same name, born the same year", "same name, born 1 year apart", "same name, no birth years to compare"],
+            scan.Pairs.Select(p => p.Match.Reason));
+    }
+
+    [Fact]
     public void Scan_Never_Pairs_Spouses_Or_A_Person_With_Their_Ancestor()
     {
         var people = People(
@@ -125,7 +144,8 @@ public class DuplicateToolsTests
             Person("h7", "I0007", "Анна", "Сидорова", gender: 0));
 
         Assert.Equal([("h1", "h2")], Handles(DuplicateTools.Scan(people, personHandle: "h1")));
-        Assert.Equal([("h4", "h5"), ("h6", "h7")], Handles(DuplicateTools.Scan(people, surnameStem: "сидоров")));
+        Assert.Equal([("h4", "h5"), ("h6", "h7")],
+            Handles(DuplicateTools.Scan(people, surnameStems: PersonNameMatching.SurnameStems("Сидоров"))));
     }
 
     [Fact]
