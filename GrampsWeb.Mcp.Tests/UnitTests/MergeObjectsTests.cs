@@ -24,7 +24,7 @@ public class MergeObjectsTests
             """ {"handle": "n2", "gramps_id": "N0002", "type": "General", "text": {"string": "Born at Tver"}}]""");
         var user = new FakeConfirmation(ConfirmationAnswer.Confirmed);
 
-        var result = await Merge(server, user);
+        var result = (await Merge(server, user)).ReplaceLineEndings("\n");
 
         var question = Assert.Single(user.Questions).ReplaceLineEndings("\n");
         Assert.StartsWith(

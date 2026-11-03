@@ -220,7 +220,7 @@ public class RecordBatchToolsTests
     {
         var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1881")}]" };
 
-        var result = await CreateRecords(Ivan(birth: "1880"), handler);
+        var result = (await CreateRecords(Ivan(birth: "1880"), handler)).ReplaceLineEndings("\n");
 
         Assert.Empty(handler.Posts);
         Assert.StartsWith("---\ntype: Transaction\naction: refused\nduplicates: 1\n---\n", result);
@@ -249,7 +249,7 @@ public class RecordBatchToolsTests
     {
         var handler = new TreeHandler { People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1884")}]" };
 
-        var result = await CreateRecords(Ivan(birth: "1880"), handler);
+        var result = (await CreateRecords(Ivan(birth: "1880"), handler)).ReplaceLineEndings("\n");
 
         var person = handler.Body!.AsArray().Single(o => o!["_class"]!.GetValue<string>() == "Person")!;
         Assert.Equal(["/api/objects/"], handler.Posts);
