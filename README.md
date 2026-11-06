@@ -6,6 +6,7 @@
 [![CI](https://github.com/Scormave/gramps-web-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Scormave/gramps-web-mcp/actions/workflows/ci.yml)
 [![Docker on GHCR](https://img.shields.io/badge/Docker-GHCR-2496ED?logo=docker&logoColor=white)](https://github.com/Scormave/gramps-web-mcp/pkgs/container/gramps-web-mcp)
 [![Gramps Web MCP MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/Scormave/gramps-web-mcp/badges/score.svg)](https://glama.ai/mcp/servers/Scormave/gramps-web-mcp)
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Scormave)
 
 > [!WARNING]
 > **Update to 2.3.1 or later.** Before 2.3.1 the `update_*` tools could drop
@@ -169,6 +170,13 @@ against the public [demo.grampsweb.org](https://demo.grampsweb.org) tree at
 `http://127.0.0.1:8080/mcp`, and `dotnet test` runs the tests. See
 [CONTRIBUTING.md](CONTRIBUTING.md) and the
 [developer guide](GrampsWeb.Mcp/docs/DEVELOPER_GUIDE.md).
+
+## Sponsors
+
+gramps-web-mcp is free and open source. If it helps your research, you can
+support its development through
+[GitHub Sponsors](https://github.com/sponsors/Scormave), monthly or once.
+Sponsors whose tier includes a mention are listed here.
 
 ## Security
 

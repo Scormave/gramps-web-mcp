@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   push and pull request. A test that passes only with Unix line endings
   now fails there, before a release, instead of stopping the release
   files as in 2.9.0
+- Sponsor links to [GitHub Sponsors](https://github.com/sponsors/Scormave):
+  the Sponsor button on the repository page, a badge and a Sponsors
+  section in the README, and a Sponsor button in the header and a link in
+  the footer of the GitHub Pages site
 
 ## [2.9.1] - 2026-11-03
 
