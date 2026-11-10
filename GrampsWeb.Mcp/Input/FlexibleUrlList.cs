@@ -5,7 +5,7 @@ using GrampsWeb.Mcp.Serialization;
 namespace GrampsWeb.Mcp.Input;
 
 /// <summary>
-/// MCP parameter for person URL list. Accepts JSON array of <see cref="GrampsUrl"/> objects,
+/// MCP parameter for the URL list of a person or repository. Accepts JSON array of <see cref="GrampsUrl"/> objects,
 /// array of strings <c>Type: URL</c> with optional <c> — description</c> or <c> - description</c> after the URL,
 /// multiline or <c>|</c>-separated string, or embedded JSON array string.
 /// </summary>

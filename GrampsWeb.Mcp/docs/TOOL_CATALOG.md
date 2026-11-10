@@ -953,18 +953,20 @@ call number. `noteHandles` and `tagHandles` only link existing notes and tags.
 | `repoType` | `string?` | no | — | Repository type, such as `Archive`, `Library`, `Church`, or `Web site`; Gramps stores `Library` when omitted |
 | `address` | `string?` | no | — | Postal address as one line, stored as the street of the repository's address |
 | `addresses` | `FlexibleAddressList?` | no | — | Addresses with separate fields (street, locality, city, county, state, postal code, country, phone), in the same forms as on `CreatePerson`; not together with `address` |
-| `url` | `string?` | no | — | Website, stored as the repository's web home link |
+| `url` | `string?` | no | — | Website, stored as the repository's Web Home link |
+| `urls` | `FlexibleUrlList?` | no | — | Links, each with a type (`Web Home`, `E-mail`, …) and an optional description, in the same forms as on `CreatePerson`; not together with `url` |
 | `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Existing notes and tags to link |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateRepository`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a repository (same field set, all optional). `addresses` replaces
-every stored address with the ones given, and `[]` removes them. `address` and
-`url` each replace every stored address or link with one, as on create, and an
-empty string removes them. `address` and `addresses` are not given together.
-A change shows on every source that lists the repository.
+Update a repository (same field set, all optional). `addresses` and `urls`
+replace every stored address or link with the ones given, and `[]` removes
+them. `address` and `url` each replace every stored address or link with one,
+as on create, and an empty string removes them. `address` and `addresses` are
+not given together, nor are `url` and `urls`. A change shows on every source
+that lists the repository.
 
 ---
 

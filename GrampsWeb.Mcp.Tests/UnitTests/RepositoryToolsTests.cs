@@ -28,6 +28,8 @@ public class RepositoryToolsTests
 
     private const string KeyedAddress = "street: 12 High Street\ncity: London\npostal: SW1A 1AA\ncountry: United Kingdom";
 
+    private const string TwoLinks = "Web Home: https://archive.example.org — reading room\nE-mail: info@archive.example.org";
+
     [Fact]
     public async Task CreateRepository_Result_Shows_The_Name_Not_The_Type()
     {
@@ -115,6 +117,96 @@ public class RepositoryToolsTests
     }
 
     [Fact]
+    public async Task CreateRepository_Urls_Keep_Each_Type_And_Description()
+    {
+        var handler = new RepositoryHandler();
+
+        await RepositoryTools.CreateRepository("City Archive", urls: Urls(TwoLinks), client: CreateClient(handler));
+
+        var urls = handler.Body!["urls"]!.AsArray();
+        Assert.Equal(2, urls.Count);
+        Assert.Equal("Web Home", urls[0]!["type"]!.GetValue<string>());
+        Assert.Equal("https://archive.example.org", urls[0]!["path"]!.GetValue<string>());
+        Assert.Equal("reading room", urls[0]!["desc"]!.GetValue<string>());
+        Assert.Equal("E-mail", urls[1]!["type"]!.GetValue<string>());
+        Assert.Equal("info@archive.example.org", urls[1]!["path"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task CreateRepository_Url_Is_Stored_As_A_Web_Home_Link()
+    {
+        var handler = new RepositoryHandler();
+
+        await RepositoryTools.CreateRepository("City Archive", url: "https://archive.example.org", client: CreateClient(handler));
+
+        var url = Assert.Single(handler.Body!["urls"]!.AsArray())!;
+        Assert.Equal("Web Home", url["type"]!.GetValue<string>());
+        Assert.Equal("https://archive.example.org", url["path"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task CreateRepository_Refuses_Url_And_Urls_Together()
+    {
+        var handler = new RepositoryHandler();
+
+        var error = await Assert.ThrowsAsync<McpException>(() => RepositoryTools.CreateRepository("City Archive",
+            url: "https://archive.example.org", urls: Urls(TwoLinks), client: CreateClient(handler)));
+
+        Assert.Contains("url or urls, not both", error.Message);
+        Assert.Null(handler.Body);
+    }
+
+    [Fact]
+    public async Task CreateRepository_Rejects_An_Unknown_Url_Type_Before_Saving()
+    {
+        var handler = new RepositoryHandler();
+
+        var error = await Assert.ThrowsAsync<McpException>(() => RepositoryTools.CreateRepository("City Archive",
+            urls: Urls("Web Hom: https://archive.example.org"), client: CreateClient(handler)));
+
+        Assert.Contains("Did you mean: Web Home", error.Message);
+        Assert.Null(handler.Body);
+    }
+
+    [Fact]
+    public async Task UpdateRepository_Urls_Replace_The_Stored_Ones_And_Keep_The_Rest()
+    {
+        var handler = new RepositoryHandler(StoredRepository);
+
+        await RepositoryTools.UpdateRepository("h-repo", urls: Urls(TwoLinks), client: CreateClient(handler));
+
+        var expected = JsonNode.Parse(StoredRepository)!.AsObject();
+        expected.Remove("urls");
+        var sent = handler.Body!.AsObject();
+        var urls = sent["urls"]!.AsArray();
+        Assert.Equal(["Web Home", "E-mail"], urls.Select(u => u!["type"]!.GetValue<string>()));
+        Assert.Equal("reading room", urls[0]!["desc"]!.GetValue<string>());
+        sent.Remove("urls");
+        Assert.True(JsonNode.DeepEquals(expected, sent), $"Expected:\n{expected}\nActual:\n{sent}");
+    }
+
+    [Fact]
+    public async Task UpdateRepository_Empty_Urls_Remove_The_Stored_Ones()
+    {
+        var handler = new RepositoryHandler(StoredRepository);
+
+        await RepositoryTools.UpdateRepository("h-repo", urls: Urls("[]"), client: CreateClient(handler));
+
+        Assert.Empty(handler.Body!["urls"]!.AsArray());
+    }
+
+    [Fact]
+    public async Task UpdateRepository_Refuses_Url_And_Urls_Together()
+    {
+        var handler = new RepositoryHandler(StoredRepository);
+
+        await Assert.ThrowsAsync<McpException>(() => RepositoryTools.UpdateRepository("h-repo", url: "",
+            urls: Urls("[]"), client: CreateClient(handler)));
+
+        Assert.Null(handler.Body);
+    }
+
+    [Fact]
     public async Task ReadRepository_Shows_Addresses_And_Urls_As_Text()
     {
         var handler = new RepositoryHandler(StoredRepository);
@@ -130,6 +222,10 @@ public class RepositoryToolsTests
     /// <summary>An addresses argument as the MCP client sends it: a JSON string or array.</summary>
     private static FlexibleAddressList Addresses(string value) =>
         JsonSerializer.Deserialize<FlexibleAddressList>(value.TrimStart().StartsWith('[') ? value : JsonSerializer.Serialize(value))!;
+
+    /// <summary>A urls argument as the MCP client sends it: a JSON string or array.</summary>
+    private static FlexibleUrlList Urls(string value) =>
+        JsonSerializer.Deserialize<FlexibleUrlList>(value.TrimStart().StartsWith('[') ? value : JsonSerializer.Serialize(value))!;
 
     private static GrampsApiClient CreateClient(RepositoryHandler handler)
     {
@@ -156,7 +252,8 @@ public class RepositoryToolsTests
             var json = path switch
             {
                 "/api/token/" => """{"access_token":"token","refresh_token":"refresh","expires_in":900}""",
-                "/api/types/default/" => """{"repository_types":["Archive","Library"]}""",
+                "/api/types/default/" =>
+                    """{"repository_types":["Archive","Library"],"url_types":["Unknown","E-mail","Web Home","Web Search","FTP"]}""",
                 "/api/repositories/" when request.Method == HttpMethod.Post =>
                     """[{"_class":"Repository","type":"add","old":null,"new":{"_class":"Repository","handle":"repo-h","gramps_id":"R0001"}}]""",
                 _ when path.StartsWith("/api/repositories/") && request.Method == HttpMethod.Put => "{}",

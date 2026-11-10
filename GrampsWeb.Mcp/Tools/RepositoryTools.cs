@@ -60,8 +60,11 @@ public static class RepositoryTools
         string? address = null,
         [Description(AddressesText + " Optional; not together with address.")]
         FlexibleAddressList? addresses = null,
-        [Description("Website, e.g. https://archive.example.org, stored as the repository's web home link (optional).")]
+        [Description("Website, e.g. https://archive.example.org, stored as the repository's Web Home link (optional). " +
+                     "For several links, another type such as E-mail, or a description, use urls instead.")]
         string? url = null,
+        [Description(UrlsText + " Optional; not together with url.")]
+        FlexibleUrlList? urls = null,
         [Description("Existing notes to link (optional); create them first with create_note. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Existing tags to link (optional); create them first with create_tag. " + FlexibleHandleList.DescriptionHint)]
@@ -72,7 +75,7 @@ public static class RepositoryTools
     {
         try
         {
-            var request = await BuildRepositoryRequestAsync(name, repoType, address, addresses, url, noteHandles,
+            var request = await BuildRepositoryRequestAsync(name, repoType, address, addresses, url, urls, noteHandles,
                 tagHandles, isPrivate, client);
             var (handle, grampsId) = await client.PostMutationAsync("/api/repositories/", request, "Repository");
             return ResponseEnvelope.CreateSuccess(
@@ -87,22 +90,24 @@ public static class RepositoryTools
 
     /// <summary>The checked request body of create_repository; create_records sends it too.</summary>
     internal static async Task<CreateRepositoryRequest> BuildRepositoryRequestAsync(
-        string name, string? repoType, string? address, FlexibleAddressList? addresses, string? url,
+        string name, string? repoType, string? address, FlexibleAddressList? addresses, string? url, FlexibleUrlList? urls,
         FlexibleHandleList? noteHandles, FlexibleHandleList? tagHandles, bool isPrivate, GrampsApiClient client)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw McpToolErrors.ValidationError("Error: name is required");
         CheckOneAddressForm(address, addresses);
+        CheckOneUrlForm(url, urls);
 
         if (repoType != null)
             repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
+        await KnownTypes.CheckUrlsAsync(urls, client);
 
         return new CreateRepositoryRequest
         {
             Name = name,
             Type = repoType,
             AddressList = (GrampsAddress[]?)addresses is { Length: > 0 } a ? a : RepositoryAddressListFromStreet(address),
-            UrlList = RepositoryUrlListFromPath(url),
+            UrlList = (GrampsUrl[]?)urls is { Length: > 0 } u ? u : RepositoryUrlListFromPath(url),
             NoteList = noteHandles,
             TagList = tagHandles,
             Private = isPrivate
@@ -114,10 +119,10 @@ public static class RepositoryTools
         "Change an existing repository's name, type, address, website or links to notes and tags. " +
         "For a new repository use create_repository; to remove one, delete_object. Which sources it holds, with their " +
         "call numbers, is stored on the sources: change that with update_source (repositoryHandles), not here. " +
-        "addresses sets street, city, postal code, country and the other address fields; address is a shortcut for a " +
-        "single address with only a street line, and url sets a single Web Home link. Each replaces every stored " +
-        "address or link; an empty address or url string, or addresses [], removes them. A change shows on every " +
-        "source that lists the repository. " +
+        "addresses sets street, city, postal code, country and the other address fields, and urls sets links with " +
+        "their type and description; address is a shortcut for a single address with only a street line, and url for " +
+        "a single Web Home link. Each replaces every stored address or link; an empty address or url string, or " +
+        "addresses or urls [], removes them. A change shows on every source that lists the repository. " +
         ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing repository returns a not-found message, and an unknown type is " +
         "rejected before anything is saved. " + ToolDescriptionFragments.WriteAccess)]
@@ -133,8 +138,11 @@ public static class RepositoryTools
         string? address = null,
         [Description(AddressesText + " Not together with address. " + ToolDescriptionFragments.ReplacedListOnUpdate)]
         FlexibleAddressList? addresses = null,
-        [Description("New website; replaces every stored link, and an empty string removes them. " + ToolDescriptionFragments.OmitToKeepScalar)]
+        [Description("New website, stored as a single Web Home link; replaces every stored link, and an empty string " +
+                     "removes them. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? url = null,
+        [Description(UrlsText + " Not together with url. " + ToolDescriptionFragments.ReplacedListOnUpdate)]
+        FlexibleUrlList? urls = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
         [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
@@ -149,6 +157,8 @@ public static class RepositoryTools
         {
             LinkUpdates.Validate(linkMode);
             CheckOneAddressForm(address, addresses);
+            CheckOneUrlForm(url, urls);
+            await KnownTypes.CheckUrlsAsync(urls, client);
             using var updateLease = await client.BeginUpdateAsync();
             if (repoType != null)
                 repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
@@ -165,6 +175,7 @@ public static class RepositoryTools
             repo.Set("address_list", (GrampsAddress[]?)addresses);
             if (url != null)
                 repo.Root["urls"] = GrampsObjectPatch.ToNode(RepositoryUrlListFromPath(url));
+            repo.Set("urls", (GrampsUrl[]?)urls);
             repo.ApplyHandles("note_list", noteHandles, linkMode);
             repo.ApplyHandles("tag_list", tagHandles, linkMode);
             repo.Set("private", isPrivate);
@@ -182,6 +193,10 @@ public static class RepositoryTools
         "Postal addresses with separate fields, e.g. \"street: 12 High Street\\ncity: London\\npostal: SW1A 1AA\\n" +
         "country: United Kingdom\". " + FlexibleAddressList.DescriptionHint;
 
+    private const string UrlsText =
+        "Links with a type and an optional description, e.g. \"Web Home: https://archive.example.org — reading room\\n" +
+        "E-mail: info@archive.example.org\". " + FlexibleUrlList.DescriptionHint;
+
     /// <summary>address is a one-line shortcut for addresses, so a call gives one or the other.</summary>
     private static void CheckOneAddressForm(string? address, FlexibleAddressList? addresses)
     {
@@ -189,6 +204,15 @@ public static class RepositoryTools
             throw McpToolErrors.ValidationError(
                 "Error: give address or addresses, not both. address is one street line; addresses takes street, city, " +
                 "postal code, country and the other fields.");
+    }
+
+    /// <summary>url is a shortcut for one Web Home link in urls, so a call gives one or the other.</summary>
+    private static void CheckOneUrlForm(string? url, FlexibleUrlList? urls)
+    {
+        if (url != null && urls != null)
+            throw McpToolErrors.ValidationError(
+                "Error: give url or urls, not both. url is one Web Home link; urls takes several links, each with its " +
+                "type and description.");
     }
 
     /// <summary>Single street line as Gramps address_list entry; null input omits the field on create.</summary>

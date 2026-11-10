@@ -90,6 +90,23 @@ public class RecordBatchToolsTests
     }
 
     [Fact]
+    public async Task CreateRecords_Repository_Takes_Urls_With_Type_And_Description()
+    {
+        var handler = new TreeHandler();
+
+        await CreateRecords("""
+            {
+              "repositories": [{ "name": "State Archive",
+                                 "urls": "Web Home: https://archive.example.org — reading room\nE-mail: info@archive.example.org" }]
+            }
+            """, handler);
+
+        var urls = handler.Body!.AsArray()[0]!["urls"]!.AsArray();
+        Assert.Equal(["Web Home", "E-mail"], urls.Select(u => u!["type"]!.GetValue<string>()));
+        Assert.Equal("reading room", urls[0]!["desc"]!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task CreateRecords_Points_Vital_Indexes_At_Events_Of_The_Call_And_Existing_Ones()
     {
         var handler = new TreeHandler(new Dictionary<string, string>
@@ -382,6 +399,7 @@ public class RecordBatchToolsTests
               "name_types": ["Unknown", "Also Known As", "Birth Name", "Married Name"],
               "note_types": ["Unknown", "General", "Research"],
               "repository_types": ["Unknown", "Archive", "Library"],
+              "url_types": ["Unknown", "E-mail", "Web Home", "Web Search", "FTP"],
               "source_media_types": ["Unknown", "Book", "Manuscript"],
               "place_types": ["Unknown", "Village", "City"]
             }

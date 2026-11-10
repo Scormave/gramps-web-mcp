@@ -25,6 +25,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   postal code and country no longer end up in the street line. The
   one-line `address` stays as a shortcut for a street; a call gives one
   or the other
+- Repository links with a type and description: `create_repository`,
+  `update_repository` and the repositories of `create_records` take
+  `urls` in the same forms as the person tools, such as
+  `Web Home: https://archive.example.org — reading room` and
+  `E-mail: info@archive.example.org`. An archive can keep its e-mail and
+  several pages, and an update can pass the whole list instead of
+  replacing every link with one Web Home link. The one-line `url` stays
+  as that shortcut; a call gives one or the other
 
 ### Fixed
 

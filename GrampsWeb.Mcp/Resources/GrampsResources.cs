@@ -651,7 +651,7 @@ public sealed class GrampsResources
                 "JSON array of objects {\"type\",\"path\",\"desc\"}",
                 "JSON array of strings or one multiline / |-separated string"
             },
-            tools = "create_person, update_person only"
+            tools = "create_person, update_person, create_repository, update_repository, and the people and repositories of create_records"
         },
         addresses = new
         {
