@@ -16,6 +16,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the Sponsor button on the repository page, a badge and a Sponsors
   section in the README, and a Sponsor button in the header and a link in
   the footer of the GitHub Pages site
+- Repository addresses with separate fields
+  ([#14](https://github.com/Scormave/gramps-web-mcp/issues/14), requested
+  by @ziwachow): `create_repository`, `update_repository` and the
+  repositories of `create_records` take `addresses` in the same forms as
+  the person tools, Gramps address objects or `street:`, `city:`,
+  `postal:`, `country:` and other keyed lines, so an archive's city,
+  postal code and country no longer end up in the street line. The
+  one-line `address` stays as a shortcut for a street; a call gives one
+  or the other
+
+### Fixed
+
+- `get_object` on a repository shows its addresses and links as text,
+  such as `12 High Street, London, SW1A 1AA` and
+  `[Web Home] https://archive.example.org`, as it does for a person,
+  instead of raw JSON
+- An address without a date, on a person or a repository, no longer shows
+  `resident as of: Unknown date`
 
 ## [2.9.1] - 2026-11-03
 

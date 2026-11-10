@@ -70,6 +70,26 @@ public class RecordBatchToolsTests
     }
 
     [Fact]
+    public async Task CreateRecords_Repository_Takes_Addresses_With_Separate_Fields()
+    {
+        var handler = new TreeHandler();
+
+        await CreateRecords("""
+            {
+              "repositories": [{ "name": "State Archive",
+                                 "addresses": [{ "street": "12 High Street", "city": "London", "postal": "SW1A 1AA",
+                                                 "country": "United Kingdom" }] }]
+            }
+            """, handler);
+
+        var address = Assert.Single(handler.Body!.AsArray()[0]!["address_list"]!.AsArray())!;
+        Assert.Equal("12 High Street", address["street"]!.GetValue<string>());
+        Assert.Equal("London", address["city"]!.GetValue<string>());
+        Assert.Equal("SW1A 1AA", address["postal"]!.GetValue<string>());
+        Assert.Equal("United Kingdom", address["country"]!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task CreateRecords_Points_Vital_Indexes_At_Events_Of_The_Call_And_Existing_Ones()
     {
         var handler = new TreeHandler(new Dictionary<string, string>

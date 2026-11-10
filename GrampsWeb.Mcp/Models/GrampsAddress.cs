@@ -3,7 +3,7 @@ using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
-/// <summary>Postal address on a Person (Gramps Web <c>address_list</c> items).</summary>
+/// <summary>Postal address on a Person or Repository (Gramps Web <c>address_list</c> items).</summary>
 public class GrampsAddress
 {
     [JsonPropertyName("street")]

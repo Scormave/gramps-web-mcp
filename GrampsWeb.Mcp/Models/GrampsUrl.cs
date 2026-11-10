@@ -3,7 +3,7 @@ using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Models;
 
-/// <summary>Web or other URL entry on a Person (Gramps Web <c>urls</c> items).</summary>
+/// <summary>Web or other URL entry on a Person or Repository (Gramps Web <c>urls</c> items).</summary>
 public class GrampsUrl
 {
     [JsonPropertyName("type")]

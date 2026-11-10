@@ -452,7 +452,9 @@ public class GrampsCompatibilityDeserializeTests
             {
               "_class": "Repository", "handle": "r1", "gramps_id": "R0001", "change": 1793295509, "private": false,
               "name": "State archive", "type": { "_class": "RepositoryType", "value": 1, "string": "" },
-              "urls": [{{RawUrl}}], "address_list": [], "note_list": [], "tag_list": []
+              "urls": [{{RawUrl}}], "note_list": [], "tag_list": [],
+              "address_list": [{ "_class": "Address", "private": false, "citation_list": [], "note_list": [], "date": {{RawDate}},
+                                 "street": "", "locality": "", "city": "Tver", "county": "", "state": "", "country": "", "postal": "", "phone": "" }]
             }
             """ },
         { typeof(GrampsPlace), $$"""
@@ -480,6 +482,9 @@ public class GrampsCompatibilityDeserializeTests
         var urls = model.GetProperty("UrlList")?.GetValue(record) as GrampsUrl[];
         if (urls != null)
             Assert.Equal("2", urls[0].Type);
+        var addresses = model.GetProperty("AddressList")?.GetValue(record) as GrampsAddress[];
+        if (addresses != null)
+            Assert.Equal("Tver", addresses[0].City);
     }
 
     [Fact]

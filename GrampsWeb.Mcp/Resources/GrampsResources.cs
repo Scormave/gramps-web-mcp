@@ -664,7 +664,7 @@ public sealed class GrampsResources
                 "JSON array of strings (each string is one address block)",
                 "One multiline JSON string with blocks separated by blank line or ---"
             },
-            tools = "create_person, update_person only"
+            tools = "create_person, update_person, create_repository, update_repository, and the people and repositories of create_records"
         },
         person_associations = new
         {

@@ -22,19 +22,8 @@ public static class RepositoryFormatter
         var typeLabel = await GrampsDefaultTypeLabels.FormatRepositoryTypeAsync(client, repo.Type);
         sb.AppendLine($"Type: {typeLabel}");
 
-        if (repo.AddressList?.Length > 0)
-        {
-            sb.AppendLine("\nAddresses:");
-            foreach (var addr in repo.AddressList)
-                sb.AppendLine($"  • {addr}");
-        }
-
-        if (repo.UrlList?.Length > 0)
-        {
-            sb.AppendLine("\nURLs:");
-            foreach (var url in repo.UrlList)
-                sb.AppendLine($"  • {url}");
-        }
+        AddressListFormatter.AppendAddressesSection(sb, repo.AddressList);
+        AddressListFormatter.AppendUrlsSection(sb, repo.UrlList);
 
         var labels = await labelsTask;
         HandleListFormatter.AppendHandleBulletSection(sb, "Notes", repo.NoteList, labels);

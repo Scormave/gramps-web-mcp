@@ -5,7 +5,7 @@ using GrampsWeb.Mcp.Serialization;
 namespace GrampsWeb.Mcp.Input;
 
 /// <summary>
-/// MCP parameter for person address list. Accepts JSON array of <see cref="GrampsAddress"/> objects,
+/// MCP parameter for the address list of a person or repository. Accepts JSON array of <see cref="GrampsAddress"/> objects,
 /// array of strings (each string is one address block), a multiline string with blocks separated by blank lines or <c>---</c>,
 /// keyed lines (<c>street:</c>, <c>city:</c>, …), or a single line without <c>key:</c> as street-only.
 /// </summary>

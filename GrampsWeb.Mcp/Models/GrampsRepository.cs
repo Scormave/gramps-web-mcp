@@ -25,10 +25,10 @@ public class GrampsRepository
     public string[]? EmailList { get; set; }
 
     [JsonPropertyName("address_list")]
-    public object[]? AddressList { get; set; }
+    public GrampsAddress[]? AddressList { get; set; }
 
     [JsonPropertyName("urls")]
-    public object[]? UrlList { get; set; }
+    public GrampsUrl[]? UrlList { get; set; }
 
     [JsonPropertyName("note_list")]
     public string[]? NoteList { get; set; }

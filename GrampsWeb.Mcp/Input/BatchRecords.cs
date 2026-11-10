@@ -357,8 +357,12 @@ public sealed class RepositoryRecord : BatchRecord
     public string? RepoType { get; init; }
 
     [JsonPropertyName("address")]
-    [Description("Postal address as one line.")]
+    [Description("Postal address as one line, stored as the street; for a city, postal code or country use addresses.")]
     public string? Address { get; init; }
+
+    [JsonPropertyName("addresses")]
+    [Description("Addresses with separate fields, as in create_person; not together with address.")]
+    public FlexibleAddressList? Addresses { get; init; }
 
     [JsonPropertyName("url")]
     [Description("Website.")]
@@ -380,8 +384,8 @@ public sealed class RepositoryRecord : BatchRecord
 
     internal override async Task<(object Request, string Label)> BuildAsync(GrampsApiClient client)
     {
-        var request = await RepositoryTools.BuildRepositoryRequestAsync(Name, RepoType, Address, Url, NoteHandles,
-            TagHandles, IsPrivate, client);
+        var request = await RepositoryTools.BuildRepositoryRequestAsync(Name, RepoType, Address, Addresses, Url,
+            NoteHandles, TagHandles, IsPrivate, client);
         return (request, Name);
     }
 }

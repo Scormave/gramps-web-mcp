@@ -571,74 +571,12 @@ public static class PersonFormatter
     private static void AppendMetadataSectionsForPerson(StringBuilder sb, GrampsPerson person)
     {
         AppendAttributesSection(sb, person.AttributeList);
-        AppendAddressesSection(sb, person.AddressList);
-        AppendUrlsSection(sb, person.UrlList);
+        AddressListFormatter.AppendAddressesSection(sb, person.AddressList);
+        AddressListFormatter.AppendUrlsSection(sb, person.UrlList);
     }
 
     private static void AppendAttributesSection(StringBuilder sb, GrampsAttribute[]? list) =>
         AttributeListFormatter.AppendSection(sb, list);
-
-    private static void AppendAddressesSection(StringBuilder sb, GrampsAddress[]? list)
-    {
-        if (list is null || list.Length == 0)
-            return;
-
-        sb.AppendLine();
-        sb.AppendLine($"Addresses ({list.Length}):");
-        foreach (var a in list)
-        {
-            var parts = new List<string>();
-            void add(string? s)
-            {
-                if (!string.IsNullOrWhiteSpace(s))
-                    parts.Add(s.Trim());
-            }
-
-            add(a.Street);
-            add(a.Locality);
-            add(a.City);
-            add(a.County);
-            add(a.State);
-            add(a.Postal);
-            add(a.Country);
-
-            var line = parts.Count > 0 ? string.Join(", ", parts) : "";
-            if (string.IsNullOrEmpty(line) && string.IsNullOrWhiteSpace(a.Phone))
-                line = "(empty address lines)";
-
-            sb.AppendLine($"  • {line}");
-            if (!string.IsNullOrWhiteSpace(a.Phone))
-                sb.AppendLine($"    phone: {a.Phone.Trim()}");
-            if (a.Date != null)
-            {
-                var ds = GrampsValueFormatter.FormatDate(a.Date);
-                if (!string.IsNullOrWhiteSpace(ds))
-                    sb.AppendLine($"    resident as of: {ds}");
-            }
-
-            if (a.Private)
-                sb.AppendLine("    ⚠ private");
-            AppendIndentedHandleListLine(sb, "    citations", a.CitationList);
-            AppendIndentedHandleListLine(sb, "    notes", a.NoteList);
-        }
-    }
-
-    private static void AppendUrlsSection(StringBuilder sb, GrampsUrl[]? list)
-    {
-        if (list is null || list.Length == 0)
-            return;
-
-        sb.AppendLine();
-        sb.AppendLine($"URLs ({list.Length}):");
-        foreach (var u in list)
-        {
-            var typ = string.IsNullOrWhiteSpace(u.Type) ? "URL" : u.Type.Trim();
-            var path = string.IsNullOrWhiteSpace(u.Path) ? "—" : u.Path.Trim();
-            var desc = string.IsNullOrWhiteSpace(u.Description) ? "" : $" — {u.Description.Trim()}";
-            var priv = u.Private ? " ⚠ private" : "";
-            sb.AppendLine($"  • [{typ}] {path}{desc}{priv}");
-        }
-    }
 
     /// <param name="labels">Names of the related people by handle; others are shown as "related person".</param>
     private static void AppendPersonAssociationsSection(
