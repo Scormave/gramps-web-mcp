@@ -8,22 +8,14 @@ namespace GrampsWeb.Mcp.Serialization;
 /// <summary>Shared event-ref object parsing for model and request types.</summary>
 internal static class EventRefJsonParsing
 {
-    internal static (string? Ref, string? Role, string[]? NoteList, object[]? AttributeList) ReadFields(
+    internal static (string? Ref, string? Role, string[]? NoteList, GrampsAttribute[]? AttributeList) ReadFields(
         JsonElement root,
-        JsonSerializerOptions options)
-    {
-        var noteList = JsonElementPropertyReader.GetStringArray(root, "note_list", "noteList");
-        object[]? attributeList = null;
-        var attrArray = JsonElementPropertyReader.FindArrayProperty(root, "attribute_list", "attributeList");
-        if (attrArray is { } arr)
-            attributeList = JsonSerializer.Deserialize<object[]>(arr, options);
-
-        return (
+        JsonSerializerOptions options) =>
+        (
             JsonElementPropertyReader.GetString(root, "ref", "handle"),
             ReadRole(root),
-            noteList,
-            attributeList);
-    }
+            JsonElementPropertyReader.GetStringArray(root, "note_list", "noteList"),
+            GrampsAttributeJson.ReadProperty(root, options));
 
     private static string? ReadRole(JsonElement root)
     {
@@ -96,10 +88,7 @@ public sealed class GrampsEventRefJsonConverter : JsonConverter<GrampsEventRef?>
         }
 
         if (value.AttributeList is { Length: > 0 })
-        {
-            writer.WritePropertyName("attribute_list");
-            JsonSerializer.Serialize(writer, value.AttributeList, options);
-        }
+            GrampsAttributeJson.WriteProperty(writer, value.AttributeList);
 
         writer.WriteEndObject();
     }
@@ -156,11 +145,8 @@ public sealed class EventRefRequestJsonConverter : JsonConverter<EventRefRequest
             writer.WriteEndArray();
         }
 
-        if (value.AttributeList is { Length: > 0 })
-        {
-            writer.WritePropertyName("attribute_list");
-            JsonSerializer.Serialize(writer, value.AttributeList, options);
-        }
+        // An empty list is sent too, so that on update it removes the stored attributes.
+        GrampsAttributeJson.WriteProperty(writer, value.AttributeList);
 
         writer.WriteEndObject();
     }

@@ -19,12 +19,16 @@ public sealed class FlexibleMediaLinkList
         "Media handles, not Gramps IDs: JSON array [\"h1\",\"h2\"], one handle, or a comma/semicolon/newline-separated string. " +
         "To show only part of an image, such as one record on a page scan, give an object {\"ref\":\"…\",\"region\":[left, top, right, bottom]} " +
         "in place of the handle. " + MediaRegion.DescriptionHint + " [0, 0, 100, 100] shows the whole image again; " +
-        "read_media with the same region shows what it covers.";
+        "read_media with the same region shows what it covers. " +
+        "The object may also carry \"attributes\" of this link (not of the media), in the forms of the attributes argument, " +
+        "such as [\"Page: 12\"]; their types are checked like media attributes.";
 
     /// <summary>How linkMode treats regions, for update tools.</summary>
     public const string UpdateHint =
         "A plain handle keeps the region its link has. In add mode a media already shown keeps its link and takes the region given; " +
-        "to show two regions of one image, list it twice, each with its region.";
+        "to show two regions of one image, list it twice, each with its region. " +
+        "Link attributes follow the same rule: omitted keeps the stored ones, [] removes them in replace mode, " +
+        "and add mode adds the missing ones to a link already there.";
 
     public required MediaLink[] Items { get; init; }
 
@@ -39,7 +43,11 @@ public sealed class FlexibleMediaLinkList
 }
 
 /// <summary>
-/// One link from a tool argument: a handle or Gramps ID, and the region of the image to show.
-/// A null <see cref="Region"/> leaves a stored region as it is.
+/// One link from a tool argument: a handle or Gramps ID, the region of the image to show and the attributes of
+/// the link. A null <see cref="Region"/> or <see cref="Attributes"/> leaves the stored one as it is.
 /// </summary>
-public sealed record MediaLink(string Ref, MediaRegion? Region = null, string? RegionError = null);
+public sealed record MediaLink(
+    string Ref,
+    MediaRegion? Region = null,
+    string? RegionError = null,
+    GrampsAttribute[]? Attributes = null);

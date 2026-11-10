@@ -509,11 +509,11 @@ public sealed class GrampsResources
 
     private static object BuildLinkUpdatesGuidePayload() => new
     {
-        applies_to = "Link-list parameters on update_person, update_family, update_event, update_place, update_source, update_citation, update_note, update_media, and update_repository. Names, attributes, addresses, and URLs always use replacement semantics; an attribute with the same type and value as a stored one keeps its citations, notes, and privacy.",
+        applies_to = "Link-list parameters on update_person, update_family, update_event, update_place, update_source, update_citation, update_note, update_media, and update_repository. Names, attributes, addresses, and URLs always use replacement semantics; an attribute with the same type and value as a stored one keeps its citations, notes, and privacy. The attributes of event and media links follow linkMode with their link.",
         link_mode = new
         {
             replace = "Default. Each supplied link list replaces the entire existing list; [] clears it. A reference that stays keeps its stored privacy, citations, notes, crop, and other metadata; fields the call sends (including the default role or relationship of a bare handle) overwrite them. Several references to the same handle are matched in order. List every reference that should stay, even when changing only one.",
-            add = "Append only missing handles. Existing references and their role, relationship, crop, and other metadata stay unchanged. [] does nothing.",
+            add = "Append only missing handles. Existing references and their role, relationship, crop, and other metadata stay unchanged, except that an event or media link already there gains the link attributes it lacks. [] does nothing.",
             remove = "Remove every reference matching each supplied handle; other references and metadata stay unchanged. [] does nothing."
         },
         rules = new[]
@@ -526,7 +526,7 @@ public sealed class GrampsResources
         examples = new[]
         {
             "update_person(handle: \"PERSON_HANDLE\", noteHandles: [\"NOTE_HANDLE\"], linkMode: \"add\")",
-            "update_person(handle: \"PERSON_HANDLE\", eventRefs: [{ref: \"EVENT_HANDLE\", role: \"Primary\"}], linkMode: \"add\")",
+            "update_person(handle: \"PERSON_HANDLE\", eventRefs: [{ref: \"EVENT_HANDLE\", role: \"Primary\", attributes: [\"Age: 65\"]}], linkMode: \"add\")",
             "update_family(handle: \"FAMILY_HANDLE\", childRefs: [\"CHILD_HANDLE\"], linkMode: \"remove\")",
             "update_event(handle: \"EVENT_HANDLE\", citationHandles: [\"CITATION_HANDLE\"], linkMode: \"add\")"
         }
@@ -639,6 +639,7 @@ public sealed class GrampsResources
                 "One JSON string: \"Line1\\nLine2\" or \"A: 1|B: 2\""
             },
             sources_and_citations = "Source and citation attributes take only type, value and private; citation_list or note_list on them is rejected.",
+            links = "An eventRefs or mediaHandles/attachTo object may carry \"attributes\" of that link in these forms, such as one person's Age at a shared event: {\"ref\":\"EVENT_HANDLE\",\"role\":\"Primary\",\"attributes\":[\"Age: 65\"]}. Omitted keeps the link's stored attributes; [] removes them in replace mode; add mode adds the missing ones to a link already there.",
             tools = "create_person, update_person, create_event, update_event, create_family, update_family, create_source, update_source, create_citation, update_citation, update_media"
         },
         urls = new

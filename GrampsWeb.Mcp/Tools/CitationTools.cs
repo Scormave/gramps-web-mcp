@@ -99,6 +99,7 @@ public static class CitationTools
         if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
             throw McpToolErrors.ValidationError(attributeError);
         await KnownTypes.CheckSourceAttributesAsync(attributes, client);
+        await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
         var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
 
         var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
@@ -161,6 +162,7 @@ public static class CitationTools
             if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
                 throw McpToolErrors.ValidationError(attributeError);
             await KnownTypes.CheckSourceAttributesAsync(attributes, client);
+            await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
             var resolvedSourceHandle = sourceHandle is null

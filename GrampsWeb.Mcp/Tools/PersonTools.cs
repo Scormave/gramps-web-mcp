@@ -300,6 +300,7 @@ public static class PersonTools
         var eventRefArr = (EventRefRequest[]?)eventRefs ?? [];
         await EventRoles.CheckAsync(eventRefArr, client);
         await KnownTypes.CheckAttributesAsync(attributes, client);
+        await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
         await KnownTypes.CheckUrlsAsync(urls, client);
 
         var parentFamilyHandleArray = (string[]?)parentFamilyHandles;
@@ -346,7 +347,7 @@ public static class PersonTools
         string? gender = null,
         [Description("Alternate names. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
-        [Description("Events this person takes part in, with roles. In replace mode the list must hold every event the person keeps. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleEventRefList.DescriptionHint)]
+        [Description("Events this person takes part in, with roles. In replace mode the list must hold every event the person keeps. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleEventRefList.DescriptionHint + " " + FlexibleEventRefList.UpdateHint)]
         FlexibleEventRefList? eventRefs = null,
         [Description("Families where this person is a parent or spouse. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? familyHandles = null,
@@ -384,6 +385,7 @@ public static class PersonTools
             await KnownTypes.CheckNamesAsync(alternateNames, "alternateNames", client);
             await EventRoles.CheckAsync(eventRefs, client, linkMode);
             await KnownTypes.CheckAttributesAsync(attributes, client);
+            await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
             await KnownTypes.CheckUrlsAsync(urls, client);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");

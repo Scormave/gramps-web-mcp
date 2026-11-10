@@ -184,8 +184,12 @@ public class EventRefRequest
     [JsonPropertyName("note_list")]
     public string[]? NoteList { get; set; }
 
+    /// <summary>
+    /// The attributes of this person's or family's part in the event, such as their Age. Null keeps the stored ones on
+    /// update; an empty list removes them in replace mode.
+    /// </summary>
     [JsonPropertyName("attribute_list")]
-    public object[]? AttributeList { get; set; }
+    public GrampsAttribute[]? AttributeList { get; set; }
 
     /// <summary>
     /// Set for a bare handle string (no <c>::Role</c>), which takes the default role of the record that links it:

@@ -73,19 +73,66 @@ internal sealed class GrampsObjectPatch
     /// Applies a supplied link list to the stored one (see <see cref="LinkUpdates"/>). Stored entries are kept
     /// as they are. In replace mode a supplied object whose ref matches a stored entry is laid over that entry,
     /// so metadata the caller did not send (privacy, citations, notes, crop rectangle, …) stays;
-    /// several references to the same handle are matched in order.
+    /// several references to the same handle are matched in order. Link attributes are matched by type and value
+    /// (see <see cref="ReplaceAttributes"/>); in add mode the attributes of a link already stored are added to it.
     /// </summary>
     public void ApplyLinks(string key, IEnumerable<JsonNode?>? supplied, string mode)
     {
         if (supplied is null)
             return;
         var stored = (Root[key] as JsonArray)?.ToArray();
-        var result = LinkUpdates.Apply(stored, supplied.ToArray(), mode, LinkKey);
+        var suppliedArray = supplied.ToArray();
+        if (mode == "add" && stored is not null)
+            AddAttributesToStoredLinks(stored, suppliedArray);
+        var result = LinkUpdates.Apply(stored, suppliedArray, mode, LinkKey);
         if (result is null || ReferenceEquals(result, stored))
             return;
         if (mode == "replace")
             result = Overlay(stored ?? [], result, LinkKey);
         Root[key] = new JsonArray(result.Select(node => node?.DeepClone()).ToArray());
+    }
+
+    /// <summary>
+    /// Adds the attributes of each supplied link whose handle is stored to that stored link: the one with the same
+    /// role when there is one, otherwise the first. <see cref="LinkUpdates"/> leaves links already stored as they are.
+    /// </summary>
+    private static void AddAttributesToStoredLinks(JsonNode?[] stored, JsonNode?[] supplied)
+    {
+        foreach (var link in supplied.OfType<JsonObject>())
+        {
+            if (link["attribute_list"] is not JsonArray { Count: > 0 } attributes || LinkKey(link) is not { Length: > 0 } handle)
+                continue;
+            var matches = stored.OfType<JsonObject>().Where(o => LinkKey(o) == handle).ToArray();
+            var role = TypeString(link["role"]);
+            var target = matches.FirstOrDefault(o => role is not null && TypeString(o["role"]) == role) ?? matches.FirstOrDefault();
+            if (target is not null)
+                AddAttributes(target, attributes);
+        }
+    }
+
+    /// <summary>Appends to <paramref name="link"/> the attributes whose type and value it does not have yet.</summary>
+    private static bool AddAttributes(JsonObject link, JsonArray? attributes)
+    {
+        if (attributes is not { Count: > 0 })
+            return false;
+        if (link["attribute_list"] is not JsonArray existing)
+        {
+            existing = new JsonArray();
+            link["attribute_list"] = existing;
+        }
+
+        var keys = existing.Select(StoredAttributeKey).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        var changed = false;
+        foreach (var attribute in attributes)
+        {
+            if (StoredAttributeKey(attribute) is { } key && keys.Add(key))
+            {
+                existing.Add(attribute!.DeepClone());
+                changed = true;
+            }
+        }
+
+        return changed;
     }
 
     /// <summary>Applies a list of plain handles, e.g. <c>note_list</c> or <c>tag_list</c>.</summary>
@@ -95,8 +142,8 @@ internal sealed class GrampsObjectPatch
     /// <summary>
     /// Applies media links to <c>media_list</c>, whose entries are <c>MediaRef</c> objects. A link with a region
     /// sets the stored <c>rect</c> (the whole image clears it); a link without one keeps the stored region.
-    /// In add mode a media already shown keeps its link and takes the region given; a region for a media
-    /// whose links all took one already adds another link, so one image can show several regions.
+    /// In add mode a media already shown keeps its link and takes the region and the missing attributes given;
+    /// a region for a media whose links all took one already adds another link, so one image can show several regions.
     /// </summary>
     public void ApplyMediaLinks(MediaLink[]? links, string mode, string argument = "mediaHandles")
     {
@@ -118,22 +165,24 @@ internal sealed class GrampsObjectPatch
         var shown = stored.Select(LinkKey).OfType<string>().ToHashSet(StringComparer.Ordinal);
         var changed = false;
 
-        // Links that already show their region stay as they are, so repeating a call changes nothing.
-        var pending = new List<MediaLink>();
+        // Links that already show their region keep it, so repeating a call changes nothing.
+        var showing = new Dictionary<MediaLink, int>(ReferenceEqualityComparer.Instance);
         foreach (var link in links.Where(link => link.Region is not null))
         {
             var region = link.Region!.IsWholeImage ? null : link.Region;
             var index = Enumerable.Range(0, stored.Length).FirstOrDefault(i => !used[i] && LinkKey(stored[i]) == link.Ref.Trim()
                 && stored[i] is JsonObject o && MediaRegion.FromStored(IntArray(o["rect"])) == region, -1);
             if (index >= 0)
+            {
                 used[index] = true;
-            else
-                pending.Add(link);
+                showing[link] = index;
+            }
         }
 
         foreach (var link in links)
         {
             var handle = link.Ref.Trim();
+            var attributes = AttributesNode(link);
             if (link.Region is null)
             {
                 if (shown.Add(handle))
@@ -141,16 +190,24 @@ internal sealed class GrampsObjectPatch
                     list.Add(MediaRefNode(link));
                     changed = true;
                 }
+                else if (list.OfType<JsonObject>().FirstOrDefault(o => LinkKey(o) == handle) is { } existing)
+                    changed |= AddAttributes(existing, attributes);
                 continue;
             }
 
-            if (!pending.Remove(link))
+            if (showing.TryGetValue(link, out var shownAt))
+            {
+                if (stored[shownAt] is JsonObject same)
+                    changed |= AddAttributes(same, attributes);
                 continue;
+            }
+
             var index = FindUnused(stored, used, handle, LinkKey);
             if (index >= 0 && stored[index] is JsonObject match)
             {
                 used[index] = true;
                 match["rect"] = RectNode(link.Region);
+                AddAttributes(match, attributes);
                 changed = true;
                 continue;
             }
@@ -169,8 +226,13 @@ internal sealed class GrampsObjectPatch
         var node = new JsonObject { ["_class"] = "MediaRef", ["ref"] = link.Ref.Trim() };
         if (link.Region is not null)
             node["rect"] = RectNode(link.Region);
+        if (AttributesNode(link) is { } attributes)
+            node["attribute_list"] = attributes;
         return node;
     }
+
+    private static JsonArray? AttributesNode(MediaLink link) =>
+        link.Attributes is null ? null : GrampsAttributeJson.ToNode(link.Attributes);
 
     /// <summary>The stored <c>rect</c>: the region's edges, or null for the whole image, as Gramps stores a link without one.</summary>
     private static JsonNode? RectNode(MediaRegion region) =>
@@ -196,36 +258,39 @@ internal sealed class GrampsObjectPatch
         if (supplied is null)
             return;
         var stored = (Root["attribute_list"] as JsonArray)?.ToArray() ?? [];
+        Root["attribute_list"] = MergeAttributes(stored, GrampsAttributeJson.ToNode(supplied));
+    }
+
+    /// <summary>
+    /// The supplied attributes, each laid over the stored one with the same type and value, so that one keeps its
+    /// citations, notes and privacy unless the supplied attribute has its own (<see cref="GrampsAttributeJson"/> leaves
+    /// unset ones out). Several stored attributes with the same type and value are matched in order.
+    /// </summary>
+    private static JsonArray MergeAttributes(JsonNode?[] stored, JsonArray supplied)
+    {
         var used = new bool[stored.Length];
         var result = new JsonArray();
         foreach (var attribute in supplied)
         {
-            var index = FindUnused(stored, used, AttributeKey(attribute.Type, attribute.Value), StoredAttributeKey);
-            JsonObject node;
-            if (index >= 0 && stored[index] is JsonObject match)
+            var index = StoredAttributeKey(attribute) is { } key ? FindUnused(stored, used, key, StoredAttributeKey) : -1;
+            if (index < 0 || stored[index] is not JsonObject match)
             {
-                used[index] = true;
-                node = (JsonObject)match.DeepClone();
-            }
-            else
-            {
-                node = new JsonObject();
-                if (attribute.Type is not null)
-                    node["type"] = attribute.Type;
-                if (attribute.Value is not null)
-                    node["value"] = attribute.Value;
+                result.Add(attribute?.DeepClone());
+                continue;
             }
 
-            if (attribute.CitationList is { Length: > 0 })
-                node["citation_list"] = ToNode(attribute.CitationList);
-            if (attribute.NoteList is { Length: > 0 })
-                node["note_list"] = ToNode(attribute.NoteList);
-            if (attribute.Private)
-                node["private"] = true;
-            result.Add(node);
+            used[index] = true;
+            var merged = (JsonObject)match.DeepClone();
+            foreach (var (name, value) in (JsonObject)attribute!)
+            {
+                if (name is not ("type" or "value"))
+                    merged[name] = value?.DeepClone();
+            }
+
+            result.Add(merged);
         }
 
-        Root["attribute_list"] = result;
+        return result;
     }
 
     /// <summary>The nested object at <paramref name="key"/>, created when missing or not an object.</summary>
@@ -278,7 +343,12 @@ internal sealed class GrampsObjectPatch
             used[index] = true;
             var merged = (JsonObject)match.DeepClone();
             foreach (var (name, value) in patch)
-                merged[name] = value?.DeepClone();
+            {
+                merged[name] = name == "attribute_list" && value is JsonArray attributes && match[name] is JsonArray storedAttributes
+                    ? MergeAttributes(storedAttributes.ToArray(), attributes)
+                    : value?.DeepClone();
+            }
+
             result[i] = merged;
         }
 

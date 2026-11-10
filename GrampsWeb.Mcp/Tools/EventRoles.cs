@@ -23,7 +23,7 @@ internal static class EventRoles
     /// store a misspelt role as a new custom role, and writes each accepted role in its known spelling. A bare handle
     /// (no <c>::Role</c>) takes <paramref name="defaultRole"/>. A link object without a role stays without one, so in
     /// replace mode it keeps the stored role, and linkMode remove matches links by handle only, so its roles are
-    /// not checked.
+    /// not checked. The attribute types of each link, such as Age, are checked as well.
     /// </summary>
     public static async Task CheckAsync(EventRefRequest[]? refs, GrampsApiClient client, string linkMode = "replace",
         string defaultRole = Primary)
@@ -33,6 +33,7 @@ internal static class EventRoles
 
         foreach (var eventRef in refs)
         {
+            await KnownTypes.CheckAttributesAsync(eventRef.AttributeList, client, "eventRefs");
             if (string.IsNullOrWhiteSpace(eventRef.Role))
             {
                 if (eventRef.BareHandle)

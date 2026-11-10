@@ -24,6 +24,29 @@ public static class AttributeListFormatter
         }
     }
 
+    /// <summary>
+    /// The attributes of an event or media link on one line, such as <c>Age: 65; Occupation: Farmer</c>, each with its
+    /// privacy and its citation and note handles; null when there are none.
+    /// </summary>
+    public static string? FormatInline(GrampsAttribute[]? list)
+    {
+        if (list is null || list.Length == 0)
+            return null;
+        return string.Join("; ", list.Select(a =>
+        {
+            var type = string.IsNullOrWhiteSpace(a.Type) ? "—" : a.Type.Trim();
+            var val = string.IsNullOrWhiteSpace(a.Value) ? "—" : a.Value.Trim();
+            var priv = a.Private ? " ⚠ private" : "";
+            return $"{type}: {val}{priv}{InlineHandles("citations", a.CitationList)}{InlineHandles("notes", a.NoteList)}";
+        }));
+    }
+
+    private static string InlineHandles(string label, string[]? handles)
+    {
+        var cleaned = handles?.Where(h => !string.IsNullOrWhiteSpace(h)).Select(h => h.Trim()).ToArray() ?? [];
+        return cleaned.Length == 0 ? "" : $" [{label}: {string.Join(", ", cleaned)}]";
+    }
+
     private static void AppendIndentedHandleListLine(StringBuilder sb, string label, string[]? handles)
     {
         if (handles is null || handles.Length == 0)

@@ -258,6 +258,29 @@ public class MediaUploadToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateMedia_AttachTo_Gives_A_Shown_Scan_Link_Attributes_Once()
+    {
+        var server = new FakeGramps();
+        server.Objects["/api/media/h-media"] = """{"_class":"Media","handle":"h-media","gramps_id":"O0100","checksum":"0ld","desc":"Page 12"}""";
+        server.Lists["/api/people/?gramps_id=I0002&pagesize=1"] = """[{"handle":"h-person","gramps_id":"I0002"}]""";
+        server.Objects["/api/people/h-person"] =
+            """{"_class":"Person","handle":"h-person","gramps_id":"I0002","media_list":[{"_class":"MediaRef","ref":"h-media","rect":[5,50,95,75]}]}""";
+        server.Lists["/api/types/default/"] = """{"attribute_types":["Unknown","Description","Age"]}""";
+        var attachTo = LinksJson("""[{"ref":"I0002","region":[5,50,95,75],"attributes":["description: entry 14"]}]""");
+
+        await MediaTools.UpdateMedia("h-media", client: server.Client(), config: Config(), attachTo: attachTo);
+
+        Assert.Equal(
+            """[{"_class":"MediaRef","ref":"h-media","rect":[5,50,95,75],"attribute_list":[{"type":"Description","value":"entry 14"}]}]""",
+            server.Saved["/api/people/h-person"]["media_list"]!.ToJsonString());
+
+        server.Requests.Clear();
+        await MediaTools.UpdateMedia("h-media", client: server.Client(), config: Config(), attachTo: attachTo);
+
+        Assert.DoesNotContain(server.Requests, r => r.StartsWith("PUT", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task UpdateMedia_AttachTo_Saves_Metadata_Then_Links()
     {
         var server = new FakeGramps();

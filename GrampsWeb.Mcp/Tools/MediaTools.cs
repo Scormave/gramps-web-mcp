@@ -115,7 +115,9 @@ public static class MediaTools
         "or handles of people, families, events, places, sources or citations. JSON array, one value, or a comma-separated string. " +
         "To show only part of the image, such as one record on a page scan, give an object {\"ref\":\"I0001\",\"region\":[left, top, right, bottom]} " +
         "in place of the ID. " + MediaRegion.DescriptionHint + " A record already showing the media keeps its link and takes the region; " +
-        "list a record twice to show two regions. Check a region with read_media first.";
+        "list a record twice to show two regions. Check a region with read_media first. " +
+        "The object may also carry \"attributes\" of the link (not of the media), such as [\"Page: 12\"]; " +
+        "a link already there gains the ones it lacks.";
 
     private const string CreateRetry =
         "Run create_media again with the same file and attachTo: it finds the stored media by checksum and adds only the missing links.";
@@ -173,6 +175,7 @@ public static class MediaTools
             var file = await MediaUploadFile.ReadAsync(filePath, config);
             var mediaDate = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             await KnownTypes.CheckAttributesAsync(attributes, client);
+            await KnownTypes.CheckMediaLinksAsync(attachTo, client, argument: "attachTo");
             using var updateLease = await client.BeginUpdateAsync();
             var owners = await ResolveOwnersAsync(attachTo, client, "Nothing was uploaded.");
 
@@ -271,6 +274,7 @@ public static class MediaTools
             var file = filePath is null ? null : await MediaUploadFile.ReadAsync(filePath, config);
             var mediaDate = date is null ? null : AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             await KnownTypes.CheckAttributesAsync(attributes, client);
+            await KnownTypes.CheckMediaLinksAsync(attachTo, client, argument: "attachTo");
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             var mediaPath = $"/api/media/{Uri.EscapeDataString(resolvedHandle)}";
@@ -387,8 +391,11 @@ public static class MediaTools
                 resolved[value] = owner;
             }
 
-            if (!attachments.Any(a => a.Owner.Handle == owner.Handle && a.Region == link.Region))
-                attachments.Add(new MediaAttachment(owner, link.Region));
+            var same = attachments.FindIndex(a => a.Owner.Handle == owner.Handle && a.Region == link.Region);
+            if (same < 0)
+                attachments.Add(new MediaAttachment(owner, link.Region, link.Attributes));
+            else if (link.Attributes is not null)
+                attachments[same] = attachments[same] with { Attributes = [.. attachments[same].Attributes ?? [], .. link.Attributes] };
         }
 
         return attachments;
@@ -450,7 +457,7 @@ public static class MediaTools
                 var patch = await GrampsObjectPatch.LoadAsync(client, owner.Path)
                     ?? throw new InvalidOperationException($"the {owner.Type.Kind} no longer exists.");
                 var before = patch.Root["media_list"]?.ToJsonString();
-                patch.ApplyMediaLinks(group.Select(a => new MediaLink(mediaHandle, a.Region)).ToArray(), "add", "attachTo");
+                patch.ApplyMediaLinks(group.Select(a => new MediaLink(mediaHandle, a.Region, Attributes: a.Attributes)).ToArray(), "add", "attachTo");
                 if (patch.Root["media_list"]?.ToJsonString() != before)
                     await patch.SaveAsync(client);
                 attached.AddRange(group.Select(a => a.Label));
@@ -473,8 +480,10 @@ public static class MediaTools
         public string Label => GrampsId ?? Handle;
     }
 
-    /// <summary>One attachTo entry: the record, and the region it shows (null keeps a stored region).</summary>
-    private sealed record MediaAttachment(MediaOwner Owner, MediaRegion? Region)
+    /// <summary>
+    /// One attachTo entry: the record, the region it shows (null keeps a stored region) and the attributes of its link.
+    /// </summary>
+    private sealed record MediaAttachment(MediaOwner Owner, MediaRegion? Region, GrampsAttribute[]? Attributes = null)
     {
         public string Label => Region switch
         {

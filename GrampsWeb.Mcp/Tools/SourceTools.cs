@@ -102,6 +102,7 @@ public static class SourceTools
         if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
             throw McpToolErrors.ValidationError(attributeError);
         await KnownTypes.CheckSourceAttributesAsync(attributes, client);
+        await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
 
         var repoRefList = (GrampsRepositoryRef[]?)repositoryHandles;
         await KnownTypes.CheckRepositoryRefsAsync(repoRefList, client);
@@ -164,6 +165,7 @@ public static class SourceTools
             if (GrampsRequestMapping.SourceAttributeError(attributes) is { } attributeError)
                 throw McpToolErrors.ValidationError(attributeError);
             await KnownTypes.CheckSourceAttributesAsync(attributes, client);
+            await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
             await KnownTypes.CheckRepositoryRefsAsync(repositoryHandles, client, linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");

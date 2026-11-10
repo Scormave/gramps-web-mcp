@@ -37,6 +37,20 @@ public sealed class FlexibleAttributeListJsonConverter : JsonConverter<FlexibleA
         JsonSerializer.Serialize(writer, value.Items, options);
     }
 
+    /// <summary>
+    /// Reads an attribute list nested in another object, such as the attributes of an event link: null and an empty
+    /// string give null, an array or a string the attributes they hold.
+    /// </summary>
+    internal static GrampsAttribute[]? ReadElement(JsonElement element, JsonSerializerOptions options) =>
+        element.ValueKind switch
+        {
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            JsonValueKind.String => ParseFromString(element.GetString(), options)?.Items,
+            JsonValueKind.Array => ReadFromJsonArray(element, options).Items,
+            _ => throw new JsonException(
+                $"Unexpected {element.ValueKind} for attributes; use a JSON array, a string, or null.")
+        };
+
     private static FlexibleAttributeList? ParseFromString(string? s, JsonSerializerOptions options)
     {
         if (string.IsNullOrWhiteSpace(s))

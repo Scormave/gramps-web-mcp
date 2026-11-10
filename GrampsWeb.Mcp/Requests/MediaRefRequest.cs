@@ -24,7 +24,7 @@ public sealed class MediaRefRequest
     public string[]? NoteList { get; set; }
 
     [JsonPropertyName("attribute_list")]
-    public object[]? AttributeList { get; set; }
+    public AttributeRequest[]? AttributeList { get; set; }
 
     /// <summary>Image region [left, top, right, bottom] in percent of the image size; omit to show the whole image.</summary>
     [JsonPropertyName("rect")]

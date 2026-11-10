@@ -107,7 +107,10 @@ public static class PersonFormatter
             foreach (var er in person.EventRefList)
             {
                 var named = er.Ref != null && labels.TryGetValue(er.Ref.Trim(), out var label) ? $"{label} " : "";
-                sb.AppendLine($"  • {named}[handle: {er.Ref}] role: {er.Role ?? "Primary"}");
+                var linkAttributes = AttributeListFormatter.FormatInline(er.AttributeList) is { } formatted
+                    ? $" | link attributes: {formatted}"
+                    : "";
+                sb.AppendLine($"  • {named}[handle: {er.Ref}] role: {er.Role ?? "Primary"}{linkAttributes}");
             }
         }
 
@@ -245,7 +248,8 @@ public static class PersonFormatter
         {
             sb.AppendLine();
             sb.AppendLine($"Events ({extEvents.Length}):");
-            string RoleOf(GrampsEvent evt) => person.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
+            GrampsEventRef? LinkOf(GrampsEvent evt) => person.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle);
+            string RoleOf(GrampsEvent evt) => LinkOf(evt)?.Role ?? "Primary";
             // For an event under another role, such as the birth of a child, name the others in it.
             var others = await EventParticipantsFormatter.LoadOtherParticipantsAsync(
                 client, extEvents.Where(e => !IsPrimaryRole(RoleOf(e))).Select(e => e.Handle), person.Handle);
@@ -277,6 +281,8 @@ public static class PersonFormatter
                     ? ""
                     : $" [place: {evt.Place.Trim()}]";
                 sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]{placeHandleSuffix}{evtHandleSuffix}");
+                if (AttributeListFormatter.FormatInline(LinkOf(evt)?.AttributeList) is { } linkAttributes)
+                    sb.AppendLine($"    Link attributes: {linkAttributes}");
                 if (evt.Handle is { } eventHandle && others.TryGetValue(eventHandle, out var participants))
                     sb.AppendLine($"    Participants: {participants}");
                 if (!string.IsNullOrEmpty(evt.Description))

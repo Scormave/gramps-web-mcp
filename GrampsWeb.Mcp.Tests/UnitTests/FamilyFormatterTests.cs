@@ -82,6 +82,26 @@ public class FamilyFormatterTests
         Assert.Contains("  • [handle: marr-h] role: Primary", result);
     }
 
+    [Fact]
+    public async Task ReadFamily_Shows_The_Attributes_Of_Its_Event_Links()
+    {
+        const string link = """
+            { "ref": "marr-h", "role": "Family", "attribute_list": [{ "type": "Father Age", "value": "30" }, { "type": "Mother Age", "value": "19" }] }
+            """;
+        var withProfile = FamilyWithProfile.Replace("""{ "ref": "marr-h", "role": "Family" }""", link);
+        const string withoutProfile = $$"""{ "handle": "fam-h", "gramps_id": "F0001", "event_ref_list": [{{link}}] }""";
+
+        var profileResult = (await FamilyTools.ReadFamilyAsync("fam-h", client: CreateClient(new FamilyHandler(withProfile))))
+            .Replace("\r\n", "\n");
+        var handlesResult = (await FamilyTools.ReadFamilyAsync("fam-h", client: CreateClient(new FamilyHandler(withoutProfile))))
+            .Replace("\r\n", "\n");
+
+        Assert.Contains(
+            "  • Marriage 1905-06-01 in Cork [handle: marr-h] role: Family | link attributes: Father Age: 30; Mother Age: 19\n",
+            profileResult);
+        Assert.Contains("  • [handle: marr-h] role: Family | link attributes: Father Age: 30; Mother Age: 19\n", handlesResult);
+    }
+
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
     {
         var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");

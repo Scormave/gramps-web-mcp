@@ -137,6 +137,7 @@ public static class FamilyTools
         foreach (var eventRef in eventRefArr.Where(r => string.IsNullOrWhiteSpace(r.Role)))
             eventRef.Role = EventRoles.Family;
         await KnownTypes.CheckAttributesAsync(attributes, client);
+        await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
         var resolvedFatherHandle = fatherHandle is null
             ? null
             : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
@@ -189,7 +190,7 @@ public static class FamilyTools
         string? relationshipType = null,
         [Description("Children with their relations to the parents. In replace mode the list must hold every child the family keeps. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleChildRefList.DescriptionHint)]
         FlexibleChildRefList? childRefs = null,
-        [Description("Family events (Marriage, Divorce, …). " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleEventRefList.DescriptionHint)]
+        [Description("Family events (Marriage, Divorce, …). " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleEventRefList.DescriptionHint + " " + FlexibleEventRefList.UpdateHint)]
         FlexibleEventRefList? eventRefs = null,
         [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
         FlexibleMediaLinkList? mediaHandles = null,
@@ -216,6 +217,7 @@ public static class FamilyTools
             await KnownTypes.CheckChildRefsAsync(childRefs, client, linkMode);
             await EventRoles.CheckAsync(eventRefs, client, linkMode, EventRoles.Family);
             await KnownTypes.CheckAttributesAsync(attributes, client);
+            await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             if (relationshipType != null)
                 relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);

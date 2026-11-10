@@ -24,8 +24,9 @@ public sealed class GrampsMediaRef
     [JsonPropertyName("note_list")]
     public string[]? NoteList { get; set; }
 
+    /// <summary>The attributes of this link, as opposed to those of the media itself.</summary>
     [JsonPropertyName("attribute_list")]
-    public object[]? AttributeList { get; set; }
+    public GrampsAttribute[]? AttributeList { get; set; }
 
     /// <summary>Image region <c>[left, top, right, bottom]</c> in percent of the image size (<see cref="MediaRegion"/>).</summary>
     [JsonPropertyName("rect")]

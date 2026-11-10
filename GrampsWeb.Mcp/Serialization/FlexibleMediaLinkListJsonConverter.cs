@@ -8,7 +8,7 @@ namespace GrampsWeb.Mcp.Serialization;
 /// <summary>
 /// Deserializes <see cref="FlexibleMediaLinkList"/> from a JSON string, array, or null. Strings are read as
 /// handle lists (<see cref="FlexibleHandleListJsonConverter"/>); array entries may be handles or objects with
-/// <c>ref</c> / <c>handle</c> / <c>id</c> and <c>region</c> / <c>rect</c>.
+/// <c>ref</c> / <c>handle</c> / <c>id</c>, <c>region</c> / <c>rect</c> and the link's <c>attributes</c>.
 /// </summary>
 public sealed class FlexibleMediaLinkListJsonConverter : JsonConverter<FlexibleMediaLinkList?>
 {
@@ -19,11 +19,11 @@ public sealed class FlexibleMediaLinkListJsonConverter : JsonConverter<FlexibleM
             case JsonTokenType.Null:
                 return null;
             case JsonTokenType.String:
-                return ParseFromString(reader.GetString());
+                return ParseFromString(reader.GetString(), options);
             case JsonTokenType.StartArray:
             {
                 using var doc = JsonDocument.ParseValue(ref reader);
-                return FromArray(doc.RootElement);
+                return FromArray(doc.RootElement, options);
             }
             default:
                 throw new JsonException(
@@ -42,7 +42,7 @@ public sealed class FlexibleMediaLinkListJsonConverter : JsonConverter<FlexibleM
         writer.WriteStartArray();
         foreach (var link in value.Items)
         {
-            if (link.Region is null)
+            if (link.Region is null && link.Attributes is null)
             {
                 writer.WriteStringValue(link.Ref);
                 continue;
@@ -50,11 +50,21 @@ public sealed class FlexibleMediaLinkListJsonConverter : JsonConverter<FlexibleM
 
             writer.WriteStartObject();
             writer.WriteString("ref", link.Ref);
-            writer.WritePropertyName("region");
-            writer.WriteStartArray();
-            foreach (var edge in link.Region.ToArray())
-                writer.WriteNumberValue(edge);
-            writer.WriteEndArray();
+            if (link.Region is not null)
+            {
+                writer.WritePropertyName("region");
+                writer.WriteStartArray();
+                foreach (var edge in link.Region.ToArray())
+                    writer.WriteNumberValue(edge);
+                writer.WriteEndArray();
+            }
+
+            if (link.Attributes is not null)
+            {
+                writer.WritePropertyName("attributes");
+                GrampsAttributeJson.ToNode(link.Attributes).WriteTo(writer);
+            }
+
             writer.WriteEndObject();
         }
 
@@ -62,7 +72,7 @@ public sealed class FlexibleMediaLinkListJsonConverter : JsonConverter<FlexibleM
     }
 
     /// <summary>Whitespace-only → null (omit). Leading <c>[</c> → JSON array. Otherwise a delimiter-separated handle list.</summary>
-    private static FlexibleMediaLinkList? ParseFromString(string? s)
+    private static FlexibleMediaLinkList? ParseFromString(string? s, JsonSerializerOptions options)
     {
         if (string.IsNullOrWhiteSpace(s))
             return null;
@@ -73,7 +83,7 @@ public sealed class FlexibleMediaLinkListJsonConverter : JsonConverter<FlexibleM
             try
             {
                 using var doc = JsonDocument.Parse(s);
-                return doc.RootElement.ValueKind == JsonValueKind.Array ? FromArray(doc.RootElement) : null;
+                return doc.RootElement.ValueKind == JsonValueKind.Array ? FromArray(doc.RootElement, options) : null;
             }
             catch (JsonException)
             {
@@ -85,19 +95,19 @@ public sealed class FlexibleMediaLinkListJsonConverter : JsonConverter<FlexibleM
         return handles is null ? null : new FlexibleMediaLinkList { Items = handles.Select(h => new MediaLink(h)).ToArray() };
     }
 
-    private static FlexibleMediaLinkList FromArray(JsonElement array)
+    private static FlexibleMediaLinkList FromArray(JsonElement array, JsonSerializerOptions options)
     {
         var list = new List<MediaLink>();
         foreach (var element in array.EnumerateArray())
         {
-            if (ReadLink(element) is { } link)
+            if (ReadLink(element, options) is { } link)
                 list.Add(link);
         }
 
         return new FlexibleMediaLinkList { Items = list.ToArray() };
     }
 
-    private static MediaLink? ReadLink(JsonElement element)
+    private static MediaLink? ReadLink(JsonElement element, JsonSerializerOptions options)
     {
         if (element.ValueKind == JsonValueKind.String)
             return string.IsNullOrWhiteSpace(element.GetString()) ? null : new MediaLink(element.GetString()!.Trim());
@@ -108,12 +118,13 @@ public sealed class FlexibleMediaLinkListJsonConverter : JsonConverter<FlexibleM
         if (string.IsNullOrWhiteSpace(handle))
             return null;
 
+        var attributes = GrampsAttributeJson.ReadProperty(element, options);
         var regionElement = FindProperty(element, "region", "rect");
         if (regionElement is null)
-            return new MediaLink(handle.Trim());
+            return new MediaLink(handle.Trim(), Attributes: attributes);
         return MediaRegion.TryRead(regionElement.Value, out var region, out var error)
-            ? new MediaLink(handle.Trim(), region)
-            : new MediaLink(handle.Trim(), RegionError: error);
+            ? new MediaLink(handle.Trim(), region, Attributes: attributes)
+            : new MediaLink(handle.Trim(), RegionError: error, Attributes: attributes);
     }
 
     private static JsonElement? FindProperty(JsonElement element, params string[] names)

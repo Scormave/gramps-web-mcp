@@ -12,7 +12,7 @@ public static class EventFormatter
     public static async Task<string> FormatEventFull(
         GrampsEvent evt,
         GrampsApiClient client,
-        IReadOnlyList<(string Handle, string? DisplayName, string Role)>? linkedPeople = null)
+        IReadOnlyList<(string Handle, string? DisplayName, string Role, string? LinkAttributes)>? linkedPeople = null)
     {
         var labelsTask = LinkedObjectLabels.LoadAsync(client,
             [
@@ -63,10 +63,11 @@ public static class EventFormatter
             sb.AppendLine($"Linked people ({linkedPeople.Count}) [READ-ONLY backlinks — to add/remove this person-event link, use update_person(eventRefs: [...], linkMode: \"add\"/\"remove\")]:");
             foreach (var p in linkedPeople)
             {
+                var linkAttributes = string.IsNullOrEmpty(p.LinkAttributes) ? "" : $" | link attributes: {p.LinkAttributes}";
                 if (!string.IsNullOrWhiteSpace(p.DisplayName))
-                    sb.AppendLine($"  • {p.DisplayName.Trim()} [handle: {p.Handle}] role: {p.Role}");
+                    sb.AppendLine($"  • {p.DisplayName.Trim()} [handle: {p.Handle}] role: {p.Role}{linkAttributes}");
                 else
-                    sb.AppendLine($"  • [handle: {p.Handle}] role: {p.Role}");
+                    sb.AppendLine($"  • [handle: {p.Handle}] role: {p.Role}{linkAttributes}");
             }
         }
 

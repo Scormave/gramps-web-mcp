@@ -1,4 +1,5 @@
 using GrampsWeb.Mcp.Client;
+using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -41,11 +42,28 @@ internal static class KnownTypes
             await CheckNameAsync(name, argument, client);
     }
 
-    /// <summary>Checks the types of person, family, event and media attributes.</summary>
-    public static async Task CheckAttributesAsync(GrampsAttribute[]? attributes, GrampsApiClient client)
+    /// <summary>
+    /// Checks the types of person, family, event and media attributes, and of the attributes on event and media links,
+    /// naming <paramref name="argument"/> in the error.
+    /// </summary>
+    public static async Task CheckAttributesAsync(GrampsAttribute[]? attributes, GrampsApiClient client,
+        string argument = "attributes")
     {
         foreach (var attribute in attributes ?? [])
-            attribute.Type = await ResolveOptionalAsync(attribute.Type, AttributeCategories, "attributes", client);
+            attribute.Type = await ResolveOptionalAsync(attribute.Type, AttributeCategories, argument, client);
+    }
+
+    /// <summary>
+    /// Checks the attribute types on media links. linkMode remove matches links by handle only, so their attributes
+    /// are not checked.
+    /// </summary>
+    public static async Task CheckMediaLinksAsync(MediaLink[]? links, GrampsApiClient client, string linkMode = "replace",
+        string argument = "mediaHandles")
+    {
+        if (linkMode == "remove")
+            return;
+        foreach (var link in links ?? [])
+            await CheckAttributesAsync(link.Attributes, client, argument);
     }
 
     /// <summary>Checks the types of source and citation attributes, which have a vocabulary of their own.</summary>

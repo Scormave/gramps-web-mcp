@@ -87,8 +87,8 @@ public static class FamilyFormatter
                     : $"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}";
                 if (er.NoteList is { Length: > 0 })
                     line += $" | note refs: {er.NoteList.Length}";
-                if (er.AttributeList is { Length: > 0 })
-                    line += $" | nested attributes: {er.AttributeList.Length}";
+                if (AttributeListFormatter.FormatInline(er.AttributeList) is { } linkAttributes)
+                    line += $" | link attributes: {linkAttributes}";
                 sb.AppendLine(line);
             }
         }
@@ -250,7 +250,8 @@ public static class FamilyFormatter
                     }
                     catch { }
                 }
-                var role = family.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle)?.Role ?? "Primary";
+                var link = family.EventRefList?.FirstOrDefault(er => er.Ref == evt.Handle);
+                var role = link?.Role ?? "Primary";
                 var evtTypeLabel = GrampsDefaultTypeLabels.ResolveStored(evt.Type, tables.EventTypes);
                 var evtHandleSuffix = string.IsNullOrWhiteSpace(evt.Handle)
                     ? ""
@@ -259,6 +260,8 @@ public static class FamilyFormatter
                     ? ""
                     : $" [place: {evt.Place.Trim()}]";
                 sb.AppendLine($"  • {evtTypeLabel}: {dateStr}{placeStr} [{role}]{placeHandleSuffix}{evtHandleSuffix}");
+                if (AttributeListFormatter.FormatInline(link?.AttributeList) is { } linkAttributes)
+                    sb.AppendLine($"    Link attributes: {linkAttributes}");
             }
         }
         else if (family.EventRefList?.Length > 0)
@@ -270,8 +273,8 @@ public static class FamilyFormatter
                 var line = $"  • [handle: {er.Ref}] role: {er.Role ?? "Primary"}";
                 if (er.NoteList is { Length: > 0 })
                     line += $" | note refs: {er.NoteList.Length}";
-                if (er.AttributeList is { Length: > 0 })
-                    line += $" | nested attributes: {er.AttributeList.Length}";
+                if (AttributeListFormatter.FormatInline(er.AttributeList) is { } linkAttributes)
+                    line += $" | link attributes: {linkAttributes}";
                 sb.AppendLine(line);
             }
         }

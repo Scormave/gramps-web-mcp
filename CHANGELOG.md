@@ -33,9 +33,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   several pages, and an update can pass the whole list instead of
   replacing every link with one Web Home link. The one-line `url` stays
   as that shortcut; a call gives one or the other
+- Attributes on event and media links: an `eventRefs` entry of the person
+  and family tools, and of `create_records`, takes `attributes` of that
+  link in the forms of the `attributes` argument, such as
+  `{"ref": "EVENT_HANDLE", "role": "Primary", "attributes": ["Age: 65"]}`
+  for one person's age at an event several people share. `mediaHandles`
+  and `attachTo` objects take `attributes` next to `ref` and `region`.
+  Their types are checked like other attributes before anything is
+  saved. An entry without `attributes` keeps the stored ones; in
+  `replace` mode `[]` removes them, and one with the same type and value
+  keeps its citations and notes; with `linkMode: "add"` and with
+  `attachTo`, a link already there gains the attributes it lacks
 
 ### Fixed
 
+- `get_object` shows the attributes of event and media links: next to
+  each event of a person or family, by each person an event lists, and
+  next to each media a record shows. A family's event used to show only
+  their number (`nested attributes: 1`), and the other records did not
+  show them at all
+- The `attribute_list` of an `eventRefs` entry was sent to Gramps Web
+  unchecked, so a misspelt type was stored as a custom type, and
+  `linkMode: "add"` dropped it when the person already had the event
 - `get_object` on a repository shows its addresses and links as text,
   such as `12 High Street, London, SW1A 1AA` and
   `[Web Home] https://archive.example.org`, as it does for a person,

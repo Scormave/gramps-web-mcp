@@ -122,6 +122,7 @@ public static class PlaceTools
 
         if (placeType != null)
             placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
+        await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
 
         var placeRefList = await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client);
 
@@ -198,6 +199,7 @@ public static class PlaceTools
             using var updateLease = await client.BeginUpdateAsync();
             if (placeType != null)
                 placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
+            await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
             var place = await GrampsObjectPatch.LoadAsync(client, $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");

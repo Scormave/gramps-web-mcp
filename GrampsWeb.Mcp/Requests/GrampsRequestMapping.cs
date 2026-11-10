@@ -65,7 +65,8 @@ internal static class GrampsRequestMapping
         return links.Select(static link => new MediaRefRequest
         {
             Ref = string.IsNullOrWhiteSpace(link.Ref) ? link.Ref : link.Ref.Trim(),
-            Rect = link.Region is { IsWholeImage: false } region ? region.ToArray() : null
+            Rect = link.Region is { IsWholeImage: false } region ? region.ToArray() : null,
+            AttributeList = link.Attributes is { Length: > 0 } ? ToAttributeRequests(link.Attributes) : null
         }).ToArray();
     }
 

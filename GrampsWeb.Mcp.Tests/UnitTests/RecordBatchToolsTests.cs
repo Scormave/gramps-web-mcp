@@ -136,6 +136,31 @@ public class RecordBatchToolsTests
     }
 
     [Fact]
+    public async Task CreateRecords_Sends_Event_Link_Attributes_With_Their_Citations_Keyed_In_The_Call()
+    {
+        var handler = new TreeHandler();
+
+        await CreateRecords("""
+            {
+              "sources": [{ "key": "book", "title": "Metric book 1897" }],
+              "citations": [{ "key": "cit", "sourceHandle": "#book", "page": "f. 12" }],
+              "events": [{ "key": "death", "eventType": "Death", "date": "1897" }],
+              "people": [{ "primaryName": "Ivan Petrov",
+                           "eventRefs": [{ "ref": "#death", "attributes": [{ "type": "Age", "value": "65", "citation_list": ["#cit"] }] }] }]
+            }
+            """, handler);
+
+        var body = handler.Body!.AsArray();
+        var (citation, death, person) = (body[1]!, body[2]!, body[3]!);
+        var link = person["event_ref_list"]![0]!;
+        Assert.Equal(death["handle"]!.GetValue<string>(), link["ref"]!.GetValue<string>());
+        var attribute = Assert.Single(link["attribute_list"]!.AsArray())!;
+        Assert.Equal("Age", attribute["type"]!.GetValue<string>());
+        Assert.Equal("65", attribute["value"]!.GetValue<string>());
+        Assert.Equal(citation["handle"]!.GetValue<string>(), attribute["citation_list"]![0]!.GetValue<string>());
+    }
+
+    [Fact]
     public async Task CreateRecords_Lists_Ids_Existing_People_Linked_Back_And_What_Still_Needs_A_Link()
     {
         var handler = new TreeHandler

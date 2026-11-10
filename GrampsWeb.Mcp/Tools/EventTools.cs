@@ -43,7 +43,7 @@ public static class EventTools
         }
     }
 
-    private static async Task<IReadOnlyList<(string Handle, string? DisplayName, string Role)>> CollectLinkedPeopleAsync(
+    private static async Task<IReadOnlyList<(string Handle, string? DisplayName, string Role, string? LinkAttributes)>> CollectLinkedPeopleAsync(
         string eventHandle,
         GrampsApiClient client)
     {
@@ -71,7 +71,7 @@ public static class EventTools
         if (handles.Count == 0)
             return [];
 
-        var result = new List<(string Handle, string? DisplayName, string Role)>(handles.Count);
+        var result = new List<(string Handle, string? DisplayName, string Role, string? LinkAttributes)>(handles.Count);
         foreach (var h in handles.OrderBy(static x => x, StringComparer.Ordinal))
         {
             string? displayName = null;
@@ -79,7 +79,7 @@ public static class EventTools
             if (person?.PrimaryName != null)
                 displayName = GrampsValueFormatter.FormatName(person.PrimaryName);
             var role = ResolveDistinctRolesForPersonEvent(person, eventHandle);
-            result.Add((h, displayName, role));
+            result.Add((h, displayName, role, ResolveLinkAttributesForPersonEvent(person, eventHandle)));
         }
 
         return result;
@@ -112,6 +112,20 @@ public static class EventTools
         return orderedDistinct.Count > 0 ? string.Join(", ", orderedDistinct) : "Primary";
     }
 
+    /// <summary>
+    /// The attributes of a person's links to <paramref name="eventHandle"/>, such as their Age, on one line;
+    /// null when the links have none.
+    /// </summary>
+    internal static string? ResolveLinkAttributesForPersonEvent(GrampsPerson? person, string eventHandle)
+    {
+        var parts = (person?.EventRefList ?? [])
+            .Where(er => string.Equals(er.Ref, eventHandle, StringComparison.Ordinal))
+            .Select(er => AttributeListFormatter.FormatInline(er.AttributeList))
+            .OfType<string>()
+            .ToArray();
+        return parts.Length == 0 ? null : string.Join("; ", parts);
+    }
+
     [McpServerTool(Title = "Create Event", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
         "Create a standalone event (Birth, Marriage, Residence, Census, …) with its date, place, description, citations, " +
@@ -125,7 +139,7 @@ public static class EventTools
         "lasted, such as a Residence or Occupation, write from 1890 to 1900. A register that gives both birth and " +
         "baptism makes two events, Birth and Baptism. Citations, notes, media, tags and attributes passed here belong " +
         "to the event and show for everyone who shares it; one participant's own details, such as their Age, go on " +
-        "that person's eventRefs entry (its attribute_list). " +
+        "that person's eventRefs entry ({ref, role, attributes:[\"Age: 65\"]}). " +
         "Change an existing event with update_event. " +
         "An unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
@@ -180,6 +194,7 @@ public static class EventTools
 
         eventType = await KnownTypes.ResolveAsync(eventType, "event_types", client);
         await KnownTypes.CheckAttributesAsync(attributes, client);
+        await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
 
         var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
         var resolvedPlaceHandle = placeHandle is null
@@ -242,6 +257,7 @@ public static class EventTools
         {
             LinkUpdates.Validate(linkMode);
             await KnownTypes.CheckAttributesAsync(attributes, client);
+            await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
             using var updateLease = await client.BeginUpdateAsync();
             if (eventType != null)
                 eventType = await KnownTypes.ResolveAsync(eventType, "event_types", client);

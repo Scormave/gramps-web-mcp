@@ -17,7 +17,7 @@ public static class MediaFormatter
     /// <summary>
     /// Uses resolved <paramref name="extendedMedia"/> when present, which Gramps lists in the order of
     /// <paramref name="links"/>; otherwise handle bullets from <paramref name="links"/>. Either way a link that shows
-    /// part of its image is followed by its region.
+    /// part of its image is followed by its region, and a link with attributes by those.
     /// </summary>
     public static void AppendExtendedMediaSection(
         StringBuilder sb,
@@ -37,7 +37,7 @@ public static class MediaFormatter
                     : (!string.IsNullOrEmpty(fn) ? fn : "(media)");
                 var mh = string.IsNullOrWhiteSpace(m.Handle) ? "—" : m.Handle.Trim();
                 var link = links is not null && i < links.Length && links[i].ResolvedRef == mh ? links[i] : null;
-                sb.AppendLine($"  • {label} [handle: {mh}]{RegionSuffix(link?.Rect)}");
+                sb.AppendLine($"  • {label} [handle: {mh}]{RegionSuffix(link?.Rect)}{AttributesSuffix(link)}");
             }
             return;
         }
@@ -47,7 +47,7 @@ public static class MediaFormatter
 
     /// <summary>
     /// Media links as handle bullets (<see cref="HandleListFormatter.FormatBullet"/>), each followed by
-    /// <c>region [left, top, right, bottom]</c> when it shows only part of its image.
+    /// <c>region [left, top, right, bottom]</c> when it shows only part of its image, and by its attributes.
     /// </summary>
     public static void AppendMediaLinkSection(
         StringBuilder sb,
@@ -62,11 +62,14 @@ public static class MediaFormatter
         sb.AppendLine();
         sb.AppendLine($"{title} ({shown.Count}):");
         foreach (var link in shown)
-            sb.AppendLine(HandleListFormatter.FormatBullet(link.ResolvedRef!, labels) + RegionSuffix(link.Rect));
+            sb.AppendLine(HandleListFormatter.FormatBullet(link.ResolvedRef!, labels) + RegionSuffix(link.Rect) + AttributesSuffix(link));
     }
 
     private static string RegionSuffix(int[]? rect) =>
         MediaRegion.FromStored(rect) is { } region ? $" region {region}" : "";
+
+    private static string AttributesSuffix(GrampsMediaRef? link) =>
+        AttributeListFormatter.FormatInline(link?.AttributeList) is { } attributes ? $" | link attributes: {attributes}" : "";
 
     public static async Task<string> FormatMediaFull(
         GrampsMedia media,

@@ -21,10 +21,6 @@ public sealed class GrampsMediaRefJsonConverter : JsonConverter<GrampsMediaRef?>
         {
             using var doc = JsonDocument.ParseValue(ref reader);
             var root = doc.RootElement;
-            object[]? attributeList = null;
-            var attrArray = JsonElementPropertyReader.FindArrayProperty(root, "attribute_list", "attributeList");
-            if (attrArray is { } arr)
-                attributeList = JsonSerializer.Deserialize<object[]>(arr, options);
 
             return new GrampsMediaRef
             {
@@ -32,7 +28,7 @@ public sealed class GrampsMediaRefJsonConverter : JsonConverter<GrampsMediaRef?>
                 Private = JsonElementPropertyReader.GetBool(root, "private"),
                 CitationList = JsonElementPropertyReader.GetStringArray(root, "citation_list", "citationList"),
                 NoteList = JsonElementPropertyReader.GetStringArray(root, "note_list", "noteList"),
-                AttributeList = attributeList,
+                AttributeList = GrampsAttributeJson.ReadProperty(root, options),
                 Rect = JsonElementPropertyReader.GetIntArray(root, "rect")
             };
         }
@@ -72,10 +68,7 @@ public sealed class GrampsMediaRefJsonConverter : JsonConverter<GrampsMediaRef?>
         }
 
         if (value.AttributeList is { Length: > 0 })
-        {
-            writer.WritePropertyName("attribute_list");
-            JsonSerializer.Serialize(writer, value.AttributeList, options);
-        }
+            GrampsAttributeJson.WriteProperty(writer, value.AttributeList);
 
         if (value.Rect is { Length: > 0 })
         {
