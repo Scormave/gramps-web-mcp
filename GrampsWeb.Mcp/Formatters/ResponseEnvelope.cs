@@ -155,7 +155,7 @@ public static class ResponseEnvelope
 
     public static string[] MediaCreateNextSteps(string handle) => new[]
     {
-        $"Show it on a person, family, event, place, source or citation: add it to that record's mediaHandles, e.g. update_person(handle: \"<person>\", mediaHandles: [\"{handle}\"], linkMode: \"add\"). Next time pass attachTo to create_media instead.",
+        $"Show it on a person, family, event, place, source or citation: add it to that record's mediaHandles, e.g. update_person(handle: \"<person>\", mediaHandles: [\"{handle}\"], linkMode: \"add\"). Next time pass attachTo to upload_media instead.",
     };
 
     public static string[] PlaceCreateNextSteps(string handle) => new[]

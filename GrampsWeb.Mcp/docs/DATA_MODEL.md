@@ -220,7 +220,7 @@ Create/update request DTOs sent to the Gramps Web API via POST/PUT.
 | `CreateRepositoryRequest` | `POST /api/repositories/` / `PUT /api/repositories/{handle}` |
 | `CreateTagRequest` | `POST /api/tags/` |
 
-Media has no request DTO: `create_media` uploads the file bytes to
+Media has no request DTO: `upload_media` uploads the file bytes to
 `POST /api/media/`, which creates the record, and `update_media` replaces them
 through `PUT /api/media/{handle}/file`. Metadata is changed on the stored JSON
 record and sent back with `PUT /api/media/{handle}`.

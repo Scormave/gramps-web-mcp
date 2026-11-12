@@ -64,15 +64,15 @@ public class McpToolProfileTests
 
     [Theory]
     [InlineData(false, new[] { "get_object", "update_media" })]
-    [InlineData(true, new[] { "get_object", "create_media", "update_media" })]
-    public void KeepAvailableTools_PublishesCreateMediaOnlyWithUploadFolders(bool uploadFolders, string[] expected)
+    [InlineData(true, new[] { "get_object", "upload_media", "update_media" })]
+    public void KeepAvailableTools_PublishesUploadMediaOnlyWithUploadFolders(bool uploadFolders, string[] expected)
     {
         var result = new ListToolsResult
         {
             Tools =
             [
                 Tool("get_object", readOnly: true),
-                Tool("create_media", readOnly: false),
+                Tool("upload_media", readOnly: false),
                 Tool("update_media", readOnly: false)
             ]
         };
@@ -84,9 +84,9 @@ public class McpToolProfileTests
     }
 
     [Fact]
-    public void KeepAvailableTools_ReadOnlyModeHidesCreateMediaEvenWithUploadFolders()
+    public void KeepAvailableTools_ReadOnlyModeHidesUploadMediaEvenWithUploadFolders()
     {
-        var result = new ListToolsResult { Tools = [Tool("get_object", readOnly: true), Tool("create_media", readOnly: false)] };
+        var result = new ListToolsResult { Tools = [Tool("get_object", readOnly: true), Tool("upload_media", readOnly: false)] };
 
         var filtered = McpToolProfileExtensions.KeepAvailableTools(result,
             Config(readOnly: true, mediaResourcesEnabled: true, uploadFolders: true));
@@ -95,7 +95,7 @@ public class McpToolProfileTests
     }
 
     [Fact]
-    public void KeepAvailableTools_DisabledMediaAccessHidesCreateMediaEvenWithUploadFolders()
+    public void KeepAvailableTools_DisabledMediaAccessHidesUploadMediaEvenWithUploadFolders()
     {
         var result = new ListToolsResult
         {
@@ -103,7 +103,7 @@ public class McpToolProfileTests
             [
                 Tool("get_object", readOnly: true),
                 Tool("read_media", readOnly: true),
-                Tool("create_media", readOnly: false),
+                Tool("upload_media", readOnly: false),
                 Tool("update_media", readOnly: false)
             ]
         };

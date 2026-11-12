@@ -130,21 +130,21 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
 ### Media
 
 When media access (`GRAMPS_MEDIA_RESOURCES_ENABLED`) is disabled, `tools/list`
-omits `read_media` and `create_media`; media metadata remains available through
+omits `read_media` and `upload_media`; media metadata remains available through
 `get_object`. `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig`
 lists it as retired, and startup logs a warning when it is still set.
 
 Uploading needs media access and `GRAMPS_MEDIA_UPLOAD_DIRS`:
 `GrampsConfig.MediaUploadEnabled` is true only with both, and startup logs why
 uploading is off when folders are set without media access. Until then
-`tools/list` omits `create_media`, and `update_media` rejects `filePath`.
+`tools/list` omits `upload_media`, and `update_media` rejects `filePath`.
 `GrampsConfig` expands a leading `~` or `${HOME}` in the folders, because Claude
 Desktop passes the MCPB default `${HOME}/Downloads` unexpanded until the user
 saves the setting. `MediaUploadFile` resolves symbolic links before checking
 that a file lies inside a folder, then reads the resolved path, and judges the
 type from the file's first bytes (JPEG, PNG, GIF, WebP, TIFF, BMP, PDF). Gramps
 Web's `POST /api/media/` creates a record without checking for duplicates, so
-`create_media` first looks for a record with the file's MD5 checksum and reuses
+`upload_media` first looks for a record with the file's MD5 checksum and reuses
 it.
 
 ### Logging
@@ -195,7 +195,7 @@ adds the call-tool filters for argument checks and read scopes, and, when
 needed, a `tools/list` filter that publishes only tools enabled by the current
 configuration:
 read-only mode removes write tools, disabled media access removes
-`read_media` and `create_media`, and no upload folder removes `create_media`. Hidden tools remain
+`read_media` and `upload_media`, and no upload folder removes `upload_media`. Hidden tools remain
 registered so direct calls still receive the normal read-only or configuration
 error.
 
@@ -203,7 +203,7 @@ error.
 `Hosting/GrampsServerInstructions.cs` in both transports. The instructions
 tell the client how the tools fit together and follow the same profile: no
 write guidance in read-only mode, no `read_media` while media access is
-disabled, and no `create_media` without both media access and an upload
+disabled, and no `upload_media` without both media access and an upload
 folder.
 
 ### 1b. Resources (`Resources/`)

@@ -47,7 +47,7 @@ public static class CitationTools
         "Create a citation: one specific spot in an existing source, such as a page, act or entry number, with its date, " +
         "confidence, notes and media. Returns the new handle, Gramps ID and page, with next steps. " +
         "The source must already exist (search, or create_source). A transcript of the entry goes in a note " +
-        "(create_note, type Transcript) passed in noteHandles; the scan goes in mediaHandles, or later through create_media " +
+        "(create_note, type Transcript) passed in noteHandles; the scan goes in mediaHandles, or later through upload_media " +
         "attachTo, which can mark the entry's region on the page. The citation supports nothing until it is attached: " +
         "add it to each person, family, event or place it names (citationHandles, linkMode add, on their update tool). " +
         "Does not check for duplicates; change an existing citation with update_citation. " +

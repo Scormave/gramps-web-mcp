@@ -10,7 +10,7 @@ namespace GrampsWeb.Mcp.Tools;
 /// </summary>
 internal sealed record MediaUploadFile(string Path, byte[] Bytes, string MimeType, string Checksum)
 {
-    /// <summary>The types create_media and update_media accept, as listed in errors.</summary>
+    /// <summary>The types upload_media and update_media accept, as listed in errors.</summary>
     public const string SupportedTypes = "JPEG, PNG, GIF, WebP, TIFF, BMP or PDF";
 
     /// <summary>File name without its extension: the default description, as in Gramps Web's upload form.</summary>

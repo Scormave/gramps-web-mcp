@@ -33,8 +33,8 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # GRAMPS_MEDIA_RESOURCES_ENABLED  true|false — expose read_media, media resources and uploads (default false).
 # GRAMPS_MEDIA_MAX_BYTES  Max bytes returned by read_media or a media resource (default 5242880).
 # GRAMPS_MEDIA_ALLOW_PRIVATE  true|false — return bytes for media marked private (default false).
-# GRAMPS_MEDIA_UPLOAD_DIRS  Mounted folders create_media may upload from, :-separated (default unset: off; needs media access).
-# GRAMPS_MEDIA_UPLOAD_MAX_BYTES  Largest file create_media or update_media uploads (default 52428800).
+# GRAMPS_MEDIA_UPLOAD_DIRS  Mounted folders upload_media may upload from, :-separated (default unset: off; needs media access).
+# GRAMPS_MEDIA_UPLOAD_MAX_BYTES  Largest file upload_media or update_media uploads (default 52428800).
 
 # --- MCP transport (optional; these defaults suit a networked container) ---
 # MCP_TRANSPORT       stdio | http | sse — default in image is http for Docker.

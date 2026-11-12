@@ -24,7 +24,7 @@ tree, and a Gramps ID such as `I0012` works as well.
 | "Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber." | `search` for each person and place, then `create_place`, `create_event`, `create_person` and `create_family` | The new records with their Gramps IDs, people already in the tree reused, and what the text left open |
 | "Enter entry 12 of the 1884 marriage register: the couple, their fathers and the witnesses." | `search` for each person, then `create_records` | The citation, the marriage, the new people and families saved in one transaction, which one `undo_change` takes back |
 | "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source or `create_source`, then `create_citation` and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
-| "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `create_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
+| "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `upload_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
 | "Add today's findings to my research note." | `update_note` with `appendText` | The note extended at the end, its earlier text, styling and links untouched |
 | "Check my grandfather's branch for mistakes." | the `audit-tree` prompt: `list_objects` with filter rules, `get_timeline`, `get_person_tree` and `find_duplicates` | A report of impossible dates, possible duplicates, unsourced facts, unlinked records and missing data, most serious first, with nothing changed |
 | "Is anyone in the tree entered twice?" | `find_duplicates`, then `get_object` for both people of a pair | The pairs with the same name in any spelling, possible duplicates first, each person with birth, death and parents |
@@ -55,7 +55,7 @@ Direct calls to a previously known write-tool name still return an MCP error
 before any mutation request is sent to Gramps Web.
 When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media`
 is also omitted from the catalog; `get_object` still reads
-media metadata. `create_media` is published only when media access is enabled
+media metadata. `upload_media` is published only when media access is enabled
 and `GRAMPS_MEDIA_UPLOAD_DIRS` names at least one upload folder.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
 
@@ -74,7 +74,7 @@ and `linkMode` work, the order to create linked records in, and when to delete.
 They name only the tools the configuration publishes: read-only mode replaces
 the writing guidance with one line saying no tool changes the tree,
 `read_media` is mentioned only when media access is enabled, and
-`create_media` only when media access is enabled and an upload folder is set.
+`upload_media` only when media access is enabled and an upload folder is set.
 
 Create/update/delete HTTP calls are serialized in-process by default
 (`GRAMPS_MUTATION_SERIALIZE=true`) and may wait
@@ -135,7 +135,7 @@ update_family(handle: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "a
 
 A media link can show only part of an image, such as one baptism record on a
 page scan. `mediaHandles` on the person, family, event, place, source and
-citation tools, and `attachTo` on `create_media` and `update_media`, take an
+citation tools, and `attachTo` on `upload_media` and `update_media`, take an
 object `{"ref": "MEDIA_HANDLE", "region": [left, top, right, bottom]}` in place
 of a handle (`attachTo` takes a Gramps ID as `ref` too). The edges are whole
 percent of the image width and height, 0 to 100, from the top-left corner, as
@@ -158,7 +158,7 @@ is saved.
 ```text
 read_media(handle: "O0100", region: [5, 50, 95, 75])
 update_person(handle: "PERSON_HANDLE", mediaHandles: [{"ref": "MEDIA_HANDLE", "region": [5, 50, 95, 75]}], linkMode: "add")
-create_media(filePath: "page12.jpg", attachTo: [{"ref": "I0001", "region": [5, 50, 95, 75]}, "C0001"])
+upload_media(filePath: "page12.jpg", attachTo: [{"ref": "I0001", "region": [5, 50, 95, 75]}, "C0001"])
 ```
 
 ### Link attributes
@@ -185,7 +185,7 @@ to it, and an event shows them by each person who took part.
 
 ```text
 update_person(handle: "PERSON_HANDLE", eventRefs: [{"ref": "EVENT_HANDLE", "role": "Primary", "attributes": ["Age: 65"]}], linkMode: "add")
-create_media(filePath: "page12.jpg", attachTo: [{"ref": "C0001", "region": [5, 50, 95, 75], "attributes": ["Description: entry 14"]}])
+upload_media(filePath: "page12.jpg", attachTo: [{"ref": "C0001", "region": [5, 50, 95, 75], "attributes": ["Description: entry 14"]}])
 ```
 
 ### Updates keep stored data
@@ -903,7 +903,7 @@ Use `get_object(objectType: "media", ...)` for media metadata. It does not
 upload or download file bytes. Media byte tools/resources require
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect `GRAMPS_MEDIA_MAX_BYTES`, and
 block private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
-Uploading with `create_media` or `update_media(filePath)` requires
+Uploading with `upload_media` or `update_media(filePath)` requires
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true` and `GRAMPS_MEDIA_UPLOAD_DIRS`, and
 respects `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`.
 
@@ -930,7 +930,7 @@ Migration: replace `get_media_thumbnail(handle, size)` with
 `get_media_file(handle)` with `read_media(handle, mode: "file")`.
 The old tool names are no longer registered. Media resource URIs are unchanged.
 
-### C — `CreateMedia`
+### C — `UploadMedia`
 Upload a photo, document scan or PDF from an upload folder as a new media
 record, and show it on people, families, events, places, sources or citations
 through `attachTo`. Only files inside `GRAMPS_MEDIA_UPLOAD_DIRS` (subfolders
@@ -965,11 +965,11 @@ swap its file, with `update_media`; check a region with `read_media`.
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update media metadata, or replace the stored file with `filePath` from an
-upload folder. The new file is checked like in `CreateMedia`; a file identical
+upload folder. The new file is checked like in `UploadMedia`; a file identical
 to the stored one uploads nothing, and a file another media record already
 holds is rejected. The date and file are checked before anything is saved.
 `attachTo` shows the media on more records, whole or as a region, like in
-`CreateMedia`; it works alone, without saving the media record. To take the
+`UploadMedia`; it works alone, without saving the media record. To take the
 media off a record, use that record's update tool with `mediaHandles` and
 `linkMode: "remove"`.
 
@@ -982,7 +982,7 @@ media off a record, use that record's update tool with `mediaHandles` and
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool?` | no | — | Private flag |
 | `filePath` | `string?` | no | — | Replacement file inside an upload folder; omit to keep the file |
-| `attachTo` | `FlexibleMediaLinkList?` | no | — | Records to show the media on, as in `CreateMedia`; not affected by `linkMode` |
+| `attachTo` | `FlexibleMediaLinkList?` | no | — | Records to show the media on, as in `UploadMedia`; not affected by `linkMode` |
 
 ---
 
@@ -1068,11 +1068,16 @@ the call link to it by writing `"#key"` wherever they take a handle: a
 citation's `sourceHandle`, an event's `citationHandles` or `placeHandle`, a
 person's `eventRefs` (`"#birth"`, `"#marriage::Witness"`), a family's
 `fatherHandle`, `motherHandle`, `childRefs` and `eventRefs`, a source's
-`repositoryHandles`, a place's `enclosedBy`. Existing records are linked as
-in the create tools, by handle or, where the create tool takes one, by
-Gramps ID. A `"#key"` must name a record of the call of the class the field
-links to; media and tags are not created here, so `mediaHandles` and
-`tagHandles` take existing handles only.
+`repositoryHandles`, a place's `enclosedBy`, any record's `tagHandles`.
+Existing records are linked as in the create tools, by handle or, where the
+create tool takes one, by Gramps ID. A `"#key"` must name a record of the
+call of the class the field links to. Media is not created here, so
+`mediaHandles` takes existing handles only: upload the file first with
+`upload_media`.
+
+A new tag is checked like in `update_tag`: a name another tag of the tree or
+of the call already has, ignoring case, stops the call before saving, and the
+error gives the existing tag's handle to use in `tagHandles` instead.
 
 People have no `familyHandles` or `parentFamilyHandles`: they join families
 through the family's `fatherHandle`, `motherHandle` and `childRefs`. Gramps
@@ -1098,8 +1103,8 @@ types are not checked for duplicates.
 The reply header carries `type: Transaction`, `action: created` and
 `records`. The body lists each record in saving order with its handle, Gramps
 ID and key, then the existing people that now link back to a new family, the
-events, citations and notes no record of the call links to, and the people in
-no new family:
+tags, events, citations and notes no record of the call links to, and the
+people in no new family:
 
 ```text
 Person: Petrov, Ivan — handle: 19a3c5e0f1d2b4a6c8e0 | gramps_id: I0412 | key: ivan
@@ -1110,6 +1115,7 @@ plus `key`:
 
 | Parameter | Records | Notes |
 |-----------|---------|-------|
+| `tags` | `create_tag` | Saved first; linked from other records' `tagHandles`. Tags have no Gramps ID |
 | `repositories` | `create_repository` | — |
 | `places` | `create_place` | `enclosedBy` may name a place of the call |
 | `sources` | `create_source` | `repositoryHandles` may name repositories of the call |
@@ -1307,8 +1313,8 @@ undo_change(transactionId: 412)
 | **Total with media access and upload enabled** | **11** | **11** | **12** | **1** | **35** |
 
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
-`create_media` are hidden: the default catalog contains 33 tools in read/write
-mode. With media access enabled, `create_media` also needs
+`upload_media` are hidden: the default catalog contains 33 tools in read/write
+mode. With media access enabled, `upload_media` also needs
 `GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 11 tools
 with media access enabled, or 10 with it disabled.
 

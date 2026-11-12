@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `create_records` creates tags: `tags` takes records with the fields
+  of `create_tag` and a `key`, saved first, and the other records of
+  the call link them through `tagHandles` with `"#key"`. A tag name the
+  tree or the call already has, ignoring case, stops the call before
+  saving, and the error gives the existing tag's handle. A new tag no
+  record of the call links to is listed in the reply
+
 ### Changed
 
 - **Breaking:** Gramps Web 26.6.2 or newer (Gramps Web API 3.16 or newer)
@@ -31,6 +40,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   reverts. The reply has `type: Transaction`, `records:` and lists the
   records deleted along and those whose links were removed;
   `action: partially_deleted` reports a later type that failed
+- **Breaking:** `create_media` is renamed `upload_media`, with the same
+  arguments. It uploads the file in its own transaction, apart from
+  `create_records`, which takes no media; a `"#key"` in `mediaHandles`
+  points to `upload_media`
 - `merge_objects` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
 

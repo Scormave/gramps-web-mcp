@@ -345,7 +345,7 @@ GRAMPS_INTEGRATION_TESTS=true dotnet test GrampsWeb.Mcp.IntegrationTests
   error, and `CallErrorAsync` expects one.
 - To test another configuration, start a server of its own with
   `gramps.StartSessionAsync(gramps.Config with { … })` and dispose it with
-  `await using`. `create_media` and `update_media` read files that
+  `await using`. `upload_media` and `update_media` read files that
   `gramps.WriteUpload` puts in the upload folder.
 - Gramps Web lets a client call its token routes once a second.
   `TokenRoutePacer` spaces those calls across all servers in the run and

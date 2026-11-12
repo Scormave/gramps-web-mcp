@@ -159,7 +159,7 @@ public static class TagTools
     /// A tag color as Gramps Web stores it, <c>#rrggbb</c>: Gramps Web and Gramps desktop read the color as CSS
     /// or GTK color text, which needs the <c>#</c>.
     /// </summary>
-    private static string NormalizeColor(string color)
+    internal static string NormalizeColor(string color)
     {
         var hex = color.Trim();
         if (hex.StartsWith('#'))

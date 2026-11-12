@@ -29,7 +29,7 @@ public class ToolAnnotationTests
 
         Assert.Equal(35, toolMethods.Count);
         Assert.Single(toolMethods, method => method.Name == "ReadMedia");
-        Assert.Single(toolMethods, method => method.Name == "CreateMedia");
+        Assert.Single(toolMethods, method => method.Name == "UploadMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
         Assert.Single(toolMethods, method => method.Name == "DeleteRecords");
         Assert.Single(toolMethods, method => method.Name == "UndoChange");
@@ -60,7 +60,7 @@ public class ToolAnnotationTests
     {
         string[] idempotent =
         [
-            "create_media", "update_citation", "update_event", "update_family", "update_media", "update_person",
+            "upload_media", "update_citation", "update_event", "update_family", "update_media", "update_person",
             "update_place", "update_repository", "update_source", "update_tag", "delete_records", "merge_objects"
         ];
         string[] repeatable =
@@ -88,7 +88,8 @@ public class ToolAnnotationTests
             }
 
             Assert.Equal(idempotent.Contains(tool.Name), annotations.IdempotentHint);
-            Assert.Equal(!tool.Name.StartsWith("create_", StringComparison.Ordinal), annotations.DestructiveHint);
+            var onlyAdds = tool.Name.StartsWith("create_", StringComparison.Ordinal) || tool.Name == "upload_media";
+            Assert.Equal(!onlyAdds, annotations.DestructiveHint);
         }
 
         Assert.Equal(

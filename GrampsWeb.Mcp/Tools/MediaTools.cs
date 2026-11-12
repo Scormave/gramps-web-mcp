@@ -120,7 +120,7 @@ public static class MediaTools
         "a link already there gains the ones it lacks.";
 
     private const string CreateRetry =
-        "Run create_media again with the same file and attachTo: it finds the stored media by checksum and adds only the missing links.";
+        "Run upload_media again with the same file and attachTo: it finds the stored media by checksum and adds only the missing links.";
 
     /// <summary>The records Gramps lets show media, by Gramps ID prefix.</summary>
     private static readonly MediaOwnerType[] OwnerTypes =
@@ -133,7 +133,7 @@ public static class MediaTools
         new('C', "citation", "citations"),
     ];
 
-    [McpServerTool(Title = "Create Media", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [McpServerTool(Title = "Upload Media", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
     [Description(
         "Upload a photo, document scan or PDF from the server's upload folder as a new media record, and show it on " +
         "people, families, events, places, sources or citations with attachTo, whole or as a region such as one record on a page scan. " +
@@ -148,7 +148,7 @@ public static class MediaTools
         "belongs in a note (create_note), not here. Change the record later, or swap its file, with update_media; " +
         "check what a region shows with read_media. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
-    public static async Task<string> CreateMedia(
+    public static async Task<string> UploadMedia(
         [Description("The file to upload: an absolute path inside an upload folder, ~/…, or a name relative to the folder, e.g. scan.jpg.")]
         string filePath,
         [Description("Description (caption). Default: the file name without its extension.")]
@@ -194,7 +194,7 @@ public static class MediaTools
             if (string.IsNullOrWhiteSpace(handle))
                 throw new McpException(
                     $"{Path.GetFileName(file.Path)} was uploaded, but Gramps Web returned no handle for the new media record. " +
-                    "Run create_media again with the same file: it finds the stored record by checksum instead of uploading it twice.");
+                    "Run upload_media again with the same file: it finds the stored record by checksum instead of uploading it twice.");
 
             var mediaPath = $"/api/media/{Uri.EscapeDataString(handle)}";
             var mediaDescription = string.IsNullOrWhiteSpace(description) ? file.DefaultDescription : description;
@@ -237,7 +237,7 @@ public static class MediaTools
         "or replace its file with filePath from the server's upload folder (GRAMPS_MEDIA_UPLOAD_DIRS). " +
         "attachTo shows the media on people, families, events, places, sources or citations, whole or as a region; " +
         "to take it off a record, use that record's update tool with mediaHandles and linkMode remove. " +
-        "For a new media record use create_media; to remove one, delete_records. " +
+        "For a new media record use upload_media; to remove one, delete_records. " +
         ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing media object returns a not-found message, and an unreadable date or file is rejected before anything is saved. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]

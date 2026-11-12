@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json.Serialization;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Formatters;
+using GrampsWeb.Mcp.Requests;
 using GrampsWeb.Mcp.Tools;
 
 namespace GrampsWeb.Mcp.Input;
@@ -26,7 +27,7 @@ public abstract class BatchRecord
 
     internal const string CitationsText = "Citations: handles of existing ones or #keys of citations in this call.";
     internal const string NotesText = "Notes: handles of existing ones or #keys of notes in this call.";
-    internal const string TagsText = "Existing tags: handles (create_tag).";
+    internal const string TagsText = "Tags: handles of existing ones or #keys of tags in this call.";
     internal const string MediaText = "Existing media: handles, or {ref, region} to show part of an image, as in create_person.";
     internal const string AttributesText = "Attributes, as in the create tool: [{type, value}] or \"Type: Value\".";
     internal const string PrivateText = "Mark the record private (default false).";
@@ -391,6 +392,32 @@ public sealed class RepositoryRecord : BatchRecord
         var request = await RepositoryTools.BuildRepositoryRequestAsync(Name, RepoType, Address, Addresses, Url,
             Urls, NoteHandles, TagHandles, IsPrivate, client);
         return (request, Name);
+    }
+}
+
+public sealed class TagRecord : BatchRecord
+{
+    [JsonPropertyName("name")]
+    [Description("Tag name shown on records, such as \"To check\" (required). No other tag may have it, in any case: " +
+                 "Gramps filters find a tag by its name.")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("color")]
+    [Description("Color as six hex digits RRGGBB, with or without #, e.g. FF5733; stored as #ff5733. Default 000000 (black).")]
+    public string Color { get; init; } = "000000";
+
+    [JsonPropertyName("priority")]
+    [Description("Sort priority among tags in Gramps (default 0).")]
+    public int Priority { get; init; }
+
+    internal override string GrampsClass => "Tag";
+
+    internal override Task<(object Request, string Label)> BuildAsync(GrampsApiClient client)
+    {
+        if (string.IsNullOrWhiteSpace(Name))
+            throw McpToolErrors.ValidationError("Error: name is required");
+        var request = new CreateTagRequest { Name = Name.Trim(), Color = TagTools.NormalizeColor(Color ?? "000000"), Priority = Priority };
+        return Task.FromResult<(object, string)>((request, request.Name));
     }
 }
 

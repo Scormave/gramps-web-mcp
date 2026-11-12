@@ -91,7 +91,7 @@ internal static class McpToolProfileExtensions
         tool.Name == "read_media";
 
     private static bool IsMediaUploadTool(Tool tool) =>
-        tool.Name == "create_media";
+        tool.Name == "upload_media";
 
     private static async ValueTask<ListToolsResult> FilterAvailableToolsAsync(
         McpRequestHandler<ListToolsRequestParams, ListToolsResult> next,

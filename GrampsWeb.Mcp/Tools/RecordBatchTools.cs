@@ -55,22 +55,27 @@ public static class RecordBatchTools
 
     [McpServerTool(Title = "Create Records", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
-        "Create many linked records in one call: repositories, places, sources, notes, citations, events, people and " +
-        "families. Gramps Web saves them in one transaction, so either all are created or none, and undo_change on " +
-        "that transaction (get_recent_changes) removes them all again. Give a record that others link to a key and " +
-        "write \"#key\" wherever a handle is taken: a citation's sourceHandle \"#src\", an event's citationHandles " +
-        "[\"#cit\"], a person's eventRefs [\"#birth\"], a family's fatherHandle \"#ivan\" and childRefs [\"#petr\"]. " +
-        "Existing records are linked by handle, or by Gramps ID where the create tool accepts one. Each record takes " +
-        "the arguments of its create tool (create_person, create_event, …), except that people join families only " +
-        "through families: a new family's father, mother and children get the link back. Links from existing records " +
-        "to new ones, such as a new child of an existing family, are made afterwards with update_* and linkMode " +
-        "\"add\". Media and tags are not created here: create them first with create_media and create_tag. Each new " +
-        "person is checked for duplicates in the tree as in create_person: a possible duplicate stops the whole call " +
-        "with action \"refused\", and notDuplicateOf on that person lets it through; other record types are not " +
-        "checked, so search first. Up to 50 records per call; every record is checked before anything is saved, and " +
-        "an error names the record, e.g. people[1]. Returns each record's handle and Gramps ID. " +
-        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
+        "Create many linked records in one call: tags, repositories, places, sources, notes, citations, events, " +
+        "people and families. Gramps Web saves them in one transaction, so either all are created or none, and " +
+        "undo_change on that transaction (get_recent_changes) removes them all again. Give a record that others " +
+        "link to a key and write \"#key\" wherever a handle is taken: a citation's sourceHandle \"#src\", an event's " +
+        "citationHandles [\"#cit\"], a person's eventRefs [\"#birth\"] and tagHandles [\"#todo\"], a family's " +
+        "fatherHandle \"#ivan\" and childRefs [\"#petr\"]. Existing records are linked by handle, or by Gramps ID " +
+        "where the create tool accepts one. Each record takes the arguments of its create tool (create_person, " +
+        "create_event, …), except that people join families only through families: a new family's father, mother " +
+        "and children get the link back. Links from existing records to new ones, such as a new child of an " +
+        "existing family, are made afterwards with update_* and linkMode \"add\". Media is not created here: " +
+        "upload the file first with upload_media. Each new person is checked for duplicates in the tree as in " +
+        "create_person: a possible duplicate stops the whole call with action \"refused\", and notDuplicateOf on " +
+        "that person lets it through; a tag whose name another tag has stops the call with an error; other record " +
+        "types are not checked, so search first. Up to 50 records per call; every record is checked before " +
+        "anything is saved, and an error names the record, e.g. people[1]. Returns each record's handle and " +
+        "Gramps ID. " + ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateRecords(
+        [Description("New tags, colored labels such as \"To check\": name, color, priority. Other records of the " +
+                     "call carry them through tagHandles [\"#key\"]; existing records get them with update_* and " +
+                     "linkMode \"add\".")]
+        TagRecord[]? tags = null,
         [Description("New repositories; fields as in create_repository.")]
         RepositoryRecord[]? repositories = null,
         [Description("New places; fields as in create_place. enclosedBy may name a place of this call by \"#key\".")]
@@ -92,9 +97,9 @@ public static class RecordBatchTools
     {
         try
         {
-            var entries = Collect(("repositories", repositories), ("places", places), ("sources", sources),
-                ("notes", notes), ("citations", citations), ("events", events), ("people", people),
-                ("families", families));
+            var entries = Collect(("tags", tags), ("repositories", repositories), ("places", places),
+                ("sources", sources), ("notes", notes), ("citations", citations), ("events", events),
+                ("people", people), ("families", families));
             var keys = CheckKeys(entries);
 
             foreach (var entry in entries)
@@ -108,6 +113,8 @@ public static class RecordBatchTools
                     throw RecordError(entry, ex);
                 }
             }
+
+            await CheckTagNamesAsync(entries, client);
 
             var handles = new HashSet<string>(StringComparer.Ordinal);
             foreach (var entry in entries)
@@ -208,7 +215,7 @@ public static class RecordBatchTools
 
         if (entries.Count == 0)
             throw McpToolErrors.ValidationError(
-                "Error: nothing to create. Give at least one record in repositories, places, sources, notes, " +
+                "Error: nothing to create. Give at least one record in tags, repositories, places, sources, notes, " +
                 "citations, events, people or families.");
         if (entries.Count > MaxRecords)
             throw McpToolErrors.ValidationError(
@@ -233,6 +240,33 @@ public static class RecordBatchTools
         }
 
         return keys;
+    }
+
+    /// <summary>
+    /// Refuses a new tag whose name, ignoring case, another tag of the tree or of the call already has: Gramps
+    /// filters find a tag by its name, and update_tag refuses such a name too.
+    /// </summary>
+    private static async Task CheckTagNamesAsync(List<Entry> entries, GrampsApiClient client)
+    {
+        var newTags = entries.Where(e => e.Request is CreateTagRequest).ToList();
+        if (newTags.Count == 0)
+            return;
+
+        var stored = (await client.GetPagedListAsync<GrampsTag>("/api/tags/")).Objects ?? [];
+        var seen = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in newTags)
+        {
+            var name = ((CreateTagRequest)entry.Request).Name!;
+            var taken = stored.FirstOrDefault(t => string.Equals(t.Name?.Trim(), name, StringComparison.OrdinalIgnoreCase));
+            if (taken != null)
+                throw McpToolErrors.ValidationError(
+                    $"Error: {entry.Where}: the tree already has a tag named \"{taken.Name}\" (handle {taken.Handle}); " +
+                    "give that handle in tagHandles instead of creating the tag again.");
+            if (seen.TryGetValue(name, out var first))
+                throw McpToolErrors.ValidationError(
+                    $"Error: {entry.Where}: {first.Path} already creates a tag named \"{name}\"; tag names must differ.");
+            seen[name] = entry;
+        }
     }
 
     /// <summary>A check of the create tool that failed, prefixed with the record; server errors pass unchanged.</summary>
@@ -301,11 +335,10 @@ public static class RecordBatchTools
         if (StringValue(value) is not { } text || !text.StartsWith('#'))
             return null;
 
-        if (field.Class is "Media" or "Tag")
+        if (field.Class == "Media")
             throw McpToolErrors.ValidationError(
-                $"Error: {entry.Where}: {field.Argument} has \"{text}\", but create_records does not create " +
-                $"{(field.Class == "Media" ? "media" : "tags")}: create it first with " +
-                $"{(field.Class == "Media" ? "create_media" : "create_tag")} and give its handle.");
+                $"Error: {entry.Where}: {field.Argument} has \"{text}\", but create_records does not create media: " +
+                "upload the file first with upload_media and give its handle.");
 
         var key = text[1..];
         if (!keys.TryGetValue(key, out var target))
@@ -395,7 +428,7 @@ public static class RecordBatchTools
                 sb.AppendLine(Line(change.GrampsClass, ExistingLabel(change), handle, StringValue(change.New?["gramps_id"]), null));
         }
 
-        var unlinked = entries.Where(e => e.Record is EventRecord or CitationRecord or NoteRecord
+        var unlinked = entries.Where(e => e.Record is EventRecord or CitationRecord or NoteRecord or TagRecord
                                           && (e.Key == null || !used.Contains(e.Key))).ToList();
         if (unlinked.Count > 0)
         {
@@ -413,7 +446,7 @@ public static class RecordBatchTools
         sb.AppendLine("Next steps:");
         if (unlinked.Count > 0)
             sb.AppendLine("  • Link the records above from existing ones with update_* and linkMode \"add\" " +
-                          "(eventRefs, citationHandles, noteHandles), or remove them with delete_records.");
+                          "(eventRefs, citationHandles, noteHandles, tagHandles), or remove them with delete_records.");
         if (unplaced.Count > 0)
             sb.AppendLine($"  • {string.Join(", ", unplaced.Select(e => e.Where))} " +
                           $"{(unplaced.Count == 1 ? "is" : "are")} in no new family: add to an existing family with " +

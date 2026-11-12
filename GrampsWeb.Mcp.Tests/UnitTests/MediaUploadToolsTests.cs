@@ -13,7 +13,7 @@ using Xunit;
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 /// <summary>
-/// create_media and update_media's filePath against a fake Gramps Web: what is uploaded, in which order,
+/// upload_media and update_media's filePath against a fake Gramps Web: what is uploaded, in which order,
 /// and that a stored copy of the file is reused instead of uploaded again.
 /// </summary>
 public class MediaUploadToolsTests : IDisposable
@@ -29,13 +29,13 @@ public class MediaUploadToolsTests : IDisposable
     public void Dispose() => Directory.Delete(_uploads, recursive: true);
 
     [Fact]
-    public async Task CreateMedia_Uploads_The_Bytes_Then_Saves_The_Record_And_Shows_It_On_The_Owner()
+    public async Task UploadMedia_Uploads_The_Bytes_Then_Saves_The_Record_And_Shows_It_On_The_Owner()
     {
         var server = new FakeGramps();
         server.Lists["/api/people/?gramps_id=I0001&pagesize=1"] = """[{"handle":"h-person","gramps_id":"I0001"}]""";
         server.Objects["/api/people/h-person"] = """{"_class":"Person","handle":"h-person","gramps_id":"I0001","media_list":[{"_class":"MediaRef","ref":"h-photo"}]}""";
 
-        var result = await MediaTools.CreateMedia("metric book 1890.jpg", date: "1890",
+        var result = await MediaTools.UploadMedia("metric book 1890.jpg", date: "1890",
             attachTo: Links("I0001"), noteHandles: Handles("h-note"), client: server.Client(), config: Config());
 
         Assert.Equal(
@@ -68,14 +68,14 @@ public class MediaUploadToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMedia_Reuses_A_Stored_Identical_File_And_Only_Adds_Missing_Links()
+    public async Task UploadMedia_Reuses_A_Stored_Identical_File_And_Only_Adds_Missing_Links()
     {
         var server = new FakeGramps { StoredByChecksum = """[{"handle":"h-old","gramps_id":"O0007","checksum":"x","mime":"image/jpeg","desc":"Old scan"}]""" };
         server.Objects["/api/events/h-event-handle-1"] = """{"_class":"Event","handle":"h-event-handle-1","gramps_id":"E0003","media_list":[]}""";
         server.Objects["/api/people/h-person-handle-1"] =
             """{"_class":"Person","handle":"h-person-handle-1","gramps_id":"I0002","media_list":[{"_class":"MediaRef","ref":"h-old"}]}""";
 
-        var result = await MediaTools.CreateMedia("metric book 1890.jpg", description: "ignored",
+        var result = await MediaTools.UploadMedia("metric book 1890.jpg", description: "ignored",
             attachTo: Links("h-event-handle-1", "h-person-handle-1"), client: server.Client(), config: Config());
 
         Assert.DoesNotContain("POST /api/media/", server.Requests);
@@ -93,12 +93,12 @@ public class MediaUploadToolsTests : IDisposable
     [InlineData("N0001", "media can be shown only on those")]
     [InlineData("h-nowhere-handle-1", "no person, family, event, place, source or citation has handle")]
     [InlineData("Ivan", "neither a Gramps ID")]
-    public async Task CreateMedia_Rejects_Unknown_Owners_Before_Uploading(string owner, string message)
+    public async Task UploadMedia_Rejects_Unknown_Owners_Before_Uploading(string owner, string message)
     {
         var server = new FakeGramps();
         server.Lists["/api/people/?gramps_id=I0009&pagesize=1"] = "[]";
 
-        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia("metric book 1890.jpg",
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.UploadMedia("metric book 1890.jpg",
             attachTo: Links(owner), client: server.Client(), config: Config()));
 
         Assert.Contains(message, ex.Message);
@@ -106,11 +106,11 @@ public class MediaUploadToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMedia_Rejects_An_Unreadable_Date_Before_Uploading()
+    public async Task UploadMedia_Rejects_An_Unreadable_Date_Before_Uploading()
     {
         var server = new FakeGramps();
 
-        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia("metric book 1890.jpg",
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.UploadMedia("metric book 1890.jpg",
             date: "1890-02-30", client: server.Client(), config: Config()));
 
         Assert.Contains("1890-02-30", ex.Message);
@@ -118,11 +118,11 @@ public class MediaUploadToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMedia_Without_Owners_Suggests_How_To_Link()
+    public async Task UploadMedia_Without_Owners_Suggests_How_To_Link()
     {
         var server = new FakeGramps();
 
-        var result = await MediaTools.CreateMedia("metric book 1890.jpg", isPrivate: true, client: server.Client(), config: Config());
+        var result = await MediaTools.UploadMedia("metric book 1890.jpg", isPrivate: true, client: server.Client(), config: Config());
 
         Assert.True(server.Saved["/api/media/h-new"]["private"]!.GetValue<bool>());
         Assert.Contains("Next steps", result);
@@ -130,11 +130,11 @@ public class MediaUploadToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMedia_Timeout_Says_A_Retry_Is_Safe()
+    public async Task UploadMedia_Timeout_Says_A_Retry_Is_Safe()
     {
         var server = new FakeGramps { UploadTimesOut = true };
 
-        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia("metric book 1890.jpg", client: server.Client(), config: Config()));
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.UploadMedia("metric book 1890.jpg", client: server.Client(), config: Config()));
 
         Assert.Contains("did not finish in time", ex.Message);
         Assert.Contains("found by checksum", ex.Message);
@@ -202,7 +202,7 @@ public class MediaUploadToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMedia_Shows_A_Region_On_One_Owner_And_The_Whole_Image_On_Another()
+    public async Task UploadMedia_Shows_A_Region_On_One_Owner_And_The_Whole_Image_On_Another()
     {
         var server = new FakeGramps();
         server.Lists["/api/people/?gramps_id=I0001&pagesize=1"] = """[{"handle":"h-person","gramps_id":"I0001"}]""";
@@ -210,7 +210,7 @@ public class MediaUploadToolsTests : IDisposable
         server.Lists["/api/citations/?gramps_id=C0001&pagesize=1"] = """[{"handle":"h-citation","gramps_id":"C0001"}]""";
         server.Objects["/api/citations/h-citation"] = """{"_class":"Citation","handle":"h-citation","gramps_id":"C0001"}""";
 
-        var result = await MediaTools.CreateMedia("metric book 1890.jpg",
+        var result = await MediaTools.UploadMedia("metric book 1890.jpg",
             attachTo: LinksJson("""[{"ref":"I0001","region":[10,20,60,45]},"C0001"]"""), client: server.Client(), config: Config());
 
         Assert.Equal(
@@ -221,11 +221,11 @@ public class MediaUploadToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateMedia_Rejects_An_Unreadable_Region_Before_Uploading()
+    public async Task UploadMedia_Rejects_An_Unreadable_Region_Before_Uploading()
     {
         var server = new FakeGramps();
 
-        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia("metric book 1890.jpg",
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.UploadMedia("metric book 1890.jpg",
             attachTo: LinksJson("""[{"ref":"I0001","region":[10,20,5,45]}]"""), client: server.Client(), config: Config()));
 
         Assert.Contains("attachTo: I0001: region [10, 20, 5, 45] is empty", ex.Message);
@@ -315,7 +315,7 @@ public class MediaUploadToolsTests : IDisposable
     {
         var server = new FakeGramps();
 
-        await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia("metric book 1890.jpg",
+        await Assert.ThrowsAsync<McpException>(() => MediaTools.UploadMedia("metric book 1890.jpg",
             client: server.Client(readOnly: true), config: Config()));
 
         Assert.DoesNotContain("POST /api/media/", server.Requests);

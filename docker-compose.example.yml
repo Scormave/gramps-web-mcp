@@ -75,7 +75,7 @@ services:
       GRAMPS_MEDIA_RESOURCES_ENABLED: ${GRAMPS_MEDIA_RESOURCES_ENABLED:-false}
       GRAMPS_MEDIA_MAX_BYTES: ${GRAMPS_MEDIA_MAX_BYTES:-5242880}
       GRAMPS_MEDIA_ALLOW_PRIVATE: ${GRAMPS_MEDIA_ALLOW_PRIVATE:-false}
-      # Folders inside the container that create_media may upload from; mount them below.
+      # Folders inside the container that upload_media may upload from; mount them below.
       GRAMPS_MEDIA_UPLOAD_DIRS: ${GRAMPS_MEDIA_UPLOAD_DIRS:-}
       GRAMPS_MEDIA_UPLOAD_MAX_BYTES: ${GRAMPS_MEDIA_UPLOAD_MAX_BYTES:-52428800}
       GRAMPS_LOG_LEVEL: ${GRAMPS_LOG_LEVEL:-Information}
@@ -84,7 +84,7 @@ services:
       MCP_PATH: ${MCP_PATH:-/mcp}
       MCP_STATELESS: ${MCP_STATELESS:-true}
       MCP_ENABLE_LEGACY_SSE: ${MCP_ENABLE_LEGACY_SSE:-false}
-    # For create_media: set GRAMPS_MEDIA_RESOURCES_ENABLED=true, mount a folder of scans
+    # For upload_media: set GRAMPS_MEDIA_RESOURCES_ENABLED=true, mount a folder of scans
     # and set GRAMPS_MEDIA_UPLOAD_DIRS=/uploads.
     # volumes:
     #   - ./media-inbox:/uploads:ro

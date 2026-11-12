@@ -206,6 +206,60 @@ public class RecordBatchToolsTests
         Assert.DoesNotContain("people[0]", result);
     }
 
+    [Fact]
+    public async Task CreateRecords_Saves_New_Tags_First_And_Links_Them_By_Key()
+    {
+        var handler = new TreeHandler { Tags = """[{ "handle": "h-old", "name": "Checked", "color": "#00ff00", "priority": 0 }]""" };
+
+        var result = (await CreateRecords("""
+            {
+              "notes": [{ "text": "Read in 2026", "tagHandles": ["#todo", "h-old"] }],
+              "people": [{ "key": "ivan", "primaryName": "Ivan Petrov", "tagHandles": ["#todo"] }],
+              "tags": [{ "key": "todo", "name": " To check ", "color": "FF5733", "priority": 2 }, { "name": "Spare" }]
+            }
+            """, handler)).ReplaceLineEndings("\n");
+
+        var body = handler.Body!.AsArray();
+        Assert.Equal(["Tag", "Tag", "Note", "Person"], body.Select(o => o!["_class"]!.GetValue<string>()));
+        var (todo, spare, note, person) = (body[0]!, body[1]!, body[2]!, body[3]!);
+        Assert.Equal("To check", todo["name"]!.GetValue<string>());
+        Assert.Equal("#ff5733", todo["color"]!.GetValue<string>());
+        Assert.Equal(2, todo["priority"]!.GetValue<int>());
+        Assert.Null(todo["gramps_id"]);
+        Assert.Equal("#000000", spare["color"]!.GetValue<string>());
+        var todoHandle = todo["handle"]!.GetValue<string>();
+        Assert.Equal([todoHandle, "h-old"], note["tag_list"]!.AsArray().Select(t => t!.GetValue<string>()));
+        Assert.Equal([todoHandle], person["tag_list"]!.AsArray().Select(t => t!.GetValue<string>()));
+
+        Assert.Contains($"Tag: To check — handle: {todoHandle} | key: todo\n", result);
+        Assert.Contains($"Tag: Spare — handle: {spare["handle"]!.GetValue<string>()}\n", result);
+        Assert.Contains("Not linked from any record of this call (2): tags[1], notes[0].", result);
+    }
+
+    [Fact]
+    public async Task CreateRecords_Refuses_A_Tag_Name_The_Tree_Already_Has()
+    {
+        var handler = new TreeHandler { Tags = """[{ "handle": "h-todo", "name": "To Check", "color": "#000000", "priority": 0 }]""" };
+
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords("""
+            { "tags": [{ "key": "todo", "name": "to check" }], "notes": [{ "text": "x", "tagHandles": ["#todo"] }] }
+            """, handler));
+
+        Assert.Equal("Error: tags[0] (key todo): the tree already has a tag named \"To Check\" (handle h-todo); " +
+                     "give that handle in tagHandles instead of creating the tag again.", error.Message);
+        Assert.Empty(handler.Posts);
+    }
+
+    [Fact]
+    public async Task CreateRecords_Reads_The_Tags_Only_When_It_Creates_One()
+    {
+        var handler = new TreeHandler();
+
+        await CreateRecords("""{ "notes": [{ "text": "x", "tagHandles": ["h-old"] }] }""", handler);
+
+        Assert.DoesNotContain("/api/tags/", handler.Requests);
+    }
+
     [Theory]
     [InlineData("""{ "sources": [{ "key": "book", "title": "Book" }], "citations": [{ "sourceHandle": "#bok" }] }""",
         "Error: citations[0]: sourceHandle has \"#bok\", which is not a key of this call. Keys of source records in this call: #book.")]
@@ -214,9 +268,17 @@ public class RecordBatchToolsTests
     [InlineData("""{ "people": [{ "key": "ivan", "primaryName": "Ivan Petrov", "eventRefs": ["#maria"] }, { "key": "maria", "primaryName": "Maria Petrova" }] }""",
         "Error: people[0] (key ivan): eventRefs takes an event, but \"#maria\" is people[1], a person.")]
     [InlineData("""{ "events": [{ "eventType": "Birth", "mediaHandles": ["#scan"] }] }""",
-        "Error: events[0]: mediaHandles has \"#scan\", but create_records does not create media: create it first with create_media and give its handle.")]
+        "Error: events[0]: mediaHandles has \"#scan\", but create_records does not create media: upload the file first with upload_media and give its handle.")]
     [InlineData("""{ "notes": [{ "text": "To do", "tagHandles": ["#todo"] }] }""",
-        "Error: notes[0]: tagHandles has \"#todo\", but create_records does not create tags: create it first with create_tag and give its handle.")]
+        "Error: notes[0]: tagHandles has \"#todo\", which is not a key of this call. No tag of this call has a key.")]
+    [InlineData("""{ "tags": [{ "key": "todo", "name": "To check" }], "events": [{ "eventType": "Birth", "citationHandles": ["#todo"] }] }""",
+        "Error: events[0]: citationHandles takes a citation, but \"#todo\" is tags[0], a tag.")]
+    [InlineData("""{ "tags": [{ "name": "  " }] }""",
+        "Error: tags[0]: name is required")]
+    [InlineData("""{ "tags": [{ "name": "To check", "color": "red" }] }""",
+        "Error: tags[0]: color must be six hex digits RRGGBB")]
+    [InlineData("""{ "tags": [{ "key": "a", "name": "To check" }, { "key": "b", "name": "to CHECK " }] }""",
+        "Error: tags[1] (key b): tags[0] already creates a tag named \"to CHECK\"; tag names must differ.")]
     [InlineData("""{ "events": [{ "key": "b", "eventType": "Birth" }], "people": [{ "key": "#b", "primaryName": "Ivan Petrov" }] }""",
         "Error: people[0]: key \"b\" is already used by events[0]; keys must be unique in the call.")]
     [InlineData("""{ "notes": [{ "key": "my note", "text": "x" }] }""",
@@ -224,14 +286,14 @@ public class RecordBatchToolsTests
     [InlineData("""{ "people": [null] }""",
         "Error: people[0] is empty; give each record as an object, or leave it out.")]
     [InlineData("{}",
-        "Error: nothing to create. Give at least one record in repositories, places, sources, notes, citations, events, people or families.")]
+        "Error: nothing to create. Give at least one record in tags, repositories, places, sources, notes, citations, events, people or families.")]
     public async Task CreateRecords_Rejects_A_Bad_Call_Before_Saving(string arguments, string expected)
     {
         var handler = new TreeHandler();
 
         var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords(arguments, handler));
 
-        Assert.Equal(expected, error.Message);
+        Assert.StartsWith(expected, error.Message);
         Assert.Empty(handler.Posts);
     }
 
@@ -341,6 +403,7 @@ public class RecordBatchToolsTests
     [InlineData(typeof(SourceRecord), typeof(SourceTools), nameof(SourceTools.CreateSource))]
     [InlineData(typeof(RepositoryRecord), typeof(RepositoryTools), nameof(RepositoryTools.CreateRepository))]
     [InlineData(typeof(PlaceRecord), typeof(PlaceTools), nameof(PlaceTools.CreatePlace))]
+    [InlineData(typeof(TagRecord), typeof(TagTools), nameof(TagTools.CreateTag))]
     public void Each_Record_Takes_The_Arguments_Of_Its_Create_Tool(Type record, Type tools, string method)
     {
         var arguments = tools.GetMethod(method)!.GetParameters()
@@ -396,7 +459,7 @@ public class RecordBatchToolsTests
         var arguments = JsonNode.Parse(json)!.AsObject();
         T[]? Records<T>(string name) => arguments[name]?.Deserialize<T[]>();
         return RecordBatchTools.CreateRecords(
-            Records<RepositoryRecord>("repositories"), Records<PlaceRecord>("places"), Records<SourceRecord>("sources"),
+            Records<TagRecord>("tags"), Records<RepositoryRecord>("repositories"), Records<PlaceRecord>("places"), Records<SourceRecord>("sources"),
             Records<NoteRecord>("notes"), Records<CitationRecord>("citations"), Records<EventRecord>("events"),
             Records<PersonRecord>("people"), Records<FamilyRecord>("families"), CreateClient(handler));
     }
@@ -453,6 +516,9 @@ public class RecordBatchToolsTests
         /// <summary>The answer to the duplicate check's people searches.</summary>
         public string People { get; init; } = "[]";
 
+        /// <summary>The tags of the tree, read when the call creates tags.</summary>
+        public string Tags { get; init; } = "[]";
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.PathAndQuery;
@@ -470,13 +536,12 @@ public class RecordBatchToolsTests
                 {
                     var grampsClass = o!["_class"]!.GetValue<string>();
                     var handle = o["handle"]!.GetValue<string>();
+                    var stored = new JsonObject { ["_class"] = grampsClass, ["handle"] = handle };
+                    if (grampsClass != "Tag") // tags have no Gramps ID
+                        stored["gramps_id"] = $"{Prefixes[grampsClass]}{i + 1:D4}";
                     return (JsonNode)new JsonObject
                     {
-                        ["_class"] = grampsClass, ["handle"] = handle, ["type"] = "add", ["old"] = null,
-                        ["new"] = new JsonObject
-                        {
-                            ["_class"] = grampsClass, ["handle"] = handle, ["gramps_id"] = $"{Prefixes[grampsClass]}{i + 1:D4}"
-                        }
+                        ["_class"] = grampsClass, ["handle"] = handle, ["type"] = "add", ["old"] = null, ["new"] = stored
                     };
                 }).ToArray());
                 foreach (var change in JsonNode.Parse(ExtraChanges)!.AsArray())
@@ -488,6 +553,7 @@ public class RecordBatchToolsTests
             {
                 "/api/types/default/" => Json(DefaultTypes),
                 "/api/types/custom/" => Json("{}"),
+                "/api/tags/" => Json(Tags),
                 _ when path.StartsWith("/api/people/?rules=", StringComparison.Ordinal) => Json(People),
                 _ => bodies?.TryGetValue(path, out var body) == true ? Json(body) : new HttpResponseMessage(HttpStatusCode.NotFound)
             };

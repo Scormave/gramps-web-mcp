@@ -75,7 +75,7 @@ The settings form does not expose `GRAMPS_LOG_LEVEL`, so the extension logs at
 env default remains `0` for Docker/registry installs.
 **Media upload folder defaults to `~/Downloads`**. Uploading also needs media
 file access, which is disabled by default: once it is enabled and read-only
-mode is off, `create_media` can upload scans saved there. Clear the folder to
+mode is off, `upload_media` can upload scans saved there. Clear the folder to
 keep uploading off while media access stays on. On macOS, Claude may ask for
 permission to read that folder.
 

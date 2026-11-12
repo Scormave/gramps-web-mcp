@@ -7,7 +7,7 @@ namespace GrampsWeb.Mcp.IntegrationTests;
 
 /// <summary>
 /// Small PNG files for upload tests. Each has a random fill, so its checksum is new to the tree and
-/// create_media uploads it rather than reusing an earlier file. Written by hand to keep image
+/// upload_media uploads it rather than reusing an earlier file. Written by hand to keep image
 /// libraries out of the test project.
 /// </summary>
 internal static class TestImages

@@ -117,11 +117,11 @@ configuration; the server ignores it and logs a warning at startup if it is set.
 
 ## Media upload
 
-`create_media` uploads a photo, document scan or PDF from a folder on the
+`upload_media` uploads a photo, document scan or PDF from a folder on the
 server and shows it on the records named in `attachTo`; `update_media` takes
 `filePath` to replace a record's file. Uploading needs media file access
 (`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and at least one folder in
-`GRAMPS_MEDIA_UPLOAD_DIRS`; until both are set, `create_media` is hidden. Only
+`GRAMPS_MEDIA_UPLOAD_DIRS`; until both are set, `upload_media` is hidden. Only
 files inside those folders can be read, symbolic links included,
 and only JPEG, PNG, GIF, WebP, TIFF, BMP and PDF files, judged by content. A
 file the tree already stores is reused, not uploaded twice. In Docker, mount
@@ -129,8 +129,8 @@ the folder into the container and set the path as seen inside it.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; a leading `~` or `${HOME}` stands for the home folder | unset (the Claude Desktop extension: `~/Downloads`) |
-| `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
+| `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `upload_media` and `update_media` may upload from; a leading `~` or `${HOME}` stands for the home folder | unset (the Claude Desktop extension: `~/Downloads`) |
+| `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `upload_media` or `update_media` uploads | `52428800` |
 
 ## Transports
 

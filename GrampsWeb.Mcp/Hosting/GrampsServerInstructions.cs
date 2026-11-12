@@ -45,7 +45,7 @@ internal static class GrampsServerInstructions
     private const string MediaUpload =
         """
 
-        - create_media uploads a photo, scan or PDF from the server's upload folder and shows it on records through attachTo; a file the tree already stores is reused, not uploaded twice.
+        - upload_media uploads a photo, scan or PDF from the server's upload folder and shows it on records through attachTo; a file the tree already stores is reused, not uploaded twice.
         """;
 
     private const string ReadOnlyNote =

@@ -91,11 +91,11 @@
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_DIRS",
-          "description": "Absolute folders, separated by : (; on Windows), that create_media and update_media may upload photos, scans and PDFs from while GRAMPS_MEDIA_RESOURCES_ENABLED is true. Unset turns uploading off and hides create_media"
+          "description": "Absolute folders, separated by : (; on Windows), that upload_media and update_media may upload photos, scans and PDFs from while GRAMPS_MEDIA_RESOURCES_ENABLED is true. Unset turns uploading off and hides upload_media"
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_MAX_BYTES",
-          "description": "Largest file create_media or update_media uploads",
+          "description": "Largest file upload_media or update_media uploads",
           "default": "52428800"
         }
       ]

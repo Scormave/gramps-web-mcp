@@ -38,12 +38,12 @@ public class GrampsServerInstructionsTests
     }
 
     [Fact]
-    public void For_MentionsCreateMediaOnlyWhenUploadingIsOn()
+    public void For_MentionsUploadMediaOnlyWhenUploadingIsOn()
     {
-        Assert.Contains("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: true, uploadFolders: true)));
-        Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: true, mediaResourcesEnabled: true, uploadFolders: true)));
-        Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: true, uploadFolders: false)));
-        Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: false, uploadFolders: true)));
+        Assert.Contains("upload_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: true, uploadFolders: true)));
+        Assert.DoesNotContain("upload_media", GrampsServerInstructions.For(Config(readOnly: true, mediaResourcesEnabled: true, uploadFolders: true)));
+        Assert.DoesNotContain("upload_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: true, uploadFolders: false)));
+        Assert.DoesNotContain("upload_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: false, uploadFolders: true)));
     }
 
     [Theory]
@@ -70,7 +70,7 @@ public class GrampsServerInstructionsTests
         {
             var hidden = (readOnly && !toolReadOnly)
                          || (!mediaResourcesEnabled && name == "read_media")
-                         || (!(mediaResourcesEnabled && uploadFolders) && name == "create_media");
+                         || (!(mediaResourcesEnabled && uploadFolders) && name == "upload_media");
             if (hidden)
                 Assert.DoesNotContain(name, text);
         }
