@@ -40,7 +40,7 @@ public static class ObjectTools
         "line with label, handle and, for events, the role, and \"Referenced by\" sections for the backlinks. A missing record returns a " +
         "not-found message with a hint.")]
     public static async Task<string> GetObject(
-        [Description("Gramps ID (e.g. I0001) or handle. ID prefixes give the type: I person, F family, E event, P place, S source, C citation, N note, O media, R repository, T tag.")]
+        [Description("Gramps ID (e.g. I0001) or handle. ID prefixes give the type: I person, F family, E event, P place, S source, C citation, N note, O media, R repository; tags have no Gramps ID.")]
         string identifier,
         [Description("Record type: person, family, event, place, source, citation, note, media, repository or tag. Omit for a Gramps ID; required for a handle.")]
         string? objectType = null,
@@ -116,7 +116,6 @@ public static class ObjectTools
                 "notes" => "note",
                 "media" => "media",
                 "repositories" => "repository",
-                "tags" => "tag",
                 _ => null
             }
             : null;

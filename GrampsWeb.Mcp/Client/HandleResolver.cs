@@ -45,7 +45,7 @@ public static class HandleResolver
 
     /// <summary>
     /// Maps a single-letter Gramps ID prefix to the API object type used in list endpoints.
-    /// Prefixes follow the Gramps defaults; media objects use <c>'O'</c>, not <c>'M'</c>.
+    /// Prefixes follow the Gramps defaults; media objects use <c>'O'</c>, not <c>'M'</c>, and tags have no Gramps ID.
     /// </summary>
     /// <returns>
     /// The API path segment (e.g. <c>"people"</c> for <c>'I'</c>), or <c>null</c> if the
@@ -62,7 +62,6 @@ public static class HandleResolver
         'R' => "repositories",
         'N' => "notes",
         'O' => "media",
-        'T' => "tags",
         _ => null,
     };
 
@@ -89,23 +88,38 @@ public static class HandleResolver
             !string.Equals(objectType, expectedObjectType, StringComparison.OrdinalIgnoreCase))
             return handleOrGrampsId;
 
-        var scopeKey = client.CacheScopeKey;
+        return await FindHandleAsync(handleOrGrampsId, objectType, client) ?? handleOrGrampsId;
+    }
 
-        var cached = HandleCache.TryGet(scopeKey, handleOrGrampsId);
+    /// <summary>
+    /// The handle of the record of <paramref name="objectType"/> (an API collection such as <c>people</c>) that has
+    /// this Gramps ID, whatever its prefix, or <c>null</c> when there is none or the API rejects the lookup as a bad
+    /// request (400, 404, 422). Tags have no Gramps ID, so a tag lookup is <c>null</c> without a request. Other
+    /// failures (server errors, network errors, timeouts) propagate. Found handles are cached per tree and type.
+    /// </summary>
+    public static async Task<string?> FindHandleAsync(string grampsId, string objectType, GrampsApiClient client)
+    {
+        if (string.Equals(objectType, "tags", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var scopeKey = client.CacheScopeKey;
+        var cacheId = $"{objectType}/{grampsId}";
+
+        var cached = HandleCache.TryGet(scopeKey, cacheId);
         if (cached is not null)
             return cached;
 
-        await HandleCache.AcquireKeyLockAsync(scopeKey, handleOrGrampsId);
+        await HandleCache.AcquireKeyLockAsync(scopeKey, cacheId);
         try
         {
             // Double-check after acquiring lock.
-            cached = HandleCache.TryGet(scopeKey, handleOrGrampsId);
+            cached = HandleCache.TryGet(scopeKey, cacheId);
             if (cached is not null)
                 return cached;
 
             try
             {
-                var path = $"/api/{objectType}/?gramps_id={Uri.EscapeDataString(handleOrGrampsId)}&pagesize=1";
+                var path = $"/api/{objectType}/?gramps_id={Uri.EscapeDataString(grampsId)}&pagesize=1";
                 var raw = await client.GetAsync<JsonElement>(path);
 
                 // The response is either a JSON array or an object with an "objects" array.
@@ -122,7 +136,7 @@ public static class HandleResolver
                         var handle = handleProp.GetString();
                         if (!string.IsNullOrEmpty(handle))
                         {
-                            HandleCache.Set(scopeKey, handleOrGrampsId, handle);
+                            HandleCache.Set(scopeKey, cacheId, handle);
                             return handle;
                         }
                     }
@@ -131,14 +145,14 @@ public static class HandleResolver
             catch (GrampsApiException ex) when (ex.StatusCode is
                 HttpStatusCode.BadRequest or HttpStatusCode.NotFound or HttpStatusCode.UnprocessableEntity)
             {
-                // The lookup itself was rejected: return the original value and let the caller surface the error.
+                // The lookup itself was rejected: the caller reports the ID as not found.
             }
 
-            return handleOrGrampsId;
+            return null;
         }
         finally
         {
-            HandleCache.ReleaseKeyLock(scopeKey, handleOrGrampsId);
+            HandleCache.ReleaseKeyLock(scopeKey, cacheId);
         }
     }
 }

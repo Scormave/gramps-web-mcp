@@ -141,15 +141,20 @@ public static class EventTools
         await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
 
         var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
-        var resolvedPlaceHandle = placeHandle is null
-            ? null
-            : await HandleResolver.ResolveToHandleAsync(placeHandle, client, "places");
+        await new LinkIds()
+            .One("placeHandle", placeHandle, "places", h => placeHandle = h)
+            .Handles("citationHandles", citationHandles, "citations")
+            .Handles("noteHandles", noteHandles, "notes")
+            .Handles("tagHandles", tagHandles, "tags")
+            .MediaLinks("mediaHandles", mediaHandles)
+            .Attributes("attributes", attributes)
+            .ResolveAsync(client);
 
         return new CreateEventRequest
         {
             Type = eventType,
             Date = dateRequest,
-            Place = resolvedPlaceHandle,
+            Place = placeHandle,
             Description = description,
             MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
             AttributeList = GrampsRequestMapping.ToAttributeRequests((GrampsAttribute[]?)attributes),
@@ -185,7 +190,7 @@ public static class EventTools
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
         FlexibleMediaLinkList? mediaHandles = null,
@@ -202,14 +207,19 @@ public static class EventTools
             LinkUpdates.Validate(linkMode);
             await KnownTypes.CheckAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
+            await new LinkIds()
+                .One("placeHandle", placeHandle, "places", h => placeHandle = h)
+                .Handles("citationHandles", citationHandles, "citations")
+                .Handles("noteHandles", noteHandles, "notes")
+                .Handles("tagHandles", tagHandles, "tags")
+                .MediaLinks("mediaHandles", mediaHandles)
+                .Attributes("attributes", attributes)
+                .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             if (eventType != null)
                 eventType = await KnownTypes.ResolveAsync(eventType, "event_types", client);
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "events");
-            var resolvedPlaceHandle = placeHandle is null
-                ? null
-                : await HandleResolver.ResolveToHandleAsync(placeHandle, client, "places");
             var evt = await GrampsObjectPatch.LoadAsync(client, $"/api/events/{Uri.EscapeDataString(resolvedHandle)}");
             if (evt is null)
                 return NotFoundHelper.NotFoundMessage("Event", handle);
@@ -217,7 +227,7 @@ public static class EventTools
             evt.Set("type", eventType);
             if (date != null)
                 evt.SetOrRemove("date", AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range));
-            evt.Set("place", resolvedPlaceHandle);
+            evt.Set("place", placeHandle);
             evt.Set("description", description);
             evt.ApplyMediaLinks(mediaHandles, linkMode);
             evt.ReplaceAttributes(attributes);

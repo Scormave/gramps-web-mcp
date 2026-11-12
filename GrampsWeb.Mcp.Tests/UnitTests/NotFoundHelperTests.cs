@@ -43,13 +43,21 @@ public class NotFoundHelperTests
     [InlineData("Repository", 'R', "repositories")]
     [InlineData("Note", 'N', "notes")]
     [InlineData("Media", 'O', "media")]
-    [InlineData("Tag", 'T', "tags")]
     public void NotFoundMessage_Uses_The_Prefixes_The_Resolver_Resolves(string objectType, char prefix, string collection)
     {
         Assert.Equal(collection, HandleResolver.PrefixToObjectType(prefix));
         Assert.EndsWith(
             $"list_objects(objectType: \"{collection}\").",
             NotFoundHelper.NotFoundMessage(objectType, $"{prefix}0001"));
+    }
+
+    [Fact]
+    public void NotFoundMessage_Says_Tags_Have_No_Gramps_Id()
+    {
+        Assert.Null(HandleResolver.PrefixToObjectType('T'));
+        Assert.EndsWith(
+            "Tags have no Gramps ID; find the tag's handle with list_objects(objectType: \"tags\").",
+            NotFoundHelper.NotFoundMessage("Tag", "T0001"));
     }
 
     [Fact]

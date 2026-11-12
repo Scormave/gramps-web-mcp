@@ -65,8 +65,14 @@ public static class PlaceTools
         if (placeType != null)
             placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
         await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
-
-        var placeRefList = await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client);
+        var placeRefList = (PlaceRefRequest[]?)enclosedBy;
+        await new LinkIds()
+            .PlaceRefs("enclosedBy", placeRefList)
+            .Handles("noteHandles", noteHandles, "notes")
+            .MediaLinks("mediaHandles", mediaHandles)
+            .Handles("citationHandles", citationHandles, "citations")
+            .Handles("tagHandles", tagHandles, "tags")
+            .ResolveAsync(client);
 
         return new CreatePlaceRequest
         {
@@ -127,7 +133,7 @@ public static class PlaceTools
         FlexibleMediaLinkList? mediaHandles = null,
         [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
@@ -138,6 +144,13 @@ public static class PlaceTools
         try
         {
             LinkUpdates.Validate(linkMode);
+            await new LinkIds()
+                .PlaceRefs("enclosedBy", enclosedBy)
+                .Handles("noteHandles", noteHandles, "notes")
+                .MediaLinks("mediaHandles", mediaHandles)
+                .Handles("citationHandles", citationHandles, "citations")
+                .Handles("tagHandles", tagHandles, "tags")
+                .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             if (placeType != null)
                 placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
@@ -173,7 +186,7 @@ public static class PlaceTools
             place.Set("lat", ToCoordinate(lat));
             place.Set("long", ToCoordinate(lon));
             if (enclosedBy != null)
-                place.ApplyRefs("placeref_list", await ResolvePlaceRefListAsync((PlaceRefRequest[]?)enclosedBy, client) ?? [], linkMode);
+                place.ApplyRefs("placeref_list", (PlaceRefRequest[]?)enclosedBy ?? [], linkMode);
             place.Set("alt_names", (PlaceNameRequest[]?)alternateNames);
             place.ApplyMediaLinks(mediaHandles, linkMode);
             place.ApplyHandles("note_list", noteHandles, linkMode);
@@ -229,26 +242,5 @@ public static class PlaceTools
         if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
             text = text[1..^1].Trim();
         return text;
-    }
-
-    private static async Task<PlaceRefRequest[]?> ResolvePlaceRefListAsync(
-        PlaceRefRequest[]? refs,
-        GrampsApiClient client)
-    {
-        if (refs is not { Length: > 0 })
-            return refs;
-
-        var resolved = new PlaceRefRequest[refs.Length];
-        for (var i = 0; i < refs.Length; i++)
-        {
-            var item = refs[i];
-            resolved[i] = new PlaceRefRequest
-            {
-                Ref = await HandleResolver.ResolveToHandleAsync(item.Ref ?? "", client, "places"),
-                Date = item.Date
-            };
-        }
-
-        return resolved;
     }
 }

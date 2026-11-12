@@ -217,6 +217,20 @@ public static class PersonTools
         await KnownTypes.CheckAttributesAsync(attributes, client);
         await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
         await KnownTypes.CheckUrlsAsync(urls, client);
+        await new LinkIds()
+            .Name("primaryName", primary)
+            .Names("alternateNames", alternateNames)
+            .EventRefs("eventRefs", eventRefArr)
+            .Handles("familyHandles", familyHandles, "families")
+            .Handles("parentFamilyHandles", parentFamilyHandles, "families")
+            .MediaLinks("mediaHandles", mediaHandles)
+            .Handles("citationHandles", citationHandles, "citations")
+            .Handles("noteHandles", noteHandles, "notes")
+            .Handles("tagHandles", tagHandles, "tags")
+            .Attributes("attributes", attributes)
+            .Addresses("addresses", addresses)
+            .PersonRefs("personAssociations", personAssociations)
+            .ResolveAsync(client);
 
         var parentFamilyHandleArray = (string[]?)parentFamilyHandles;
 
@@ -274,7 +288,7 @@ public static class PersonTools
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
@@ -302,6 +316,20 @@ public static class PersonTools
             await KnownTypes.CheckAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
             await KnownTypes.CheckUrlsAsync(urls, client);
+            await new LinkIds()
+                .Name("primaryName", primaryName?.Name)
+                .Names("alternateNames", alternateNames)
+                .EventRefs("eventRefs", eventRefs)
+                .Handles("familyHandles", familyHandles, "families")
+                .Handles("parentFamilyHandles", parentFamilyHandles, "families")
+                .MediaLinks("mediaHandles", mediaHandles)
+                .Handles("citationHandles", citationHandles, "citations")
+                .Handles("noteHandles", noteHandles, "notes")
+                .Handles("tagHandles", tagHandles, "tags")
+                .Attributes("attributes", attributes)
+                .Addresses("addresses", addresses)
+                .PersonRefs("personAssociations", personAssociations)
+                .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
             var person = await GrampsObjectPatch.LoadAsync(client, $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");

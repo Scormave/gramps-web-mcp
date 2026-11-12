@@ -55,6 +55,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and `linkMode: "add"`. The catalog now
   has up to 26 tools. The `add-person` and `add-family` prompts and the
   `cite-fact` prompt use `create_records`
+- Link fields take Gramps IDs as well as handles in `create_records`,
+  the `update_*` tools and `upload_media`: the `…Handles` lists,
+  `eventRefs`, `childRefs`, `personAssociations`, `enclosedBy`,
+  `fatherHandle`, `motherHandle`, `placeHandle`, `sourceHandle`, and the
+  citations and notes of names, attributes, addresses and links. Each
+  field links one type, so an ID is looked up among those records,
+  whatever its prefix. An ID that no such record has stops the call
+  before anything is saved, with an error that names the field and the
+  ID, and the type the prefix belongs to when that is another one, such
+  as `noteHandles: there is no note I0012`. Tags have no Gramps ID, so
+  a tag field rejects one
 - `merge_objects` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
 
@@ -68,6 +79,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   position in the list of types instead of by its value. The names now
   come from `/api/types/default/{type}/map`; a type that cannot be
   named stays a number, and `-1` shows as Unknown
+- A Gramps ID in a link list was saved as if it were a handle, leaving a
+  link to a record that does not exist; an unknown ID in `fatherHandle`,
+  `motherHandle`, `placeHandle`, `sourceHandle` or `enclosedBy` was passed
+  on to Gramps Web unchanged
+- A Gramps ID starting with `T`, such as `T0001`, was looked up as a tag
+  and ended in a server error: tags have no Gramps ID
 
 ## [2.10.0] - 2026-11-10
 

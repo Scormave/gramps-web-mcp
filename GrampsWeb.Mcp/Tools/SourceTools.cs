@@ -55,6 +55,12 @@ public static class SourceTools
 
         var repoRefList = (GrampsRepositoryRef[]?)repositoryHandles;
         await KnownTypes.CheckRepositoryRefsAsync(repoRefList, client);
+        await new LinkIds()
+            .RepositoryRefs("repositoryHandles", repoRefList)
+            .Handles("noteHandles", noteHandles, "notes")
+            .MediaLinks("mediaHandles", mediaHandles)
+            .Handles("tagHandles", tagHandles, "tags")
+            .ResolveAsync(client);
 
         return new CreateSourceRequest
         {
@@ -97,7 +103,7 @@ public static class SourceTools
         FlexibleHandleList? noteHandles = null,
         [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
         FlexibleMediaLinkList? mediaHandles = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint + " " +
                      FlexibleAttributeList.SourceAttributesHint)]
@@ -116,6 +122,12 @@ public static class SourceTools
             await KnownTypes.CheckSourceAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
             await KnownTypes.CheckRepositoryRefsAsync(repositoryHandles, client, linkMode);
+            await new LinkIds()
+                .RepositoryRefs("repositoryHandles", repositoryHandles)
+                .Handles("noteHandles", noteHandles, "notes")
+                .MediaLinks("mediaHandles", mediaHandles)
+                .Handles("tagHandles", tagHandles, "tags")
+                .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
             var source = await GrampsObjectPatch.LoadAsync(client, $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}");

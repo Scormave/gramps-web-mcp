@@ -54,15 +54,20 @@ public static class CitationTools
             throw McpToolErrors.ValidationError(attributeError);
         await KnownTypes.CheckSourceAttributesAsync(attributes, client);
         await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
-        var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
 
         var confidenceLevel = Math.Clamp(CitationConfidenceParser.ParseRequired(confidence), 0, 4);
 
         var dateRequest = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
+        await new LinkIds()
+            .One("sourceHandle", sourceHandle, "sources", h => sourceHandle = h)
+            .Handles("noteHandles", noteHandles, "notes")
+            .MediaLinks("mediaHandles", mediaHandles)
+            .Handles("tagHandles", tagHandles, "tags")
+            .ResolveAsync(client);
 
         return new CreateCitationRequest
         {
-            Source = resolvedSourceHandle,
+            Source = sourceHandle,
             Page = page,
             Confidence = confidenceLevel,
             Date = dateRequest,
@@ -99,7 +104,7 @@ public static class CitationTools
         FlexibleHandleList? noteHandles = null,
         [Description("Media. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleMediaLinkList.DescriptionHint + " " + FlexibleMediaLinkList.UpdateHint)]
         FlexibleMediaLinkList? mediaHandles = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint + " " +
                      FlexibleAttributeList.SourceAttributesHint)]
@@ -117,16 +122,19 @@ public static class CitationTools
                 throw McpToolErrors.ValidationError(attributeError);
             await KnownTypes.CheckSourceAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
+            await new LinkIds()
+                .One("sourceHandle", sourceHandle, "sources", h => sourceHandle = h)
+                .Handles("noteHandles", noteHandles, "notes")
+                .MediaLinks("mediaHandles", mediaHandles)
+                .Handles("tagHandles", tagHandles, "tags")
+                .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
-            var resolvedSourceHandle = sourceHandle is null
-                ? null
-                : await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
             var citation = await GrampsObjectPatch.LoadAsync(client, $"/api/citations/{Uri.EscapeDataString(resolvedHandle)}");
             if (citation == null)
                 return NotFoundHelper.NotFoundMessage("Citation", handle);
 
-            citation.Set("source_handle", resolvedSourceHandle);
+            citation.Set("source_handle", sourceHandle);
             citation.Set("page", (string?)page);
             if (CitationConfidenceParser.ParseOptional(confidence) is { } confidenceLevel)
                 citation.Set("confidence", Math.Clamp(confidenceLevel, 0, 4));

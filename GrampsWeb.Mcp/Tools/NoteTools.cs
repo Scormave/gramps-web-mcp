@@ -52,6 +52,7 @@ public static class NoteTools
         noteType = await KnownTypes.ResolveAsync(noteType, "note_types", client);
 
         var formatCode = NoteTextFormatParser.ParseRequired(format);
+        await new LinkIds().Handles("tagHandles", tagHandles, "tags").ResolveAsync(client);
 
         return new CreateNoteRequest
         {
@@ -95,7 +96,7 @@ public static class NoteTools
         string? noteType = null,
         [Description("Plain or Html. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? format = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
@@ -122,6 +123,7 @@ public static class NoteTools
                         "withText is missing: pass the text to put in place of replaceText, or an empty string to delete it.");
             }
 
+            await new LinkIds().Handles("tagHandles", tagHandles, "tags").ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             if (noteType != null)
                 noteType = await KnownTypes.ResolveAsync(noteType, "note_types", client);

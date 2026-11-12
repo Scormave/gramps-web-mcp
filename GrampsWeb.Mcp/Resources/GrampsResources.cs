@@ -519,7 +519,8 @@ public sealed class GrampsResources
         rules = new[]
         {
             "Omit a link-list parameter to leave that list unchanged. One linkMode applies to every supplied link list in the call.",
-            "Use the handle of an existing record. Resolve a Gramps ID or ambiguous name before changing links.",
+            "Give an existing record by handle or Gramps ID, a tag by handle. A Gramps ID is looked up among the records the list links; " +
+            "an unknown one is an error that names the field, and nothing is changed. Resolve an ambiguous name before changing links.",
             "For an event, child, repository, or place reference, include role or relationship metadata when adding if it is known. To change metadata on an existing link, read the record and replace the full list with the new values on that link; metadata the call does not send stays.",
             "Add and remove in one workflow require separate calls. Concurrent edits by other Gramps Web clients or server processes are not locked by this MCP server."
         },
@@ -528,7 +529,8 @@ public sealed class GrampsResources
             "update_person(handle: \"PERSON_HANDLE\", noteHandles: [\"NOTE_HANDLE\"], linkMode: \"add\")",
             "update_person(handle: \"PERSON_HANDLE\", eventRefs: [{ref: \"EVENT_HANDLE\", role: \"Primary\", attributes: [\"Age: 65\"]}], linkMode: \"add\")",
             "update_family(handle: \"FAMILY_HANDLE\", childRefs: [\"CHILD_HANDLE\"], linkMode: \"remove\")",
-            "update_event(handle: \"EVENT_HANDLE\", citationHandles: [\"CITATION_HANDLE\"], linkMode: \"add\")"
+            "update_event(handle: \"EVENT_HANDLE\", citationHandles: [\"CITATION_HANDLE\"], linkMode: \"add\")",
+            "update_family(handle: \"F0023\", childRefs: [\"I0045\"], linkMode: \"add\")"
         }
     };
 

@@ -26,11 +26,11 @@ public abstract class BatchRecord
     /// <summary>The checked request body and a label for the result.</summary>
     internal abstract Task<(object Request, string Label)> BuildAsync(GrampsApiClient client);
 
-    internal const string CitationsText = "Citations: handles of existing ones or #keys of citations in this call.";
-    internal const string NotesText = "Notes: handles of existing ones or #keys of notes in this call.";
-    internal const string TagsText = "Tags: handles of existing ones or #keys of tags in this call.";
+    internal const string CitationsText = "Citations: handles or Gramps IDs of existing ones, or #keys of citations in this call.";
+    internal const string NotesText = "Notes: handles or Gramps IDs of existing ones, or #keys of notes in this call.";
+    internal const string TagsText = "Tags: handles of existing ones (tags have no Gramps ID) or #keys of tags in this call.";
     internal const string MediaText =
-        "Existing media, uploaded first with upload_media: handles, or {\"ref\": …, \"region\": [left, top, right, bottom]} " +
+        "Existing media, uploaded first with upload_media: handles or Gramps IDs, or {\"ref\": …, \"region\": [left, top, right, bottom]} " +
         "to show one part of an image, such as one entry on a page scan. " + MediaRegion.DescriptionHint;
     internal const string AttributesText = FlexibleAttributeList.DescriptionHint;
     internal const string PrivateText = "Mark the record private (default false).";
@@ -52,7 +52,7 @@ public sealed class PersonRecord : BatchRecord
     public FlexibleAlternateNameList? AlternateNames { get; init; }
 
     [JsonPropertyName("eventRefs")]
-    [Description("Events the person takes part in: handles or #keys, each optionally with a role as \"#key::Witness\" " +
+    [Description("Events the person takes part in: handles, Gramps IDs or #keys, each optionally with a role as \"#key::Witness\" " +
                  "or {ref, role} (default Primary). The first Birth and the first Death in the Primary role become the " +
                  "person's birth and death; in another role, such as Godparent, the event is only linked. A role must be a " +
                  "standard Gramps one or a custom one the tree already uses. The person's own details from the record, such " +
@@ -88,7 +88,7 @@ public sealed class PersonRecord : BatchRecord
     public FlexibleUrlList? Urls { get; init; }
 
     [JsonPropertyName("personAssociations")]
-    [Description("Associations with other people: handles or #keys with a relation, \"#key:: Godfather\" or {ref, rel}. " +
+    [Description("Associations with other people: handles, Gramps IDs or #keys with a relation, \"#key:: Godfather\" or {ref, rel}. " +
                  "Grammar: gramps://input-guide.")]
     public FlexiblePersonRefList? PersonAssociations { get; init; }
 
@@ -181,14 +181,14 @@ public sealed class FamilyRecord : BatchRecord
     public string? RelationshipType { get; init; } = "Unknown";
 
     [JsonPropertyName("childRefs")]
-    [Description("Children in birth order, kept as given: handles or #keys, each optionally with its relation to the " +
+    [Description("Children in birth order, kept as given: handles, Gramps IDs or #keys, each optionally with its relation to the " +
                  "father and the mother as \"#key::Adopted\" (both) or {ref, frel, mrel} (default Birth). A relation must " +
                  "be a standard Gramps one (Birth, Adopted, Stepchild, Sponsored, Foster, Unknown, None) or a custom one " +
                  "the tree already uses.")]
     public FlexibleChildRefList? ChildRefs { get; init; }
 
     [JsonPropertyName("eventRefs")]
-    [Description("Family events such as Marriage or Divorce: handles or #keys, each optionally with a role as " +
+    [Description("Family events such as Marriage or Divorce: handles, Gramps IDs or #keys, each optionally with a role as " +
                  "\"#key::Role\" or {ref, role}. The default Family role makes Gramps show the family among the " +
                  "event's participants.")]
     public FlexibleEventRefList? EventRefs { get; init; }
@@ -246,8 +246,8 @@ public sealed class CitationRecord : BatchRecord
     public string? Date { get; init; }
 
     [JsonPropertyName("noteHandles")]
-    [Description("Notes, such as the transcript of the entry, a note of type Transcript: handles of existing ones or " +
-                 "#keys of notes in this call.")]
+    [Description("Notes, such as the transcript of the entry, a note of type Transcript: handles or Gramps IDs of existing " +
+                 "ones, or #keys of notes in this call.")]
     public FlexibleHandleList? NoteHandles { get; init; }
 
     [JsonPropertyName("mediaHandles")]
@@ -327,7 +327,7 @@ public sealed class SourceRecord : BatchRecord
     public string? Abbrev { get; init; }
 
     [JsonPropertyName("repositoryHandles")]
-    [Description("Repositories holding it: handles or #keys, each with the source's call number there, the archive's " +
+    [Description("Repositories holding it: handles, Gramps IDs or #keys, each with the source's call number there, the archive's " +
                  "shelf mark such as fond, inventory and file, and the media type it is held in: \"#key : CallNumber : " +
                  "MediaType\" (later parts optional, \"#key :: Film\" gives only the type) or {ref, call_number, " +
                  "media_type}. A media type must be a standard Gramps one (Book, Manuscript, Film, Electronic, …) or a " +

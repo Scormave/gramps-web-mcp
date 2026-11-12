@@ -21,8 +21,7 @@ internal static class NotFoundHelper
             ["Citation"] = new("citation", "citations", 'C'),
             ["Repository"] = new("repository", "repositories", 'R'),
             ["Note"] = new("note", "notes", 'N'),
-            ["Media"] = new("media object", "media", 'O'),
-            ["Tag"] = new("tag", "tags", 'T')
+            ["Media"] = new("media object", "media", 'O')
         };
 
     /// <summary>
@@ -49,6 +48,8 @@ internal static class NotFoundHelper
 
     private static string GrampsIdHint(string objectType, string id)
     {
+        if (string.Equals(objectType, "Tag", StringComparison.OrdinalIgnoreCase))
+            return "Tags have no Gramps ID; find the tag's handle with list_objects(objectType: \"tags\").";
         if (!Kinds.TryGetValue(objectType, out var wanted))
             return $"No {objectType.ToLowerInvariant()} has Gramps ID {id}.";
 

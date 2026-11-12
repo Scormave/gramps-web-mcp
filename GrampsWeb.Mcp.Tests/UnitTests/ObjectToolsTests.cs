@@ -59,7 +59,6 @@ public class ObjectToolsTests
     [InlineData("N0001", "notes")]
     [InlineData("O0001", "media")]
     [InlineData("R0001", "repositories")]
-    [InlineData("T0001", "tags")]
     public async Task DeleteRecords_ResolvesGrampsIdAndDeletesInItsCollection(string grampsId, string collection)
     {
         HandleCache.Invalidate();

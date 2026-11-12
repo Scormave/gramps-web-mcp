@@ -52,6 +52,11 @@ public static class RepositoryTools
         if (repoType != null)
             repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
         await KnownTypes.CheckUrlsAsync(urls, client);
+        await new LinkIds()
+            .Addresses("addresses", addresses)
+            .Handles("noteHandles", noteHandles, "notes")
+            .Handles("tagHandles", tagHandles, "tags")
+            .ResolveAsync(client);
 
         return new CreateRepositoryRequest
         {
@@ -96,7 +101,7 @@ public static class RepositoryTools
         FlexibleUrlList? urls = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("true makes the record private, false public. " + ToolDescriptionFragments.OmitToKeepScalar)]
         bool? isPrivate = null,
@@ -110,6 +115,11 @@ public static class RepositoryTools
             CheckOneAddressForm(address, addresses);
             CheckOneUrlForm(url, urls);
             await KnownTypes.CheckUrlsAsync(urls, client);
+            await new LinkIds()
+                .Addresses("addresses", addresses)
+                .Handles("noteHandles", noteHandles, "notes")
+                .Handles("tagHandles", tagHandles, "tags")
+                .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             if (repoType != null)
                 repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);

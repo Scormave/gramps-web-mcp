@@ -137,7 +137,7 @@ A media link can show only part of an image, such as one baptism record on a
 page scan. `mediaHandles` on the person, family, event, place, source and
 citation tools, and `attachTo` on `upload_media` and `update_media`, take an
 object `{"ref": "MEDIA_HANDLE", "region": [left, top, right, bottom]}` in place
-of a handle (`attachTo` takes a Gramps ID as `ref` too). The edges are whole
+of a handle; `ref` may be a Gramps ID too. The edges are whole
 percent of the image width and height, 0 to 100, from the top-left corner, as
 Gramps stores the crop of a media reference: `[10, 20, 60, 45]` runs from 10% to
 60% across and from 20% to 45% down. The key `rect` and a string such as
@@ -205,11 +205,26 @@ other server processes, creates, or deletes.
 ## Identifiers and errors
 
 Parameters that take a handle also accept a Gramps ID: an uppercase prefix
-letter followed by digits, 2–8 characters in total. The server resolves it by
-the Gramps default prefixes: `I` person, `F` family, `E` event, `P` place,
-`S` source, `C` citation, `R` repository, `N` note, `O` media, `T` tag. An ID
+letter followed by digits, 2–8 characters in total. Tags have no Gramps ID and
+are given by handle.
+
+A parameter that names one record, such as `handle` or `identifier`, resolves
+the ID by the Gramps default prefixes: `I` person, `F` family, `E` event, `P`
+place, `S` source, `C` citation, `R` repository, `N` note, `O` media. An ID
 with another type's prefix, or one that no object has, is passed on unchanged
 and ends in a not-found result.
+
+A link field, such as `noteHandles`, `eventRefs`, `fatherHandle` or
+`placeHandle`, links one type, so its Gramps IDs are looked up among the
+records of that type, whatever their prefix. An ID that no such record has
+stops the call before anything is saved, with an error that names the field
+and the ID, and the type the prefix belongs to when that is another one:
+
+```text
+Error: people[0]: noteHandles: there is no note I0012. I is the prefix of people, and noteHandles links notes. Nothing was saved.
+```
+
+A Gramps ID in a tag field is rejected the same way.
 
 A missing object returns `<Type> not found: <identifier>` as normal tool
 output, with a hint when the identifier looks like a Gramps ID:
@@ -619,8 +634,8 @@ Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
 |-----------|------|----------|-------------|
 | `handle` | `string` | yes | Person handle |
 | Fields of a [`people` record](#people) | — | no | The same fields, all optional, without `notDuplicateOf` |
-| `familyHandles` | `FlexibleHandleList?` | no | Families (as parent/spouse); the family's `fatherHandle` or `motherHandle` stays unchanged |
-| `parentFamilyHandles` | `FlexibleHandleList?` | no | Parent families (as child); the family's `childRefs` stay unchanged |
+| `familyHandles` | `FlexibleHandleList?` | no | Families (as parent/spouse), by handle or Gramps ID; the family's `fatherHandle` or `motherHandle` stays unchanged |
+| `parentFamilyHandles` | `FlexibleHandleList?` | no | Parent families (as child), by handle or Gramps ID; the family's `childRefs` stay unchanged |
 | `sort` | `FlexibleSortList?` | no | Lists to put in date order after the changes: `Events`, `Families`, `Citations`, `Media`; see [Incremental link updates](#incremental-link-updates) |
 
 `familyHandles` and `parentFamilyHandles` are stored on the person only. Gramps
@@ -773,7 +788,7 @@ its file, with `update_media`; check a region with `read_media`.
 | `description` | `string?` | no | file name without extension | Description (caption) |
 | `date` | `string?` | no | — | Date of the photo or document |
 | `attachTo` | `FlexibleMediaLinkList?` | no | — | Records to show the media on: Gramps IDs (`I`, `F`, `E`, `P`, `S`, `C`) or handles, or `{ref, region, attributes}` objects |
-| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Links on the media record itself |
+| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Links on the media record itself: handles or Gramps IDs, tags by handle |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -794,7 +809,7 @@ media off a record, use that record's update tool with `mediaHandles` and
 | `handle` | `string` | yes | — | Media handle |
 | `description` | `string?` | no | — | Description |
 | `date` | `string?` | no | — | Date text; omit to keep the current date, an empty string removes it |
-| `noteHandles`, `tagHandles`, `citationHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `noteHandles`, `tagHandles`, `citationHandles` | `FlexibleHandleList?` | no | — | Handles or Gramps IDs; tags by handle |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool?` | no | — | Private flag |
 | `filePath` | `string?` | no | — | Replacement file inside an upload folder; omit to keep the file |
@@ -858,10 +873,11 @@ handle: a citation's `sourceHandle`, an event's `citationHandles` or
 `placeHandle`, a person's `eventRefs` (`"#birth"`, `"#marriage::Witness"`), a
 family's `fatherHandle`, `motherHandle`, `childRefs` and `eventRefs`, a
 source's `repositoryHandles`, a place's `enclosedBy`, any record's
-`tagHandles`. Existing records are linked by handle or, where a field says
-so, by Gramps ID. A `"#key"` must name a record of the call of the class the
-field links to. Media is not created here, so `mediaHandles` takes existing
-handles only: upload the file first with `upload_media`.
+`tagHandles`. Existing records are linked by handle or Gramps ID, tags by
+handle only; see [Identifiers and errors](#identifiers-and-errors). A `"#key"`
+must name a record of the call of the class the field links to. Media is not
+created here, so `mediaHandles` takes existing media only: upload the file
+first with `upload_media`.
 
 A new tag is checked like in `update_tag`: a name another tag of the tree or
 of the call already has, ignoring case, stops the call before saving, and the
@@ -923,7 +939,7 @@ call number.
 | `addresses` | `FlexibleAddressList?` | no | — | Addresses with separate fields (street, locality, city, county, state, postal code, country, phone), in the same forms as on people; not together with `address` |
 | `url` | `string?` | no | — | Website, stored as the repository's Web Home link |
 | `urls` | `FlexibleUrlList?` | no | — | Links, each with a type (`Web Home`, `E-mail`, …) and an optional description, in the same forms as on people; not together with `url` |
-| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Existing notes and tags to link |
+| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Existing notes and tags to link: handles or Gramps IDs, tags by handle |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 #### `places`
@@ -940,8 +956,8 @@ places, existing or of the call. Events link a place through `placeHandle`.
 | `nameLang` | `string?` | no | — | Language code for primary name |
 | `nameDate` | `string?` | no | — | When the primary name applies, same date rules as `alternateNames` (`from 1937-02-10`, `1918-1937`). Gramps shows the first name, primary first, whose date is empty or matches the event date, so an undated primary name hides dated alternate names |
 | `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate names `{value, lang?, date?}`. Dashes → span; open `1991-` → From; English months / ISO day ranges / mixed `1703-1914-08-31` supported. Unrecognized dates fail validation |
-| `noteHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `noteHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Handles or Gramps IDs; tags by handle |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles or Gramps IDs, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
 | `code` | `string?` | no | — | Place code / postal reference |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -960,9 +976,9 @@ on its citation. `repositoryHandles` may name repositories of the call.
 | `author` | `string?` | no | — | Author |
 | `pubinfo` | `string?` | no | — | Publication info |
 | `abbrev` | `string?` | no | — | Abbreviation |
-| `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handle strings, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted); media types are checked against `source_media_types` |
-| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handles or Gramps IDs, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted); media types are checked against `source_media_types` |
+| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Handles or Gramps IDs; tags by handle |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles or Gramps IDs, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -990,8 +1006,8 @@ link it through `citationHandles`.
 | `page` | `FlexibleString?` | no | — | Page reference (JSON string or number, coerced to text) |
 | `confidence` | `string` | no | `"Normal"` | Very Low / Low / Normal / High / Very High |
 | `date` | `string?` | no | — | Access or reference date |
-| `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `noteHandles` | `FlexibleHandleList?` | no | — | Note handles or Gramps IDs |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles or Gramps IDs, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
 | `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
 | `isPrivate` | `bool` | no | `false` | Mark private |
@@ -1016,8 +1032,8 @@ details, such as their Age, go in the `attributes` of that person's
 | `date` | `string?` | no | — | Date text |
 | `placeHandle` | `string?` | no | — | An existing place by handle or Gramps ID, or `"#key"` of a place of the call |
 | `description` | `string?` | no | — | Event description |
-| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Handles or Gramps IDs; tags by handle |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles or Gramps IDs, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
@@ -1031,15 +1047,15 @@ Gramps.
 | `primaryName` | `FlexibleGrampsName?` | yes | — | Primary name: a string or a name object; see [Argument validation](#argument-validation) for its fields |
 | `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
 | `alternateNames` | `FlexibleAlternateNameList?` | no | — | Alternate names |
-| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`); an object may carry the link's own `attributes`, such as an Age; see [Link attributes](#link-attributes) |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects to show part of an image or describe the link; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
-| `citationHandles` | `FlexibleHandleList?` | no | — | Citation handles |
-| `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
+| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs by handle or Gramps ID, with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`); an object may carry the link's own `attributes`, such as an Age; see [Link attributes](#link-attributes) |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles or Gramps IDs, or `{ref, region, attributes}` objects to show part of an image or describe the link; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `citationHandles` | `FlexibleHandleList?` | no | — | Citation handles or Gramps IDs |
+| `noteHandles` | `FlexibleHandleList?` | no | — | Note handles or Gramps IDs |
 | `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `addresses` | `FlexibleAddressList?` | no | — | Addresses |
 | `urls` | `FlexibleUrlList?` | no | — | URLs |
-| `personAssociations` | `FlexiblePersonRefList?` | no | — | Person associations |
+| `personAssociations` | `FlexiblePersonRefList?` | no | — | Person associations: handles or Gramps IDs with a relation |
 | `isPrivate` | `bool` | no | `false` | Mark record private |
 | `notDuplicateOf` | `FlexibleHandleList?` | no | — | People of the tree who are someone else, from the possible duplicates of a refused call; see [Duplicate check](#duplicate-check) |
 
@@ -1055,10 +1071,10 @@ does not exist, so nothing is saved. Children keep the order given in
 | `fatherHandle` | `string?` | no | — | Father: handle or Gramps ID, or `"#key"` of a person of the call |
 | `motherHandle` | `string?` | no | — | Mother: handle or Gramps ID, or `"#key"` of a person of the call |
 | `relationshipType` | `string?` | no | `"Unknown"` | Married, Unmarried, Civil Union, Unknown; Unknown by default, as in Gramps, so pass Married when a source records the marriage |
-| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
-| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Family`); an object may carry the link's own `attributes`; see [Link attributes](#link-attributes) |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
-| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
+| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs by handle or Gramps ID (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
+| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs by handle or Gramps ID, with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Family`); an object may carry the link's own `attributes`; see [Link attributes](#link-attributes) |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles or Gramps IDs, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Handles or Gramps IDs; tags by handle |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 

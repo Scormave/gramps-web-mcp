@@ -39,7 +39,10 @@ public class RecordBatchToolsTests
     [Fact]
     public async Task CreateRecords_Saves_Every_Record_In_One_Post_With_Keys_As_Handles()
     {
-        var handler = new TreeHandler();
+        var handler = new TreeHandler(new Dictionary<string, string>
+        {
+            ["/api/people/?gramps_id=I0007&pagesize=1"] = """[{ "handle": "h-mother", "gramps_id": "I0007" }]"""
+        });
 
         await CreateRecords(Family, handler);
 
@@ -61,12 +64,86 @@ public class RecordBatchToolsTests
         Assert.Equal(handles[3], petr["event_ref_list"]![0]!["ref"]!.GetValue<string>());
         Assert.Equal(handles[5], ivan["person_ref_list"]![0]!["ref"]!.GetValue<string>());
         Assert.Equal(handles[6], family["father_handle"]!.GetValue<string>());
-        Assert.Equal("I0007", family["mother_handle"]!.GetValue<string>());
+        Assert.Equal("h-mother", family["mother_handle"]!.GetValue<string>());
         Assert.Equal(handles[4], family["event_ref_list"]![0]!["ref"]!.GetValue<string>());
         Assert.Equal(handles[5], family["child_ref_list"]![0]!["ref"]!.GetValue<string>());
         Assert.DoesNotContain("\"#", handler.Body.ToJsonString().Replace("\"#1 in the book\"", ""));
         Assert.Equal("State Archive", repository["name"]!.GetValue<string>());
         Assert.Equal("Marriage", marriage["type"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task CreateRecords_Looks_Up_Gramps_Ids_In_Link_Fields_Among_The_Records_The_Field_Links()
+    {
+        var handler = new TreeHandler(new Dictionary<string, string>
+        {
+            ["/api/places/?gramps_id=P0101&pagesize=1"] = """[{ "handle": "h-place" }]""",
+            ["/api/citations/?gramps_id=C0101&pagesize=1"] = """[{ "handle": "h-citation" }]""",
+            ["/api/notes/?gramps_id=N0101&pagesize=1"] = """[{ "handle": "h-note" }]""",
+            ["/api/notes/?gramps_id=X0101&pagesize=1"] = """[{ "handle": "h-note-x" }]""",
+            ["/api/events/?gramps_id=E0101&pagesize=1"] = """[{ "handle": "h-death" }]""",
+            ["/api/events/h-death"] = """{ "handle": "h-death", "type": "Death" }"""
+        });
+
+        await CreateRecords("""
+            {
+              "events": [{ "key": "birth", "eventType": "Birth", "placeHandle": "P0101", "citationHandles": ["C0101"] }],
+              "people": [{ "primaryName": "Ivan Petrov",
+                           "eventRefs": ["#birth", { "ref": "E0101", "note_list": ["N0101"] }],
+                           "noteHandles": ["N0101", "X0101"],
+                           "attributes": [{ "type": "Age", "value": "65", "citation_list": ["C0101"] }] }]
+            }
+            """, handler);
+
+        var body = handler.Body!.AsArray();
+        var (birth, person) = (body[0]!, body[1]!);
+        Assert.Equal("h-place", birth["place"]!.GetValue<string>());
+        Assert.Equal(["h-citation"], birth["citation_list"]!.AsArray().Select(c => c!.GetValue<string>()));
+        var eventRefs = person["event_ref_list"]!.AsArray();
+        Assert.Equal(birth["handle"]!.GetValue<string>(), eventRefs[0]!["ref"]!.GetValue<string>());
+        Assert.Equal("h-death", eventRefs[1]!["ref"]!.GetValue<string>());
+        Assert.Equal(["h-note"], eventRefs[1]!["note_list"]!.AsArray().Select(n => n!.GetValue<string>()));
+        Assert.Equal(0, person["birth_ref_index"]!.GetValue<int>());
+        Assert.Equal(1, person["death_ref_index"]!.GetValue<int>());
+        Assert.Equal(["h-note", "h-note-x"], person["note_list"]!.AsArray().Select(n => n!.GetValue<string>()));
+        Assert.Equal(["h-citation"],
+            person["attribute_list"]![0]!["citation_list"]!.AsArray().Select(c => c!.GetValue<string>()));
+        Assert.Single(handler.Requests, r => r == "/api/notes/?gramps_id=N0101&pagesize=1");
+    }
+
+    [Fact]
+    public async Task CreateRecords_Names_Each_Field_With_A_Gramps_Id_The_Tree_Lacks_And_Saves_Nothing()
+    {
+        var handler = new TreeHandler();
+
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords("""
+            {
+              "people": [{ "key": "ivan", "primaryName": "Ivan Petrov", "eventRefs": ["E0404"], "noteHandles": ["I0404"] }]
+            }
+            """, handler));
+
+        Assert.Equal(
+            "Error: people[0] (key ivan): eventRefs: there is no event E0404. noteHandles: there is no note I0404. " +
+            "I is the prefix of people, and noteHandles links notes. Nothing was saved.",
+            error.Message);
+        Assert.Empty(handler.Posts);
+    }
+
+    [Fact]
+    public async Task CreateRecords_Refuses_A_Gramps_Id_As_A_Tag_Without_Asking_Gramps_Web()
+    {
+        var handler = new TreeHandler();
+
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords("""
+            { "notes": [{ "text": "To do", "tagHandles": ["T0001"] }] }
+            """, handler));
+
+        Assert.Equal(
+            "Error: notes[0]: tagHandles: T0001 is not a tag handle; tags have no Gramps ID, so give the tag's handle " +
+            "from list_objects(objectType: \"tags\"). Nothing was saved.",
+            error.Message);
+        Assert.DoesNotContain(handler.Requests, r => r.Contains("gramps_id=", StringComparison.Ordinal));
+        Assert.Empty(handler.Posts);
     }
 
     [Fact]

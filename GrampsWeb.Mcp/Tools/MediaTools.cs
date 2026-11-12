@@ -161,7 +161,7 @@ public static class MediaTools
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Attributes. " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
@@ -176,6 +176,13 @@ public static class MediaTools
             var mediaDate = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             await KnownTypes.CheckAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(attachTo, client, argument: "attachTo");
+            await new LinkIds()
+                .Handles("citationHandles", citationHandles, "citations")
+                .Handles("noteHandles", noteHandles, "notes")
+                .Handles("tagHandles", tagHandles, "tags")
+                .Attributes("attributes", attributes)
+                .MediaLinks("attachTo", attachTo, refs: false)
+                .ResolveAsync(client, "Nothing was uploaded.");
             using var updateLease = await client.BeginUpdateAsync();
             var owners = await ResolveOwnersAsync(attachTo, client, "Nothing was uploaded.");
 
@@ -250,7 +257,7 @@ public static class MediaTools
         string? date = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Citations. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? citationHandles = null,
@@ -275,6 +282,13 @@ public static class MediaTools
             var mediaDate = date is null ? null : AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             await KnownTypes.CheckAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(attachTo, client, argument: "attachTo");
+            await new LinkIds()
+                .Handles("citationHandles", citationHandles, "citations")
+                .Handles("noteHandles", noteHandles, "notes")
+                .Handles("tagHandles", tagHandles, "tags")
+                .Attributes("attributes", attributes)
+                .MediaLinks("attachTo", attachTo, refs: false)
+                .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
             var mediaPath = $"/api/media/{Uri.EscapeDataString(resolvedHandle)}";

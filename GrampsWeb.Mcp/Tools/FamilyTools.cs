@@ -79,17 +79,22 @@ public static class FamilyTools
             eventRef.Role = EventRoles.Family;
         await KnownTypes.CheckAttributesAsync(attributes, client);
         await KnownTypes.CheckMediaLinksAsync(mediaHandles, client);
-        var resolvedFatherHandle = fatherHandle is null
-            ? null
-            : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
-        var resolvedMotherHandle = motherHandle is null
-            ? null
-            : await HandleResolver.ResolveToHandleAsync(motherHandle, client, "people");
+        await new LinkIds()
+            .One("fatherHandle", fatherHandle, "people", h => fatherHandle = h)
+            .One("motherHandle", motherHandle, "people", h => motherHandle = h)
+            .ChildRefs("childRefs", childRefArr)
+            .EventRefs("eventRefs", eventRefArr)
+            .MediaLinks("mediaHandles", mediaHandles)
+            .Handles("citationHandles", citationHandles, "citations")
+            .Handles("noteHandles", noteHandles, "notes")
+            .Handles("tagHandles", tagHandles, "tags")
+            .Attributes("attributes", attributes)
+            .ResolveAsync(client);
 
         return new CreateFamilyRequest
         {
-            FatherHandle = resolvedFatherHandle,
-            MotherHandle = resolvedMotherHandle,
+            FatherHandle = fatherHandle,
+            MotherHandle = motherHandle,
             ChildRefList = childRefArr is { Length: > 0 } ? childRefArr : null,
             EventRefList = eventRefArr.Length > 0 ? eventRefArr : null,
             MediaList = GrampsRequestMapping.ToMediaRefRequests(mediaHandles),
@@ -139,7 +144,7 @@ public static class FamilyTools
         FlexibleHandleList? citationHandles = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
+        [Description("Tags. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.TagHint)]
         FlexibleHandleList? tagHandles = null,
         [Description("Attributes. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAttributeList.DescriptionHint)]
         FlexibleAttributeList? attributes = null,
@@ -159,23 +164,28 @@ public static class FamilyTools
             await EventRoles.CheckAsync(eventRefs, client, linkMode, EventRoles.Family);
             await KnownTypes.CheckAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
+            await new LinkIds()
+                .One("fatherHandle", fatherHandle, "people", h => fatherHandle = h)
+                .One("motherHandle", motherHandle, "people", h => motherHandle = h)
+                .ChildRefs("childRefs", childRefs)
+                .EventRefs("eventRefs", eventRefs)
+                .MediaLinks("mediaHandles", mediaHandles)
+                .Handles("citationHandles", citationHandles, "citations")
+                .Handles("noteHandles", noteHandles, "notes")
+                .Handles("tagHandles", tagHandles, "tags")
+                .Attributes("attributes", attributes)
+                .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
             if (relationshipType != null)
                 relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);
 
             var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
-            var resolvedFatherHandle = fatherHandle is null
-                ? null
-                : await HandleResolver.ResolveToHandleAsync(fatherHandle, client, "people");
-            var resolvedMotherHandle = motherHandle is null
-                ? null
-                : await HandleResolver.ResolveToHandleAsync(motherHandle, client, "people");
             var family = await GrampsObjectPatch.LoadAsync(client, $"/api/families/{Uri.EscapeDataString(resolvedHandle)}");
             if (family == null)
                 return NotFoundHelper.NotFoundMessage("Family", handle);
 
-            family.Set("father_handle", resolvedFatherHandle);
-            family.Set("mother_handle", resolvedMotherHandle);
+            family.Set("father_handle", fatherHandle);
+            family.Set("mother_handle", motherHandle);
             family.Set("type", relationshipType);
             family.ApplyRefs("child_ref_list", (GrampsChildRef[]?)childRefs, linkMode);
             family.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);

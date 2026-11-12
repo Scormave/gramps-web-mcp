@@ -67,7 +67,7 @@ public class HandleResolverTests
     [InlineData('N', "notes")]
     [InlineData('O', "media")]
     [InlineData('M', null)]
-    [InlineData('T', "tags")]
+    [InlineData('T', null)]
     [InlineData('Z', null)]
     [InlineData('X', null)]
     [InlineData('i', null)]
@@ -310,6 +310,53 @@ public class HandleResolverTests
         var result = await HandleResolver.ResolveToHandleAsync("I0001", client, "families");
 
         Assert.Equal("I0001", result);
+        Assert.Empty(handler.ListRequests);
+    }
+
+    [Fact]
+    public async Task FindHandleAsync_Looks_Up_The_Id_Among_Records_Of_The_Given_Type_Whatever_Its_Prefix()
+    {
+        var handler = new ResolverRecordingHandler
+        {
+            ListResponses =
+            {
+                ["/api/people/"] = """[{"handle": "person-handle", "gramps_id": "I0001"}]""",
+                ["/api/notes/"] = """[{"handle": "note-handle", "gramps_id": "I0001"}]"""
+            }
+        };
+        var client = CreateClient(handler);
+
+        Assert.Equal("note-handle", await HandleResolver.FindHandleAsync("I0001", "notes", client));
+        Assert.Equal("person-handle", await HandleResolver.FindHandleAsync("I0001", "people", client));
+        Assert.Equal("note-handle", await HandleResolver.FindHandleAsync("I0001", "notes", client));
+
+        Assert.Equal(1, handler.ListRequestCount("/api/notes/"));
+        Assert.Equal(1, handler.ListRequestCount("/api/people/"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(HttpStatusCode.NotFound)]
+    [InlineData(HttpStatusCode.BadRequest)]
+    public async Task FindHandleAsync_Returns_Null_When_No_Record_Has_The_Id(HttpStatusCode? statusCode)
+    {
+        var handler = new ResolverRecordingHandler();
+        if (statusCode is { } code)
+            handler.ListStatusCodes["/api/events/"] = code;
+        var client = CreateClient(handler);
+
+        Assert.Null(await HandleResolver.FindHandleAsync("E0099", "events", client));
+        Assert.Null(await HandleResolver.FindHandleAsync("E0099", "events", client));
+        Assert.Equal(2, handler.ListRequestCount("/api/events/"));
+    }
+
+    [Fact]
+    public async Task FindHandleAsync_Returns_Null_For_A_Tag_Without_A_Request()
+    {
+        var handler = new ResolverRecordingHandler();
+        var client = CreateClient(handler);
+
+        Assert.Null(await HandleResolver.FindHandleAsync("T0001", "tags", client));
         Assert.Empty(handler.ListRequests);
     }
 

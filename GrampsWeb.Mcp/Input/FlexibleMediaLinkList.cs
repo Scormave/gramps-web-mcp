@@ -16,7 +16,7 @@ public sealed class FlexibleMediaLinkList
 {
     /// <summary>Human-readable hint for MCP tool parameter descriptions.</summary>
     public const string DescriptionHint =
-        "Media handles, not Gramps IDs: JSON array [\"h1\",\"h2\"], one handle, or a comma/semicolon/newline-separated string. " +
+        "Media handles or Gramps IDs: JSON array [\"h1\",\"h2\"], one handle or ID, or a comma/semicolon/newline-separated string. " +
         "To show only part of an image, such as one record on a page scan, give an object {\"ref\":\"…\",\"region\":[left, top, right, bottom]} " +
         "in place of the handle. " + MediaRegion.DescriptionHint + " [0, 0, 100, 100] shows the whole image again; " +
         "read_media with the same region shows what it covers. " +
