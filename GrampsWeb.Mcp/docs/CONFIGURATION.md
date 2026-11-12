@@ -71,15 +71,25 @@ changes nothing. Dry runs and refusals do not ask.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GRAMPS_CONFIRMATION` | `when-supported` asks clients that support elicitation and runs as before in the others; `required` refuses deletes, merges and undos in clients that cannot ask; `off` never asks | `when-supported` |
+| `GRAMPS_REQUIRE_USER_INTERACTION` | `true` publishes the three tools with the `anthropic/requiresUserInteraction` tool metadata, so clients that honour it ask their own permission on every call; `false` leaves the metadata out, and the client's permission settings decide | `true` |
 
 - Stateless Streamable HTTP (`MCP_STATELESS=true`, the default) cannot send
   requests to the client, so it never asks, and `required` refuses every
   delete, merge and undo there. Set `MCP_STATELESS=false` to confirm over
   HTTP; stdio and legacy SSE keep a session and can ask.
 - All three tools also carry the `anthropic/requiresUserInteraction` tool
-  metadata, whatever the setting. Clients that honour it, such as Claude Code,
-  ask their own permission first, so the user may confirm twice; `off` keeps
-  only the client's prompt.
+  metadata, whatever `GRAMPS_CONFIRMATION` says. Clients that honour it, such
+  as Claude Code, ask their own permission first, so the user may confirm
+  twice; `off` keeps only the client's prompt.
+- Claude Code asks for a tool with that metadata
+  [on every call](https://code.claude.com/docs/en/mcp#require-approval-for-a-specific-tool),
+  in every permission mode, and no allow rule or hook of the user's skips the
+  prompt. `GRAMPS_REQUIRE_USER_INTERACTION=false` leaves the metadata out, for
+  an operator who wants the client's own permission settings to decide, such
+  as on a tree with one trusted user. The three tools are then asked about
+  like any other write tool. Only `true` and `false` are accepted, so a
+  mistyped value stops the server instead of removing the prompt, and the
+  server logs at startup that the metadata is off.
 - The tool call lasts until the user answers. If the client cancels the call
   first, nothing changes.
 - The server logs once per client whether it asks.

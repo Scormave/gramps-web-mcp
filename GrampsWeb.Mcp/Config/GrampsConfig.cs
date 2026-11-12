@@ -18,7 +18,8 @@ public record GrampsConfig(
     string? RefreshToken = null,
     IReadOnlyList<string>? MediaUploadDirs = null,
     long MediaUploadMaxBytes = GrampsConfig.DefaultMediaUploadMaxBytes,
-    ConfirmationMode Confirmation = ConfirmationMode.WhenSupported)
+    ConfirmationMode Confirmation = ConfirmationMode.WhenSupported,
+    bool RequireUserInteraction = true)
 {
     public const long DefaultMediaMaxBytes = 5 * 1024 * 1024;
 
@@ -77,6 +78,8 @@ public record GrampsConfig(
         var mediaUploadDirs = ParseDirectoryList(ReadEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS"),
             "GRAMPS_MEDIA_UPLOAD_DIRS", errors);
         var confirmation = ParseConfirmationMode(ReadEnvironmentVariable("GRAMPS_CONFIRMATION"), errors);
+        var requireUserInteraction = ParseRequireUserInteraction(
+            ReadEnvironmentVariable("GRAMPS_REQUIRE_USER_INTERACTION"), errors);
 
         if (string.IsNullOrWhiteSpace(apiUrl))
             errors.Add("GRAMPS_API_URL is not set or empty");
@@ -124,7 +127,8 @@ public record GrampsConfig(
             RefreshToken: string.IsNullOrWhiteSpace(refreshToken) ? null : refreshToken.Trim(),
             MediaUploadDirs: mediaUploadDirs,
             MediaUploadMaxBytes: mediaUploadMaxBytes,
-            Confirmation: confirmation);
+            Confirmation: confirmation,
+            RequireUserInteraction: requireUserInteraction);
     }
 
     /// <summary>
@@ -217,6 +221,25 @@ public record GrampsConfig(
             default:
                 errors.Add("GRAMPS_CONFIRMATION must be when-supported, required or off");
                 return ConfirmationMode.WhenSupported;
+        }
+    }
+
+    /// <summary>
+    /// Only <c>false</c> or <c>0</c> takes the <c>anthropic/requiresUserInteraction</c> metadata off
+    /// delete_object, merge_objects and undo_change. Any other value is an error instead of a quiet
+    /// <c>false</c>, so a typing mistake cannot remove the client's prompt.
+    /// </summary>
+    private static bool ParseRequireUserInteraction(string? value, List<string> errors)
+    {
+        switch (value?.Trim().ToLowerInvariant())
+        {
+            case null or "" or "true" or "1":
+                return true;
+            case "false" or "0":
+                return false;
+            default:
+                errors.Add("GRAMPS_REQUIRE_USER_INTERACTION must be true or false");
+                return true;
         }
     }
 

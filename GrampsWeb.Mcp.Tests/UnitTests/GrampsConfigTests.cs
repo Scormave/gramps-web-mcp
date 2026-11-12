@@ -300,6 +300,30 @@ public class GrampsConfigTests
         Assert.Contains("GRAMPS_CONFIRMATION must be when-supported, required or off", ex.Message);
     }
 
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("", true)]
+    [InlineData("${user_config.gramps_require_user_interaction}", true)]
+    [InlineData("true", true)]
+    [InlineData("1", true)]
+    [InlineData(" False ", false)]
+    [InlineData("0", false)]
+    public void FromEnvironment_Reads_Require_User_Interaction(string? value, bool expected)
+    {
+        var config = LoadConfig(readOnlyEnv: null, requireUserInteraction: value);
+
+        Assert.Equal(expected, config.RequireUserInteraction);
+    }
+
+    [Fact]
+    public void FromEnvironment_Rejects_A_Mistyped_Require_User_Interaction()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, requireUserInteraction: "flase"));
+
+        Assert.Contains("GRAMPS_REQUIRE_USER_INTERACTION must be true or false", ex.Message);
+    }
+
     private static GrampsConfig LoadConfig(
         string? readOnlyEnv,
         string? username = "user",
@@ -313,7 +337,8 @@ public class GrampsConfigTests
         string? mutationMinIntervalMs = null,
         string? mediaUploadDirs = null,
         string? mediaUploadMaxBytes = null,
-        string? confirmation = null) =>
+        string? confirmation = null,
+        string? requireUserInteraction = null) =>
         WithEnvironment(
             GrampsConfig.FromEnvironment,
             readOnlyEnv,
@@ -328,7 +353,8 @@ public class GrampsConfigTests
             mutationMinIntervalMs,
             mediaUploadDirs,
             mediaUploadMaxBytes,
-            confirmation);
+            confirmation,
+            requireUserInteraction);
 
     private static T WithEnvironment<T>(
         Func<T> action,
@@ -344,7 +370,8 @@ public class GrampsConfigTests
         string? mutationMinIntervalMs = null,
         string? mediaUploadDirs = null,
         string? mediaUploadMaxBytes = null,
-        string? confirmation = null)
+        string? confirmation = null,
+        string? requireUserInteraction = null)
     {
         lock (EnvironmentLock)
         {
@@ -366,6 +393,7 @@ public class GrampsConfigTests
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS", mediaUploadDirs);
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES", mediaUploadMaxBytes);
                 Environment.SetEnvironmentVariable("GRAMPS_CONFIRMATION", confirmation);
+                Environment.SetEnvironmentVariable("GRAMPS_REQUIRE_USER_INTERACTION", requireUserInteraction);
 
                 return action();
             }
@@ -394,7 +422,8 @@ public class GrampsConfigTests
             ["GRAMPS_MUTATION_MIN_INTERVAL_MS"] = Environment.GetEnvironmentVariable("GRAMPS_MUTATION_MIN_INTERVAL_MS"),
             ["GRAMPS_MEDIA_UPLOAD_DIRS"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS"),
             ["GRAMPS_MEDIA_UPLOAD_MAX_BYTES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES"),
-            ["GRAMPS_CONFIRMATION"] = Environment.GetEnvironmentVariable("GRAMPS_CONFIRMATION")
+            ["GRAMPS_CONFIRMATION"] = Environment.GetEnvironmentVariable("GRAMPS_CONFIRMATION"),
+            ["GRAMPS_REQUIRE_USER_INTERACTION"] = Environment.GetEnvironmentVariable("GRAMPS_REQUIRE_USER_INTERACTION")
         };
     }
 

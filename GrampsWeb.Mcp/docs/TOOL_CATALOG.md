@@ -1400,7 +1400,9 @@ each answer. Stateless Streamable HTTP (`MCP_STATELESS=true`, the default for
 `http`) cannot send requests to the client, so there the server never asks,
 and with `required` it refuses every delete, merge and undo; set
 `MCP_STATELESS=false` to confirm over HTTP. All three tools also carry the
-`anthropic/requiresUserInteraction` tool meta, whatever the setting, so
-clients that honor it ask for their own permission first and keep these tools
-out of unattended runs. The tool call lasts until the user answers; if the
-client cancels the call first, nothing changes.
+`anthropic/requiresUserInteraction` tool meta, whatever `GRAMPS_CONFIRMATION`
+says, so clients that honor it ask for their own permission first and keep
+these tools out of unattended runs;
+[`GRAMPS_REQUIRE_USER_INTERACTION=false`](CONFIGURATION.md#confirming-deletes-merges-and-undos)
+leaves it out. The tool call lasts until the user answers; if the client
+cancels the call first, nothing changes.

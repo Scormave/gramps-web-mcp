@@ -108,4 +108,19 @@ internal static class McpEndpointExtensions
             .LogInformation(
                 "Uploading is off: GRAMPS_MEDIA_UPLOAD_DIRS is set, but media file access is disabled. Set GRAMPS_MEDIA_RESOURCES_ENABLED=true to upload.");
     }
+
+    /// <summary>
+    /// Says that the operator took the client's prompt off delete_object, merge_objects and undo_change.
+    /// </summary>
+    public static void LogUserInteractionNotRequired(this IHost host, GrampsConfig config)
+    {
+        if (config.RequireUserInteraction)
+            return;
+
+        host.Services
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("GrampsWeb.Mcp.Config")
+            .LogInformation(
+                "GRAMPS_REQUIRE_USER_INTERACTION=false: delete_object, merge_objects and undo_change are published without the anthropic/requiresUserInteraction metadata; the client's own permission settings decide whether to ask.");
+    }
 }
