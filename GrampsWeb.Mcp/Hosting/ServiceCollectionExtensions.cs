@@ -13,6 +13,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton(config);
         services.AddSingleton(new MutationGate(config));
         services.AddSingleton(new GrampsTypeVocabularies());
+        services.AddSingleton(new GrampsServerVersion());
         services.AddHttpClient(nameof(GrampsAuthTokenProvider), GrampsUserAgent.Configure);
         services.AddSingleton(sp =>
             new GrampsAuthTokenProvider(

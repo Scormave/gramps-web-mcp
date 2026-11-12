@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -256,7 +255,7 @@ public static partial class UndoTools
 
         var hasDeletions = changes.Any(c => c.Kind == Deleted);
         var version = needVersion && hasDeletions ? await ReadServerVersionAsync(client) : null;
-        var deletionNeedsForce = version is { } v && ParseVersion(v) is { } parsed && parsed < DeletionUndoFixed;
+        var deletionNeedsForce = version is { } v && GrampsServerVersion.Parse(v) is { } parsed && parsed < DeletionUndoFixed;
 
         var labelHandles = changes.Take(SystemFormatter.MaxChangesShownPerTransaction)
             .Where(c => c.Kind != Deleted)
@@ -429,28 +428,13 @@ public static partial class UndoTools
     {
         try
         {
-            var metadata = await client.GetAsync<JsonElement>("/api/metadata/");
-            return metadata.TryGetProperty("gramps_webapi", out var api) && api.ValueKind == JsonValueKind.Object
-                   && api.TryGetProperty("version", out var version) && version.ValueKind == JsonValueKind.String
-                ? version.GetString()
-                : null;
+            return GrampsServerVersion.ReadApiVersion(
+                await client.GetAsync<JsonElement>(GrampsServerVersion.MetadataPath));
         }
         catch (GrampsApiException)
         {
             return null; // Unknown: the undo itself tells whether it needs force.
         }
-    }
-
-    /// <summary>Major and minor of a version such as "3.22.1" or "3.23.0rc1"; null when it has none.</summary>
-    internal static Version? ParseVersion(string version)
-    {
-        var parts = version.Trim().TrimStart('v').Split('.');
-        return parts.Length >= 2
-               && int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var major)
-               && int.TryParse(new string(parts[1].TakeWhile(char.IsAsciiDigit).ToArray()), NumberStyles.None,
-                   CultureInfo.InvariantCulture, out var minor)
-            ? new Version(major, minor)
-            : null;
     }
 
     private enum TaskState { Succeeded, Failed, Pending }

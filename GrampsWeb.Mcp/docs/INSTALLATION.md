@@ -3,7 +3,10 @@
 `gramps-web-mcp` runs next to an existing [Gramps Web](https://www.grampsweb.org/)
 instance and works on its tree through the Gramps Web API. You need:
 
-- A running Gramps Web instance with API access, and an account on it
+- A running Gramps Web instance with API access, and an account on it. It must
+  be Gramps Web 26.6.2 or newer (Gramps Web API 3.16 or newer); with an older
+  server every tool call returns an error that names both versions. Keep Gramps
+  Web MCP 2.x until you can update Gramps Web
 - Docker for the [image](#docker), [Docker Compose](#gramps-web--mcp-docker-compose)
   and [Unraid](#unraid). The [Claude Desktop extension](#claude-desktop-mcpb-extension)
   and the [release binary](CLIENTS.md#over-stdio-with-the-release-binary) need
@@ -93,11 +96,13 @@ declared in `server.json`.
 
 The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
 container health, and other uptime monitors. It returns HTTP 200 when the MCP
-server can authenticate against Gramps Web, or HTTP 503 otherwise. Probes reuse
+server can authenticate against Gramps Web, or HTTP 503 otherwise, including
+for a Gramps Web server older than API 3.16. Probes reuse
 the token the tools use, so they do not log in to Gramps Web each time. The
 public response is minimal: `{ "status": "healthy" }` or
 `{ "status": "unhealthy" }`. Startup logs include a line such as
-`Connected to Gramps Web at …` once the API is reachable.
+`Connected to Gramps Web at …` once the API is reachable, with the Gramps and
+Gramps Web API versions, or one error that the server is too old.
 
 The image is built on Ubuntu Chiseled and has no shell or `curl`. Its
 `HEALTHCHECK` runs `dotnet /app/GrampsWeb.Mcp.dll --health-check`, which

@@ -25,6 +25,34 @@ public class GrampsHealthServiceTests
         Assert.Equal("Example Tree", status.TreeName);
         Assert.Equal("5f850009", status.TreeDatabaseId);
         Assert.Equal("6.0.0", status.GrampsVersion);
+        Assert.Equal("3.24.0", status.ApiVersion);
+        Assert.Null(status.Error);
+    }
+
+    [Fact]
+    public async Task CheckAsync_ReturnsUnhealthy_WhenTheApiIsOlderThanTheMinimum()
+    {
+        var handler = new RecordingHandler(apiVersion: "3.15.2");
+        var service = CreateService(handler);
+
+        var status = await service.CheckAsync();
+
+        Assert.False(status.IsHealthy);
+        Assert.Equal("Example Tree", status.TreeName);
+        Assert.Equal("3.15.2", status.ApiVersion);
+        Assert.Equal(GrampsServerVersion.UnsupportedMessage("3.15.2"), status.Error);
+    }
+
+    [Fact]
+    public async Task CheckAsync_ReturnsHealthy_WhenTheServerDoesNotReportItsApiVersion()
+    {
+        var handler = new RecordingHandler(apiVersion: null);
+        var service = CreateService(handler);
+
+        var status = await service.CheckAsync();
+
+        Assert.True(status.IsHealthy);
+        Assert.Null(status.ApiVersion);
         Assert.Null(status.Error);
     }
 
@@ -159,12 +187,14 @@ public class GrampsHealthServiceTests
 
     /// <summary>
     /// Issues "token-1", "token-2", … per login and "token" per refresh; metadata answers
-    /// <paramref name="rejection"/>, by default an expired-token 401, to <paramref name="rejectedTokens"/>.
+    /// <paramref name="rejection"/>, by default an expired-token 401, to <paramref name="rejectedTokens"/>, and
+    /// otherwise reports <paramref name="apiVersion"/>, or no API version when it is null.
     /// </summary>
     private sealed class RecordingHandler(
         bool failToken = false,
         string[]? rejectedTokens = null,
-        (HttpStatusCode Status, string Body)? rejection = null) : HttpMessageHandler
+        (HttpStatusCode Status, string Body)? rejection = null,
+        string? apiVersion = "3.24.0") : HttpMessageHandler
     {
         public int CredentialPosts { get; private set; }
 
@@ -219,7 +249,8 @@ public class GrampsHealthServiceTests
                     });
                 }
 
-                return Task.FromResult(JsonResponse("""
+                var webApi = apiVersion is null ? "" : $$$""", "gramps_webapi": {"version": "{{{apiVersion}}}"}""";
+                return Task.FromResult(JsonResponse($$"""
                     {
                       "database": {
                         "id": "5f850009",
@@ -227,7 +258,7 @@ public class GrampsHealthServiceTests
                       },
                       "gramps": {
                         "version": "6.0.0"
-                      }
+                      }{{webApi}}
                     }
                     """));
             }

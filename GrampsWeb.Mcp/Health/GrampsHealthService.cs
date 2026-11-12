@@ -8,7 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace GrampsWeb.Mcp.Health;
 
 /// <summary>
-/// Verifies that the configured Gramps Web API is reachable and accepts credentials. The token comes from
+/// Verifies that the configured Gramps Web API is reachable, accepts credentials and is not older than
+/// <see cref="GrampsServerVersion.Minimum"/>. The token comes from
 /// the shared <see cref="GrampsAuthTokenProvider"/>, so a check logs in only when the cached token is
 /// missing, expiring, or rejected; Gramps Web rate-limits its token route.
 /// </summary>
@@ -42,14 +43,18 @@ public sealed class GrampsHealthService
             var treeName = TryGetString(metadata, "database", "name");
             var treeDatabaseId = TryGetString(metadata, "database", "id");
             var grampsVersion = TryGetString(metadata, "gramps", "version");
+            var apiVersion = GrampsServerVersion.ReadApiVersion(metadata);
+            var unsupported = GrampsServerVersion.UnsupportedMessage(apiVersion);
 
             return new GrampsConnectivityStatus(
-                IsHealthy: true,
+                IsHealthy: unsupported is null,
                 ApiUrl: _config.ApiUrl,
                 ConfiguredTreeId: _config.TreeId,
                 TreeName: treeName,
                 TreeDatabaseId: treeDatabaseId,
-                GrampsVersion: grampsVersion);
+                GrampsVersion: grampsVersion,
+                ApiVersion: apiVersion,
+                Error: unsupported);
         }
         catch (Exception ex) when (ex is GrampsApiException or HttpRequestException or TaskCanceledException
                                        or JsonException or InvalidOperationException)

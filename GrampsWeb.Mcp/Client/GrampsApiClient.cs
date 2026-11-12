@@ -25,6 +25,7 @@ public class GrampsApiClient
     private readonly GrampsAuthTokenProvider _tokenProvider;
     private readonly MutationGate _mutationGate;
     private readonly GrampsTypeVocabularies _typeVocabularies;
+    private readonly GrampsServerVersion? _serverVersion;
     private string? _accessToken;
 
     /// <summary>
@@ -38,7 +39,8 @@ public class GrampsApiClient
         ILogger<GrampsApiClient> logger,
         GrampsAuthTokenProvider tokenProvider,
         MutationGate? mutationGate = null,
-        GrampsTypeVocabularies? typeVocabularies = null)
+        GrampsTypeVocabularies? typeVocabularies = null,
+        GrampsServerVersion? serverVersion = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -46,6 +48,7 @@ public class GrampsApiClient
         _tokenProvider = tokenProvider ?? throw new ArgumentNullException(nameof(tokenProvider));
         _mutationGate = mutationGate ?? MutationGate.Disabled;
         _typeVocabularies = typeVocabularies ?? new GrampsTypeVocabularies();
+        _serverVersion = serverVersion;
 
         // Set base address without /api suffix; it's added per endpoint
         _httpClient.BaseAddress = new Uri(_config.ApiUrl);
@@ -119,12 +122,13 @@ public class GrampsApiClient
         JsonSerializer.Deserialize<T>(body, GrampsJson.Options)
             ?? throw new InvalidOperationException($"Failed to deserialize response as {typeof(T).Name}");
 
-    private async Task<string> GetJsonBodyAsync(string path)
+    private async Task<string> GetJsonBodyAsync(string path, bool checkServerVersion = true)
     {
         try
         {
             using var response = await SendAuthorizedAsync(
-                () => new HttpRequestMessage(HttpMethod.Get, path), request => SendWithLoggingAsync(request));
+                () => new HttpRequestMessage(HttpMethod.Get, path), request => SendWithLoggingAsync(request),
+                checkServerVersion);
             var body = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -390,12 +394,18 @@ public class GrampsApiClient
     /// <summary>
     /// Sends a request built by <paramref name="createRequest"/> with the cached access token. When the
     /// API rejects the token, e.g. after the server's SECRET_KEY changed, replaces it and sends a new
-    /// request once; see <see cref="GrampsAuthTokenProvider.IsRejectedAccessTokenAsync"/>.
+    /// request once; see <see cref="GrampsAuthTokenProvider.IsRejectedAccessTokenAsync"/>. The first
+    /// request of the process first checks the server's version; see <see cref="GrampsServerVersion"/>.
     /// </summary>
     private async Task<HttpResponseMessage> SendAuthorizedAsync(
         Func<HttpRequestMessage> createRequest,
-        Func<HttpRequestMessage, Task<HttpResponseMessage>> send)
+        Func<HttpRequestMessage, Task<HttpResponseMessage>> send,
+        bool checkServerVersion = true)
     {
+        if (checkServerVersion && _serverVersion is not null)
+            await _serverVersion.EnsureSupportedAsync(
+                () => GetJsonBodyAsync(GrampsServerVersion.MetadataPath, checkServerVersion: false));
+
         await EnsureAuthenticatedAsync();
         var token = _accessToken!;
         var response = await send(WithBearer(createRequest(), token));

@@ -274,6 +274,14 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
   replaces it through `GrampsAuthTokenProvider` and sends the request once
   more. Gramps Web checks the token before the endpoint runs, so writes are
   retried too; Gramps Web's own HTTP 422 validation errors are not
+- a minimum server version: before its first request in the process the
+  client reads `/api/metadata/` through the singleton `GrampsServerVersion`
+  and refuses a server older than Gramps Web API 3.16 with
+  `UnsupportedGrampsServerException`, which the call-tool filter returns as
+  the tool's error. A supported version, or a server that reports none, is
+  kept. A failed read lets the request through, so the request reports the
+  server's error itself; it and an older version are read again on the next
+  request, so updating Gramps Web needs no restart
 - typed GET plus mutation POST/PUT/DELETE with `System.Text.Json`
 - mutation response parsing in `PostMutationAsync`, which reads the new
   handle and Gramps ID from Gramps' change-array response through

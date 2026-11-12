@@ -52,6 +52,8 @@ public class GrampsUserAgentTests
         {
             ("POST", "/api/token/"),
             ("POST", "/api/token/refresh/"),
+            // The first request checks the server version.
+            ("GET", "/api/metadata/"),
             ("GET", "/api/people/"),
             ("POST", "/api/people/"),
             ("PUT", "/api/people/handle"),

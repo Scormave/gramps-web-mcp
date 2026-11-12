@@ -521,17 +521,6 @@ public class UndoToolsTests
         Assert.DoesNotContain(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
     }
 
-    [Theory]
-    [InlineData("3.22.1", "3.22")]
-    [InlineData("3.23.0rc1", "3.23")]
-    [InlineData("v4.0", "4.0")]
-    [InlineData("3", null)]
-    [InlineData("dev", null)]
-    public void ParseVersion_ReadsMajorAndMinor(string version, string? expected)
-    {
-        Assert.Equal(expected is null ? null : Version.Parse(expected), UndoTools.ParseVersion(version));
-    }
-
     [Fact]
     public void LinkTargets_AreReadFromEveryLinkingKey()
     {

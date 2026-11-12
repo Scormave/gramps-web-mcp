@@ -212,7 +212,7 @@ public class MergeObjectsTests
     }
 
     [Fact]
-    public async Task Merge_OnAServerWithoutTheEndpoint_SaysWhichVersionItNeeds()
+    public async Task Merge_AnsweredWithABareNotFound_IsAnError()
     {
         using var server = NoteServer();
         server.Post(NoteMerge, HttpStatusCode.NotFound,
@@ -220,7 +220,7 @@ public class MergeObjectsTests
 
         var ex = await Assert.ThrowsAsync<McpException>(() => Merge(server, new FakeConfirmation(ConfirmationAnswer.Confirmed)));
 
-        Assert.Contains("merging needs Gramps Web API 3.15 or newer", ex.Message);
+        Assert.Contains("The requested URL was not found on the server.", ex.Message);
     }
 
     [Fact]

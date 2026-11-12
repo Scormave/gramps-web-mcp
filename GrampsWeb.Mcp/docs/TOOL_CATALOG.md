@@ -450,8 +450,7 @@ find_duplicates(personHandle: "I0012")
 
 ### U — `MergeObjects`
 Merge a duplicate into the record to keep through Gramps Web's merge endpoint
-(`POST /api/{type}/{keep}/merge/{duplicate}`, Gramps Web API 3.15 or newer),
-which runs Gramps' own merge in one transaction: the duplicate's details and
+(`POST /api/{type}/{keep}/merge/{duplicate}`), which runs Gramps' own merge in one transaction: the duplicate's details and
 every link to it move to the kept record, and the duplicate is deleted. Works
 for people, families, events, places, sources, citations, notes, media and
 repositories; tags have no merge, and the tool says to move the tag with
@@ -482,8 +481,7 @@ the duplicate's when the kept family has none.
 Gramps refuses to merge two partners of one family, or a parent with their
 child. The tool checks both before asking and returns `action: refused` with
 nothing changed; it also returns `refused` for the same refusals from Gramps
-Web (HTTP 409) and for a record deleted meanwhile. A server older than API 3.15
-gets an error that names the version.
+Web (HTTP 409) and for a record deleted meanwhile.
 
 When the client supports MCP elicitation, the user confirms the merge in a
 [dialog](#confirmation-dialogs) that names both records, says what the kept

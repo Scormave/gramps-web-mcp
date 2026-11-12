@@ -1,3 +1,4 @@
+using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Health;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,6 +42,17 @@ public sealed class GrampsStartupHostedService : IHostedService
             if (status.IsHealthy)
             {
                 LogConnected(status);
+                return;
+            }
+
+            // Waiting does not upgrade the server: say so once instead of retrying.
+            if (GrampsServerVersion.UnsupportedMessage(status.ApiVersion) is { } unsupported)
+            {
+                _logger.LogError(
+                    "Connected to Gramps Web at {ApiUrl}, but it is too old: {Error} " +
+                    "The MCP server will keep running and refuse every tool call until the server is updated.",
+                    status.ApiUrl,
+                    unsupported);
                 return;
             }
 
@@ -101,6 +113,11 @@ public sealed class GrampsStartupHostedService : IHostedService
         if (status.GrampsVersion is not null)
         {
             _logger.LogInformation("Gramps version: {Version}", status.GrampsVersion);
+        }
+
+        if (status.ApiVersion is not null)
+        {
+            _logger.LogInformation("Gramps Web API version: {Version}", status.ApiVersion);
         }
 
         if (_config.ReadOnly)

@@ -12,17 +12,14 @@ using ModelContextProtocol.Server;
 namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
-/// MCP tool that merges a duplicate record into the record to keep through Gramps Web's merge endpoints
-/// (Gramps Web API 3.15+), which run Gramps' own merge queries in one transaction.
+/// MCP tool that merges a duplicate record into the record to keep through Gramps Web's merge endpoints,
+/// which run Gramps' own merge queries in one transaction.
 /// </summary>
 [McpServerToolType]
 public static class MergeTools
 {
     // Gramps TXNDEL in the transaction history.
     private const int Deleted = 2;
-
-    /// <summary>Gramps Web API 3.15 added <c>POST /api/{type}/{phoenix}/merge/{titanic}</c>.</summary>
-    internal const string MinimumApiVersion = "3.15";
 
     /// <summary>A mergeable type: its objectType, its name in replies, its API collection, and nouns for counts.</summary>
     private sealed record MergeKind(string Type, string DisplayName, string ApiPath, string Noun, string Plural);
@@ -150,21 +147,14 @@ public static class MergeTools
                     return ResponseEnvelope.MergeNotDone(kind.DisplayName, keep, duplicate, "refused",
                         $"Gramps refuses this merge: {ServerMessage(ex.ResponseBody) ?? ex.Message} Nothing was changed.");
                 }
-                catch (GrampsApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+                catch (GrampsApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound
+                                                    && ServerMessage(ex.ResponseBody)?.Contains("handle not found",
+                                                        StringComparison.OrdinalIgnoreCase) == true)
                 {
-                    // A record deleted meanwhile says "Phoenix handle not found" or "Titanic handle not found";
-                    // a server without the endpoint answers a bare 404.
-                    if (ServerMessage(ex.ResponseBody)?.Contains("handle not found",
-                            StringComparison.OrdinalIgnoreCase) == true)
-                    {
-                        return ResponseEnvelope.MergeNotDone(kind.DisplayName, keep, duplicate, "refused",
-                            "One of the two records was deleted meanwhile, so nothing was merged. Read both again " +
-                            "before calling again.");
-                    }
-
-                    throw new InvalidOperationException(
-                        $"This Gramps Web server has no merge endpoint: merging needs Gramps Web API {MinimumApiVersion} " +
-                        "or newer. Nothing was changed.", ex);
+                    // "Phoenix handle not found" or "Titanic handle not found".
+                    return ResponseEnvelope.MergeNotDone(kind.DisplayName, keep, duplicate, "refused",
+                        "One of the two records was deleted meanwhile, so nothing was merged. Read both again " +
+                        "before calling again.");
                 }
                 catch (GrampsApiException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
                 {

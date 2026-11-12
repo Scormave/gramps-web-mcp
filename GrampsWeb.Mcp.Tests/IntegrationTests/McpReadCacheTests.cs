@@ -76,7 +76,8 @@ public class McpReadCacheTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var token = request.RequestUri!.AbsolutePath.StartsWith("/api/token/");
-            if (!token) Interlocked.Increment(ref Reads);
+            // The server version is read once per process, not per call.
+            if (!token && request.RequestUri.AbsolutePath != "/api/metadata/") Interlocked.Increment(ref Reads);
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(token

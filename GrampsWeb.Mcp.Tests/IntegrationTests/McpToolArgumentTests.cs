@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Text.Json;
 using GrampsWeb.Mcp.Config;
+using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Hosting;
 using GrampsWeb.Mcp.Input;
 using Microsoft.AspNetCore.Builder;
@@ -70,6 +71,15 @@ public class McpToolArgumentTests
             Assert.EndsWith(" At $[0].primaryName.", content);
     }
 
+    [Fact]
+    public async Task McpPipeline_Explains_An_Unsupported_Server()
+    {
+        var (error, content) = await CallAsync("old_server_probe", "{}");
+
+        Assert.True(error);
+        Assert.Equal("An error occurred invoking 'old_server_probe': This Gramps Web server is too old.", content);
+    }
+
     private static async Task<(bool IsError, string? Text)> CallAsync(string tool, string arguments)
     {
         var config = new GrampsConfig("https://gramps.test", "user", "pass", "tree");
@@ -119,5 +129,10 @@ public class McpToolArgumentTests
         [Description("Echoes an update.")]
         public static string UpdateProbe(string handle, string? date = null, bool? isPrivate = null, string linkMode = "replace") =>
             $"updated {handle} {date} {isPrivate}".TrimEnd();
+
+        [McpServerTool(Name = "old_server_probe", ReadOnly = true)]
+        [Description("Fails as on a server that is too old.")]
+        public static string OldServerProbe() =>
+            throw new UnsupportedGrampsServerException("This Gramps Web server is too old.");
     }
 }

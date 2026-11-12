@@ -47,6 +47,12 @@ internal static class McpToolProfileExtensions
                 {
                     throw new McpException(ex.Path is null or "$" ? ex.Message : $"{ex.Message} At {ex.Path}.");
                 }
+                // The server is too old for this version; tools that catch only API errors would let the SDK
+                // hide why.
+                catch (UnsupportedGrampsServerException ex)
+                {
+                    throw new McpException(ex.Message);
+                }
                 // The SDK hides the message of a value it cannot convert; name the argument instead.
                 catch (JsonException) when (ToolArgumentValidator.FindTypeMismatch(schema, arguments) is { } typeError)
                 {

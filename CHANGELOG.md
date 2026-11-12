@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** Gramps Web 26.6.2 or newer (Gramps Web API 3.16 or newer)
+  is required. Before its first request the server reads the Gramps Web
+  API version; with an older server every tool call returns an error that
+  names both versions, `GET /health` reports unhealthy, and the startup
+  log says so once instead of retrying. Keep Gramps Web MCP 2.x until
+  Gramps Web can be updated. The startup log also shows the Gramps Web
+  API version
+- `merge_objects` no longer explains a bare HTTP 404 as a server older
+  than API 3.15; such a server is refused before the merge
+
 ## [2.10.0] - 2026-11-10
 
 ### Added
