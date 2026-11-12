@@ -71,29 +71,26 @@ public class LinkAttributesTests
     }
 
     [Fact]
-    public async Task CreatePerson_Sends_Event_Link_Attributes_In_Their_Known_Spelling()
+    public async Task CreateRecords_Sends_Event_Link_Attributes_In_Their_Known_Spelling()
     {
         var handler = new TreeHandler();
 
-        await PersonTools.CreatePerson(Name(),
-            eventRefs: Deserialize<FlexibleEventRefList>("""[{"ref":"h-event","role":"primary","attributes":["age: 65"]}]"""),
-            client: CreateClient(handler));
+        await CreatePerson("""[{"ref":"h-event","role":"primary","attributes":["age: 65"]}]""", handler);
 
-        var link = handler.Body!["event_ref_list"]![0]!;
+        var link = CreateRecordsCall.Saved(handler.Body, "Person")["event_ref_list"]![0]!;
         Assert.Equal("Primary", link["role"]!.GetValue<string>());
         AssertJsonEqual(JsonNode.Parse("""[{"type":"Age","value":"65"}]"""), link["attribute_list"]);
     }
 
     [Fact]
-    public async Task CreatePerson_Rejects_A_Misspelt_Link_Attribute_Before_Saving()
+    public async Task CreateRecords_Rejects_A_Misspelt_Link_Attribute_Before_Saving()
     {
         var handler = new TreeHandler();
 
-        var error = await Assert.ThrowsAsync<McpException>(() => PersonTools.CreatePerson(Name(),
-            eventRefs: Deserialize<FlexibleEventRefList>("""[{"ref":"h-event","attributes":["Agee: 65"]}]"""),
-            client: CreateClient(handler)));
+        var error = await Assert.ThrowsAsync<McpException>(() =>
+            CreatePerson("""[{"ref":"h-event","attributes":["Agee: 65"]}]""", handler));
 
-        Assert.StartsWith("eventRefs: Invalid attribute types 'Agee'.", error.Message);
+        Assert.StartsWith("Error: people[0]: eventRefs: Invalid attribute types 'Agee'.", error.Message);
         Assert.Contains("Age", error.Message);
         Assert.Null(handler.Body);
     }
@@ -374,8 +371,10 @@ public class LinkAttributesTests
                             "attribute_list":[{{attribute}}]}]}
         """;
 
-    private static FlexibleGrampsName Name() =>
-        Deserialize<FlexibleGrampsName>("""{ "given": "Pyotr", "surname": "Obraztsov" }""");
+    /// <summary>Creates Ivan Petrov with <paramref name="eventRefs"/> through create_records.</summary>
+    private static Task<string> CreatePerson(string eventRefs, TreeHandler handler) => CreateRecordsCall.RunAsync(
+        $$"""{ "people": [{ "primaryName": { "given": "Ivan", "surname": "Petrov" }, "eventRefs": {{eventRefs}} }] }""",
+        CreateClient(handler));
 
     private static T Deserialize<T>(string json) => JsonSerializer.Deserialize<T>(json)!;
 
@@ -392,8 +391,8 @@ public class LinkAttributesTests
     }
 
     /// <summary>
-    /// Serves the type vocabularies, <paramref name="bodies"/> by path and query, and <paramref name="stored"/> for any
-    /// other GET (404 without it), and records the POST or PUT body.
+    /// Serves the type vocabularies, no people for the duplicate check, <paramref name="bodies"/> by path and query, and
+    /// <paramref name="stored"/> for any other GET (404 without it), and records the POST or PUT body.
     /// </summary>
     private sealed class TreeHandler(string? stored = null, IReadOnlyDictionary<string, string>? bodies = null) : HttpMessageHandler
     {
@@ -423,15 +422,15 @@ public class LinkAttributesTests
             if (request.Method == HttpMethod.Post || request.Method == HttpMethod.Put)
             {
                 Body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
-                return Json(request.Method == HttpMethod.Put
-                    ? "{}"
-                    : """[{ "_class": "Person", "type": "add", "old": null, "new": { "_class": "Person", "handle": "h-new", "gramps_id": "I0001" } }]""");
+                return Json(request.Method == HttpMethod.Put ? "{}" : CreateRecordsCall.Changes(Body!).ToJsonString());
             }
 
             if (path == "/api/types/default/")
                 return Json(DefaultTypes);
             if (path == "/api/types/custom/")
                 return Json("{}");
+            if (path.StartsWith("/api/people/?rules=", StringComparison.Ordinal))
+                return Json("[]");
             if (bodies is not null && bodies.TryGetValue(path, out var body))
                 return Json(body);
             return stored is null ? new HttpResponseMessage(HttpStatusCode.NotFound) : Json(stored);

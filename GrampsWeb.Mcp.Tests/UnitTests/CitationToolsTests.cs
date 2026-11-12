@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
-using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -13,28 +13,26 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 public class CitationToolsTests
 {
     [Theory]
-    [InlineData("5")]
-    [InlineData("10")]
-    [InlineData("123")]
-    [InlineData("p. 5")]
-    [InlineData("vol. 3")]
-    public async Task CreateCitation_Sends_Page_As_String(string page)
+    [InlineData("5", "5")]
+    [InlineData("10", "10")]
+    [InlineData("123", "123")]
+    [InlineData("\"p. 5\"", "p. 5")]
+    [InlineData("\"vol. 3\"", "vol. 3")]
+    public async Task CreateRecords_Sends_A_Citation_Page_As_String(string pageJson, string page)
     {
         var handler = new RecordingHandler();
         var client = CreateClient(handler);
 
-        var result = await CitationTools.CreateCitation(
-            sourceHandle: "source1",
-            page: new FlexibleString { Value = page },
-            client: client);
+        var result = await CreateRecordsCall.RunAsync(
+            $$"""{ "citations": [{ "sourceHandle": "source1", "page": {{pageJson}} }] }""", client);
 
-        var citationRequest = Assert.Single(handler.Requests, r => r.Method == HttpMethod.Post && r.Path == "/api/citations/");
-        using var body = JsonDocument.Parse(citationRequest.Body!);
-        var pageProperty = body.RootElement.GetProperty("page");
+        var post = Assert.Single(handler.Requests, r => r.Method == HttpMethod.Post && r.Path == "/api/objects/");
+        using var body = JsonDocument.Parse(post.Body!);
+        var pageProperty = body.RootElement[0].GetProperty("page");
 
         Assert.Equal(JsonValueKind.String, pageProperty.ValueKind);
         Assert.Equal(page, pageProperty.GetString());
-        Assert.Contains($"name: {JsonSerializer.Serialize(page)}", result);
+        Assert.Contains($"Citation: {page} — handle:", result);
     }
 
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
@@ -87,25 +85,8 @@ public class CitationToolsTests
                     """);
             }
 
-            if (request.Method == HttpMethod.Post && request.RequestUri?.AbsolutePath == "/api/citations/")
-            {
-                return JsonResponse("""
-                    [
-                      {
-                        "_class": "Citation",
-                        "type": "add",
-                        "old": null,
-                        "new": {
-                          "_class": "Citation",
-                          "handle": "citation1",
-                          "gramps_id": "C0001",
-                          "source_handle": "source1",
-                          "page": "5"
-                        }
-                      }
-                    ]
-                    """);
-            }
+            if (request.Method == HttpMethod.Post && request.RequestUri?.AbsolutePath == "/api/objects/")
+                return JsonResponse(CreateRecordsCall.Changes(JsonNode.Parse(body!)!).ToJsonString());
 
             return new HttpResponseMessage(HttpStatusCode.NotFound)
             {

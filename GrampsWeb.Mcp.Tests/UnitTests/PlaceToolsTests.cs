@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Input;
@@ -29,11 +30,11 @@ public class PlaceToolsTests
         """;
 
     [Fact]
-    public async Task CreatePlace_Sends_Primary_Name_Date()
+    public async Task CreateRecords_Sends_Primary_Name_Date()
     {
         var handler = new PlaceHandler();
 
-        await PlaceTools.CreatePlace("Pushkin", nameLang: "ru", nameDate: "from 1937-02-10", client: CreateClient(handler));
+        await CreatePlace("""{ "name": "Pushkin", "nameLang": "ru", "nameDate": "from 1937-02-10" }""", handler);
 
         var name = handler.Body!.Value.GetProperty("name");
         Assert.Equal("Pushkin", name.GetProperty("value").GetString());
@@ -42,22 +43,22 @@ public class PlaceToolsTests
     }
 
     [Fact]
-    public async Task CreatePlace_Without_Name_Date_Sends_Undated_Name()
+    public async Task CreateRecords_Without_Name_Date_Sends_Undated_Name()
     {
         var handler = new PlaceHandler();
 
-        await PlaceTools.CreatePlace("Pushkin", client: CreateClient(handler));
+        await CreatePlace("""{ "name": "Pushkin" }""", handler);
 
         Assert.False(handler.Body!.Value.GetProperty("name").TryGetProperty("date", out _));
     }
 
     [Fact]
-    public async Task CreatePlace_Rejects_Unrecognized_Name_Date_Before_Posting()
+    public async Task CreateRecords_Rejects_Unrecognized_Name_Date_Before_Posting()
     {
         var handler = new PlaceHandler();
 
         await Assert.ThrowsAsync<McpException>(() =>
-            PlaceTools.CreatePlace("Pushkin", nameDate: "since the revolution", client: CreateClient(handler)));
+            CreatePlace("""{ "name": "Pushkin", "nameDate": "since the revolution" }""", handler));
 
         Assert.Null(handler.Body);
     }
@@ -104,15 +105,11 @@ public class PlaceToolsTests
     }
 
     [Fact]
-    public async Task CreatePlace_Sends_Numeric_Coordinates_As_Text()
+    public async Task CreateRecords_Sends_Numeric_Coordinates_As_Text()
     {
         var handler = new PlaceHandler();
 
-        await PlaceTools.CreatePlace(
-            "London",
-            lat: JsonSerializer.Deserialize<FlexibleString>("51.5072"),
-            lon: JsonSerializer.Deserialize<FlexibleString>("-0.1276"),
-            client: CreateClient(handler));
+        await CreatePlace("""{ "name": "London", "lat": 51.5072, "lon": -0.1276 }""", handler);
 
         Assert.Equal(JsonValueKind.String, handler.Body!.Value.GetProperty("lat").ValueKind);
         Assert.Equal("51.5072", handler.Body!.Value.GetProperty("lat").GetString());
@@ -124,11 +121,11 @@ public class PlaceToolsTests
     [InlineData(" 52.2297 ", "52.2297")]
     [InlineData("\" +52.2297 \"", "+52.2297")]
     [InlineData("52°13'47\"N", "52°13'47\"N")]
-    public async Task CreatePlace_Trims_Coordinates_And_Drops_Wrapping_Quotes(string lat, string stored)
+    public async Task CreateRecords_Trims_Coordinates_And_Drops_Wrapping_Quotes(string lat, string stored)
     {
         var handler = new PlaceHandler();
 
-        await PlaceTools.CreatePlace("Warsaw", lat: new FlexibleString { Value = lat }, client: CreateClient(handler));
+        await CreatePlace($$"""{ "name": "Warsaw", "lat": {{JsonSerializer.Serialize(lat)}} }""", handler);
 
         Assert.Equal(stored, handler.Body!.Value.GetProperty("lat").GetString());
     }
@@ -157,53 +154,14 @@ public class PlaceToolsTests
     }
 
     [Fact]
-    public async Task CreatePlace_Result_Shows_The_Name_Not_The_Type()
+    public async Task CreateRecords_Result_Names_The_Place_Not_Its_Type()
     {
         var handler = new PlaceHandler();
 
-        var result = await PlaceTools.CreatePlace(" Warsaw ", placeType: "City", client: CreateClient(handler));
+        var result = await CreatePlace("""{ "name": " Warsaw ", "placeType": "City" }""", handler);
 
-        Assert.Contains("name: \"Warsaw\"", result);
-        Assert.DoesNotContain("name: \"City\"", result);
-    }
-
-    [Fact]
-    public async Task CreatePlace_Result_Shows_The_Stored_Type_Coordinates_And_Enclosing_Places()
-    {
-        var handler = new PlaceHandler();
-
-        var result = await PlaceTools.CreatePlace(
-            "Москва",
-            placeType: "city",
-            lat: JsonSerializer.Deserialize<FlexibleString>("55.7558"),
-            lon: new FlexibleString { Value = "37.6173" },
-            enclosedBy: JsonSerializer.Deserialize<FlexiblePlaceRefList>("""["region-handle-0001"]"""),
-            client: CreateClient(handler));
-
-        Assert.Contains("""
-            name: "Москва"
-            placeType: "City"
-            lat: "55.7558"
-            lon: "37.6173"
-            enclosedBy: ["region-handle-0001"]
-            ---
-            """.ReplaceLineEndings(), result.ReplaceLineEndings());
-    }
-
-    [Fact]
-    public async Task CreatePlace_Result_Shows_What_A_Dropped_Argument_Left_Unset()
-    {
-        // A client drops type and latitude, which the tool does not have, so only the name arrives.
-        var handler = new PlaceHandler();
-
-        var result = await PlaceTools.CreatePlace("Kraków", client: CreateClient(handler));
-
-        Assert.Contains("""
-            placeType: "Unknown"
-            lat: none
-            lon: none
-            enclosedBy: none
-            """.ReplaceLineEndings(), result.ReplaceLineEndings());
+        Assert.Contains("Place: Warsaw — handle:", result);
+        Assert.DoesNotContain("City", result);
     }
 
     [Fact]
@@ -243,11 +201,11 @@ public class PlaceToolsTests
     }
 
     [Fact]
-    public async Task CreatePlace_Stores_The_Type_In_Its_Known_Spelling()
+    public async Task CreateRecords_Stores_The_Type_In_Its_Known_Spelling()
     {
         var handler = new PlaceHandler();
 
-        await PlaceTools.CreatePlace("Warsaw", placeType: "city", client: CreateClient(handler));
+        await CreatePlace("""{ "name": "Warsaw", "placeType": "city" }""", handler);
 
         Assert.Equal("City", handler.Body!.Value.GetProperty("place_type").GetString());
     }
@@ -283,6 +241,10 @@ public class PlaceToolsTests
         Assert.Equal(year, dateval[2].GetInt32());
     }
 
+    /// <summary>Creates <paramref name="place"/> through create_records.</summary>
+    private static Task<string> CreatePlace(string place, PlaceHandler handler) =>
+        CreateRecordsCall.RunAsync($$"""{ "places": [{{place}}] }""", CreateClient(handler));
+
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
     {
         var config = new GrampsConfig("https://place-tools.test", "user", "pass", "tree");
@@ -291,7 +253,10 @@ public class PlaceToolsTests
         return new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
     }
 
-    /// <summary>Answers the token and type routes, one stored place, and records the mutation body.</summary>
+    /// <summary>
+    /// Answers the token and type routes and one stored place, records the saved place, and answers a create as
+    /// Gramps Web does.
+    /// </summary>
     private sealed class PlaceHandler(string? storedPlace = null) : HttpMessageHandler
     {
         public JsonElement? Body { get; private set; }
@@ -307,10 +272,16 @@ public class PlaceToolsTests
                 json = "{}";
             else if (request.Method == HttpMethod.Get && storedPlace != null)
                 json = storedPlace;
-            else if (request.Method == HttpMethod.Post || request.Method == HttpMethod.Put)
+            else if (request.Method == HttpMethod.Post)
+            {
+                var body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken))!;
+                Body = JsonSerializer.SerializeToElement(CreateRecordsCall.Saved(body, "Place"));
+                json = CreateRecordsCall.Changes(body).ToJsonString();
+            }
+            else if (request.Method == HttpMethod.Put)
             {
                 Body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(cancellationToken)).RootElement.Clone();
-                json = """[{"_class":"Place","type":"add","old":null,"new":{"_class":"Place","handle":"place-h","gramps_id":"P0007"}}]""";
+                json = """[{"_class":"Place","type":"update","old":null,"new":{"_class":"Place","handle":"place-h","gramps_id":"P0007"}}]""";
             }
             else
                 return new HttpResponseMessage(HttpStatusCode.NotFound);

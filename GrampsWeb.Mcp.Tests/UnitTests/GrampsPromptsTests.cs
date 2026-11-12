@@ -12,8 +12,9 @@ public class GrampsPromptsTests
 
         Assert.Contains("Birth: place: Birth City", text);
         Assert.Contains("Death: place: Death City", text);
-        Assert.Contains("create_event", text);
-        Assert.Contains("create_person", text);
+        Assert.Contains("one create_records call", text);
+        Assert.Contains("notDuplicateOf", text);
+        Assert.DoesNotContain("create_person", text);
         Assert.DoesNotContain("quick_add_person", text);
     }
 
@@ -55,7 +56,7 @@ public class GrampsPromptsTests
 
         Assert.Contains("Page/location: 12", text);
         Assert.Contains("Reuse a matching source", text);
-        Assert.Contains("create_citation", text);
+        Assert.Contains("create_records(citations:", text);
         Assert.Contains("citationHandles: [CITATION_HANDLE], linkMode: \"add\"", text);
     }
 

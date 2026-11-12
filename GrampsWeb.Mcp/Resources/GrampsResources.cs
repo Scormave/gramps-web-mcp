@@ -611,7 +611,7 @@ public sealed class GrampsResources
                     "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}",
                     "{\"firstName\":\"Fyodor\",\"surnameList\":[{\"surname\":\"Probnyakin\"},{\"surname\":\"Ivanovich\",\"originType\":\"Patronymic\"}]}"
                 },
-                tools = "create_person (primaryName required), update_person (primaryName optional), create_records (people[].primaryName)"
+                tools = "create_records (people[].primaryName, required), update_person (primaryName optional)"
             },
             alternate_names = new
             {
@@ -625,7 +625,7 @@ public sealed class GrampsResources
                     "[{\"given\":\"Johnny\",\"surname\":\"Smith\",\"type\":\"Also Known As\"}]",
                     "[{\"given\":\"Ivan\",\"patronymic\":\"Petrovich\",\"type\":\"Patronymic\"}]"
                 },
-                tools = "create_person, update_person, create_records (people[].alternateNames)"
+                tools = "create_records (people[].alternateNames), update_person"
             }
         },
         attributes = new
@@ -640,7 +640,7 @@ public sealed class GrampsResources
             },
             sources_and_citations = "Source and citation attributes take only type, value and private; citation_list or note_list on them is rejected.",
             links = "An eventRefs or mediaHandles/attachTo object may carry \"attributes\" of that link in these forms, such as one person's Age at a shared event: {\"ref\":\"EVENT_HANDLE\",\"role\":\"Primary\",\"attributes\":[\"Age: 65\"]}. Omitted keeps the link's stored attributes; [] removes them in replace mode; add mode adds the missing ones to a link already there.",
-            tools = "create_person, update_person, create_event, update_event, create_family, update_family, create_source, update_source, create_citation, update_citation, update_media"
+            tools = "create_records (people, events, families, sources, citations), update_person, update_event, update_family, update_source, update_citation, update_media"
         },
         urls = new
         {
@@ -652,7 +652,7 @@ public sealed class GrampsResources
                 "JSON array of objects {\"type\",\"path\",\"desc\"}",
                 "JSON array of strings or one multiline / |-separated string"
             },
-            tools = "create_person, update_person, create_repository, update_repository, and the people and repositories of create_records"
+            tools = "create_records (people, repositories), update_person, update_repository"
         },
         addresses = new
         {
@@ -665,7 +665,7 @@ public sealed class GrampsResources
                 "JSON array of strings (each string is one address block)",
                 "One multiline JSON string with blocks separated by blank line or ---"
             },
-            tools = "create_person, update_person, create_repository, update_repository, and the people and repositories of create_records"
+            tools = "create_records (people, repositories), update_person, update_repository"
         },
         person_associations = new
         {
@@ -681,7 +681,7 @@ public sealed class GrampsResources
                 "JSON array of objects {\"ref\":\"handle\",\"rel\":\"relationship\",...} (rel or relationship; snake_case or camelCase list fields)",
                 "JSON array of strings or one multiline / |-separated string"
             },
-            tools = "create_person, update_person only (person_ref_list)"
+            tools = "create_records (people[].personAssociations), update_person only (person_ref_list)"
         },
         repository_refs = new
         {
@@ -703,7 +703,7 @@ public sealed class GrampsResources
                 "JSON array of strings [\"REPO123 : A-1 : Book\"]",
                 "One multiline / |-separated string with one repository ref per segment"
             },
-            tools = "create_source, update_source (reporef_list)"
+            tools = "create_records (sources[].repositoryHandles), update_source (reporef_list)"
         }
     };
 
@@ -812,13 +812,13 @@ public sealed class GrampsResources
         },
         tools = new
         {
-            events = "create_event / update_event - date (dashes → range/After)",
-            citations = "create_citation / update_citation - date (dashes → range/After)",
+            events = "create_records events[] / update_event - date (dashes → range/After)",
+            citations = "create_records citations[] / update_citation - date (dashes → range/After)",
             media = "update_media - date (dashes → range/After)",
             places =
-                "create_place / update_place - nameDate / enclosedBy / alternateNames dates (dashes → span/From; parameter is enclosedBy, not enclosedByHandles)",
+                "create_records places[] / update_place - nameDate / enclosedBy / alternateNames dates (dashes → span/From; parameter is enclosedBy, not enclosedByHandles)",
             persons =
-                "create_person / update_person - gender: Female, Male, or Unknown"
+                "create_records people[] / update_person - gender: Female, Male, or Unknown"
         },
         validation =
             "Unrecognized date strings fail validation (no text-only dates from agent input). Fix the format and retry; see examples above."

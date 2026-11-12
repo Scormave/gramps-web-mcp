@@ -19,53 +19,55 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 public class AttributeMetadataTests
 {
     [Fact]
-    public async Task CreatePerson_Sends_Attribute_Citations_Notes_And_Privacy()
+    public async Task CreateRecords_Sends_Person_Attribute_Citations_Notes_And_Privacy()
     {
-        var handler = new RecordingHandler("Person");
+        var handler = new RecordingHandler();
 
-        await PersonTools.CreatePerson(
-            Deserialize<FlexibleGrampsName>("""{ "given": "Ivan", "surname": "Petrov" }"""),
-            attributes: Deserialize<FlexibleAttributeList>("""
-                [{ "type": "Occupation", "value": "Smith", "citation_list": ["c1"], "note_list": ["n1"], "private": true },
-                 "Nickname: Vanya"]
-                """),
-            client: CreateClient(handler));
+        await CreateRecordsCall.RunAsync("""
+            { "people": [{ "primaryName": { "given": "Ivan", "surname": "Petrov" },
+                           "attributes": [{ "type": "Occupation", "value": "Smith", "citation_list": ["c1"], "note_list": ["n1"], "private": true },
+                                          "Nickname: Vanya"] }] }
+            """, CreateClient(handler));
 
         AssertJsonEqual(JsonNode.Parse("""
             [{ "type": "Occupation", "value": "Smith", "citation_list": ["c1"], "note_list": ["n1"], "private": true },
              { "type": "Nickname", "value": "Vanya", "private": false }]
-            """), handler.PostBody!["attribute_list"]);
+            """), CreateRecordsCall.Saved(handler.PostBody, "Person")["attribute_list"]);
     }
 
     [Fact]
-    public async Task CreateSource_Sends_Attribute_Privacy_Without_Empty_Link_Lists()
+    public async Task CreateRecords_Sends_Source_Attribute_Privacy_Without_Empty_Link_Lists()
     {
-        var handler = new RecordingHandler("Source");
+        var handler = new RecordingHandler();
 
-        await SourceTools.CreateSource("Parish register",
-            attributes: Deserialize<FlexibleAttributeList>("""[{ "type": "Pages", "value": "120", "citation_list": [], "private": true }]"""),
-            client: CreateClient(handler));
+        await CreateRecordsCall.RunAsync("""
+            { "sources": [{ "title": "Parish register",
+                            "attributes": [{ "type": "Pages", "value": "120", "citation_list": [], "private": true }] }] }
+            """, CreateClient(handler));
 
         AssertJsonEqual(JsonNode.Parse("""[{ "type": "Pages", "value": "120", "private": true }]"""),
-            handler.PostBody!["attribute_list"]);
+            CreateRecordsCall.Saved(handler.PostBody, "Source")["attribute_list"]);
     }
 
     [Theory]
-    [InlineData("create_source")]
+    [InlineData("sources")]
     [InlineData("update_source")]
-    [InlineData("create_citation")]
+    [InlineData("citations")]
     [InlineData("update_citation")]
     public async Task Source_And_Citation_Attributes_With_Citations_Or_Notes_Are_Rejected_Before_Anything_Is_Sent(string tool)
     {
-        var handler = new RecordingHandler(tool.EndsWith("source") ? "Source" : "Citation");
+        var handler = new RecordingHandler();
         var client = CreateClient(handler);
-        var attributes = Deserialize<FlexibleAttributeList>("""[{ "type": "Pages", "value": "120", "note_list": ["n1"] }]""");
+        const string attributesJson = """[{ "type": "Pages", "value": "120", "note_list": ["n1"] }]""";
+        var attributes = Deserialize<FlexibleAttributeList>(attributesJson);
 
         var error = await Assert.ThrowsAsync<McpException>(() => tool switch
         {
-            "create_source" => SourceTools.CreateSource("Parish register", attributes: attributes, client: client),
+            "sources" => CreateRecordsCall.RunAsync(
+                $$"""{ "sources": [{ "title": "Parish register", "attributes": {{attributesJson}} }] }""", client),
             "update_source" => SourceTools.UpdateSource("h-source", attributes: attributes, client: client),
-            "create_citation" => CitationTools.CreateCitation("h-source", attributes: attributes, client: client),
+            "citations" => CreateRecordsCall.RunAsync(
+                $$"""{ "citations": [{ "sourceHandle": "h-source", "attributes": {{attributesJson}} }] }""", client),
             _ => CitationTools.UpdateCitation("h-citation", attributes: attributes, client: client)
         });
 
@@ -88,10 +90,10 @@ public class AttributeMetadataTests
     }
 
     /// <summary>
-    /// Answers the token route and the type vocabularies (empty, so attribute types go unchecked), records every other
-    /// request and answers a create with a new object of <paramref name="grampsClass"/>.
+    /// Answers the token route, the type vocabularies (empty, so attribute types go unchecked) and the duplicate
+    /// check's people searches (none found), records every other request and answers a create as Gramps Web does.
     /// </summary>
-    private sealed class RecordingHandler(string grampsClass) : HttpMessageHandler
+    private sealed class RecordingHandler : HttpMessageHandler
     {
         public List<string> Requests { get; } = [];
 
@@ -103,13 +105,15 @@ public class AttributeMetadataTests
                 return Json("""{"access_token":"token","refresh_token":"refresh","expires_in":900}""");
             if (request.RequestUri.AbsolutePath.StartsWith("/api/types/"))
                 return Json("{}");
+            if (request.Method == HttpMethod.Get && request.RequestUri.AbsolutePath == "/api/people/")
+                return Json("[]");
 
             Requests.Add($"{request.Method} {request.RequestUri.AbsolutePath}");
             if (request.Method != HttpMethod.Post)
                 return new HttpResponseMessage(HttpStatusCode.NotFound);
 
             PostBody = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
-            return Json($$"""[{ "_class": "{{grampsClass}}", "type": "add", "old": null, "new": { "_class": "{{grampsClass}}", "handle": "h-new", "gramps_id": "X0001" } }]""");
+            return Json(CreateRecordsCall.Changes(PostBody!).ToJsonString());
         }
 
         private static HttpResponseMessage Json(string json) =>

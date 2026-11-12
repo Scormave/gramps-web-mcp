@@ -10,7 +10,7 @@ public sealed class DeleteTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task Delete_UnlinkedRecord()
     {
-        var note = await Session.CreateAsync("create_note", new { text = TestNames.Unique("note") });
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
 
         var deleted = await Session.CallAsync("delete_records", new { identifiers = new[] { note.GrampsId } });
 
@@ -22,8 +22,8 @@ public sealed class DeleteTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task Delete_LinkedRecord_IsRefusedUntilForced()
     {
-        var birth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1901" });
-        var person = await Session.CreateAsync("create_person", new
+        var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1901" });
+        var person = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Ivan", surname = TestNames.Surname() },
             eventRefs = new[] { $"{birth.Handle}::Primary" }

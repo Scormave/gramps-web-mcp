@@ -20,60 +20,59 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 public class KnownTypeTests
 {
     [Fact]
-    public async Task CreatePerson_Stores_Name_Types_And_Origins_In_Their_Known_Spelling()
+    public async Task CreateRecords_Stores_Name_Types_And_Origins_In_Their_Known_Spelling()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await PersonTools.CreatePerson(
-            Name("""{ "given": "Ivan", "surname": "Petrov", "type": "married name", "origin_type": "unknown" }"""),
-            alternateNames: Deserialize<FlexibleAlternateNameList>("""["also known as:: Ivan|Petrov"]"""),
-            client: CreateClient(handler));
+        await CreateRecords("""
+            { "people": [{ "primaryName": { "given": "Ivan", "surname": "Petrov", "type": "married name", "origin_type": "unknown" },
+                           "alternateNames": ["also known as:: Ivan|Petrov"] }] }
+            """, handler);
 
-        var primary = handler.Body!["primary_name"]!;
+        var person = CreateRecordsCall.Saved(handler.Body, "Person");
+        var primary = person["primary_name"]!;
         Assert.Equal("Married Name", primary["type"]!.GetValue<string>());
         // Gramps spells the unknown origin with a trailing space and reads anything else as a new custom origin.
         Assert.Equal("Unknown ", primary["surname_list"]![0]!["origintype"]!.GetValue<string>());
-        Assert.Equal("Also Known As", handler.Body["alternate_names"]![0]!["type"]!.GetValue<string>());
+        Assert.Equal("Also Known As", person["alternate_names"]![0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
-    public async Task CreatePerson_Rejects_An_Origin_Gramps_Would_Store_As_A_New_Custom_One()
+    public async Task CreateRecords_Rejects_An_Origin_Gramps_Would_Store_As_A_New_Custom_One()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        var error = await Assert.ThrowsAsync<McpException>(() => PersonTools.CreatePerson(
-            Name("""{ "given": "Ivan", "surname": "Petrov", "origin_type": "Custom" }"""), client: CreateClient(handler)));
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords(
+            """{ "people": [{ "primaryName": { "given": "Ivan", "surname": "Petrov", "origin_type": "Custom" } }] }""", handler));
 
-        Assert.StartsWith("primaryName: Invalid name origin types 'Custom'.", error.Message);
+        Assert.StartsWith("Error: people[0]: primaryName: Invalid name origin types 'Custom'.", error.Message);
         Assert.Null(handler.Body);
     }
 
     [Fact]
-    public async Task CreatePerson_Stores_Attribute_And_Url_Types_In_Their_Known_Spelling()
+    public async Task CreateRecords_Stores_Attribute_And_Url_Types_In_Their_Known_Spelling()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await PersonTools.CreatePerson(
-            Name(),
-            attributes: Deserialize<FlexibleAttributeList>("""["nationality: Polish", "nickname: Vanya"]"""),
-            urls: Deserialize<FlexibleUrlList>("""[{ "type": "web home", "path": "https://example.org" }]"""),
-            client: CreateClient(handler));
+        await CreateRecords($$"""
+            { "people": [{ "primaryName": {{Ivan}}, "attributes": ["nationality: Polish", "nickname: Vanya"],
+                           "urls": [{ "type": "web home", "path": "https://example.org" }] }] }
+            """, handler);
 
-        Assert.Equal(
-            ["Nationality", "Nickname"],
-            handler.Body!["attribute_list"]!.AsArray().Select(a => a!["type"]!.GetValue<string>()));
-        Assert.Equal("Web Home", handler.Body["urls"]![0]!["type"]!.GetValue<string>());
+        var person = CreateRecordsCall.Saved(handler.Body, "Person");
+        Assert.Equal(["Nationality", "Nickname"], person["attribute_list"]!.AsArray().Select(a => a!["type"]!.GetValue<string>()));
+        Assert.Equal("Web Home", person["urls"]![0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
-    public async Task CreatePerson_Rejects_A_Misspelt_Attribute_Type_Before_Saving()
+    public async Task CreateRecords_Rejects_A_Misspelt_Attribute_Type_Before_Saving()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        var error = await Assert.ThrowsAsync<McpException>(() => PersonTools.CreatePerson(
-            Name(), attributes: Deserialize<FlexibleAttributeList>("""["Nationalty: Polish"]"""), client: CreateClient(handler)));
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords(
+            $$"""{ "people": [{ "primaryName": {{Ivan}}, "attributes": ["Nationalty: Polish"] }] }""", handler));
 
-        Assert.StartsWith("attributes: Invalid attribute types 'Nationalty'.", error.Message);
+        Assert.StartsWith("Error: people[0]: attributes: Invalid attribute types 'Nationalty'.", error.Message);
         Assert.Contains("Nationality", error.Message);
         Assert.Null(handler.Body);
     }
@@ -93,48 +92,46 @@ public class KnownTypeTests
     }
 
     [Fact]
-    public async Task CreateFamily_Accepts_A_Custom_Attribute_Type_The_Tree_Uses_On_People()
+    public async Task CreateRecords_Accepts_A_Family_Attribute_Type_The_Tree_Uses_On_People()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await FamilyTools.CreateFamily(
-            attributes: Deserialize<FlexibleAttributeList>("""["patronymic: Ivanovich"]"""), client: CreateClient(handler));
+        await CreateRecords("""{ "families": [{ "attributes": ["patronymic: Ivanovich"] }] }""", handler);
 
-        Assert.Equal("Patronymic", handler.Body!["attribute_list"]![0]!["type"]!.GetValue<string>());
+        Assert.Equal("Patronymic", CreateRecordsCall.Saved(handler.Body, "Family")["attribute_list"]![0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
-    public async Task CreateFamily_Stores_Child_Relations_In_Their_Known_Spelling()
+    public async Task CreateRecords_Stores_Child_Relations_In_Their_Known_Spelling()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await FamilyTools.CreateFamily(
-            childRefs: Deserialize<FlexibleChildRefList>("""["h-child::adopted"]"""), client: CreateClient(handler));
+        await CreateRecords("""{ "families": [{ "childRefs": ["h-child::adopted"] }] }""", handler);
 
-        var childRef = handler.Body!["child_ref_list"]![0]!;
+        var childRef = CreateRecordsCall.Saved(handler.Body, "Family")["child_ref_list"]![0]!;
         Assert.Equal("Adopted", childRef["frel"]!.GetValue<string>());
         Assert.Equal("Adopted", childRef["mrel"]!.GetValue<string>());
     }
 
     [Fact]
-    public async Task CreateFamily_Without_A_Relationship_Type_Stores_Unknown_As_Gramps_Does()
+    public async Task CreateRecords_Family_Without_A_Relationship_Type_Stores_Unknown_As_Gramps_Does()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await FamilyTools.CreateFamily(fatherHandle: "h-father", client: CreateClient(handler));
+        await CreateRecords("""{ "families": [{ "fatherHandle": "h-father" }] }""", handler);
 
-        Assert.Equal("Unknown", handler.Body!["type"]!.GetValue<string>());
+        Assert.Equal("Unknown", CreateRecordsCall.Saved(handler.Body, "Family")["type"]!.GetValue<string>());
     }
 
     [Fact]
-    public async Task CreateFamily_Rejects_A_Misspelt_Child_Relation_Before_Saving()
+    public async Task CreateRecords_Rejects_A_Misspelt_Child_Relation_Before_Saving()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        var error = await Assert.ThrowsAsync<McpException>(() => FamilyTools.CreateFamily(
-            childRefs: Deserialize<FlexibleChildRefList>("""["h-child::Adoptd"]"""), client: CreateClient(handler)));
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords(
+            """{ "families": [{ "childRefs": ["h-child::Adoptd"] }] }""", handler));
 
-        Assert.StartsWith("childRefs: Invalid child reference types 'Adoptd'. Did you mean: Adopted?", error.Message);
+        Assert.StartsWith("Error: families[0]: childRefs: Invalid child reference types 'Adoptd'. Did you mean: Adopted?", error.Message);
         Assert.Null(handler.Body);
     }
 
@@ -160,29 +157,28 @@ public class KnownTypeTests
     }
 
     [Fact]
-    public async Task CreateEvent_Stores_Attribute_Types_In_Their_Known_Spelling()
+    public async Task CreateRecords_Stores_Event_Attribute_Types_In_Their_Known_Spelling()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await EventTools.CreateEvent(
-            "Birth", attributes: Deserialize<FlexibleAttributeList>("""["father age: 34"]"""), client: CreateClient(handler));
+        await CreateRecords("""{ "events": [{ "eventType": "Birth", "attributes": ["father age: 34"] }] }""", handler);
 
-        Assert.Equal("Father Age", handler.Body!["attribute_list"]![0]!["type"]!.GetValue<string>());
+        Assert.Equal("Father Age", CreateRecordsCall.Saved(handler.Body, "Event")["attribute_list"]![0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
-    public async Task CreateSource_Stores_Source_Attribute_And_Media_Types_In_Their_Known_Spelling()
+    public async Task CreateRecords_Stores_Source_Attribute_And_Media_Types_In_Their_Known_Spelling()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await SourceTools.CreateSource(
-            "Metrical book",
-            repositoryHandles: Deserialize<FlexibleRepositoryRefList>("""[{ "ref": "h-repo", "media_type": "book" }]"""),
-            attributes: Deserialize<FlexibleAttributeList>("""["status: draft"]"""),
-            client: CreateClient(handler));
+        await CreateRecords("""
+            { "sources": [{ "title": "Metrical book", "repositoryHandles": [{ "ref": "h-repo", "media_type": "book" }],
+                            "attributes": ["status: draft"] }] }
+            """, handler);
 
-        Assert.Equal("Book", handler.Body!["reporef_list"]![0]!["media_type"]!.GetValue<string>());
-        Assert.Equal("Status", handler.Body["attribute_list"]![0]!["type"]!.GetValue<string>());
+        var source = CreateRecordsCall.Saved(handler.Body, "Source");
+        Assert.Equal("Book", source["reporef_list"]![0]!["media_type"]!.GetValue<string>());
+        Assert.Equal("Status", source["attribute_list"]![0]!["type"]!.GetValue<string>());
     }
 
     [Fact]
@@ -198,8 +194,10 @@ public class KnownTypeTests
         Assert.DoesNotContain(handler.Requests, path => path.StartsWith("/api/citations/", StringComparison.Ordinal));
     }
 
-    private static FlexibleGrampsName Name(string json = """{ "given": "Ivan", "surname": "Petrov" }""") =>
-        Deserialize<FlexibleGrampsName>(json);
+    private const string Ivan = """{ "given": "Ivan", "surname": "Petrov" }""";
+
+    private static Task<string> CreateRecords(string json, TreeHandler handler) =>
+        CreateRecordsCall.RunAsync(json, CreateClient(handler));
 
     private static T Deserialize<T>(string json) => JsonSerializer.Deserialize<T>(json)!;
 
@@ -258,6 +256,7 @@ public class KnownTypeTests
             {
                 "/api/types/default/" => Json(DefaultTypes),
                 "/api/types/custom/" => Json("""{ "person_attribute_types": ["Nationality", "Patronymic"] }"""),
+                _ when path.StartsWith("/api/people/?rules=", StringComparison.Ordinal) => Json("[]"),
                 _ => bodies.TryGetValue(path, out var body) ? Json(body) : new HttpResponseMessage(HttpStatusCode.NotFound)
             };
         }

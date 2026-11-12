@@ -8,8 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- `create_records` creates tags: `tags` takes records with the fields
-  of `create_tag` and a `key`, saved first, and the other records of
+- `create_records` creates tags: `tags` takes records with a name,
+  color, priority and `key`, saved first, and the other records of
   the call link them through `tagHandles` with `"#key"`. A tag name the
   tree or the call already has, ignoring case, stops the call before
   saving, and the error gives the existing tag's handle. A new tag no
@@ -44,11 +44,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   arguments. It uploads the file in its own transaction, apart from
   `create_records`, which takes no media; a `"#key"` in `mediaHandles`
   points to `upload_media`
+- **Breaking:** `create_person`, `create_family`, `create_event`,
+  `create_place`, `create_source`, `create_citation`, `create_note`,
+  `create_repository` and `create_tag` are removed: `create_records`
+  creates every type of record, one or many in one call, with the same
+  fields, checks and duplicate check of new people. A person's
+  `familyHandles` and `parentFamilyHandles` are not set on creation:
+  pass the person in the family's `fatherHandle`, `motherHandle` or
+  `childRefs`, or add them to an existing family with `update_family`
+  and `linkMode: "add"`. The catalog now
+  has up to 26 tools. The `add-person` and `add-family` prompts and the
+  `cite-fact` prompt use `create_records`
 - `merge_objects` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
 
 ### Fixed
 
+- The `format` of a note record in `create_records` was described as
+  Plain or Preformatted; it is Plain or Html
 - `undo_change` named the type of a deleted event, note, place,
   repository or family wrongly, such as a birth as a christening:
   Gramps stores the type as a number, and it was looked up by its

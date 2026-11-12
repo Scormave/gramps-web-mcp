@@ -12,7 +12,7 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     public async Task Search_FindsPersonBySurname()
     {
         var surname = TestNames.Surname();
-        var person = await Session.CreateAsync("create_person", new { primaryName = new { first = "Ivan", surname } });
+        var person = await Session.CreateAsync("people", new { primaryName = new { first = "Ivan", surname } });
 
         var found = await Session.CallAsync("search", new { query = surname });
 
@@ -24,8 +24,8 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     public async Task ListObjects_FiltersWithGql()
     {
         var first = TestNames.Surname();
-        var match = await Session.CreateAsync("create_person", new { primaryName = new { first, surname = TestNames.Surname() } });
-        await Session.CreateAsync("create_person", new { primaryName = new { first = TestNames.Surname(), surname = TestNames.Surname() } });
+        var match = await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() } });
+        await Session.CreateAsync("people", new { primaryName = new { first = TestNames.Surname(), surname = TestNames.Surname() } });
 
         var listed = await Session.CallAsync("list_objects", new { objectType = "people", gql = $"primary_name.first_name = {first}" });
 
@@ -36,7 +36,7 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task ListObjects_FindsByGrampsId()
     {
-        var note = await Session.CreateAsync("create_note", new { text = TestNames.Unique("note") });
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
 
         var listed = await Session.CallAsync("list_objects", new { objectType = "notes", grampsId = note.GrampsId });
 
@@ -49,8 +49,8 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     public async Task ListObjects_GqlComparesWithOneEqualsSignAndQuotedText()
     {
         var first = TestNames.Surname();
-        var man = await Session.CreateAsync("create_person", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "male" });
-        await Session.CreateAsync("create_person", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "female" });
+        var man = await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "male" });
+        await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "female" });
 
         var listed = await Session.CallAsync("list_objects", new { objectType = "people", gql = $"gender = 1 and primary_name.first_name = \"{first}\"" });
         var error = await Session.CallErrorAsync("list_objects", new { objectType = "people", gql = $"gender == 1 and primary_name.first_name = \"{first}\"" });
@@ -64,7 +64,7 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     public async Task ListObjects_GqlMatchesEventTypesByNumber()
     {
         var description = TestNames.Unique("birth");
-        var birth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1901", description });
+        var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1901", description });
 
         var byNumber = await Session.CallAsync("list_objects", new { objectType = "events", gql = $"type.value = 12 and description = \"{description}\"" });
         var byName = await Session.CallAsync("list_objects", new { objectType = "events", gql = $"type = \"Birth\" and description = \"{description}\"" });
@@ -93,7 +93,7 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task RecentChanges_ShowTheLatestEdit()
     {
-        var person = await Session.CreateAsync("create_person", new { primaryName = new { first = "Olga", surname = TestNames.Surname() } });
+        var person = await Session.CreateAsync("people", new { primaryName = new { first = "Olga", surname = TestNames.Surname() } });
 
         var changes = await Session.CallAsync("get_recent_changes", new { limit = 1 });
 

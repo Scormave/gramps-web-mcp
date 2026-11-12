@@ -66,10 +66,9 @@ When the user asks to change the tree:
 4. After the change, report what was created or updated, including Gramps IDs and handles when available.
 
 Write tools:
-- create_person, create_family, create_event, create_place, create_source, create_citation, create_note, create_repository, create_tag.
+- create_records creates new records of every kind: tags, repositories, places, sources, notes, citations, events, people and families, one or many in one call. Records of the call link each other by "#key" (a citation's sourceHandle "#src", a person's eventRefs ["#birth"], a family's fatherHandle "#ivan" and childRefs ["#petr"]); Gramps Web saves them all or none in one transaction, and one undo_change removes them. Up to 50 records per call; people join families only through the family.
 - update_* tools for changing existing objects.
-- To add an event to a person: find or create the place, create_event, then update_person with eventRefs and linkMode "add".
-- To enter many linked records at once, such as a family from one register entry with its source, citation and events: create_records. Records of the call link each other by "#key" (a citation's sourceHandle "#src", a person's eventRefs ["#birth"], a family's fatherHandle "#ivan" and childRefs ["#petr"]); Gramps Web saves them all or none in one transaction, and one undo_change removes them. Up to 50 records per call; people join families only through the family.
+- To add an event to a person: search for the place, create_records with the event (and the place when it is new), then update_person with eventRefs and linkMode "add".
 - delete_records only after explicit confirmation of those exact records; force only after a separate confirmation, since Gramps Web then removes the links from other records.
 - undo_change reverts one transaction from get_recent_changes, deletions included, only after the user confirmed that transaction. dryRun shows what it would change. If it reports conflicts, undo the later transactions first, newest first; force=true only after a separate confirmation.
 - In some clients these two tools also show the user a confirmation dialog. A reply with action declined or cancelled means the user said no there and nothing changed: do not call again unless the user asks.

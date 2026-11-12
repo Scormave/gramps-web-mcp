@@ -13,7 +13,7 @@ public sealed class RecordBatchTests(GrampsWebFixture gramps)
     {
         var surname = TestNames.Surname();
         var title = TestNames.Surname() + " metric book";
-        var mother = await Session.CreateAsync("create_person", new
+        var mother = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Maria", surname = TestNames.Surname() },
             gender = "female"

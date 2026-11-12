@@ -17,57 +17,52 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 public class EventRoleTests
 {
     [Fact]
-    public async Task CreatePerson_Rejects_A_Misspelt_Role_Before_Saving()
+    public async Task CreateRecords_Rejects_A_Misspelt_Role_Before_Saving()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        var error = await Assert.ThrowsAsync<McpException>(() => PersonTools.CreatePerson(
-            Name(), eventRefs: Refs("""["e-birth", "e-baptism::Witnes"]"""), client: CreateClient(handler)));
+        var error = await Assert.ThrowsAsync<McpException>(() => CreatePerson("""["e-birth", "e-baptism::Witnes"]""", handler));
 
-        Assert.StartsWith("eventRefs: Invalid event role types 'Witnes'. Did you mean: Witness?", error.Message);
+        Assert.StartsWith("Error: people[0]: eventRefs: Invalid event role types 'Witnes'. Did you mean: Witness?", error.Message);
         Assert.Null(handler.Body);
     }
 
     [Fact]
-    public async Task CreatePerson_Stores_Roles_In_Their_Known_Spelling()
+    public async Task CreateRecords_Stores_Roles_In_Their_Known_Spelling()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await PersonTools.CreatePerson(
-            Name(),
-            eventRefs: Refs("""["e-baptism:: witness", { "ref": "e-baptism-2", "role": "восприемник" }]"""),
-            client: CreateClient(handler));
+        await CreatePerson("""["e-baptism:: witness", { "ref": "e-baptism-2", "role": "восприемник" }]""", handler);
 
         Assert.Equal(
             ["Witness", "Восприемник"],
-            handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
+            CreateRecordsCall.Saved(handler.Body, "Person")["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
     }
 
     [Fact]
-    public async Task CreatePerson_Gives_A_Bare_Handle_The_Primary_Role()
+    public async Task CreateRecords_Gives_A_Persons_Bare_Event_Handle_The_Primary_Role()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await PersonTools.CreatePerson(
-            Name(), eventRefs: Refs("""["e-birth", "e-baptism::Witness"]"""), client: CreateClient(handler));
+        await CreatePerson("""["e-birth", "e-baptism::Witness"]""", handler);
 
         Assert.Equal(
             ["Primary", "Witness"],
-            handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
+            CreateRecordsCall.Saved(handler.Body, "Person")["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
     }
 
     [Fact]
-    public async Task CreateFamily_Gives_Event_Links_Without_A_Role_The_Family_Role()
+    public async Task CreateRecords_Gives_Family_Event_Links_Without_A_Role_The_Family_Role()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await FamilyTools.CreateFamily(
-            eventRefs: Refs("""["e-marriage", { "ref": "e-banns" }, "e-engagement::primary"]"""),
-            client: CreateClient(handler));
+        await CreateRecordsCall.RunAsync(
+            """{ "families": [{ "eventRefs": ["e-marriage", { "ref": "e-banns" }, "e-engagement::primary"] }] }""",
+            CreateClient(handler));
 
         Assert.Equal(
             ["Family", "Family", "Primary"],
-            handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
+            CreateRecordsCall.Saved(handler.Body, "Family")["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
     }
 
     [Fact]
@@ -146,8 +141,10 @@ public class EventRoleTests
         Assert.Equal(["e-birth"], handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["ref"]!.GetValue<string>()));
     }
 
-    private static FlexibleGrampsName Name() =>
-        JsonSerializer.Deserialize<FlexibleGrampsName>("""{ "given": "Ivan", "surname": "Petrov" }""")!;
+    /// <summary>Creates Ivan Petrov with <paramref name="eventRefs"/> through create_records.</summary>
+    private static Task<string> CreatePerson(string eventRefs, TreeHandler handler) => CreateRecordsCall.RunAsync(
+        $$"""{ "people": [{ "primaryName": { "given": "Ivan", "surname": "Petrov" }, "eventRefs": {{eventRefs}} }] }""",
+        CreateClient(handler));
 
     private static FlexibleEventRefList Refs(string json) => JsonSerializer.Deserialize<FlexibleEventRefList>(json)!;
 
@@ -160,8 +157,8 @@ public class EventRoleTests
     }
 
     /// <summary>
-    /// Serves the role vocabularies (one custom role) and bodies by path and query (404 otherwise), and records the
-    /// POST or PUT body.
+    /// Serves the role vocabularies (one custom role), no people for the duplicate check and bodies by path and query
+    /// (404 otherwise), and records the POST or PUT body.
     /// </summary>
     private sealed class TreeHandler(IReadOnlyDictionary<string, string> bodies) : HttpMessageHandler
     {
@@ -181,17 +178,14 @@ public class EventRoleTests
             if (request.Method == HttpMethod.Post || request.Method == HttpMethod.Put)
             {
                 Body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
-                return Json(request.Method == HttpMethod.Put
-                    ? "{}"
-                    : path.StartsWith("/api/families/", StringComparison.Ordinal)
-                        ? """[{ "_class": "Family", "type": "add", "old": null, "new": { "_class": "Family", "handle": "h-new", "gramps_id": "F0001" } }]"""
-                        : """[{ "_class": "Person", "type": "add", "old": null, "new": { "_class": "Person", "handle": "h-new", "gramps_id": "I0001" } }]""");
+                return Json(request.Method == HttpMethod.Put ? "{}" : CreateRecordsCall.Changes(Body!).ToJsonString());
             }
 
             return path switch
             {
                 "/api/types/default/" => Json("""{ "event_role_types": ["Unknown", "Primary", "Witness", "Godparent", "Father", "Mother", "Family"] }"""),
                 "/api/types/custom/" => Json("""{ "event_role_types": ["Восприемник"] }"""),
+                _ when path.StartsWith("/api/people/?rules=", StringComparison.Ordinal) => Json("[]"),
                 _ => bodies.TryGetValue(path, out var body) ? Json(body) : new HttpResponseMessage(HttpStatusCode.NotFound)
             };
         }

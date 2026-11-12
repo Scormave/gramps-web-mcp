@@ -126,63 +126,7 @@ public static class EventTools
         return parts.Length == 0 ? null : string.Join("; ", parts);
     }
 
-    [McpServerTool(Title = "Create Event", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create a standalone event (Birth, Marriage, Residence, Census, …) with its date, place, description, citations, " +
-        "notes and media. Returns the new handle, Gramps ID and type, with next steps. The event is linked to nobody yet: " +
-        "attach it with update_person or update_family (eventRefs, linkMode add), which keeps their other events; several people " +
-        "can share one event, each with their own role. The role is stored on their eventRefs (HANDLE::Role, default Primary " +
-        "on a person and Family on a family), " +
-        "not on the event, and a Birth or Death becomes a person's birth or death only in the Primary role. " +
-        "The place must exist: find it with search or create it with create_place. " +
-        "A dated range such as 1890-1900 means the event happened once, some time within it; for something that " +
-        "lasted, such as a Residence or Occupation, write from 1890 to 1900. A register that gives both birth and " +
-        "baptism makes two events, Birth and Baptism. Citations, notes, media, tags and attributes passed here belong " +
-        "to the event and show for everyone who shares it; one participant's own details, such as their Age, go on " +
-        "that person's eventRefs entry ({ref, role, attributes:[\"Age: 65\"]}). " +
-        "Change an existing event with update_event. " +
-        "An unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
-        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
-    public static async Task<string> CreateEvent(
-        [Description("Event type, e.g. Birth, Baptism, Death, Burial, Marriage, Residence, Occupation. " + ToolDescriptionFragments.KnownType)]
-        string eventType,
-        [Description("When it happened, optional. " + ToolDescriptionFragments.DateText)]
-        string? date = null,
-        [Description("Where it happened, optional; the place must exist (create_place). " + ToolDescriptionFragments.HandleDiscovery)]
-        string? placeHandle = null,
-        [Description("Short description, optional.")]
-        string? description = null,
-        [Description("Citations supporting the event. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? citationHandles = null,
-        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? tagHandles = null,
-        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
-        FlexibleMediaLinkList? mediaHandles = null,
-        [Description(FlexibleAttributeList.DescriptionHint)]
-        FlexibleAttributeList? attributes = null,
-        [Description("Mark the event private (default false).")]
-        bool isPrivate = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var request = await BuildEventRequestAsync(eventType, date, placeHandle, description,
-                citationHandles, noteHandles, tagHandles, mediaHandles, attributes, isPrivate, client);
-            var (handle, grampsId) = await client.PostMutationAsync("/api/events/", request, "Event");
-            var typeLabel = await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, request.Type);
-            return ResponseEnvelope.CreateSuccess(
-                "Event", handle, grampsId,
-                typeLabel, ResponseEnvelope.EventCreateNextSteps(handle!));
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    /// <summary>The checked request body of create_event; create_records sends it too.</summary>
+    /// <summary>The checked request body of a new event for create_records.</summary>
     internal static async Task<CreateEventRequest> BuildEventRequestAsync(
         string eventType, string? date, string? placeHandle, string? description,
         FlexibleHandleList? citationHandles, FlexibleHandleList? noteHandles, FlexibleHandleList? tagHandles,
@@ -221,7 +165,7 @@ public static class EventTools
         "Change an existing event's type, date, place, description, attributes or links to citations, notes, media and tags; " +
         "everyone who shares the event sees the change. Who takes part is not set here: add or remove the event in a person's " +
         "or family's eventRefs with update_person or update_family, which also hold each participant's role. " +
-        "For a new event use create_event; to remove one, delete_records. An empty string clears date, and attributes " +
+        "For a new event use create_records; to remove one, delete_records. An empty string clears date, and attributes " +
         "replace the whole list whatever linkMode says. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing event returns a not-found message, and an unknown type or unreadable " +
         "date is rejected before anything is saved. " +

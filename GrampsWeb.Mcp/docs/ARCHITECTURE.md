@@ -37,7 +37,7 @@ gramps-web-mcp.sln
 │   ├── Input/              — Flexible* types (agent-friendly deserialization)
 │   ├── Logging/            — GRAMPS_LOG_LEVEL parsing, one-line console formatter
 │   ├── Models/             — Gramps entity DTOs
-│   ├── Requests/           — create/update request DTOs
+│   ├── Requests/           — request DTOs of new records
 │   ├── Prompts/            — MCP workflow prompts (add-person, research-person, …)
 │   ├── Resources/          — MCP resources (gramps://* reference data, media previews)
 │   ├── Serialization/      — JSON converters, wire-format adapters
@@ -169,10 +169,10 @@ one Gramps transaction: `create_records` sends many new records to
 history, both applied by Gramps Web all or nothing. Multi-step workflows live
 in the MCP prompts and next-step hints.
 
-`RecordBatchTools.cs` builds each record with the checks of its create tool:
+`RecordBatchTools.cs` builds each record with the checks of its update tool:
 the `Build*RequestAsync` methods of `PersonTools`, `EventTools`, … turn the
-arguments into the request body that both the single create tool and
-`create_records` send. `create_records` then gives every record a new handle,
+record's fields into its request body. `create_records` then gives every
+record a new handle,
 replaces each `"#key"` with the handle of the record it names, and posts the
 whole array.
 
@@ -408,9 +408,9 @@ model type and an `implicit operator` cast.
 
 ### 6. Requests (`Requests/`)
 
-DTOs for POST/PUT operations.  Mirror the Gramps Web JSON schema with
-`_class`, optional `handle`/`gramps_id`/`change`, and snake_case naming.
-`GrampsRequestMapping` maps tool input to create request DTOs. Update tools
+DTOs for the new records `create_records` posts.  Mirror the Gramps Web JSON
+schema with `_class`, optional `handle`/`gramps_id`/`change`, and snake_case
+naming. `GrampsRequestMapping` maps tool input to these DTOs. Update tools
 do not use them for the whole body: `GrampsObjectPatch` (in `Tools/`) GETs
 the stored JSON, changes only the supplied fields and PUTs it back, because
 Gramps Web replaces the whole object on `PUT`.
@@ -425,7 +425,7 @@ Convert models into human-readable text for MCP tool responses.  Strategy:
 - indented JSON fallback for dynamic payloads (`JsonResponseFormatter`)
 - `ResponseEnvelope` adds machine-readable YAML-like headers with type,
   handle, gramps_id, and action metadata to tool responses, plus suggested
-  next-step hints for create operations; place tools add the stored type,
+  next-step hints after an upload; `update_place` adds the stored type,
   coordinates and enclosing places, so an argument the client dropped shows
   as a value that was not set
 

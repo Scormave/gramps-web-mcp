@@ -12,12 +12,12 @@ using static GrampsWeb.Mcp.Tools.PersonNameMatching;
 namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
-/// The duplicate check of create_person and create_records, and the comparison find_duplicates shares. Gramps Web's
+/// The duplicate check of create_records, and the comparison find_duplicates shares. Gramps Web's
 /// RegExpName rule selects the people whose names hold one of the new person's surname stems and given names, in
 /// either alphabet, in one request (see <see cref="PersonNameMatching"/>); they are then compared here. Anyone of the other gender, with another
 /// patronymic, born or dead more than five years apart, or dead before the other was born is dropped. A birth within
-/// two years, or the same parents when there are no two years to compare, makes a strong match, which the create
-/// tools refuse; the others are reported as similar people.
+/// two years, or the same parents when there are no two years to compare, makes a strong match, which
+/// create_records refuses; the others are reported as similar people.
 /// </summary>
 internal static partial class DuplicatePeople
 {
@@ -266,82 +266,6 @@ internal static partial class DuplicatePeople
     /// <summary>A quoted list of identifiers for <c>notDuplicateOf</c>: <c>["I0012", "I0013"]</c>.</summary>
     internal static string IdentifierList(IEnumerable<Candidate> candidates) =>
         $"[{string.Join(", ", candidates.Select(c => $"\"{Identifier(c)}\""))}]";
-
-    /// <summary>
-    /// The create_person reply when a strong match stops it: the possible duplicates, the other similar people,
-    /// and how to go on either way.
-    /// </summary>
-    internal static string Refusal(string? name, CheckResult result)
-    {
-        var strong = result.Strong;
-        var weak = result.Weak;
-        var sb = new StringBuilder();
-        sb.AppendLine("---");
-        sb.AppendLine("type: Person");
-        sb.AppendLine("action: refused");
-        sb.AppendLine($"name: {ResponseEnvelope.HeaderValue(name)}");
-        sb.AppendLine($"duplicates: {strong.Count}");
-        sb.AppendLine("---");
-        sb.AppendLine();
-        sb.AppendLine($"Did not create {(string.IsNullOrWhiteSpace(name) ? "the person" : name.Trim())}: " +
-                      "the tree may already have this person.");
-        sb.AppendLine();
-        sb.AppendLine($"Possible duplicates ({strong.Count}):");
-        AppendCandidates(sb, strong);
-        if (weak.Count > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"Similar people ({weak.Count}):");
-            AppendCandidates(sb, weak);
-        }
-
-        if (result.Partial)
-        {
-            sb.AppendLine();
-            sb.AppendLine(PartialNote(result));
-        }
-
-        sb.AppendLine();
-        sb.AppendLine("Next steps:");
-        sb.AppendLine($"  • Compare: get_object(objectType: \"person\", identifier: \"{Identifier(strong[0])}\", extended: true).");
-        sb.AppendLine("  • The same person: add the new details to the existing record with update_person instead.");
-        sb.AppendLine("  • A different person: call create_person again with the same arguments and " +
-                      $"notDuplicateOf: {IdentifierList(strong)}.");
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// What create_person adds to its reply after creating the person: the similar people with a merge hint,
-    /// and a note when the check did not run or did not read every match; empty when there is nothing to say.
-    /// </summary>
-    internal static string CreatedNote(CheckResult result, string? newHandle)
-    {
-        var sb = new StringBuilder();
-        var weak = result.Weak;
-        if (weak.Count > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"Similar people already in the tree ({weak.Count}), possibly the same person:");
-            AppendCandidates(sb, weak);
-            sb.AppendLine("If one of them is this person, compare them with get_object and merge the new record into " +
-                          "theirs: merge_objects(objectType: \"person\", keepHandle: \"<their handle>\", " +
-                          $"duplicateHandle: \"{newHandle}\").");
-        }
-
-        if (result.Failure != null)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"The duplicate check did not run: Gramps Web gave {result.Failure} to the name search. " +
-                          "Search the tree for this person before adding more about them.");
-        }
-        else if (result.Partial)
-        {
-            sb.AppendLine();
-            sb.AppendLine(PartialNote(result));
-        }
-
-        return sb.ToString();
-    }
 
     /// <summary>A new person of create_records: where the call gave them, their name, new handle and check.</summary>
     internal sealed record BatchCheck(string Where, string Label, string Handle, CheckResult Result);

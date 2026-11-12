@@ -145,7 +145,7 @@ public static class MediaTools
         "its fields stay as they are and only attachTo is applied, so repeating a call is safe. " +
         "Returns the handle and Gramps ID; an unreadable date or unknown attachTo record is rejected before anything is uploaded. " +
         "It is the only tool that uploads a file: create_records takes no media, and a transcription of a document " +
-        "belongs in a note (create_note), not here. Change the record later, or swap its file, with update_media; " +
+        "belongs in a note (create_records), not here. Change the record later, or swap its file, with update_media; " +
         "check what a region shows with read_media. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UploadMedia(

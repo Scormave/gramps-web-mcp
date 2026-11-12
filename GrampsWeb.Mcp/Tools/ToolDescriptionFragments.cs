@@ -21,11 +21,6 @@ public static class ToolDescriptionFragments
         "Writes run one at a time and need a Gramps Web account allowed to edit the tree; " +
         "a locked or rate-limited write fails with the delay to wait before retrying it.";
 
-    /// <summary>Tool-level sentence for the create tools whose records create_records also takes.</summary>
-    public const string BatchCreate =
-        "For several new records that link to each other, such as the people, events, source and citation of one " +
-        "register entry, use create_records instead: one transaction, all created or none.";
-
     /// <summary>For link-list parameters on update tools.</summary>
     public const string LinkListOnUpdate =
         "Omit to keep; applied per linkMode.";

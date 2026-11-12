@@ -55,43 +55,69 @@ public static class RecordBatchTools
 
     [McpServerTool(Title = "Create Records", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
     [Description(
-        "Create many linked records in one call: tags, repositories, places, sources, notes, citations, events, " +
-        "people and families. Gramps Web saves them in one transaction, so either all are created or none, and " +
-        "undo_change on that transaction (get_recent_changes) removes them all again. Give a record that others " +
-        "link to a key and write \"#key\" wherever a handle is taken: a citation's sourceHandle \"#src\", an event's " +
-        "citationHandles [\"#cit\"], a person's eventRefs [\"#birth\"] and tagHandles [\"#todo\"], a family's " +
-        "fatherHandle \"#ivan\" and childRefs [\"#petr\"]. Existing records are linked by handle, or by Gramps ID " +
-        "where the create tool accepts one. Each record takes the arguments of its create tool (create_person, " +
-        "create_event, …), except that people join families only through families: a new family's father, mother " +
-        "and children get the link back. Links from existing records to new ones, such as a new child of an " +
-        "existing family, are made afterwards with update_* and linkMode \"add\". Media is not created here: " +
-        "upload the file first with upload_media. Each new person is checked for duplicates in the tree as in " +
-        "create_person: a possible duplicate stops the whole call with action \"refused\", and notDuplicateOf on " +
-        "that person lets it through; a tag whose name another tag has stops the call with an error; other record " +
-        "types are not checked, so search first. Up to 50 records per call; every record is checked before " +
-        "anything is saved, and an error names the record, e.g. people[1]. Returns each record's handle and " +
-        "Gramps ID. " + ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
+        "Create new records, one or many linked ones in one call: tags, repositories, places, sources, notes, " +
+        "citations, events, people and families. Gramps Web saves them in one transaction, so either all are created " +
+        "or none, and undo_change on that transaction (get_recent_changes) removes them all again. Give a record that " +
+        "others link to a key and write \"#key\" wherever a handle is taken: a citation's sourceHandle \"#src\", an " +
+        "event's citationHandles [\"#cit\"], a person's eventRefs [\"#birth\"] and tagHandles [\"#todo\"], a family's " +
+        "fatherHandle \"#ivan\" and childRefs [\"#petr\"]. Existing records are linked by handle, or by Gramps ID where " +
+        "a field says so. People join families only through families: a new family's father, mother and children get " +
+        "the link back. Links from existing records to new ones, such as a new child of an existing family, are made " +
+        "afterwards with update_* and linkMode \"add\"; an existing record is changed with its update tool. Media is " +
+        "not created here: upload the file first with upload_media. Each new person is checked for duplicates in the " +
+        "tree: someone with the same given name and surname (spelling variants, old letters, Cyrillic and Latin " +
+        "letters, and male, female and daughter's forms such as Novák, Nováková and Новак count as one), not the " +
+        "other gender, without another patronymic, and born within two years, or a child of the same parents when " +
+        "there are no two years to compare, stops the whole call with action \"refused\" and the possible duplicates; " +
+        "notDuplicateOf on that person lets it through. Namesakes born up to five years apart, or without a year, are " +
+        "listed after creating. A tag whose name another tag has stops the call with an error; other record types are " +
+        "not checked, so search first. Up to 50 records per call; every record is checked before anything is saved, " +
+        "and an error names the record, e.g. people[1]. Returns each record's handle and Gramps ID. " +
+        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateRecords(
-        [Description("New tags, colored labels such as \"To check\": name, color, priority. Other records of the " +
-                     "call carry them through tagHandles [\"#key\"]; existing records get them with update_* and " +
-                     "linkMode \"add\".")]
+        [Description("New tags, colored labels such as \"To check\" for grouping records: name, color, priority. Other " +
+                     "records of the call carry them through tagHandles [\"#key\"]; existing records get them with " +
+                     "update_* and linkMode \"add\". Look through list_objects(objectType: \"tags\") first.")]
         TagRecord[]? tags = null,
-        [Description("New repositories; fields as in create_repository.")]
+        [Description("New repositories: archives, libraries, churches, websites or other holders of sources. Look " +
+                     "through list_objects(objectType: \"repositories\") first so one holder is not entered twice. " +
+                     "Sources link them through repositoryHandles with the call number.")]
         RepositoryRecord[]? repositories = null,
-        [Description("New places; fields as in create_place. enclosedBy may name a place of this call by \"#key\".")]
+        [Description("New places, such as a village, parish or county. enclosedBy links the larger places, existing or " +
+                     "of this call by \"#key\", each with optional dates for when the place belonged there. name, " +
+                     "nameLang and nameDate make the primary name, alternateNames the historical or other-language " +
+                     "ones. Events link a place through placeHandle.")]
         PlaceRecord[]? places = null,
-        [Description("New sources; fields as in create_source.")]
+        [Description("New sources: a book, register, archive unit or website that facts come from. The fields split " +
+                     "a reference: title names the document, such as a parish register for one year; author is who " +
+                     "made it; pubinfo is for a published work; abbrev is a short title; the archive's shelf mark is " +
+                     "the call number on repositoryHandles; the page, frame or entry goes on the citation. Notes and " +
+                     "media here describe the whole source; the scan of one entry belongs on its citation.")]
         SourceRecord[]? sources = null,
-        [Description("New notes; fields as in create_note. Other records link them through noteHandles.")]
+        [Description("New notes: research notes, transcriptions, comments. Other records link them through " +
+                     "noteHandles; the transcript of a cited entry is a Transcript note on that citation.")]
         NoteRecord[]? notes = null,
-        [Description("New citations; fields as in create_citation. Other records link them through citationHandles.")]
+        [Description("New citations: one spot in a source, existing or of this call, such as a page, act or entry " +
+                     "number. The transcript goes in a Transcript note in noteHandles and the scan in mediaHandles, or " +
+                     "later through upload_media attachTo, which can mark the entry's region on the page. A citation " +
+                     "supports nothing until people, families, events or places link it through citationHandles.")]
         CitationRecord[]? citations = null,
-        [Description("New events; fields as in create_event. People and families link them through eventRefs.")]
+        [Description("New events: Birth, Marriage, Residence, Census, …. People and families link them through " +
+                     "eventRefs; several people can share one event, each with their own role. A dated range such as " +
+                     "1890-1900 means the event happened once, some time within it; for something that lasted, such " +
+                     "as a Residence or Occupation, write from 1890 to 1900. A register that gives both birth and " +
+                     "baptism makes two events, Birth and Baptism. Citations, notes, media and attributes here show " +
+                     "for everyone who shares the event; one participant's own details, such as their age, go on " +
+                     "that person's eventRefs entry.")]
         EventRecord[]? events = null,
-        [Description("New people; fields as in create_person, without familyHandles and parentFamilyHandles: " +
-                     "name a person in a family's fatherHandle, motherHandle or childRefs instead.")]
+        [Description("New people, checked for duplicates as described above. A person joins a family only as a " +
+                     "family's fatherHandle, motherHandle or childRefs, in this call or later with update_family.")]
         PersonRecord[]? people = null,
-        [Description("New families; fields as in create_family. They are saved after the people, which get the link back.")]
+        [Description("New families: a couple, each optional, with relationship type, children and family events. " +
+                     "They are saved after the people, which get the link back. relationshipType stays Unknown " +
+                     "unless a source records the marriage: then pass Married and link the Marriage event in " +
+                     "eventRefs. Citations, notes and media here belong to the family itself, not to its members or " +
+                     "events. Not checked for duplicates: look at the parents' families first.")]
         FamilyRecord[]? families = null,
         GrampsApiClient client = null!)
     {
@@ -269,7 +295,7 @@ public static class RecordBatchTools
         }
     }
 
-    /// <summary>A check of the create tool that failed, prefixed with the record; server errors pass unchanged.</summary>
+    /// <summary>A check of one record that failed, prefixed with the record; server errors pass unchanged.</summary>
     private static McpException RecordError(Entry entry, McpException ex)
     {
         var message = ex.Message.StartsWith("Error: ", StringComparison.Ordinal) ? ex.Message["Error: ".Length..] : ex.Message;

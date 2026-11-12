@@ -39,56 +39,7 @@ public static class RepositoryTools
         }
     }
 
-    [McpServerTool(Title = "Create Repository", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create a repository: an archive, library, church, website or other holder of sources. " +
-        "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicates: " +
-        "look through list_objects(objectType: \"repositories\") first so one holder is not entered twice; " +
-        "change an existing repository with update_repository. Link sources to it afterwards through repositoryHandles " +
-        "on create_source or update_source, which also carry the call number. noteHandles and tagHandles only link " +
-        "existing notes and tags (create_note, create_tag); nothing else is created or changed. " +
-        "An unknown type is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
-        ToolDescriptionFragments.WriteAccess)]
-    public static async Task<string> CreateRepository(
-        [Description("Name, e.g. \"State Archive in Warsaw\" (required).")]
-        string name,
-        [Description("Repository type, e.g. Archive, Library, Church, Web site (optional; Gramps stores Library when omitted). " +
-                     ToolDescriptionFragments.KnownType)]
-        string? repoType = null,
-        [Description("Postal address as one line, e.g. \"12 High Street, London\", stored as the street of the repository's address " +
-                     "(optional). To keep the city, postal code or country in their own fields, use addresses instead.")]
-        string? address = null,
-        [Description(AddressesText + " Optional; not together with address.")]
-        FlexibleAddressList? addresses = null,
-        [Description("Website, e.g. https://archive.example.org, stored as the repository's Web Home link (optional). " +
-                     "For several links, another type such as E-mail, or a description, use urls instead.")]
-        string? url = null,
-        [Description(UrlsText + " Optional; not together with url.")]
-        FlexibleUrlList? urls = null,
-        [Description("Existing notes to link (optional); create them first with create_note. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? noteHandles = null,
-        [Description("Existing tags to link (optional); create them first with create_tag. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? tagHandles = null,
-        [Description("Mark the repository private (default: false); Gramps Web hides private records from users not allowed to see them.")]
-        bool isPrivate = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var request = await BuildRepositoryRequestAsync(name, repoType, address, addresses, url, urls, noteHandles,
-                tagHandles, isPrivate, client);
-            var (handle, grampsId) = await client.PostMutationAsync("/api/repositories/", request, "Repository");
-            return ResponseEnvelope.CreateSuccess(
-                "Repository", handle, grampsId,
-                name, ResponseEnvelope.RepositoryCreateNextSteps(handle!));
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    /// <summary>The checked request body of create_repository; create_records sends it too.</summary>
+    /// <summary>The checked request body of a new repository for create_records.</summary>
     internal static async Task<CreateRepositoryRequest> BuildRepositoryRequestAsync(
         string name, string? repoType, string? address, FlexibleAddressList? addresses, string? url, FlexibleUrlList? urls,
         FlexibleHandleList? noteHandles, FlexibleHandleList? tagHandles, bool isPrivate, GrampsApiClient client)
@@ -117,7 +68,7 @@ public static class RepositoryTools
     [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing repository's name, type, address, website or links to notes and tags. " +
-        "For a new repository use create_repository; to remove one, delete_records. Which sources it holds, with their " +
+        "For a new repository use create_records; to remove one, delete_records. Which sources it holds, with their " +
         "call numbers, is stored on the sources: change that with update_source (repositoryHandles), not here. " +
         "addresses sets street, city, postal code, country and the other address fields, and urls sets links with " +
         "their type and description; address is a shortcut for a single address with only a street line, and url for " +

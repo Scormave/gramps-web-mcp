@@ -131,18 +131,16 @@ public class TagToolsTests
     [InlineData(null, "#000000")]
     [InlineData("#AbCdEf", "#abcdef")]
     [InlineData("FF5733", "#ff5733")]
-    public async Task CreateTag_Stores_The_Color_With_Hash(string? color, string stored)
+    public async Task CreateRecords_Stores_The_Tag_Color_With_Hash(string? color, string stored)
     {
         var handler = new TagHandler();
-        var client = CreateClient(handler);
+        var tag = color == null ? """{ "name": "Новый" }""" : $$"""{ "name": "Новый", "color": "{{color}}" }""";
 
-        var result = color == null
-            ? await TagTools.CreateTag("Новый", client: client)
-            : await TagTools.CreateTag("Новый", color, client: client);
+        var result = await CreateRecordsCall.RunAsync($$"""{ "tags": [{{tag}}] }""", CreateClient(handler));
 
-        Assert.Equal("POST /api/tags/", handler.BodyRoute);
+        Assert.Equal("POST /api/objects/", handler.BodyRoute);
         Assert.Equal(stored, handler.Body!["color"]!.GetValue<string>());
-        Assert.Contains("handle: t-new", result);
+        Assert.Contains("Tag: Новый — handle:", result);
     }
 
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
@@ -153,7 +151,10 @@ public class TagToolsTests
         return new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
     }
 
-    /// <summary>Serves the stored tags and records the body of the one write a tool sends.</summary>
+    /// <summary>
+    /// Serves the stored tags, records the body of the one write a tool sends (the tag of a create), and answers a
+    /// create as Gramps Web does.
+    /// </summary>
     private sealed class TagHandler : HttpMessageHandler
     {
         private readonly JsonArray _tags = JsonNode.Parse(StoredTags)!.AsArray();
@@ -173,11 +174,16 @@ public class TagToolsTests
 
             if (request.Method != HttpMethod.Get)
             {
-                Body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken))!.AsObject();
+                var body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken))!;
                 BodyRoute = $"{request.Method} {path}";
-                return request.Method == HttpMethod.Post
-                    ? Json("""[{"_class":"Tag","type":"add","old":null,"new":{"_class":"Tag","handle":"t-new"}}]""")
-                    : Json("[]");
+                if (path == "/api/objects/")
+                {
+                    Body = CreateRecordsCall.Saved(body, "Tag").AsObject();
+                    return Json(CreateRecordsCall.Changes(body).ToJsonString());
+                }
+
+                Body = body.AsObject();
+                return Json("[]");
             }
 
             if (path == "/api/tags/")

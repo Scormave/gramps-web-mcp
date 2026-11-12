@@ -40,58 +40,7 @@ public static class SourceTools
         }
     }
 
-    [McpServerTool(Title = "Create Source", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create a source: a book, register, archive unit or website that facts come from, with title, author, publication " +
-        "info and the repositories that hold it. Search for the source first: no duplicate check is made, and an existing " +
-        "source is changed with update_source. repositoryHandles takes existing repositories only (create_repository), " +
-        "each with the source's call number there. The arguments split a reference: title names the document, such as " +
-        "a parish register for one year; author is who made it; pubinfo is for a published work; abbrev is a short " +
-        "title for lists; the archive's shelf mark, such as fond, inventory and file, is the call number on " +
-        "repositoryHandles, with the media type (Book, Manuscript, Film, Electronic …) the archive holds it in; the page, " +
-        "frame or entry goes on the citation. Notes and media here describe the whole source; the scan of one entry " +
-        "belongs on its citation. A source alone proves nothing: cite a page or act of it with " +
-        "create_citation, then attach that citation to people and events. " +
-        "Returns the new handle, Gramps ID and title, with next steps. " + ToolDescriptionFragments.BatchCreate + " " +
-        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
-    public static async Task<string> CreateSource(
-        [Description("Title (required).")]
-        string title,
-        [Description("Author or issuing body (optional).")]
-        string? author = null,
-        [Description("Publication info: publisher, place, year (optional).")]
-        string? pubinfo = null,
-        [Description("Short title for lists (optional).")]
-        string? abbrev = null,
-        [Description("Repositories that hold the source, each with an optional call number and media type; the repositories must exist (create_repository). " + FlexibleRepositoryRefList.DescriptionHint)]
-        FlexibleRepositoryRefList? repositoryHandles = null,
-        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? noteHandles = null,
-        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
-        FlexibleMediaLinkList? mediaHandles = null,
-        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? tagHandles = null,
-        [Description(FlexibleAttributeList.DescriptionHint + " " + FlexibleAttributeList.SourceAttributesHint)]
-        FlexibleAttributeList? attributes = null,
-        [Description("Mark the source private (default false).")]
-        bool isPrivate = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var request = await BuildSourceRequestAsync(title, author, pubinfo, abbrev, repositoryHandles,
-                noteHandles, mediaHandles, tagHandles, attributes, isPrivate, client);
-            var (handle, grampsId) = await client.PostMutationAsync("/api/sources/", request, "Source");
-            return ResponseEnvelope.CreateSuccess("Source", handle, grampsId,
-                title, ResponseEnvelope.SourceCreateNextSteps(handle!));
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    /// <summary>The checked request body of create_source; create_records sends it too.</summary>
+    /// <summary>The checked request body of a new source for create_records.</summary>
     internal static async Task<CreateSourceRequest> BuildSourceRequestAsync(
         string title, string? author, string? pubinfo, string? abbrev, FlexibleRepositoryRefList? repositoryHandles,
         FlexibleHandleList? noteHandles, FlexibleMediaLinkList? mediaHandles, FlexibleHandleList? tagHandles,
@@ -125,7 +74,7 @@ public static class SourceTools
     [McpServerTool(Title = "Update Source", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing source's title, author, publication info, abbreviation, attributes or links to repositories, " +
-        "notes, media and tags. For a new source use create_source; to remove one, delete_records; a page or act inside " +
+        "notes, media and tags. For a new source use create_records; to remove one, delete_records; a page or act inside " +
         "the source is a citation, changed with update_citation. repositoryHandles carry each repository's call number, " +
         "so edit a call number with linkMode replace; attributes replace the whole list whatever linkMode says. " +
         ToolDescriptionFragments.UpdateSemantics + " " +

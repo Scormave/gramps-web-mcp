@@ -12,9 +12,9 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     public async Task Place_IsEnclosedByAnotherPlace()
     {
         var townName = TestNames.Surname();
-        var town = await Session.CreateAsync("create_place", new { name = townName, placeType = "Town" });
+        var town = await Session.CreateAsync("places", new { name = townName, placeType = "Town" });
 
-        var village = await Session.CreateAsync("create_place", new
+        var village = await Session.CreateAsync("places", new
         {
             name = TestNames.Surname(),
             placeType = "Village",
@@ -33,22 +33,22 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task SourceChain_RepositorySourceCitationEvent()
     {
-        var archive = await Session.CreateAsync("create_repository", new { name = TestNames.Surname() + " archive", repoType = "Archive" });
+        var archive = await Session.CreateAsync("repositories", new { name = TestNames.Surname() + " archive", repoType = "Archive" });
         var title = TestNames.Surname() + " metric book";
-        var source = await Session.CreateAsync("create_source", new
+        var source = await Session.CreateAsync("sources", new
         {
             title,
             author = "Church",
             repositoryHandles = new[] { archive.Handle }
         });
-        var citation = await Session.CreateAsync("create_citation", new
+        var citation = await Session.CreateAsync("citations", new
         {
             sourceHandle = source.Handle,
             page = "f. 12, No. 34",
             date = "1890",
             confidence = "High"
         });
-        var birth = await Session.CreateAsync("create_event", new
+        var birth = await Session.CreateAsync("events", new
         {
             eventType = "Birth",
             date = "1890-05-03",
@@ -75,7 +75,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task UpdateNote_AppendsAndReplacesText()
     {
-        var note = await Session.CreateAsync("create_note", new { text = "First line. Fixme here.", noteType = "Research" });
+        var note = await Session.CreateAsync("notes", new { text = "First line. Fixme here.", noteType = "Research" });
 
         await Session.CallAsync("update_note", new { handle = note.Handle, appendText = "Second line." });
         await Session.CallAsync("update_note", new { handle = note.Handle, replaceText = "Fixme", withText = "Fixed" });
@@ -88,7 +88,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task UpdateNote_ReplaceTextNotFound_LeavesNoteAlone()
     {
-        var note = await Session.CreateAsync("create_note", new { text = "Original text." });
+        var note = await Session.CreateAsync("notes", new { text = "Original text." });
 
         var error = await Session.CallErrorAsync("update_note", new { handle = note.Handle, replaceText = "Missing", withText = "x" });
 
@@ -101,8 +101,8 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     public async Task Tag_IsAttachedToPerson()
     {
         var tagName = TestNames.Unique("tag");
-        var tag = await Session.CreateAsync("create_tag", new { name = tagName, color = "#ff0000" });
-        var person = await Session.CreateAsync("create_person", new { primaryName = new { first = "Anna", surname = TestNames.Surname() } });
+        var tag = await Session.CreateAsync("tags", new { name = tagName, color = "#ff0000" });
+        var person = await Session.CreateAsync("people", new { primaryName = new { first = "Anna", surname = TestNames.Surname() } });
 
         await Session.CallAsync("update_person", new { handle = person.Handle, tagHandles = new[] { tag.Handle }, linkMode = "add" });
 
@@ -114,8 +114,8 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     public async Task Tag_IsRenamedAndRecoloredOnEveryRecordCarryingIt()
     {
         var oldName = TestNames.Unique("tag");
-        var tag = await Session.CreateAsync("create_tag", new { name = oldName, color = "FF0000" });
-        var person = await Session.CreateAsync("create_person", new { primaryName = new { first = "Anna", surname = TestNames.Surname() } });
+        var tag = await Session.CreateAsync("tags", new { name = oldName, color = "FF0000" });
+        var person = await Session.CreateAsync("people", new { primaryName = new { first = "Anna", surname = TestNames.Surname() } });
         await Session.CallAsync("update_person", new { handle = person.Handle, tagHandles = new[] { tag.Handle }, linkMode = "add" });
         var newName = TestNames.Unique("tag");
 
@@ -136,8 +136,8 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     public async Task Tag_CannotTakeTheNameOfAnotherTag()
     {
         var taken = TestNames.Unique("tag");
-        await Session.CreateAsync("create_tag", new { name = taken });
-        var tag = await Session.CreateAsync("create_tag", new { name = TestNames.Unique("tag") });
+        await Session.CreateAsync("tags", new { name = taken });
+        var tag = await Session.CreateAsync("tags", new { name = TestNames.Unique("tag") });
 
         var error = await Session.CallErrorAsync("update_tag", new { handle = tag.Handle, name = taken.ToUpperInvariant() });
 
@@ -157,7 +157,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     {
         var description = TestNames.Unique("date");
 
-        var created = await Session.CreateAsync("create_event", new { eventType = "Birth", date, description });
+        var created = await Session.CreateAsync("events", new { eventType = "Birth", date, description });
 
         var stored = await Session.CallAsync("get_object", new { identifier = created.GrampsId });
         Assert.Contains(shown, stored);
@@ -166,7 +166,10 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task EventDate_ThatDoesNotExist_IsRejected()
     {
-        var error = await Session.CallErrorAsync("create_event", new { eventType = "Birth", date = "1900-02-29" });
+        var error = await Session.CallErrorAsync("create_records", new
+        {
+            events = new[] { new { eventType = "Birth", date = "1900-02-29" } }
+        });
 
         Assert.Contains("1900-02-29", error);
     }

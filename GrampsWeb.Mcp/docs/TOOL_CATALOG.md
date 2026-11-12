@@ -1,6 +1,6 @@
 # MCP Tool Catalog
 
-Complete catalog of up to 35 MCP tools exposed by the server.
+Complete catalog of up to 26 MCP tools exposed by the server.
 Tools are grouped by Gramps entity type.  Each tool is a static method
 decorated with `[McpServerTool]`.
 
@@ -21,9 +21,9 @@ tree, and a Gramps ID such as `I0012` works as well.
 | "Who in the tree has no parents, spouse or children?" | `list_objects` with the filter rule `Disconnected` | The people with no family links, page by page |
 | "Who was born in Dublin before 1900? Oldest first." | `list_objects` with the filter rule `HasBirth` and `sort` | The matching people in order of birth |
 | "Transcribe the baptism scan O0012." | `read_media`, with `region` to zoom in on one entry | The scan for the agent to read, and the transcription in its reply |
-| "Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber." | `search` for each person and place, then `create_place`, `create_event`, `create_person` and `create_family` | The new records with their Gramps IDs, people already in the tree reused, and what the text left open |
+| "Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber." | `search` for each person and place, then `create_records` | The new places, events, people and family saved in one transaction with their Gramps IDs, people already in the tree reused, and what the text left open |
 | "Enter entry 12 of the 1884 marriage register: the couple, their fathers and the witnesses." | `search` for each person, then `create_records` | The citation, the marriage, the new people and families saved in one transaction, which one `undo_change` takes back |
-| "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source or `create_source`, then `create_citation` and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
+| "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source, then `create_records` for the citation (and the source, when it is new) and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
 | "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `upload_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
 | "Add today's findings to my research note." | `update_note` with `appendText` | The note extended at the end, its earlier text, styling and links untouched |
 | "Check my grandfather's branch for mistakes." | the `audit-tree` prompt: `list_objects` with filter rules, `get_timeline`, `get_person_tree` and `find_duplicates` | A report of impossible dates, possible duplicates, unsourced facts, unlinked records and missing data, most serious first, with nothing changed |
@@ -166,7 +166,7 @@ upload_media(filePath: "page12.jpg", attachTo: [{"ref": "I0001", "region": [5, 5
 An event or media link can carry attributes of its own, apart from those of the
 record it links to. When a register names several people at one event, each
 one's age belongs on that person's link to the event, since the event itself is
-shared. `eventRefs` on the person and family tools take
+shared. `eventRefs` of people and families take
 `{"ref": "EVENT_HANDLE", "role": "Primary", "attributes": ["Age: 65"]}`, and
 `mediaHandles` and `attachTo` take `attributes` next to `ref` and `region`. The
 attributes take the forms of the `attributes` argument (`"Type: Value"` strings,
@@ -234,17 +234,16 @@ parameter is read as its text. An `update_*` call that gives no field to change
 besides `handle` and `linkMode` is refused with the same parameter list instead
 of saving the record unchanged: clients such as Claude Code drop arguments a
 tool does not have, so `update_event(place: …)` arrives without `place`.
-For the same reason `create_place` and `update_place` show the place's
-`placeType`, `lat`, `lon` and `enclosedBy` in their result (`none` when
-empty, Unknown for a place created without a type), so a misnamed argument
-shows up as a value that was not set.
+For the same reason `update_place` shows the place's `placeType`, `lat`,
+`lon` and `enclosedBy` in its result (`none` when empty, Unknown for a place
+without a type), so a misnamed argument shows up as a value that was not set.
 
 Type values (event, place, note, repository and family relationship types) are
 checked against the tree's vocabularies from `gramps://types` before anything
 is saved, and an unknown value is refused with suggestions. Case does not
 matter: an accepted value is stored in the vocabulary's spelling (`village`
-becomes `Village`). Event link roles in `eventRefs` of `create_person`,
-`update_person`, `create_family` and `update_family` are checked the same way
+becomes `Village`). Event link roles in `eventRefs` of the people and families
+of `create_records`, `update_person` and `update_family` are checked the same way
 (`witness` becomes `Witness`). A bare handle takes the default role, `Primary`
 on a person and `Family` on a family as in Gramps; a `{ref}` object without a
 role takes it too on a new link and keeps the stored role in `replace` mode.
@@ -267,8 +266,8 @@ Name and no origin. The unknown surname origin is sent as Gramps spells it,
 with a trailing space. `linkMode: "remove"` does not check `childRefs` or
 `repositoryHandles`.
 
-Name objects in `primaryName` and `alternateNames` (of `create_person`,
-`update_person` and the people of `create_records`) take the shortcut fields
+Name objects in `primaryName` and `alternateNames` (of the people of
+`create_records` and of `update_person`) take the shortcut fields
 `given`, `surname`, `prefix`, `connector`, `origin_type`, `patronymic`,
 `matronymic` and `name` (the whole name as one string) together with the
 native Gramps name fields (`first_name`, `surname_list`, `title`, `type` and
@@ -330,9 +329,9 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 
 | Name | Parameters | Purpose |
 |------|------------|---------|
-| `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details: search for the person, find or create the places, `create_event` for birth and death, `create_person` with those events, then confirm with handle and Gramps ID. |
+| `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details: search for the person and the places, then one `create_records` call with the new places, the birth and death events and the person linking them by `"#key"`; on a refusal show the possible duplicates and ask; then confirm with handle and Gramps ID. |
 | `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Start with the person record; retrieve extended details, a timeline, or the requested tree branch only when relevant. |
-| `add-family` | optional `father`, `mother`, `relationship`, optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, `create_family`, optionally marriage event via `create_event` and `update_family`, then `get_object` for the family. |
+| `add-family` | optional `father`, `mother`, `relationship`, optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, one `create_records` call with the family and, when a marriage date is given, its Marriage event linked by `"#marriage"`, then `get_object` for the family. |
 | `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_person_tree` if no direct link. |
 | `import-from-text` | `text` | Parse free-form genealogy text: search for existing people, places and the source, save the new places, source, citation, events, people and families in one `create_records` call linked by `"#key"`, attach new events to existing people and new children to existing families with `linkMode: "add"`, then report import summary and gaps. |
 | `change-link` | `ownerType`, `owner`, `linkField`, `target`, optional `action` (`add` by default) | Resolve existing records, add or remove one link with `linkMode`, then verify the owner. |
@@ -423,7 +422,7 @@ Find people entered twice across the whole tree. It reads every person with
 their profile (`GET /api/people/?profile=self`, 500 per request, up to 20000
 people), pairs the people where the first word of one's given name is a word
 of the other's, and compares each pair with the rule of the [duplicate check
-of `create_person`](#c--createperson): names compare across spellings, Cyrillic
+of `create_records`](#duplicate-check): names compare across spellings, Cyrillic
 and Latin letters, and the male, female and daughter's forms of a surname in
 Slavic, Baltic, Greek and Hungarian, alternate names count, and a pair of the
 other gender, with other patronymics, born or dead more than five years apart,
@@ -571,7 +570,7 @@ Pass `dates` to narrow the timeline to the years you need.
 
 ---
 
-## Person (`PersonTools.cs`) — 4 tools
+## Person (`PersonTools.cs`) — 3 tools
 
 ### R — `GetPersonTree`
 List either ancestors or descendants up to N generations with names, vital
@@ -610,81 +609,6 @@ returns the usual not-found message.
 | `handle1` | `string` | yes | First person handle or Gramps ID |
 | `handle2` | `string` | yes | Second person handle or Gramps ID |
 
-### C — `CreatePerson`
-Create a new person.  Returns handle and Gramps ID.
-**Prerequisites:** `gramps://input-guide`, `gramps://types`.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `primaryName` | `FlexibleGrampsName?` | yes | — | Primary name: a string or a name object; see [Argument validation](#argument-validation) for its fields |
-| `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
-| `alternateNames` | `FlexibleAlternateNameList?` | no | — | Alternate names |
-| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`); an object may carry the link's own `attributes`, such as an Age; see [Link attributes](#link-attributes) |
-| `familyHandles` | `FlexibleHandleList?` | no | — | Families (as parent/spouse); the family's `fatherHandle` or `motherHandle` stays unset |
-| `parentFamilyHandles` | `FlexibleHandleList?` | no | — | Parent families (as child); the family's `childRefs` stay unchanged |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects to show part of an image or describe the link; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
-| `citationHandles` | `FlexibleHandleList?` | no | — | Citation handles |
-| `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
-| `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
-| `addresses` | `FlexibleAddressList?` | no | — | Addresses |
-| `urls` | `FlexibleUrlList?` | no | — | URLs |
-| `personAssociations` | `FlexiblePersonRefList?` | no | — | Person associations |
-| `isPrivate` | `bool` | no | `false` | Mark record private |
-| `notDuplicateOf` | `FlexibleHandleList?` | no | — | People of the tree who are someone else, from the possible duplicates of a refused call |
-
-The first Birth and the first Death in `eventRefs` with the Primary role become
-the person's birth and death (`birth_ref_index`, `death_ref_index`), as in Gramps.
-
-`familyHandles` and `parentFamilyHandles` are stored on the person only. Gramps
-Web writes the link back the other way, from a family to its father, mother
-and children, so a person joins a family through the family's `fatherHandle`,
-`motherHandle` or `childRefs` (`create_family`, `update_family`).
-
-Before creating, it looks for the same person in the tree with Gramps Web's
-`RegExpName` rule. Names compare across spellings: case, ё and ѣ, і and ѵ, ѳ,
-Latin accents, a final ъ, doubled letters, -ия and -ья, -ий and -ей, and
-Cyrillic and Latin letters in English, Polish and Czech spelling (Novák, Nowak
-and Новак; Maria, Мария and Марья). A surname is cut to one or more stems, and
-two surnames match when they share one, so it also matches its male, female
-and daughter's forms:
-
-| Language | Forms |
-|----------|-------|
-| Russian, Ukrainian, Belarusian | -ов and -ова, -ин and -ина, -ский and -ская, -ой and -ая |
-| Polish | Kowalski and Kowalska; Nowak, Nowakowa and Nowakówna |
-| Czech, Slovak | Novák and Nováková, Hájek and Hájková, Svoboda and Svobodová |
-| Lithuanian | Kazlauskas, Kazlauskienė and Kazlauskaitė |
-| Latvian | Ozols and Ozola |
-| Greek | Papadopoulos and Papadopoulou |
-| Hungarian | Kovács and Kovácsné |
-
-The search sends the stems as `RegExpName` patterns that allow up to eight
-more letters, so it finds every form; the comparison afterwards decides.
-The rules that cut Latin endings (-ová to the bare stem, the e of Hájek, the
--s of Kazlauskas) apply to Latin letters only, so a Czech or Lithuanian female
-form written in Cyrillic letters does not match the male form. Alternate names
-count on both sides.
-Given names are the same when the first word of one is a word of the other:
-Мария and Анна Мария, but not Иван Петрович and Петр Петрович, or Robert de
-and Gilbert de. A namesake of the other gender, with another patronymic, or
-who died before the new person's birth year, is not the same person. The birth
-year is the birth's, else the first baptism's or christening's in the Primary
-role; the death year is the death's, else a burial's or cremation's.
-`find_duplicates` compares the people already in the tree the same way.
-
-| Namesake | Result |
-|----------|--------|
-| Born up to two years apart, or a child of the same parents when either year is missing | Possible duplicate: nothing is created, `action: refused`, with the candidates and next steps |
-| Born three to five years apart, or either year missing | Similar person: the person is created and the reply lists them with a `merge_objects` hint |
-| Born more than five years apart | Not listed |
-
-`notDuplicateOf` takes the Gramps IDs or handles from a refusal that are
-someone else, and the check passes over them. A check that Gramps Web fails
-does not stop the person from being created; the reply says it did not run.
-The check reads up to 100 people with a matching name and says so when there
-are more.
-
 ### U — `UpdatePerson`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
@@ -694,38 +618,25 @@ Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `handle` | `string` | yes | Person handle |
-| All fields from `CreatePerson` | — | no | Same as create (all optional) |
+| Fields of a [`people` record](#people) | — | no | The same fields, all optional, without `notDuplicateOf` |
+| `familyHandles` | `FlexibleHandleList?` | no | Families (as parent/spouse); the family's `fatherHandle` or `motherHandle` stays unchanged |
+| `parentFamilyHandles` | `FlexibleHandleList?` | no | Parent families (as child); the family's `childRefs` stay unchanged |
 | `sort` | `FlexibleSortList?` | no | Lists to put in date order after the changes: `Events`, `Families`, `Citations`, `Media`; see [Incremental link updates](#incremental-link-updates) |
+
+`familyHandles` and `parentFamilyHandles` are stored on the person only. Gramps
+Web writes the link back the other way, from a family to its father, mother
+and children, so a person joins a family through the family's `fatherHandle`,
+`motherHandle` or `childRefs` (`create_records`, `update_family`).
 
 ---
 
-## Family (`FamilyTools.cs`) — 2 tools
-
-### C — `CreateFamily`
-Create a family unit.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
-Gramps Web links the father, mother and children back to the family in the
-same transaction, and refuses the family when one of them does not exist, so
-nothing is saved. Children keep the order given in `childRefs`. Returns the
-handle, Gramps ID and stored relationship type, and, for children or events
-not passed, the `update_family` calls that add them with `linkMode: "add"`.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `fatherHandle` | `string?` | no | — | Father person handle |
-| `motherHandle` | `string?` | no | — | Mother person handle |
-| `relationshipType` | `string?` | no | `"Unknown"` | Married, Unmarried, Civil Union, Unknown; Unknown by default, as in Gramps, so pass Married when a source records the marriage |
-| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
-| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Family`); an object may carry the link's own `attributes`; see [Link attributes](#link-attributes) |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
-| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
-| `isPrivate` | `bool` | no | `false` | Mark private |
+## Family (`FamilyTools.cs`) — 1 tool
 
 ### U — `UpdateFamily`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update an existing family.  Same field set as create (all optional), plus
-`sort` to put `Events`, `Children`, `Citations` or `Media` in date order; see
+Update an existing family.  The fields of a [`families` record](#families),
+all optional, plus `sort` to put `Events`, `Children`, `Citations` or `Media` in date order; see
 [Incremental link updates](#incremental-link-updates). Gramps Web updates the
 people's side in the same transaction: a new father, mother or child gets the
 family on their record, one replaced or removed loses it, and a father, mother
@@ -735,148 +646,53 @@ not the changed family; read it back with `get_object`.
 
 ---
 
-## Event (`EventTools.cs`) — 2 tools
-
-### C — `CreateEvent`
-Create an event.  **Prerequisites:** `gramps://types`, `gramps://input-guide`.
-Link to persons/families via their create/update tools' `eventRefs`. The role
-is stored on each `eventRefs` entry, not on the event (default `Primary` on a
-person and `Family` on a family), and a Birth or Death becomes a person's birth
-or death only in the `Primary` role. A dash date such as `1890-1900` is stored
-as a range (`between 1890 and 1900`: it happened once, some time within it);
-for something that lasted, such as a Residence or Occupation, write
-`from 1890 to 1900`. A register that gives both birth and baptism makes two
-events, Birth and Baptism. Citations, notes, media, tags and attributes passed
-here belong to the event and show for everyone who shares it; one participant's
-own details, such as their Age, go in the `attributes` of that person's
-`eventRefs` entry; see [Link attributes](#link-attributes).
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `eventType` | `string` | yes | — | Event type key from tree |
-| `date` | `string?` | no | — | Date text |
-| `placeHandle` | `string?` | no | — | Place handle |
-| `description` | `string?` | no | — | Event description |
-| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
-| `isPrivate` | `bool` | no | `false` | Mark private |
+## Event (`EventTools.cs`) — 1 tool
 
 ### U — `UpdateEvent`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update an existing event (same field set, all optional). Omit `date` to keep
+Update an existing event (the fields of an [`events` record](#events), all
+optional). Omit `date` to keep
 the current date; an empty string removes it.
 
 ---
 
-## Place (`PlaceTools.cs`) — 2 tools
-
-### C — `CreatePlace`
-Create a place.  **Prerequisites:** `gramps://types`.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `name` | `string` | yes | — | Primary display name |
-| `placeType` | `string?` | no | — | Place type key |
-| `lat` | `FlexibleString?` | no | — | Latitude in decimal degrees, north positive (JSON string or number, coerced to text) |
-| `lon` | `FlexibleString?` | no | — | Longitude in decimal degrees, east positive (JSON string or number, coerced to text) |
-| `enclosedBy` | `FlexiblePlaceRefList?` | no | — | Parent place refs + optional dates (`enclosedBy`, not `enclosedByHandles`). Dashes → span (`from…to`); open `1991-` → From. English months OK (`from 1 Oct 1929 to 27 Sep 1937`). Unrecognized dates fail validation. Examples: `[{ref, date:"1708-1927"}]`, `HANDLE::1991-` |
-| `nameLang` | `string?` | no | — | Language code for primary name |
-| `nameDate` | `string?` | no | — | When the primary name applies, same date rules as `alternateNames` (`from 1937-02-10`, `1918-1937`). Gramps shows the first name, primary first, whose date is empty or matches the event date, so an undated primary name hides dated alternate names |
-| `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate names `{value, lang?, date?}`. Dashes → span; open `1991-` → From; English months / ISO day ranges / mixed `1703-1914-08-31` supported. Unrecognized dates fail validation |
-| `noteHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
-| `code` | `string?` | no | — | Place code / postal reference |
-| `isPrivate` | `bool` | no | `false` | Mark private |
-
-The result's header gives the handle, Gramps ID and name, then the stored
-`placeType` (Unknown when none was given), `lat`, `lon` and `enclosedBy`
-handles, each `none` when empty.
+## Place (`PlaceTools.cs`) — 1 tool
 
 ### U — `UpdatePlace`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a place. Same fields as create (all optional). `enclosedBy` is a link list and follows `linkMode`; `alternateNames` always uses replacement. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates. Omit `nameDate` or `nameLang` to keep the primary name's date or language; an empty string removes it. The same goes for `lat` and `lon`. The result's header shows the place as saved: its name, `placeType`, `lat`, `lon` and `enclosedBy` handles, whether or not the call changed them.
+Update a place. The fields of a [`places` record](#places), all optional. `enclosedBy` is a link list and follows `linkMode`; `alternateNames` always uses replacement. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates. Omit `nameDate` or `nameLang` to keep the primary name's date or language; an empty string removes it. The same goes for `lat` and `lon`. The result's header shows the place as saved: its name, `placeType`, `lat`, `lon` and `enclosedBy` handles, whether or not the call changed them.
 
 ---
 
-## Source (`SourceTools.cs`) — 2 tools
-
-### C — `CreateSource`
-Create a source.  Create sources **before** citations.
-The arguments split a reference: `title` names the document, such as a parish
-register for one year; `author` is who made it; `pubinfo` is for a published
-work; `abbrev` is a short title for lists. The archive's shelf mark (fond,
-inventory, file) is the call number on `repositoryHandles`, with the media
-type the archive holds it in; the page, frame or entry goes on the citation.
-Notes and media here describe the whole source; the scan of one entry belongs
-on its citation.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `title` | `string` | yes | — | Source title |
-| `author` | `string?` | no | — | Author |
-| `pubinfo` | `string?` | no | — | Publication info |
-| `abbrev` | `string?` | no | — | Abbreviation |
-| `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handle strings, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted); media types are checked against `source_media_types` |
-| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
-| `isPrivate` | `bool` | no | `false` | Mark private |
+## Source (`SourceTools.cs`) — 1 tool
 
 ### U — `UpdateSource`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a source (same field set, all optional).
+Update a source (the fields of a [`sources` record](#sources), all optional).
 
 ---
 
-## Citation (`CitationTools.cs`) — 2 tools
-
-### C — `CreateCitation`
-Create a citation.  `sourceHandle` must point to an existing source.
-Attach to persons/events/places via their `citationHandles`.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `sourceHandle` | `string` | yes | — | Source handle |
-| `page` | `FlexibleString?` | no | — | Page reference (JSON string or number, coerced to text) |
-| `confidence` | `string` | no | `"Normal"` | Very Low / Low / Normal / High / Very High |
-| `date` | `string?` | no | — | Access or reference date |
-| `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
-| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
-| `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
-| `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
-| `isPrivate` | `bool` | no | `false` | Mark private |
+## Citation (`CitationTools.cs`) — 1 tool
 
 ### U — `UpdateCitation`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a citation (same field set, all optional). Omit `date` to keep the
-current date; an empty string removes it. A change shows on every record that
+Update a citation (the fields of a [`citations` record](#citations), all
+optional). Omit `date` to keep the current date; an empty string removes it. A change shows on every record that
 cites the citation; to cite another page for one record, create a new citation.
 
 ---
 
-## Note (`NoteTools.cs`) — 2 tools
-
-### C — `CreateNote`
-Create a note.  **Prerequisites:** `gramps://types`.
-Link via `noteHandles` on other objects.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `text` | `string` | yes | — | Note body |
-| `noteType` | `string` | no | `"General"` | Note type key |
-| `format` | `string` | no | `"Plain"` | Plain or Html |
-| `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
-| `isPrivate` | `bool` | no | `false` | Mark private |
+## Note (`NoteTools.cs`) — 1 tool
 
 ### U — `UpdateNote`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a note (same field set, all optional). `text` replaces the whole body;
+Update a note (the fields of a [`notes` record](#notes), all optional). `text`
+replaces the whole body;
 `replaceText` with `withText` changes one fragment and `appendText` adds to the
 end, both working on the body as stored at the time of the call, so a long
 research note can be corrected or extended without the caller sending it back
@@ -948,8 +764,8 @@ part of the image; see [Image regions](#image-regions). `citationHandles` cite
 where the file itself came from; to show a scan as the evidence of a register
 entry, attach it to that entry's citation with `attachTo` instead. It is the
 only tool that uploads a file: `create_records` takes no media, and a
-transcription belongs in a note (`create_note`). Change the record later, or
-swap its file, with `update_media`; check a region with `read_media`.
+transcription belongs in one of its `notes`. Change the record later, or swap
+its file, with `update_media`; check a region with `read_media`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -986,55 +802,27 @@ media off a record, use that record's update tool with `mediaHandles` and
 
 ---
 
-## Repository (`RepositoryTools.cs`) — 2 tools
-
-### C — `CreateRepository`
-Create a repository: an archive, library, church, website, or other holder of
-sources.  **Prerequisites:** `gramps://types`.  Call `list_objects('repositories')`
-first to avoid entering one holder twice, and change an existing repository with
-`UpdateRepository`. Sources link to the repository afterwards through
-`repositoryHandles` on `CreateSource` or `UpdateSource`, which also carry the
-call number. `noteHandles` and `tagHandles` only link existing notes and tags.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `name` | `string` | yes | — | Name |
-| `repoType` | `string?` | no | — | Repository type, such as `Archive`, `Library`, `Church`, or `Web site`; Gramps stores `Library` when omitted |
-| `address` | `string?` | no | — | Postal address as one line, stored as the street of the repository's address |
-| `addresses` | `FlexibleAddressList?` | no | — | Addresses with separate fields (street, locality, city, county, state, postal code, country, phone), in the same forms as on `CreatePerson`; not together with `address` |
-| `url` | `string?` | no | — | Website, stored as the repository's Web Home link |
-| `urls` | `FlexibleUrlList?` | no | — | Links, each with a type (`Web Home`, `E-mail`, …) and an optional description, in the same forms as on `CreatePerson`; not together with `url` |
-| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Existing notes and tags to link |
-| `isPrivate` | `bool` | no | `false` | Mark private |
+## Repository (`RepositoryTools.cs`) — 1 tool
 
 ### U — `UpdateRepository`
 `linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
-Update a repository (same field set, all optional). `addresses` and `urls`
+Update a repository (the fields of a [`repositories` record](#repositories),
+all optional). `addresses` and `urls`
 replace every stored address or link with the ones given, and `[]` removes
 them. `address` and `url` each replace every stored address or link with one,
-as on create, and an empty string removes them. `address` and `addresses` are
+as in a new record, and an empty string removes them. `address` and `addresses` are
 not given together, nor are `url` and `urls`. A change shows on every source
 that lists the repository.
 
 ---
 
-## Tag (`TagTools.cs`) — 2 tools
+## Tag (`TagTools.cs`) — 1 tool
 
 Tags have no Gramps ID. Their color is stored as `#rrggbb`, the form Gramps
-Web and Gramps desktop read; both tools accept six hex digits with or without
-`#` and reject anything else before saving.
-
-### C — `CreateTag`
-Create a tag.  Call `list_objects('tags')` first to avoid duplicates, and keep
-names distinct: filters such as `HasTag` find tags by name, and `UpdateTag`
-rejects a name another tag uses.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `name` | `string` | yes | — | Display name |
-| `color` | `string` | no | `"000000"` | RRGGBB, with or without `#`; stored as `#rrggbb` |
-| `priority` | `int` | no | `0` | Sort priority |
+Web and Gramps desktop read; `update_tag` and the tags of `create_records`
+accept six hex digits with or without `#` and reject anything else before
+saving.
 
 ### U — `UpdateTag`
 Rename a tag or change its color or priority; every record carrying the tag
@@ -1055,25 +843,25 @@ header reports the stored `name`, `color` and `priority`.
 ## Record batch (`RecordBatchTools.cs`) — 1 tool
 
 ### C — `CreateRecords`
-Create many linked records in one call, such as a family from one metric-book
-entry: its source and citation, the events, the people and the family. The
-tool sends them to Gramps Web's `POST /api/objects/`, which saves them in one
+Create new records, one or many linked ones in one call, such as a family from
+one metric-book entry: its source and citation, the events, the people and the
+family. **Prerequisites:** `gramps://types`, `gramps://input-guide`. The tool
+sends them to Gramps Web's `POST /api/objects/`, which saves them in one
 transaction, so either every record is created or none is.
 `get_recent_changes` lists the call as `Add multiple objects`, and one
 `undo_change` on it removes every record again.
 
-Each record takes the arguments of its create tool, plus an optional `key`:
-letters, digits, `_` and `-`, up to 64, unique in the call. Other records of
-the call link to it by writing `"#key"` wherever they take a handle: a
-citation's `sourceHandle`, an event's `citationHandles` or `placeHandle`, a
-person's `eventRefs` (`"#birth"`, `"#marriage::Witness"`), a family's
-`fatherHandle`, `motherHandle`, `childRefs` and `eventRefs`, a source's
-`repositoryHandles`, a place's `enclosedBy`, any record's `tagHandles`.
-Existing records are linked as in the create tools, by handle or, where the
-create tool takes one, by Gramps ID. A `"#key"` must name a record of the
-call of the class the field links to. Media is not created here, so
-`mediaHandles` takes existing handles only: upload the file first with
-`upload_media`.
+Each record takes the fields listed below for its type, plus an optional
+`key`: letters, digits, `_` and `-`, up to 64, unique in the call. Other
+records of the call link to it by writing `"#key"` wherever they take a
+handle: a citation's `sourceHandle`, an event's `citationHandles` or
+`placeHandle`, a person's `eventRefs` (`"#birth"`, `"#marriage::Witness"`), a
+family's `fatherHandle`, `motherHandle`, `childRefs` and `eventRefs`, a
+source's `repositoryHandles`, a place's `enclosedBy`, any record's
+`tagHandles`. Existing records are linked by handle or, where a field says
+so, by Gramps ID. A `"#key"` must name a record of the call of the class the
+field links to. Media is not created here, so `mediaHandles` takes existing
+handles only: upload the file first with `upload_media`.
 
 A new tag is checked like in `update_tag`: a name another tag of the tree or
 of the call already has, ignoring case, stops the call before saving, and the
@@ -1087,18 +875,13 @@ record to a new one, such as a new event on an existing person or a new child
 of an existing family, is made afterwards with `update_*` and `linkMode: "add"`.
 
 Every record is checked before anything is saved, with the same checks as its
-create tool (types, dates, names, handles), and an error names the record:
+update tool (types, dates, names, handles), and an error names the record:
 `people[1] (key petr): …`. A call holds 1–50 records.
 
-Each new person is checked for duplicates as in `create_person`, but not
-against the other people of the call. A possible duplicate of any of them
-stops the whole call before saving: the reply header carries `type:
-Transaction`, `action: refused` and `duplicates`, then the candidates per
-record and the `notDuplicateOf` to add to each record that is someone else.
-Existing parents for the same-parents test come from the call's families
-that list the person in `childRefs`. Similar people come after the saved
-records, with the new person's handle for `merge_objects`. Other record
-types are not checked for duplicates.
+Each new person is checked for duplicates in the tree; a possible duplicate
+of any of them stops the whole call before saving. See
+[Duplicate check](#duplicate-check). Other record types are not checked for
+duplicates, so search for them first.
 
 The reply header carries `type: Transaction`, `action: created` and
 `records`. The body lists each record in saving order with its handle, Gramps
@@ -1110,20 +893,223 @@ people in no new family:
 Person: Petrov, Ivan — handle: 19a3c5e0f1d2b4a6c8e0 | gramps_id: I0412 | key: ivan
 ```
 
-Parameters, each a list of records with the fields of the named create tool
-plus `key`:
+The parameters are lists of records, saved in the order below. Every record
+also takes `key`.
 
-| Parameter | Records | Notes |
-|-----------|---------|-------|
-| `tags` | `create_tag` | Saved first; linked from other records' `tagHandles`. Tags have no Gramps ID |
-| `repositories` | `create_repository` | — |
-| `places` | `create_place` | `enclosedBy` may name a place of the call |
-| `sources` | `create_source` | `repositoryHandles` may name repositories of the call |
-| `notes` | `create_note` | Linked from other records' `noteHandles` |
-| `citations` | `create_citation` | `sourceHandle` may name a source of the call |
-| `events` | `create_event` | Linked from people's and families' `eventRefs` |
-| `people` | `create_person` | Without `familyHandles` and `parentFamilyHandles`; `notDuplicateOf` per person |
-| `families` | `create_family` | Saved after the people, which get the link back |
+#### `tags`
+Colored labels for grouping records, saved first; tags have no Gramps ID.
+Call `list_objects('tags')` first, and keep names distinct: filters such as
+`HasTag` find tags by name. Other records of the call carry a new tag through
+`tagHandles` (`["#todo"]`); existing records get it with `update_*` and
+`linkMode: "add"`.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | `string` | yes | — | Display name |
+| `color` | `string` | no | `"000000"` | RRGGBB, with or without `#`; stored as `#rrggbb` |
+| `priority` | `int` | no | `0` | Sort priority |
+
+#### `repositories`
+An archive, library, church, website or other holder of sources. Call
+`list_objects('repositories')` first so one holder is not entered twice.
+Sources link to a repository through `repositoryHandles`, which also carry the
+call number.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | `string` | yes | — | Name |
+| `repoType` | `string?` | no | — | Repository type, such as `Archive`, `Library`, `Church`, or `Web site`; Gramps stores `Library` when omitted |
+| `address` | `string?` | no | — | Postal address as one line, stored as the street of the repository's address |
+| `addresses` | `FlexibleAddressList?` | no | — | Addresses with separate fields (street, locality, city, county, state, postal code, country, phone), in the same forms as on people; not together with `address` |
+| `url` | `string?` | no | — | Website, stored as the repository's Web Home link |
+| `urls` | `FlexibleUrlList?` | no | — | Links, each with a type (`Web Home`, `E-mail`, …) and an optional description, in the same forms as on people; not together with `url` |
+| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Existing notes and tags to link |
+| `isPrivate` | `bool` | no | `false` | Mark private |
+
+#### `places`
+A village, parish, county or other place. `enclosedBy` links the larger
+places, existing or of the call. Events link a place through `placeHandle`.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | `string` | yes | — | Primary display name |
+| `placeType` | `string?` | no | — | Place type key |
+| `lat` | `FlexibleString?` | no | — | Latitude in decimal degrees, north positive (JSON string or number, coerced to text) |
+| `lon` | `FlexibleString?` | no | — | Longitude in decimal degrees, east positive (JSON string or number, coerced to text) |
+| `enclosedBy` | `FlexiblePlaceRefList?` | no | — | Parent places by handle, Gramps ID or `"#key"`, each with optional dates (`enclosedBy`, not `enclosedByHandles`). Dashes → span (`from…to`); open `1991-` → From. English months OK (`from 1 Oct 1929 to 27 Sep 1937`). Unrecognized dates fail validation. Examples: `[{ref, date:"1708-1927"}]`, `HANDLE::1991-` |
+| `nameLang` | `string?` | no | — | Language code for primary name |
+| `nameDate` | `string?` | no | — | When the primary name applies, same date rules as `alternateNames` (`from 1937-02-10`, `1918-1937`). Gramps shows the first name, primary first, whose date is empty or matches the event date, so an undated primary name hides dated alternate names |
+| `alternateNames` | `FlexiblePlaceNameList?` | no | — | Alternate names `{value, lang?, date?}`. Dashes → span; open `1991-` → From; English months / ISO day ranges / mixed `1703-1914-08-31` supported. Unrecognized dates fail validation |
+| `noteHandles`, `citationHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `code` | `string?` | no | — | Place code / postal reference |
+| `isPrivate` | `bool` | no | `false` | Mark private |
+
+#### `sources`
+The fields split a reference: `title` names the document, such as a parish
+register for one year; `author` is who made it; `pubinfo` is for a published
+work; `abbrev` is a short title for lists. The archive's shelf mark (fond,
+inventory, file) is the call number on `repositoryHandles`, with the media
+type the archive holds it in; the page, frame or entry goes on the citation.
+Notes and media here describe the whole source; the scan of one entry belongs
+on its citation. `repositoryHandles` may name repositories of the call.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `title` | `string` | yes | — | Source title |
+| `author` | `string?` | no | — | Author |
+| `pubinfo` | `string?` | no | — | Publication info |
+| `abbrev` | `string?` | no | — | Abbreviation |
+| `repositoryHandles` | `FlexibleRepositoryRefList?` | no | — | Repository refs: handle strings, `"Ref : CallNumber : MediaType"` strings, or `{ref, callNumber, mediaType}` objects (snake_case also accepted); media types are checked against `source_media_types` |
+| `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
+| `isPrivate` | `bool` | no | `false` | Mark private |
+
+#### `notes`
+Research notes, transcriptions and comments. Other records link them through
+`noteHandles`; the transcript of a cited entry is a Transcript note on that
+citation.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `text` | `string` | yes | — | Note body |
+| `noteType` | `string` | no | `"General"` | Note type key |
+| `format` | `string` | no | `"Plain"` | Plain or Html |
+| `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
+| `isPrivate` | `bool` | no | `false` | Mark private |
+
+#### `citations`
+One spot in a source, existing or of the call, such as a page, act or entry
+number. A citation supports nothing until people, families, events or places
+link it through `citationHandles`.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `sourceHandle` | `string` | yes | — | An existing source by handle or Gramps ID, or `"#key"` of a source of the call |
+| `page` | `FlexibleString?` | no | — | Page reference (JSON string or number, coerced to text) |
+| `confidence` | `string` | no | `"Normal"` | Very Low / Low / Normal / High / Very High |
+| `date` | `string?` | no | — | Access or reference date |
+| `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes: type, value and private only (no citations or notes) |
+| `isPrivate` | `bool` | no | `false` | Mark private |
+
+#### `events`
+Birth, Marriage, Residence, Census and other events. People and families link
+them through `eventRefs`, and several people can share one event. The role is
+stored on each `eventRefs` entry, not on the event (default `Primary` on a
+person and `Family` on a family), and a Birth or Death becomes a person's
+birth or death only in the `Primary` role. A dash date such as `1890-1900` is
+stored as a range (`between 1890 and 1900`: it happened once, some time within
+it); for something that lasted, such as a Residence or Occupation, write `from
+1890 to 1900`. A register that gives both birth and baptism makes two events,
+Birth and Baptism. Citations, notes, media, tags and attributes passed here
+belong to the event and show for everyone who shares it; one participant's own
+details, such as their Age, go in the `attributes` of that person's
+`eventRefs` entry; see [Link attributes](#link-attributes).
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `eventType` | `string` | yes | — | Event type key from tree |
+| `date` | `string?` | no | — | Date text |
+| `placeHandle` | `string?` | no | — | An existing place by handle or Gramps ID, or `"#key"` of a place of the call |
+| `description` | `string?` | no | — | Event description |
+| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked handles |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
+| `isPrivate` | `bool` | no | `false` | Mark private |
+
+#### `people`
+The first Birth and the first Death in `eventRefs` with the Primary role become
+the person's birth and death (`birth_ref_index`, `death_ref_index`), as in
+Gramps.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `primaryName` | `FlexibleGrampsName?` | yes | — | Primary name: a string or a name object; see [Argument validation](#argument-validation) for its fields |
+| `gender` | `string` | no | `"Unknown"` | Female, Male, or Unknown |
+| `alternateNames` | `FlexibleAlternateNameList?` | no | — | Alternate names |
+| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Primary`); an object may carry the link's own `attributes`, such as an Age; see [Link attributes](#link-attributes) |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects to show part of an image or describe the link; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `citationHandles` | `FlexibleHandleList?` | no | — | Citation handles |
+| `noteHandles` | `FlexibleHandleList?` | no | — | Note handles |
+| `tagHandles` | `FlexibleHandleList?` | no | — | Tag handles |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
+| `addresses` | `FlexibleAddressList?` | no | — | Addresses |
+| `urls` | `FlexibleUrlList?` | no | — | URLs |
+| `personAssociations` | `FlexiblePersonRefList?` | no | — | Person associations |
+| `isPrivate` | `bool` | no | `false` | Mark record private |
+| `notDuplicateOf` | `FlexibleHandleList?` | no | — | People of the tree who are someone else, from the possible duplicates of a refused call; see [Duplicate check](#duplicate-check) |
+
+#### `families`
+A couple, each optional, with relationship type, children and family events,
+saved after the people. Gramps Web links the father, mother and children back
+to the family in the same transaction, and refuses the family when one of them
+does not exist, so nothing is saved. Children keep the order given in
+`childRefs`. Not checked for duplicates: look at the parents' families first.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `fatherHandle` | `string?` | no | — | Father: handle or Gramps ID, or `"#key"` of a person of the call |
+| `motherHandle` | `string?` | no | — | Mother: handle or Gramps ID, or `"#key"` of a person of the call |
+| `relationshipType` | `string?` | no | `"Unknown"` | Married, Unmarried, Civil Union, Unknown; Unknown by default, as in Gramps, so pass Married when a source records the marriage |
+| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
+| `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Family`); an object may carry the link's own `attributes`; see [Link attributes](#link-attributes) |
+| `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
+| `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Linked object handles |
+| `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
+| `isPrivate` | `bool` | no | `false` | Mark private |
+
+#### Duplicate check
+Before saving, each new person is looked for in the tree with Gramps Web's
+`RegExpName` rule, but not among the other people of the call. Names compare
+across spellings: case, ё and ѣ, і and ѵ, ѳ, Latin accents, a final ъ, doubled
+letters, -ия and -ья, -ий and -ей, and Cyrillic and Latin letters in English,
+Polish and Czech spelling (Novák, Nowak and Новак; Maria, Мария and Марья). A
+surname is cut to one or more stems, and two surnames match when they share
+one, so it also matches its male, female and daughter's forms:
+
+| Language | Forms |
+|----------|-------|
+| Russian, Ukrainian, Belarusian | -ов and -ова, -ин and -ина, -ский and -ская, -ой and -ая |
+| Polish | Kowalski and Kowalska; Nowak, Nowakowa and Nowakówna |
+| Czech, Slovak | Novák and Nováková, Hájek and Hájková, Svoboda and Svobodová |
+| Lithuanian | Kazlauskas, Kazlauskienė and Kazlauskaitė |
+| Latvian | Ozols and Ozola |
+| Greek | Papadopoulos and Papadopoulou |
+| Hungarian | Kovács and Kovácsné |
+
+The search sends the stems as `RegExpName` patterns that allow up to eight
+more letters, so it finds every form; the comparison afterwards decides.
+The rules that cut Latin endings (-ová to the bare stem, the e of Hájek, the
+-s of Kazlauskas) apply to Latin letters only, so a Czech or Lithuanian female
+form written in Cyrillic letters does not match the male form. Alternate names
+count on both sides.
+Given names are the same when the first word of one is a word of the other:
+Мария and Анна Мария, but not Иван Петрович and Петр Петрович, or Robert de
+and Gilbert de. A namesake of the other gender, with another patronymic, or
+who died before the new person's birth year, is not the same person. The birth
+year is the birth's, else the first baptism's or christening's in the Primary
+role; the death year is the death's, else a burial's or cremation's.
+`find_duplicates` compares the people already in the tree the same way.
+
+| Namesake | Result |
+|----------|--------|
+| Born up to two years apart, or a child of the same parents when either year is missing | Possible duplicate: nothing is saved, `action: refused`, with the candidates and next steps |
+| Born three to five years apart, or either year missing | Similar person: the records are saved and the reply lists them after the records, with the new person's handle for a `merge_objects` hint |
+| Born more than five years apart | Not listed |
+
+`notDuplicateOf` takes the Gramps IDs or handles from a refusal that are
+someone else, and the check passes over them. A check that Gramps Web fails
+does not stop the call; the reply names the people it did not run for. The
+check reads up to 100 people with a matching name per new person and says so
+when there are more. Existing parents for the same-parents test come from the
+call's families that list the person in `childRefs`. A refusal carries `type:
+Transaction`, `action: refused` and `duplicates` in the reply header, then the
+candidates per record and the `notDuplicateOf` to add to each record that is
+someone else.
 
 ---
 
@@ -1292,16 +1278,16 @@ undo_change(transactionId: 412)
 | Domain | R | C | U | D | Total |
 |--------|---|---|---|---|-------|
 | Timeline | 1 | 0 | 0 | 0 | 1 |
-| Person | 2 | 1 | 1 | 0 | 4 |
-| Family | 0 | 1 | 1 | 0 | 2 |
-| Event | 0 | 1 | 1 | 0 | 2 |
-| Place | 0 | 1 | 1 | 0 | 2 |
-| Source | 0 | 1 | 1 | 0 | 2 |
-| Citation | 0 | 1 | 1 | 0 | 2 |
-| Note | 0 | 1 | 1 | 0 | 2 |
+| Person | 2 | 0 | 1 | 0 | 3 |
+| Family | 0 | 0 | 1 | 0 | 1 |
+| Event | 0 | 0 | 1 | 0 | 1 |
+| Place | 0 | 0 | 1 | 0 | 1 |
+| Source | 0 | 0 | 1 | 0 | 1 |
+| Citation | 0 | 0 | 1 | 0 | 1 |
+| Note | 0 | 0 | 1 | 0 | 1 |
 | Media | 1 | 1 | 1 | 0 | 3 |
-| Repository | 0 | 1 | 1 | 0 | 2 |
-| Tag | 0 | 1 | 1 | 0 | 2 |
+| Repository | 0 | 0 | 1 | 0 | 1 |
+| Tag | 0 | 0 | 1 | 0 | 1 |
 | RecordBatch | 0 | 1 | 0 | 0 | 1 |
 | Object | 1 | 0 | 0 | 1 | 2 |
 | Duplicate | 1 | 0 | 0 | 0 | 1 |
@@ -1310,18 +1296,18 @@ undo_change(transactionId: 412)
 | System | 2 | 0 | 0 | 0 | 2 |
 | Reference | 1 | 0 | 0 | 0 | 1 |
 | Undo | 0 | 0 | 1 | 0 | 1 |
-| **Total with media access and upload enabled** | **11** | **11** | **12** | **1** | **35** |
+| **Total with media access and upload enabled** | **11** | **2** | **12** | **1** | **26** |
 
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
-`upload_media` are hidden: the default catalog contains 33 tools in read/write
+`upload_media` are hidden: the default catalog contains 24 tools in read/write
 mode. With media access enabled, `upload_media` also needs
 `GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 11 tools
 with media access enabled, or 10 with it disabled.
 
 ## Prerequisites for write tools
 
-Before calling create/update tools, agents should call discovery tools to
-learn valid values.  Type strings are also validated server-side by
+Before calling `create_records` or an update tool, agents should call
+discovery tools to learn valid values.  Type strings are also validated server-side by
 `TypeCache`, which returns helpful error messages with suggestions on typos.
 
 | Resource | When useful |

@@ -16,7 +16,7 @@ using Xunit;
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 /// <summary>
-/// The duplicate check of create_person: name folding, the server search, which namesakes are strong or weak
+/// The duplicate check of create_records: name folding, the server search, which namesakes are strong or weak
 /// matches, and the replies.
 /// </summary>
 public class DuplicatePeopleTests
@@ -443,89 +443,85 @@ public class DuplicatePeopleTests
     }
 
     [Fact]
-    public async Task CreatePerson_Refuses_A_Strong_Match_And_Saves_Nothing()
+    public async Task CreateRecords_Refuses_A_Strong_Match_And_Saves_Nothing()
     {
         var handler = new TreeHandler(PeopleJson(
             Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1881", fatherHandle: "h-petr"),
             Person("h-namesake", "I0013", "Иван", "Образцов", 1)));
 
-        var result = await CreateIvan(handler);
+        var result = (await CreateIvan(handler)).ReplaceLineEndings("\n");
 
         Assert.Empty(handler.Posts);
-        Assert.StartsWith("---\ntype: Person\naction: refused\nname: \"Иван ", result.ReplaceLineEndings("\n"));
-        Assert.Contains("\nduplicates: 1\n---\n", result.ReplaceLineEndings("\n"));
-        Assert.Matches(@"Did not create Иван \S+ \S+: the tree may already have this person\.", result);
-        Assert.Contains("Possible duplicates (1):\n  • Образцов, Иван (I0012) [handle: h-ivan], b. 1881, " +
-                        "child of Образцов, Петр (I0100) — same name, born 1 year apart\n", result.ReplaceLineEndings("\n"));
-        Assert.Contains("Similar people (1):\n  • Образцов, Иван (I0013) [handle: h-namesake]", result.ReplaceLineEndings("\n"));
+        Assert.StartsWith("---\ntype: Transaction\naction: refused\nduplicates: 1\n---\n", result);
+        Assert.Matches(@"people\[0\], Иван \S+ \S+:\n  Possible duplicates \(1\):\n", result);
+        Assert.Contains("    • Образцов, Иван (I0012) [handle: h-ivan], b. 1881, " +
+                        "child of Образцов, Петр (I0100) — same name, born 1 year apart\n", result);
+        Assert.Contains("  Similar people (1):\n    • Образцов, Иван (I0013) [handle: h-namesake]", result);
         Assert.Contains("get_object(objectType: \"person\", identifier: \"I0012\", extended: true)", result);
-        Assert.Contains("notDuplicateOf: [\"I0012\"]", result);
+        Assert.Contains("people[0] notDuplicateOf: [\"I0012\"]", result);
     }
 
     [Fact]
-    public async Task CreatePerson_With_NotDuplicateOf_Creates_And_Lists_The_Others()
+    public async Task CreateRecords_With_NotDuplicateOf_Creates_And_Lists_The_Others()
     {
         var handler = new TreeHandler(PeopleJson(
             Person("h-ivan", "I0012", "Иван", "Образцов", 1, birth: "1881"),
             Person("h-namesake", "I0013", "Иван", "Образцов", 1)));
 
-        var result = await CreateIvan(handler, notDuplicateOf: """["I0012"]""");
+        var result = (await CreateIvan(handler, notDuplicateOf: """["I0012"]""")).ReplaceLineEndings("\n");
 
-        Assert.Equal(["/api/people/"], handler.Posts);
+        Assert.Equal(["/api/objects/"], handler.Posts);
         Assert.Contains("action: created", result);
-        Assert.Contains("Similar people already in the tree (1), possibly the same person:\n" +
-                        "  • Образцов, Иван (I0013) [handle: h-namesake] — same name, no birth years to compare\n",
-            result.ReplaceLineEndings("\n"));
-        Assert.Contains("merge_objects(objectType: \"person\", keepHandle: \"<their handle>\", duplicateHandle: \"h-new\")", result);
+        Assert.Contains("Similar people already in the tree, possibly the same as a new person:\n", result);
+        Assert.Contains("    • Образцов, Иван (I0013) [handle: h-namesake] — same name, no birth years to compare\n", result);
+        Assert.Contains("merge_objects(objectType: \"person\", keepHandle: \"<their handle>\", " +
+                        "duplicateHandle: \"<the new person's handle>\")", result);
         Assert.DoesNotContain("h-ivan", result);
     }
 
     [Fact]
-    public async Task CreatePerson_Without_Namesakes_Says_Nothing_About_Duplicates()
+    public async Task CreateRecords_Without_Namesakes_Says_Nothing_About_Duplicates()
     {
         var handler = new TreeHandler("[]");
 
         var result = await CreateIvan(handler);
 
-        Assert.Equal(["/api/people/"], handler.Posts);
+        Assert.Equal(["/api/objects/"], handler.Posts);
         Assert.DoesNotContain("duplicate", result, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Similar people", result);
         Assert.Single(handler.Requests, p => p.StartsWith("/api/people/?rules=", StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task CreatePerson_Creates_When_The_Search_Fails_And_Says_So()
+    public async Task CreateRecords_Creates_When_The_Search_Fails_And_Says_So()
     {
         var handler = new TreeHandler("""{ "error": "bad rules" }""", searchStatus: HttpStatusCode.UnprocessableEntity);
 
         var result = await CreateIvan(handler);
 
-        Assert.Equal(["/api/people/"], handler.Posts);
-        Assert.Contains("The duplicate check did not run: Gramps Web gave HTTP 422 to the name search. " +
+        Assert.Equal(["/api/objects/"], handler.Posts);
+        Assert.Contains("The duplicate check did not run for people[0]: Gramps Web gave HTTP 422 to the name search. " +
                         "Search the tree for this person before adding more about them.", result);
     }
 
     [Fact]
-    public async Task CreatePerson_Says_When_More_People_Matched_Than_Were_Compared()
+    public async Task CreateRecords_Says_When_More_People_Matched_Than_Were_Compared()
     {
         var handler = new TreeHandler(PeopleJson(Person("h-other", "I0012", "Иван", "Образцов", 1, birth: "1870")), total: 240);
 
         var result = await CreateIvan(handler);
 
         Assert.Contains("action: created", result);
-        Assert.Contains("The duplicate check compared the first 1 of 240 people with a matching name; " +
-                        "search the tree for the others.", result);
+        Assert.Contains("The duplicate check compared only part of the people with a matching name for " +
+                        "people[0] (1 of 240); search the tree for the others.", result);
     }
 
-    /// <summary>create_person for Иван Петрович Образцов, born 1880.</summary>
+    /// <summary>create_records with Иван Петрович Образцов, born 1880.</summary>
     private static Task<string> CreateIvan(TreeHandler handler, string? notDuplicateOf = null) =>
-        PersonTools.CreatePerson(
-            JsonSerializer.Deserialize<FlexibleGrampsName>(
-                """{ "given": "Иван", "surname": "Образцов", "patronymic": "Петрович" }""")!,
-            gender: "Male",
-            eventRefs: JsonSerializer.Deserialize<FlexibleEventRefList>("""["e-birth"]"""),
-            notDuplicateOf: notDuplicateOf == null ? null : JsonSerializer.Deserialize<FlexibleHandleList>(notDuplicateOf),
-            client: CreateClient(handler));
+        CreateRecordsCall.RunAsync($$"""
+            { "people": [{ "primaryName": { "given": "Иван", "surname": "Образцов", "patronymic": "Петрович" },
+                           "gender": "Male", "eventRefs": ["e-birth"], "notDuplicateOf": {{notDuplicateOf ?? "null"}} }] }
+            """, CreateClient(handler));
 
     private static bool Matches(string pythonPattern, string text) =>
         Regex.IsMatch(text, pythonPattern, RegexOptions.IgnoreCase);
@@ -589,7 +585,7 @@ public class DuplicatePeopleTests
 
     /// <summary>
     /// Serves the vocabularies, a Birth event of 1880 as e-birth and <paramref name="people"/> to the people search;
-    /// records the requests and answers a POST with the new person h-new.
+    /// records the requests and answers a POST as Gramps Web does.
     /// </summary>
     private sealed class TreeHandler(string people, HttpStatusCode searchStatus = HttpStatusCode.OK, int? total = null)
         : HttpMessageHandler
@@ -601,7 +597,7 @@ public class DuplicatePeopleTests
 
         public IReadOnlyList<string> Posts => [.. _posts];
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.PathAndQuery;
             if (path.StartsWith("/api/token/", StringComparison.Ordinal))
@@ -611,7 +607,8 @@ public class DuplicatePeopleTests
             if (request.Method == HttpMethod.Post)
             {
                 _posts.Enqueue(path);
-                return Json("""[{ "_class": "Person", "type": "add", "old": null, "new": { "_class": "Person", "handle": "h-new", "gramps_id": "I0001" } }]""");
+                var body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken))!;
+                return Response(CreateRecordsCall.Changes(body).ToJsonString(), HttpStatusCode.OK);
             }
 
             if (path.StartsWith("/api/people/?rules=", StringComparison.Ordinal))
@@ -619,7 +616,7 @@ public class DuplicatePeopleTests
                 var response = Response(people, searchStatus);
                 if (total != null)
                     response.Headers.Add("X-Total-Count", total.ToString());
-                return Task.FromResult(response);
+                return response;
             }
 
             return path switch
@@ -629,11 +626,11 @@ public class DuplicatePeopleTests
                     """),
                 "/api/types/custom/" => Json("{}"),
                 "/api/events/e-birth" => Json("""{ "handle": "e-birth", "type": "Birth", "date": { "dateval": [0, 0, 1880, false] } }"""),
-                _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound))
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound)
             };
         }
 
-        private static Task<HttpResponseMessage> Json(string json) => Task.FromResult(Response(json, HttpStatusCode.OK));
+        private static HttpResponseMessage Json(string json) => Response(json, HttpStatusCode.OK);
 
         private static HttpResponseMessage Response(string json, HttpStatusCode status) => new(status)
         {

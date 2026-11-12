@@ -27,7 +27,7 @@ public class ToolAnnotationTests
                 Assert.False(attr.Destructive, $"Read-only tool {method.Name} must not be destructive");
         }
 
-        Assert.Equal(35, toolMethods.Count);
+        Assert.Equal(26, toolMethods.Count);
         Assert.Single(toolMethods, method => method.Name == "ReadMedia");
         Assert.Single(toolMethods, method => method.Name == "UploadMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
@@ -52,8 +52,8 @@ public class ToolAnnotationTests
     /// Every tool works on the one configured tree, so none is open-world. Creates only add, while updates
     /// overwrite fields and replace mode removes links, so updates, delete, merge and undo are destructive. A write tool
     /// also states whether repeating the same call changes anything more: updates, delete and merge settle on the same state
-    /// (add mode skips handles already linked, an identical upload returns the stored media), while plain creates
-    /// add another record, update_note can append the same text again and a forced undo_change writes again.
+    /// (add mode skips handles already linked, an identical upload returns the stored media), while create_records
+    /// adds more records, update_note can append the same text again and a forced undo_change writes again.
     /// </summary>
     [Fact]
     public void Tools_Expose_Destructive_Idempotent_And_Closed_World_Hints()
@@ -65,8 +65,7 @@ public class ToolAnnotationTests
         ];
         string[] repeatable =
         [
-            "create_citation", "create_event", "create_family", "create_note", "create_person", "create_place",
-            "create_records", "create_repository", "create_source", "create_tag", "update_note", "undo_change"
+            "create_records", "update_note", "undo_change"
         ];
 
         var tools = typeof(PersonTools).Assembly
@@ -88,7 +87,7 @@ public class ToolAnnotationTests
             }
 
             Assert.Equal(idempotent.Contains(tool.Name), annotations.IdempotentHint);
-            var onlyAdds = tool.Name.StartsWith("create_", StringComparison.Ordinal) || tool.Name == "upload_media";
+            var onlyAdds = tool.Name is "create_records" or "upload_media";
             Assert.Equal(!onlyAdds, annotations.DestructiveHint);
         }
 

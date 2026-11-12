@@ -50,9 +50,13 @@ public sealed class GrampsPrompts
         sb.AppendLine();
         sb.AppendLine("Steps:");
         sb.AppendLine("1. Search for the person first. If a match exists, show it and ask before creating another.");
-        sb.AppendLine("2. Find each place with search; create it with create_place only if it is not in the tree.");
-        sb.AppendLine("3. Create the Birth and Death events that have a date or place with create_event, using the place handles.");
-        sb.AppendLine("4. Create the person with create_person: the name, gender, and those events in eventRefs with role Primary.");
+        sb.AppendLine("2. Find each place with search.");
+        sb.AppendLine("3. Create everything new in one create_records call: the places not in the tree, each with a key such as " +
+                      "\"birthplace\"; the Birth and Death events that have a date or place, with placeHandle set to the place " +
+                      "handle or \"#birthplace\"; and the person with the name, gender and those events in eventRefs " +
+                      "(\"#birth\", \"#death\"), where the default Primary role makes them the birth and death.");
+        sb.AppendLine("4. If the call is refused because the person may already be in the tree, show the possible duplicates and " +
+                      "ask; pass notDuplicateOf only when the user says it is someone else.");
         sb.AppendLine("After creation, confirm the result by showing the handle and Gramps ID.");
         return sb.ToString();
     }
@@ -100,11 +104,12 @@ public sealed class GrampsPrompts
         sb.AppendLine("Steps:");
         sb.AppendLine("1. Find or verify each person exists. If a name is given instead of a handle/ID,");
         sb.AppendLine("   search for them first. If not found, ask whether to create them.");
-        sb.AppendLine("2. Create the family with create_family, passing the person handles and relationshipType:");
-        sb.AppendLine("   the relationship above, or Married when a source records the marriage. Without one");
-        sb.AppendLine("   the family is Unknown, as in Gramps.");
-        sb.AppendLine("3. If a marriage date is provided, create a Marriage event with create_event,");
-        sb.AppendLine("   then link it to the family using update_family with eventRefs and linkMode: \"add\".");
+        sb.AppendLine("2. Create the family with create_records, families: [{fatherHandle, motherHandle, relationshipType}]");
+        sb.AppendLine("   with the person handles and the relationship above,");
+        sb.AppendLine("   or Married when a source records the marriage. Without one the family is Unknown, as in Gramps.");
+        sb.AppendLine("3. If a marriage date is provided, add the Marriage event to the same call, events:");
+        sb.AppendLine("   [{key: \"marriage\", eventType: \"Marriage\", date, placeHandle}] with the place found by search,");
+        sb.AppendLine("   and list \"#marriage\" in the family's eventRefs.");
         sb.AppendLine("4. Show the created family details with get_object(objectType: \"family\", ...).");
         return sb.ToString();
     }
@@ -197,8 +202,8 @@ public sealed class GrampsPrompts
         if (!string.IsNullOrWhiteSpace(page))
             sb.AppendLine($"Page/location: {page}");
         sb.AppendLine("1. Resolve and inspect the target with get_object; confirm an ambiguous name before editing. Check its existing citations for the same source and page to avoid duplicates.");
-        sb.AppendLine("2. Find the source by handle/Gramps ID or search by title. Reuse a matching source; create_source only if no matching source exists and the supplied information is sufficient.");
-        sb.AppendLine("3. Reuse an existing matching citation if available; otherwise create_citation(sourceHandle: SOURCE_HANDLE, page: PAGE_IF_KNOWN). Do not invent page, confidence, or other evidence details.");
+        sb.AppendLine("2. Find the source by handle/Gramps ID or search by title. Reuse a matching source; only if no matching source exists and the supplied information is sufficient, create it in the same create_records call as the citation: sources: [{key: \"src\", title}].");
+        sb.AppendLine("3. Reuse an existing matching citation if available; otherwise create_records(citations: [{sourceHandle: SOURCE_HANDLE or \"#src\", page: PAGE_IF_KNOWN}]). Do not invent page, confidence, or other evidence details.");
         sb.AppendLine("4. Attach with the target's update_* tool: handle: TARGET_HANDLE, citationHandles: [CITATION_HANDLE], linkMode: \"add\". Read the target again to verify it is linked.");
         return sb.ToString();
     }

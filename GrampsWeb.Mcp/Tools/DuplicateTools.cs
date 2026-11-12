@@ -12,7 +12,7 @@ namespace GrampsWeb.Mcp.Tools;
 /// <summary>
 /// MCP tool that looks for people entered twice across the whole tree. It reads every person with their profile,
 /// pairs the people where the first word of one's given name is a word of the other's, and compares each pair with
-/// the rule of the create tools' duplicate check (<see cref="DuplicatePeople.Compare"/>); spouses and ancestors are
+/// the rule of create_records' duplicate check (<see cref="DuplicatePeople.Compare"/>); spouses and ancestors are
 /// left out.
 /// </summary>
 [McpServerToolType]
@@ -43,8 +43,8 @@ public static class DuplicateTools
         "so a tree of a few thousand people takes 10 to 20 seconds. Returns how many people were compared and the " +
         "pairs, possible duplicates first and then by how close the births are, numbered across pages; each person " +
         "with Gramps ID, handle, birth, death and parents. Nothing changes: compare a pair with get_object, and merge " +
-        "it with merge_objects only after the user confirmed they are one person. create_person and create_records " +
-        "run the same check on the people they create; to find one name, use search.")]
+        "it with merge_objects only after the user confirmed they are one person. create_records runs the same " +
+        "check on the people it creates; to find one name, use search.")]
     public static Task<string> FindDuplicates(
         [Description("Only pairs with this person. " + ToolDescriptionFragments.HandleDiscovery)]
         string? personHandle = null,

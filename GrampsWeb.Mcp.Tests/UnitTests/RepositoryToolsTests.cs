@@ -31,21 +31,21 @@ public class RepositoryToolsTests
     private const string TwoLinks = "Web Home: https://archive.example.org — reading room\nE-mail: info@archive.example.org";
 
     [Fact]
-    public async Task CreateRepository_Result_Shows_The_Name_Not_The_Type()
+    public async Task CreateRecords_Result_Names_The_Repository_Not_Its_Type()
     {
-        var result = await RepositoryTools.CreateRepository("City Archive", repoType: "Archive", client: CreateClient(new RepositoryHandler()));
+        var result = await CreateRepository("""{ "name": "City Archive", "repoType": "Library" }""", new RepositoryHandler());
 
-        Assert.Contains("name: \"City Archive\"", result);
+        Assert.Contains("Repository: City Archive — handle:", result);
         Assert.Contains("gramps_id: R0001", result);
-        Assert.DoesNotContain("name: \"Archive\"", result);
+        Assert.DoesNotContain("Library", result);
     }
 
     [Fact]
-    public async Task CreateRepository_Addresses_Fill_The_Address_Fields()
+    public async Task CreateRecords_Addresses_Fill_The_Address_Fields()
     {
         var handler = new RepositoryHandler();
 
-        await RepositoryTools.CreateRepository("City Archive", addresses: Addresses(KeyedAddress), client: CreateClient(handler));
+        await CreateRepository($$"""{ "name": "City Archive", "addresses": {{JsonSerializer.Serialize(KeyedAddress)}} }""", handler);
 
         var address = Assert.Single(handler.Body!["address_list"]!.AsArray())!;
         Assert.Equal("12 High Street", address["street"]!.GetValue<string>());
@@ -55,11 +55,11 @@ public class RepositoryToolsTests
     }
 
     [Fact]
-    public async Task CreateRepository_Address_Line_Is_Stored_As_The_Street()
+    public async Task CreateRecords_Address_Line_Is_Stored_As_The_Street()
     {
         var handler = new RepositoryHandler();
 
-        await RepositoryTools.CreateRepository("City Archive", address: "12 High Street, London", client: CreateClient(handler));
+        await CreateRepository("""{ "name": "City Archive", "address": "12 High Street, London" }""", handler);
 
         var address = Assert.Single(handler.Body!["address_list"]!.AsArray())!;
         Assert.Equal("12 High Street, London", address["street"]!.GetValue<string>());
@@ -67,12 +67,13 @@ public class RepositoryToolsTests
     }
 
     [Fact]
-    public async Task CreateRepository_Refuses_Address_And_Addresses_Together()
+    public async Task CreateRecords_Refuses_Address_And_Addresses_Together()
     {
         var handler = new RepositoryHandler();
 
-        var error = await Assert.ThrowsAsync<McpException>(() => RepositoryTools.CreateRepository("City Archive",
-            address: "12 High Street", addresses: Addresses(KeyedAddress), client: CreateClient(handler)));
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRepository($$"""
+            { "name": "City Archive", "address": "12 High Street", "addresses": {{JsonSerializer.Serialize(KeyedAddress)}} }
+            """, handler));
 
         Assert.Contains("address or addresses, not both", error.Message);
         Assert.Null(handler.Body);
@@ -117,11 +118,11 @@ public class RepositoryToolsTests
     }
 
     [Fact]
-    public async Task CreateRepository_Urls_Keep_Each_Type_And_Description()
+    public async Task CreateRecords_Urls_Keep_Each_Type_And_Description()
     {
         var handler = new RepositoryHandler();
 
-        await RepositoryTools.CreateRepository("City Archive", urls: Urls(TwoLinks), client: CreateClient(handler));
+        await CreateRepository($$"""{ "name": "City Archive", "urls": {{JsonSerializer.Serialize(TwoLinks)}} }""", handler);
 
         var urls = handler.Body!["urls"]!.AsArray();
         Assert.Equal(2, urls.Count);
@@ -133,11 +134,11 @@ public class RepositoryToolsTests
     }
 
     [Fact]
-    public async Task CreateRepository_Url_Is_Stored_As_A_Web_Home_Link()
+    public async Task CreateRecords_Url_Is_Stored_As_A_Web_Home_Link()
     {
         var handler = new RepositoryHandler();
 
-        await RepositoryTools.CreateRepository("City Archive", url: "https://archive.example.org", client: CreateClient(handler));
+        await CreateRepository("""{ "name": "City Archive", "url": "https://archive.example.org" }""", handler);
 
         var url = Assert.Single(handler.Body!["urls"]!.AsArray())!;
         Assert.Equal("Web Home", url["type"]!.GetValue<string>());
@@ -145,24 +146,25 @@ public class RepositoryToolsTests
     }
 
     [Fact]
-    public async Task CreateRepository_Refuses_Url_And_Urls_Together()
+    public async Task CreateRecords_Refuses_Url_And_Urls_Together()
     {
         var handler = new RepositoryHandler();
 
-        var error = await Assert.ThrowsAsync<McpException>(() => RepositoryTools.CreateRepository("City Archive",
-            url: "https://archive.example.org", urls: Urls(TwoLinks), client: CreateClient(handler)));
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRepository($$"""
+            { "name": "City Archive", "url": "https://archive.example.org", "urls": {{JsonSerializer.Serialize(TwoLinks)}} }
+            """, handler));
 
         Assert.Contains("url or urls, not both", error.Message);
         Assert.Null(handler.Body);
     }
 
     [Fact]
-    public async Task CreateRepository_Rejects_An_Unknown_Url_Type_Before_Saving()
+    public async Task CreateRecords_Rejects_An_Unknown_Url_Type_Before_Saving()
     {
         var handler = new RepositoryHandler();
 
-        var error = await Assert.ThrowsAsync<McpException>(() => RepositoryTools.CreateRepository("City Archive",
-            urls: Urls("Web Hom: https://archive.example.org"), client: CreateClient(handler)));
+        var error = await Assert.ThrowsAsync<McpException>(() => CreateRepository(
+            """{ "name": "City Archive", "urls": "Web Hom: https://archive.example.org" }""", handler));
 
         Assert.Contains("Did you mean: Web Home", error.Message);
         Assert.Null(handler.Body);
@@ -227,6 +229,10 @@ public class RepositoryToolsTests
     private static FlexibleUrlList Urls(string value) =>
         JsonSerializer.Deserialize<FlexibleUrlList>(value.TrimStart().StartsWith('[') ? value : JsonSerializer.Serialize(value))!;
 
+    /// <summary>Creates <paramref name="repository"/> through create_records.</summary>
+    private static Task<string> CreateRepository(string repository, RepositoryHandler handler) =>
+        CreateRecordsCall.RunAsync($$"""{ "repositories": [{{repository}}] }""", CreateClient(handler));
+
     private static GrampsApiClient CreateClient(RepositoryHandler handler)
     {
         var config = new GrampsConfig("https://repository-tools.test", "user", "pass", "tree");
@@ -236,8 +242,8 @@ public class RepositoryToolsTests
     }
 
     /// <summary>
-    /// Answers the token and type routes, the repository post and put (recording the body), and every GET of a
-    /// repository with <paramref name="stored"/>.
+    /// Answers the token and type routes, a create as Gramps Web does and a repository put (recording the saved
+    /// repository), and every GET of a repository with <paramref name="stored"/>.
     /// </summary>
     private sealed class RepositoryHandler(string? stored = null) : HttpMessageHandler
     {
@@ -246,7 +252,13 @@ public class RepositoryToolsTests
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.AbsolutePath;
-            if (request.Method == HttpMethod.Post && path == "/api/repositories/" || request.Method == HttpMethod.Put)
+            JsonNode? posted = null;
+            if (request.Method == HttpMethod.Post && path == "/api/objects/")
+            {
+                posted = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken))!;
+                Body = CreateRecordsCall.Saved(posted, "Repository");
+            }
+            else if (request.Method == HttpMethod.Put)
                 Body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
 
             var json = path switch
@@ -254,8 +266,7 @@ public class RepositoryToolsTests
                 "/api/token/" => """{"access_token":"token","refresh_token":"refresh","expires_in":900}""",
                 "/api/types/default/" =>
                     """{"repository_types":["Archive","Library"],"url_types":["Unknown","E-mail","Web Home","Web Search","FTP"]}""",
-                "/api/repositories/" when request.Method == HttpMethod.Post =>
-                    """[{"_class":"Repository","type":"add","old":null,"new":{"_class":"Repository","handle":"repo-h","gramps_id":"R0001"}}]""",
+                "/api/objects/" when posted != null => CreateRecordsCall.Changes(posted).ToJsonString(),
                 _ when path.StartsWith("/api/repositories/") && request.Method == HttpMethod.Put => "{}",
                 _ when path.StartsWith("/api/repositories/") && stored != null => stored,
                 _ when path.StartsWith("/api/types/") => "{}",

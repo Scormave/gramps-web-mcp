@@ -206,19 +206,22 @@ Name parsing has additional logic in `FlexibleGrampsNameParsing.cs`.
 
 ## Request DTOs (`Requests/`)
 
-Create/update request DTOs sent to the Gramps Web API via POST/PUT.
+Request DTOs for new records. `create_records` serializes one per record and
+sends them all in one `POST /api/objects/` list. The update tools load the
+stored record and send it back changed with `PUT` (`GrampsObjectPatch`), using
+only the nested request types below.
 
-| DTO | Target API endpoint |
-|-----|-------------------|
-| `CreatePersonRequest` | `POST /api/people/` / `PUT /api/people/{handle}` |
-| `CreateFamilyRequest` | `POST /api/families/` / `PUT /api/families/{handle}` |
-| `CreateEventRequest` | `POST /api/events/` / `PUT /api/events/{handle}` |
-| `CreatePlaceRequest` | `POST /api/places/` / `PUT /api/places/{handle}` |
-| `CreateSourceRequest` | `POST /api/sources/` / `PUT /api/sources/{handle}` |
-| `CreateCitationRequest` | `POST /api/citations/` / `PUT /api/citations/{handle}` |
-| `CreateNoteRequest` | `POST /api/notes/` / `PUT /api/notes/{handle}` |
-| `CreateRepositoryRequest` | `POST /api/repositories/` / `PUT /api/repositories/{handle}` |
-| `CreateTagRequest` | `POST /api/tags/` |
+| DTO | Gramps class |
+|-----|--------------|
+| `CreatePersonRequest` | `Person` |
+| `CreateFamilyRequest` | `Family` |
+| `CreateEventRequest` | `Event` |
+| `CreatePlaceRequest` | `Place` |
+| `CreateSourceRequest` | `Source` |
+| `CreateCitationRequest` | `Citation` |
+| `CreateNoteRequest` | `Note` |
+| `CreateRepositoryRequest` | `Repository` |
+| `CreateTagRequest` | `Tag` |
 
 Media has no request DTO: `upload_media` uploads the file bytes to
 `POST /api/media/`, which creates the record, and `update_media` replaces them
@@ -227,7 +230,8 @@ record and sent back with `PUT /api/media/{handle}`.
 
 Common pattern:
 - `_class` field matches Gramps class name
-- `handle`, `gramps_id`, `change` — optional (API generates on create)
+- `handle` — set by `create_records`, so other records of the call can link
+  to it; `gramps_id` and `change` are left to Gramps Web
 - `[JsonPropertyName("snake_case")]` for all fields
 - Nested request types: `GrampsNameRequest`, `SurnameRequest`,
   `EventRefRequest`, `MediaRefRequest`, `AttributeRequest`,

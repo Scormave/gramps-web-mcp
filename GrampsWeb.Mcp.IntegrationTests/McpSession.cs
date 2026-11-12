@@ -24,6 +24,7 @@ namespace GrampsWeb.Mcp.IntegrationTests;
 public sealed class McpSession : IAsyncDisposable
 {
     private const string MapPath = "/mcp";
+    private const string NewRecordKey = "new";
     private static readonly TimeSpan CallTimeout = TimeSpan.FromMinutes(1);
 
     private readonly WebApplication _app;
@@ -113,13 +114,26 @@ public sealed class McpSession : IAsyncDisposable
         return await Client.CallToolAsync(tool, ToArguments(arguments), cancellationToken: timeout.Token);
     }
 
-    /// <summary>Calls a create tool and reads the handle and Gramps ID from its header.</summary>
-    public async Task<CreatedRecord> CreateAsync(string tool, object arguments)
+    /// <summary>Creates one record with create_records and reads its handle and Gramps ID from the reply.</summary>
+    /// <param name="records">The record list of create_records it belongs in, such as <c>people</c> or <c>tags</c>.</param>
+    /// <param name="record">The fields of the record, without a key.</param>
+    public async Task<CreatedRecord> CreateAsync(string records, object record)
     {
-        var text = await CallAsync(tool, arguments);
+        var fields = JsonSerializer.SerializeToNode(record)!.AsObject();
+        fields["key"] = NewRecordKey;
+        var text = await CallAsync("create_records", new Dictionary<string, object> { [records] = new[] { fields } });
         // Tags have no Gramps ID.
-        var grampsId = tool == "create_tag" ? "" : Header(text, "gramps_id");
-        return new CreatedRecord(Header(text, "handle"), grampsId, Header(text, "action"), text);
+        var match = Regex.Match(text, $@"— handle: (\S+)(?: \| gramps_id: (\S+))? \| key: {NewRecordKey}\r?$",
+            RegexOptions.Multiline);
+        Assert.True(match.Success, $"No new record in:\n{text}");
+        return new CreatedRecord(match.Groups[1].Value, match.Groups[2].Value, Header(text, "action"), text);
+    }
+
+    /// <summary>Calls upload_media and reads the handle and Gramps ID from its header.</summary>
+    public async Task<CreatedRecord> UploadAsync(object arguments)
+    {
+        var text = await CallAsync("upload_media", arguments);
+        return new CreatedRecord(Header(text, "handle"), Header(text, "gramps_id"), Header(text, "action"), text);
     }
 
     /// <summary>A field of the YAML header that create and update tools start their result with.</summary>
@@ -152,5 +166,7 @@ public sealed class McpSession : IAsyncDisposable
     }
 }
 
-/// <summary>What a create tool reported: the new record, or with action <c>existing</c> the one it reused.</summary>
+/// <summary>
+/// What create_records or upload_media reported: the new record, or with action <c>existing</c> the media it reused.
+/// </summary>
 public sealed record CreatedRecord(string Handle, string GrampsId, string Action, string Text);

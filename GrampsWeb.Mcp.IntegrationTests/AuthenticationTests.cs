@@ -64,7 +64,7 @@ public sealed class AuthenticationTests(GrampsWebFixture gramps)
     {
         await using var session = await StartWithRejectedTokenAsync(kind);
 
-        var person = await session.CreateAsync("create_person", new { primaryName = new { first = "Ivan", surname = TestNames.Surname() } });
+        var person = await session.CreateAsync("people", new { primaryName = new { first = "Ivan", surname = TestNames.Surname() } });
 
         Assert.Equal("created", person.Action);
         Assert.Equal(["/api/token/", "/api/token/refresh/"], session.TokenRequests.Paths);
@@ -93,6 +93,7 @@ public sealed class AuthenticationTests(GrampsWebFixture gramps)
         Assert.Contains("read_media", tools);
         Assert.DoesNotContain(tools, name => name.StartsWith("create_", StringComparison.Ordinal)
                                              || name.StartsWith("update_", StringComparison.Ordinal)
+                                             || name.StartsWith("upload_", StringComparison.Ordinal)
                                              || name.StartsWith("delete_", StringComparison.Ordinal));
         Assert.Contains("Person not found", await session.CallAsync("get_object", new { identifier = "I9999" }));
     }

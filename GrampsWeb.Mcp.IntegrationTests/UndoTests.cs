@@ -11,7 +11,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task Undo_OfACreate_DeletesTheRecord()
     {
-        var note = await Session.CreateAsync("create_note", new { text = TestNames.Unique("note") });
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
         var transaction = await LatestTransactionAsync();
 
         var check = await Session.CallAsync("undo_change", new { transactionId = transaction, dryRun = true });
@@ -32,7 +32,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     {
         var original = TestNames.Unique("original");
         var edited = TestNames.Unique("edited");
-        var note = await Session.CreateAsync("create_note", new { text = original });
+        var note = await Session.CreateAsync("notes", new { text = original });
         await Session.CallAsync("update_note", new { handle = note.Handle, text = edited });
         var transaction = await LatestTransactionAsync();
 
@@ -49,7 +49,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     public async Task Undo_OfADeletion_RestoresTheRecord_WithForceBeforeGrampsWeb323()
     {
         var text = TestNames.Unique("note");
-        var note = await Session.CreateAsync("create_note", new { text });
+        var note = await Session.CreateAsync("notes", new { text });
         await Session.CallAsync("delete_records", new { identifiers = new[] { note.Handle }, objectType = "note" });
         var transaction = await LatestTransactionAsync();
 
@@ -73,7 +73,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task Undo_IsRefused_AfterALaterEdit()
     {
-        var note = await Session.CreateAsync("create_note", new { text = TestNames.Unique("note") });
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
         var transaction = await LatestTransactionAsync();
         await Session.CallAsync("update_note", new { handle = note.Handle, appendText = " more" });
 
@@ -88,9 +88,9 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task Undo_IsRefused_WhenARecordToDeleteIsNowLinked()
     {
-        var note = await Session.CreateAsync("create_note", new { text = TestNames.Unique("note") });
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
         var transaction = await LatestTransactionAsync();
-        var person = await Session.CreateAsync("create_person", new
+        var person = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Anna", surname = TestNames.Surname() },
             noteHandles = new[] { note.Handle }
@@ -107,8 +107,8 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task Undo_IsRefused_WhenTheEarlierVersionLinksADeletedRecord()
     {
-        var note = await Session.CreateAsync("create_note", new { text = TestNames.Unique("note") });
-        var person = await Session.CreateAsync("create_person", new
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
+        var person = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Pyotr", surname = TestNames.Surname() },
             noteHandles = new[] { note.Handle }

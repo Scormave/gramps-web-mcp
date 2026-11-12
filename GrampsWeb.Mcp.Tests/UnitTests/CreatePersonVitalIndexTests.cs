@@ -1,22 +1,21 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
-using GrampsWeb.Mcp.Input;
-using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
-/// <summary>create_person sets birth_ref_index and death_ref_index, which Gramps Web sets only on PUT.</summary>
+/// <summary>
+/// create_records sets birth_ref_index and death_ref_index of a new person, which Gramps Web sets only on PUT.
+/// </summary>
 public class CreatePersonVitalIndexTests
 {
     [Fact]
-    public async Task CreatePerson_Points_The_Indexes_At_The_First_Primary_Birth_And_Death()
+    public async Task CreateRecords_Points_The_Indexes_At_The_First_Primary_Birth_And_Death()
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
@@ -30,51 +29,43 @@ public class CreatePersonVitalIndexTests
                 """
         });
 
-        await PersonTools.CreatePerson(
-            Name(),
-            eventRefs: JsonSerializer.Deserialize<FlexibleEventRefList>(
-                """["e-baptism", "e-birth", "e-son-death::Witness", "e-death", "e-birth-2"]"""),
-            client: CreateClient(handler));
+        await CreatePerson("""["e-baptism", "e-birth", "e-son-death::Witness", "e-death", "e-birth-2"]""", handler);
 
-        Assert.Equal(1, handler.PostBody!["birth_ref_index"]!.GetValue<int>());
-        Assert.Equal(3, handler.PostBody["death_ref_index"]!.GetValue<int>());
+        Assert.Equal(1, Person(handler)["birth_ref_index"]!.GetValue<int>());
+        Assert.Equal(3, Person(handler)["death_ref_index"]!.GetValue<int>());
     }
 
     [Fact]
-    public async Task CreatePerson_Counts_Every_Link_And_Skips_A_Birth_In_Another_Role()
+    public async Task CreateRecords_Counts_Every_Link_And_Skips_A_Birth_In_Another_Role()
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
             ["/api/events/e-birth"] = """{ "handle": "e-birth", "type": "Birth" }"""
         });
 
-        await PersonTools.CreatePerson(
-            Name(),
-            eventRefs: JsonSerializer.Deserialize<FlexibleEventRefList>("""["e-child-birth::Father", "e-birth"]"""),
-            client: CreateClient(handler));
+        await CreatePerson("""["e-child-birth::Father", "e-birth"]""", handler);
 
         Assert.Equal(["/api/events/e-birth"], handler.Requests.Where(p => p.StartsWith("/api/events/", StringComparison.Ordinal)));
-        Assert.Equal(1, handler.PostBody!["birth_ref_index"]!.GetValue<int>());
-        Assert.Equal(-1, handler.PostBody["death_ref_index"]!.GetValue<int>());
+        Assert.Equal(1, Person(handler)["birth_ref_index"]!.GetValue<int>());
+        Assert.Equal(-1, Person(handler)["death_ref_index"]!.GetValue<int>());
     }
 
     [Fact]
-    public async Task CreatePerson_Without_Primary_Events_Sends_Minus_One_Without_Reading_Events()
+    public async Task CreateRecords_Without_Primary_Events_Sends_Minus_One_Without_Reading_Events()
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await PersonTools.CreatePerson(
-            Name(),
-            eventRefs: JsonSerializer.Deserialize<FlexibleEventRefList>("""["e-child-birth::Father"]"""),
-            client: CreateClient(handler));
+        await CreatePerson("""["e-child-birth::Father"]""", handler);
 
         Assert.DoesNotContain(handler.Requests, p => p.StartsWith("/api/events/", StringComparison.Ordinal));
-        Assert.Equal(-1, handler.PostBody!["birth_ref_index"]!.GetValue<int>());
-        Assert.Equal(-1, handler.PostBody["death_ref_index"]!.GetValue<int>());
+        Assert.Equal(-1, Person(handler)["birth_ref_index"]!.GetValue<int>());
+        Assert.Equal(-1, Person(handler)["death_ref_index"]!.GetValue<int>());
     }
 
-    private static FlexibleGrampsName Name() =>
-        JsonSerializer.Deserialize<FlexibleGrampsName>("""{ "given": "Ivan", "surname": "Petrov" }""")!;
+    /// <summary>Creates Ivan Petrov with <paramref name="eventRefs"/> through create_records.</summary>
+    private static Task<string> CreatePerson(string eventRefs, TreeHandler handler) => CreateRecordsCall.RunAsync(
+        $$"""{ "people": [{ "primaryName": { "given": "Ivan", "surname": "Petrov" }, "eventRefs": {{eventRefs}} }] }""",
+        CreateClient(handler));
 
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
     {
@@ -84,7 +75,12 @@ public class CreatePersonVitalIndexTests
         return new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
     }
 
-    /// <summary>Serves the role vocabulary and bodies by path and query (404 otherwise) and records the POST body.</summary>
+    private static JsonNode Person(TreeHandler handler) => CreateRecordsCall.Saved(handler.PostBody, "Person");
+
+    /// <summary>
+    /// Serves the role vocabulary, no people for the duplicate check and bodies by path and query (404 otherwise),
+    /// and records the POST body.
+    /// </summary>
     private sealed class TreeHandler(IReadOnlyDictionary<string, string> bodies) : HttpMessageHandler
     {
         private readonly ConcurrentQueue<string> _requests = new();
@@ -103,11 +99,13 @@ public class CreatePersonVitalIndexTests
             if (request.Method == HttpMethod.Post)
             {
                 PostBody = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
-                return Json("""[{ "_class": "Person", "type": "add", "old": null, "new": { "_class": "Person", "handle": "h-new", "gramps_id": "I0001" } }]""");
+                return Json(CreateRecordsCall.Changes(PostBody!).ToJsonString());
             }
 
             if (path == "/api/types/default/")
                 return Json("""{ "event_role_types": ["Primary", "Father", "Witness"] }""");
+            if (path.StartsWith("/api/people/?rules=", StringComparison.Ordinal))
+                return Json("[]");
             return bodies.TryGetValue(path, out var body) ? Json(body) : new HttpResponseMessage(HttpStatusCode.NotFound);
         }
 

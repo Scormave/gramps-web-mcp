@@ -12,7 +12,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
     {
         var surname = TestNames.Surname();
 
-        var person = await Session.CreateAsync("create_person", new
+        var person = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Petr", surname, patronymic = "Ivanovich" },
             gender = "male"
@@ -32,8 +32,8 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
     public async Task UpdatePerson_AddsAndRemovesOneEventLink()
     {
         var person = await CreatePersonAsync("Ivan", TestNames.Surname(), "male");
-        var birth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1890-05-03" });
-        var baptism = await Session.CreateAsync("create_event", new { eventType = "Baptism", date = "1890-05-05" });
+        var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1890-05-03" });
+        var baptism = await Session.CreateAsync("events", new { eventType = "Baptism", date = "1890-05-05" });
 
         await Session.CallAsync("update_person", new
         {
@@ -142,7 +142,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
         var surname = TestNames.Surname();
 
         var people = await Task.WhenAll(Enumerable.Range(0, 6).Select(i =>
-            Session.CreateAsync("create_person", new { primaryName = new { first = $"Child{(char)('a' + i)}", surname } })));
+            Session.CreateAsync("people", new { primaryName = new { first = $"Child{(char)('a' + i)}", surname } })));
 
         Assert.Equal(6, people.Select(person => person.GrampsId).Distinct().Count());
         var listed = await Session.CallAsync("search", new { query = surname });
@@ -150,7 +150,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
     }
 
     private Task<CreatedRecord> CreatePersonAsync(string first, string surname, string gender) =>
-        Session.CreateAsync("create_person", new { primaryName = new { first, surname }, gender });
+        Session.CreateAsync("people", new { primaryName = new { first, surname }, gender });
 
     /// <summary>
     /// Ivan and Maria, married about 1884, with a son born 1890 and a daughter born 1885, linked in
@@ -165,13 +165,13 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
         var son = await CreatePersonAsync("Petr", surname, "male");
         var daughter = await CreatePersonAsync("Anna", surname, "female");
 
-        var sonBirth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1890-05-03" });
-        var daughterBirth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1885" });
-        var marriage = await Session.CreateAsync("create_event", new { eventType = "Marriage", date = "about 1884" });
+        var sonBirth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1890-05-03" });
+        var daughterBirth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1885" });
+        var marriage = await Session.CreateAsync("events", new { eventType = "Marriage", date = "about 1884" });
         await Session.CallAsync("update_person", new { handle = son.Handle, eventRefs = new[] { $"{sonBirth.Handle}::Primary" } });
         await Session.CallAsync("update_person", new { handle = daughter.Handle, eventRefs = new[] { $"{daughterBirth.Handle}::Primary" } });
 
-        var family = await Session.CreateAsync("create_family", new
+        var family = await Session.CreateAsync("families", new
         {
             fatherHandle = father.Handle,
             motherHandle = mother.Handle,

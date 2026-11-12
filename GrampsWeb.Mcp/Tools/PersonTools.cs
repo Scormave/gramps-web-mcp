@@ -193,94 +193,9 @@ public static class PersonTools
     private static Task<GrampsPerson?> GetPersonProfileAsync(GrampsApiClient client, string handle) =>
         client.GetOrNullIfNotFoundAsync<GrampsPerson>($"/api/people/{Uri.EscapeDataString(handle)}?profile=self");
 
-    [McpServerTool(Title = "Create Person", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create one person: names, gender, links to existing events with the person's role in each, families, " +
-        "citations, notes, media and tags, plus attributes, addresses, URLs and associations. " +
-        "Returns the new handle, Gramps ID and name, with next steps. Checks the tree for the same person first: someone " +
-        "with the same given name and surname (spelling variants, old letters, Cyrillic and Latin letters, and male, " +
-        "female and daughter's forms such as Novák, Nováková and Новак count as one), " +
-        "not the other gender, without another patronymic, and born within two years, or a child of the same parents " +
-        "when there are no two years to compare, stops the call with action \"refused\" and the possible duplicates; " +
-        "namesakes born up to five years apart, or without a year, are listed after the person is created. Add to an " +
-        "existing person with update_person; create a different person anyway with notDuplicateOf. " +
-        "primaryName is the main name, usually the birth name, e.g. " +
-        "{\"given\": \"Ivan\", \"patronymic\": \"Petrovich\", \"surname\": \"Sidorov\"}; a married name or another spelling " +
-        "goes in alternateNames. Events are separate records: create the Birth, Death and other events with create_event " +
-        "first and pass them in eventRefs, or attach them later with update_person (linkMode add). The first Birth and the " +
-        "first Death in the Primary role, the default, become the person's birth and death in Gramps; in another role, " +
-        "such as Witness, the event is only linked. familyHandles and parentFamilyHandles link the person to a family but " +
-        "not the family to the person: name the person in the family's fatherHandle, motherHandle or childRefs instead " +
-        "(create_family or update_family), which links both ways. " + ToolDescriptionFragments.BatchCreate + " " +
-        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
-    public static async Task<string> CreatePerson(
-        [Description(FlexibleGrampsName.DescriptionHint)]
-        FlexibleGrampsName? primaryName,
-        [Description("Gender: Female, Male, or Unknown (default Unknown).")]
-        string gender = "Unknown",
-        [Description(FlexibleAlternateNameList.DescriptionHint)]
-        FlexibleAlternateNameList? alternateNames = null,
-        [Description("Existing events this person takes part in, each with a role (Primary by default; Witness, Godparent, …). " + FlexibleEventRefList.DescriptionHint)]
-        FlexibleEventRefList? eventRefs = null,
-        [Description("Families where this person is a parent or spouse. Does not make the person the family's father or mother: use fatherHandle or motherHandle on the family for that. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? familyHandles = null,
-        [Description("Families where this person is a child. Does not add the person to the family's children: use childRefs on the family for that. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? parentFamilyHandles = null,
-        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
-        FlexibleMediaLinkList? mediaHandles = null,
-        [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? citationHandles = null,
-        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? tagHandles = null,
-        [Description(FlexibleAttributeList.DescriptionHint)]
-        FlexibleAttributeList? attributes = null,
-        [Description(FlexibleAddressList.DescriptionHint)]
-        FlexibleAddressList? addresses = null,
-        [Description(FlexibleUrlList.DescriptionHint)]
-        FlexibleUrlList? urls = null,
-        [Description(FlexiblePersonRefList.DescriptionHint)]
-        FlexiblePersonRefList? personAssociations = null,
-        [Description("Mark the person private (default false).")]
-        bool isPrivate = false,
-        [Description("People of the tree who are someone else, from the possible duplicates of a refused call: " +
-                     "Gramps IDs or handles, e.g. [\"I0012\"]. The duplicate check passes over them.")]
-        FlexibleHandleList? notDuplicateOf = null,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var request = await BuildPersonRequestAsync(primaryName, gender, alternateNames, eventRefs, familyHandles,
-                parentFamilyHandles, mediaHandles, citationHandles, noteHandles, tagHandles, attributes, addresses, urls,
-                personAssociations, isPrivate, client);
-
-            var birthYear = await SetVitalEventIndexesAsync(client, request);
-
-            client.EnsureWritable();
-            var name = GrampsValueFormatter.FormatName(primaryName!.Name);
-            var check = await DuplicatePeople.CheckAsync(client,
-                DuplicatePeople.Describe(request, birthYear, notDuplicateOf: notDuplicateOf?.Handles));
-            if (check.Strong.Count > 0)
-                return DuplicatePeople.Refusal(name, check);
-
-            var (handle, grampsId) = await client.PostMutationAsync("/api/people/", request, "Person");
-            return ResponseEnvelope.CreateSuccess(
-                "Person", handle, grampsId, name,
-                ResponseEnvelope.PersonCreateNextSteps(handle,
-                    hasEvents: request.EventRefList is { Length: > 0 },
-                    hasFamily: request.FamilyList is { Length: > 0 } || request.ParentFamilyList is { Length: > 0 },
-                    hasNotes: request.NoteList is { Length: > 0 })) + DuplicatePeople.CreatedNote(check, handle);
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
     /// <summary>
-    /// The checked request body of create_person, without the birth and death indexes, which depend on the
-    /// linked events' types; create_records sends it too.
+    /// The checked request body of a new person for create_records, without the birth and death indexes, which
+    /// depend on the linked events' types.
     /// </summary>
     internal static async Task<CreatePersonRequest> BuildPersonRequestAsync(
         FlexibleGrampsName? primaryName, string gender, FlexibleAlternateNameList? alternateNames,
@@ -330,7 +245,7 @@ public static class PersonTools
     [McpServerTool(Title = "Update Person", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing person's names, gender, attributes, addresses, URLs, associations or links to events, " +
-        "families, citations, notes, media and tags. For a new person use create_person; to remove one, delete_records. " +
+        "families, citations, notes, media and tags. For a new person use create_records; to remove one, delete_records. " +
         "Links live on one side: an event joins this person here through eventRefs (linkMode add) with the person's role, " +
         "not on the event; to make the person a child, add them to the family's childRefs with update_family. " +
         "alternateNames, attributes, addresses and urls replace their whole lists " +

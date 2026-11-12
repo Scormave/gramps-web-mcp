@@ -15,13 +15,13 @@ public sealed class MergeTests(GrampsWebFixture gramps)
     public async Task Merge_OfTwoPeople_MovesTheLinks_AndUndoRestoresTheDuplicate()
     {
         var surname = TestNames.Surname();
-        var keep = await Session.CreateAsync("create_person", new
+        var keep = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Anna", surname },
             gender = "female"
         });
-        var birth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1890" });
-        var duplicate = await Session.CreateAsync("create_person", new
+        var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1890" });
+        var duplicate = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Anya", surname },
             gender = "female",
@@ -68,17 +68,17 @@ public sealed class MergeTests(GrampsWebFixture gramps)
     public async Task Merge_OfSpouses_IsRefused_AndChangesNothing()
     {
         var surname = TestNames.Surname();
-        var husband = await Session.CreateAsync("create_person", new
+        var husband = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Ivan", surname },
             gender = "male"
         });
-        var wife = await Session.CreateAsync("create_person", new
+        var wife = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Anna", surname },
             gender = "female"
         });
-        await Session.CreateAsync("create_family", new { fatherHandle = husband.Handle, motherHandle = wife.Handle });
+        await Session.CreateAsync("families", new { fatherHandle = husband.Handle, motherHandle = wife.Handle });
 
         var refused = await Session.CallAsync("merge_objects", new
         {
@@ -97,28 +97,28 @@ public sealed class MergeTests(GrampsWebFixture gramps)
     public async Task Merge_OfTwoFamilies_JoinsTheFathers_AndMovesTheChildren()
     {
         var surname = TestNames.Surname();
-        var father = await Session.CreateAsync("create_person", new
+        var father = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Ivan", surname },
             gender = "male"
         });
-        var mother = await Session.CreateAsync("create_person", new
+        var mother = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Anna", surname },
             gender = "female"
         });
-        var keep = await Session.CreateAsync("create_family", new { fatherHandle = father.Handle, motherHandle = mother.Handle });
-        var otherFather = await Session.CreateAsync("create_person", new
+        var keep = await Session.CreateAsync("families", new { fatherHandle = father.Handle, motherHandle = mother.Handle });
+        var otherFather = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Ioann", surname },
             gender = "male"
         });
-        var son = await Session.CreateAsync("create_person", new
+        var son = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Petr", surname },
             gender = "male"
         });
-        var duplicate = await Session.CreateAsync("create_family", new
+        var duplicate = await Session.CreateAsync("families", new
         {
             fatherHandle = otherFather.Handle,
             relationshipType = "Married",
@@ -151,9 +151,9 @@ public sealed class MergeTests(GrampsWebFixture gramps)
     {
         var keptText = TestNames.Unique("kept");
         var droppedText = TestNames.Unique("dropped");
-        var keep = await Session.CreateAsync("create_note", new { text = keptText });
-        var duplicate = await Session.CreateAsync("create_note", new { text = droppedText });
-        var person = await Session.CreateAsync("create_person", new
+        var keep = await Session.CreateAsync("notes", new { text = keptText });
+        var duplicate = await Session.CreateAsync("notes", new { text = droppedText });
+        var person = await Session.CreateAsync("people", new
         {
             primaryName = new { first = "Olga", surname = TestNames.Surname() },
             noteHandles = new[] { duplicate.Handle }

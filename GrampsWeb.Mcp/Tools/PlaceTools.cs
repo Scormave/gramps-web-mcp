@@ -17,13 +17,13 @@ namespace GrampsWeb.Mcp.Tools;
 [McpServerToolType]
 public static class PlaceTools
 {
-    private const string NameDateHint =
+    internal const string NameDateHint =
         "Gramps shows the first name, primary first, whose date is empty or matches the event date, so an undated " +
         "primary name hides dated alternate names: date the primary name too (\"from 1937-02-10\"). " +
         "Dashes are spans; open \"1991-\" / \"from 1991\" are From. Unreadable dates are rejected.";
 
-    private const string LatHint = "Latitude in decimal degrees, north positive (52.2297). " + FlexibleString.DescriptionHint;
-    private const string LonHint = "Longitude in decimal degrees, east positive (21.0122). " + FlexibleString.DescriptionHint;
+    internal const string LatHint = "Latitude in decimal degrees, north positive (52.2297). " + FlexibleString.DescriptionHint;
+    internal const string LonHint = "Longitude in decimal degrees, east positive (21.0122). " + FlexibleString.DescriptionHint;
     private const string OmitToKeepEmptyRemoves = "Omit to keep the current value; pass an empty string to remove it.";
 
     [Description(
@@ -50,65 +50,7 @@ public static class PlaceTools
         }
     }
 
-    [McpServerTool(Title = "Create Place", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create a new place, such as a village, parish or county, with its names, type, coordinates and the larger places " +
-        "that contain it. Search first: no duplicate check is made, and an existing place is changed with update_place. " +
-        "Build hierarchies top-down: enclosedBy takes existing places only, each with optional dates for when the place " +
-        "belonged there, so create the county before its villages. name, nameLang and nameDate make the primary name and " +
-        "alternateNames the historical or other-language ones; an undated primary name hides dated alternate names. " +
-        "Events point here afterwards through placeHandle on create_event or update_event. " +
-        "Returns the new handle and Gramps ID with the stored name, type, coordinates and enclosing places, and next steps; " +
-        "an unknown type or unreadable date is rejected before anything is saved. " + ToolDescriptionFragments.BatchCreate + " " +
-        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
-    public static async Task<string> CreatePlace(
-        [Description("Primary name (required).")]
-        string name,
-        [Description("Place type, e.g. Country, Province, County, City, Town, Village, Hamlet, Parish. " + ToolDescriptionFragments.KnownType)]
-        string? placeType = null,
-        [Description(LatHint)]
-        FlexibleString? lat = null,
-        [Description(LonHint)]
-        FlexibleString? lon = null,
-        [Description("Places that contain this one. " + FlexiblePlaceRefList.DescriptionHint)]
-        FlexiblePlaceRefList? enclosedBy = null,
-        [Description("Language code of the primary name, e.g. pl or de (optional).")]
-        string? nameLang = null,
-        [Description("When the primary name applies (default: always). " + NameDateHint)]
-        string? nameDate = null,
-        [Description("Other names: historical, other languages. " + FlexiblePlaceNameList.DescriptionHint)]
-        FlexiblePlaceNameList? alternateNames = null,
-        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? noteHandles = null,
-        [Description("Place code or postal code (optional).")]
-        string? code = null,
-        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
-        FlexibleMediaLinkList? mediaHandles = null,
-        [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? citationHandles = null,
-        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? tagHandles = null,
-        [Description("Mark the place private (default false).")]
-        bool isPrivate = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var request = await BuildPlaceRequestAsync(name, placeType, lat, lon, enclosedBy, nameLang, nameDate,
-                alternateNames, noteHandles, code, mediaHandles, citationHandles, tagHandles, isPrivate, client);
-            var (handle, grampsId) = await client.PostMutationAsync("/api/places/", request, "Place");
-            return ResponseEnvelope.CreateSuccess(
-                "Place", handle, grampsId,
-                request.Name!.Value, ResponseEnvelope.PlaceCreateNextSteps(handle!),
-                StoredFields(request.Type, request.Latitude, request.Longitude, request.PlaceRefList?.Select(r => r.Ref)));
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    /// <summary>The checked request body of create_place; create_records sends it too.</summary>
+    /// <summary>The checked request body of a new place for create_records.</summary>
     internal static async Task<CreatePlaceRequest> BuildPlaceRequestAsync(
         string name, string? placeType, FlexibleString? lat, FlexibleString? lon, FlexiblePlaceRefList? enclosedBy,
         string? nameLang, string? nameDate, FlexiblePlaceNameList? alternateNames, FlexibleHandleList? noteHandles,
@@ -152,7 +94,7 @@ public static class PlaceTools
     [Description(
         "Change an existing place's names, type, coordinates, code, enclosing places or links to notes, media, citations " +
         "and tags. The change shows on every event at this place: if only one event names the wrong place, give that event " +
-        "another placeHandle with update_event instead. For a new place use create_place; to remove one, delete_records. " +
+        "another placeHandle with update_event instead. For a new place use create_records; to remove one, delete_records. " +
         "name, nameLang and nameDate each change one part of the primary name, alternateNames replaces all the other names, " +
         "and an empty string clears lat, lon or nameDate. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID with the stored name, type, coordinates and enclosing places; " +

@@ -42,53 +42,7 @@ public static class CitationTools
         }
     }
 
-    [McpServerTool(Title = "Create Citation", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create a citation: one specific spot in an existing source, such as a page, act or entry number, with its date, " +
-        "confidence, notes and media. Returns the new handle, Gramps ID and page, with next steps. " +
-        "The source must already exist (search, or create_source). A transcript of the entry goes in a note " +
-        "(create_note, type Transcript) passed in noteHandles; the scan goes in mediaHandles, or later through upload_media " +
-        "attachTo, which can mark the entry's region on the page. The citation supports nothing until it is attached: " +
-        "add it to each person, family, event or place it names (citationHandles, linkMode add, on their update tool). " +
-        "Does not check for duplicates; change an existing citation with update_citation. " +
-        ToolDescriptionFragments.BatchCreate + " " +
-        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
-    public static async Task<string> CreateCitation(
-        [Description("The source being cited (required). " + ToolDescriptionFragments.HandleDiscovery)]
-        string sourceHandle,
-        [Description("Where in the source: page, act or entry number (optional). " + FlexibleString.DescriptionHint)]
-        FlexibleString? page = null,
-        [Description("How reliable the cited record is: Very Low, Low, Normal (default), High or Very High.")]
-        string confidence = "Normal",
-        [Description("Date of the cited entry, optional. " + ToolDescriptionFragments.DateText)]
-        string? date = null,
-        [Description("Notes, e.g. a transcript of the entry (create_note with type Transcript). " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? noteHandles = null,
-        [Description("Media such as the scan of the page. " + FlexibleMediaLinkList.DescriptionHint)]
-        FlexibleMediaLinkList? mediaHandles = null,
-        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? tagHandles = null,
-        [Description(FlexibleAttributeList.DescriptionHint + " " + FlexibleAttributeList.SourceAttributesHint)]
-        FlexibleAttributeList? attributes = null,
-        [Description("Mark the citation private (default false).")]
-        bool isPrivate = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var request = await BuildCitationRequestAsync(sourceHandle, page, confidence, date,
-                noteHandles, mediaHandles, tagHandles, attributes, isPrivate, client);
-            var (handle, grampsId) = await client.PostMutationAsync("/api/citations/", request, "Citation");
-            return ResponseEnvelope.CreateSuccess("Citation", handle, grampsId,
-                page, ResponseEnvelope.CitationCreateNextSteps(handle!));
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    /// <summary>The checked request body of create_citation; create_records sends it too.</summary>
+    /// <summary>The checked request body of a new citation for create_records.</summary>
     internal static async Task<CreateCitationRequest> BuildCitationRequestAsync(
         string sourceHandle, FlexibleString? page, string confidence, string? date,
         FlexibleHandleList? noteHandles, FlexibleMediaLinkList? mediaHandles, FlexibleHandleList? tagHandles,
@@ -125,7 +79,7 @@ public static class CitationTools
         "Change an existing citation's source, page, date, confidence, attributes or links to notes, media and tags. " +
         "Which people, events and other records it supports is stored on them: attach or detach it with their update tool " +
         "(citationHandles), not here. A change shows on every record that cites it: to cite another page or entry " +
-        "for one record, create a new citation with create_citation; to remove one, delete_records. " +
+        "for one record, create a new citation with create_records; to remove one, delete_records. " +
         "sourceHandle moves the citation to another source, an empty string clears date, and attributes replace the whole " +
         "list whatever linkMode says. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing citation returns a not-found message. " +

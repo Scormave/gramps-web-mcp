@@ -24,11 +24,12 @@ to `demo.grampsweb.org`.
 
 ### Naming
 
-- **Tool methods**: PascalCase static methods (e.g. `GetObject`, `CreateEvent`).
+- **Tool methods**: PascalCase static methods (e.g. `GetObject`, `CreateRecords`).
   The MCP SDK derives the wire name from the method name (→ `get_object`,
-  `create_event`).
+  `create_records`).
 - **Models**: `Gramps` prefix (e.g. `GrampsPerson`, `GrampsEvent`).
-- **Request DTOs**: `Create*Request` (used for both create and update).
+- **Request DTOs**: `Create*Request` (bodies of new records; update tools use
+  their nested types).
 - **Formatters**: `*Formatter` static classes.
 - **Converters**: `*JsonConverter` or `*Codec`.
 
@@ -195,7 +196,9 @@ Full checklist for adding support for a completely new entity type
 4. **Formatter** → `Formatters/{Entity}Formatter.cs`
 5. **Tools** → `Tools/{Entity}Tools.cs` with:
    - `Read{Entity}Async` (internal read dispatcher)
-   - `Create{Entity}` and `Update{Entity}` where supported
+   - `Update{Entity}` where supported, and a `{Entity}Record` in
+     `Input/BatchRecords.cs` with a list parameter on
+     `RecordBatchTools.CreateRecords` to create it
    - add the entity to `ObjectTools.cs` when it supports generic reads or deletion
 6. **Search support** → update `SearchFormatter.cs` and
    `SearchTools.ListObjects` if the new type should appear in listings.

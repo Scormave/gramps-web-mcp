@@ -24,15 +24,15 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
     {
         var first = TestNames.Surname();
         Task<CreatedRecord> Person(string gender) =>
-            Session.CreateAsync("create_person", new { primaryName = new { first, surname = TestNames.Surname() }, gender });
+            Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() }, gender });
 
         var father = await Person("male");
         var son = await Person("male");
         var loner = await Person("female");
         var otherFather = await Person("male");
         var otherSon = await Person("male");
-        await Session.CreateAsync("create_family", new { fatherHandle = father.Handle, childRefs = new[] { son.Handle } });
-        await Session.CreateAsync("create_family", new { fatherHandle = otherFather.Handle, childRefs = new[] { otherSon.Handle } });
+        await Session.CreateAsync("families", new { fatherHandle = father.Handle, childRefs = new[] { son.Handle } });
+        await Session.CreateAsync("families", new { fatherHandle = otherFather.Handle, childRefs = new[] { otherSon.Handle } });
         return new Kin(first, father, son, loner, otherFather, otherSon);
     }
 
@@ -94,14 +94,14 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
     public async Task Rules_MatchPeopleThroughTheirEvents()
     {
         var first = TestNames.Surname();
-        var residence = await Session.CreateAsync("create_event", new { eventType = "Residence", date = "1897" });
-        var birth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1870" });
-        var resident = await Session.CreateAsync("create_person", new
+        var residence = await Session.CreateAsync("events", new { eventType = "Residence", date = "1897" });
+        var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1870" });
+        var resident = await Session.CreateAsync("people", new
         {
             primaryName = new { first, surname = TestNames.Surname() },
             eventRefs = new[] { $"{residence.Handle}::Primary" }
         });
-        await Session.CreateAsync("create_person", new
+        await Session.CreateAsync("people", new
         {
             primaryName = new { first, surname = TestNames.Surname() },
             eventRefs = new[] { $"{birth.Handle}::Primary" }

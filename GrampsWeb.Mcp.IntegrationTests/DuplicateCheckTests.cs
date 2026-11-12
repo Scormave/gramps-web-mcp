@@ -4,7 +4,7 @@ using Xunit;
 namespace GrampsWeb.Mcp.IntegrationTests;
 
 /// <summary>
-/// The duplicate check of create_person and create_records against a real Gramps Web, where its name search runs
+/// The duplicate check of create_records against a real Gramps Web, where its name search runs
 /// as regular expressions on the server, and find_duplicates over the whole tree.
 /// </summary>
 [Collection(GrampsWebCollection.Name)]
@@ -15,24 +15,27 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
     private McpSession Session => gramps.Session;
 
     [IntegrationFact]
-    public async Task CreatePerson_OfANamesakeBornAYearApart_IsRefused_UntilNotDuplicateOfNamesThem()
+    public async Task CreateRecords_OfANamesakeBornAYearApart_IsRefused_UntilNotDuplicateOfNamesThem()
     {
         var stem = CyrillicSurname();
         var existing = await CreatePersonAsync("Ѳедоръ", stem + "овъ", "male", "1880", patronymic: "Ивановъ");
-        var birth = await Session.CreateAsync("create_event", new { eventType = "Birth", date = "1881" });
+        var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1881" });
         var before = await LatestTransactionAsync();
         var name = new { first = "Федор", surname = stem + "ов", patronymic = "Иванович" };
 
-        var refused = await Session.CallAsync("create_person", new { primaryName = name, gender = "male", eventRefs = new[] { birth.Handle } });
+        var refused = await Session.CallAsync("create_records", new
+        {
+            people = new[] { new { primaryName = name, gender = "male", eventRefs = new[] { birth.Handle } } }
+        });
 
         Assert.Equal("refused", McpSession.Header(refused, "action"));
         Assert.Equal("1", McpSession.Header(refused, "duplicates"));
         AssertContains($"{stem}овъ Ивановъ, Ѳедоръ ({existing.GrampsId}) [handle: {existing.Handle}], b. 1880 — " +
                         "same name, born 1 year apart", refused);
-        AssertContains($"notDuplicateOf: [\"{existing.GrampsId}\"]", refused);
+        AssertContains($"people[0] notDuplicateOf: [\"{existing.GrampsId}\"]", refused);
         Assert.Equal(before, await LatestTransactionAsync());
 
-        var created = await Session.CreateAsync("create_person", new
+        var created = await Session.CreateAsync("people", new
         {
             primaryName = name,
             gender = "male",
@@ -45,7 +48,7 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
-    public async Task CreatePerson_OfANamesakeBornYearsApart_CreatesThePerson_AndListsTheNamesake()
+    public async Task CreateRecords_OfANamesakeBornYearsApart_CreatesThePerson_AndListsTheNamesake()
     {
         var surname = TestNames.Surname() + "ov";
         var existing = await CreatePersonAsync("Anna", surname, "female", "1880");
@@ -53,10 +56,10 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
         var created = await CreatePersonAsync("Anna", surname + "a", "female", "1884");
 
         Assert.Equal("created", created.Action);
-        AssertContains("Similar people already in the tree (1), possibly the same person:", created.Text);
+        AssertContains("Similar people already in the tree, possibly the same as a new person:", created.Text);
+        AssertContains($"— handle: {created.Handle} (1):", created.Text);
         AssertContains($"({existing.GrampsId}) [handle: {existing.Handle}], b. 1880 — same name, born 4 years apart",
             created.Text);
-        AssertContains($"keepHandle: \"<their handle>\", duplicateHandle: \"{created.Handle}\"", created.Text);
     }
 
     [IntegrationFact]
@@ -65,7 +68,7 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
         var surname = TestNames.Surname();
         var father = await CreatePersonAsync("Ivan", surname, "male");
         var son = await CreatePersonAsync("Petr", surname, "male");
-        await Session.CreateAsync("create_family", new { fatherHandle = father.Handle, childRefs = new[] { son.Handle } });
+        await Session.CreateAsync("families", new { fatherHandle = father.Handle, childRefs = new[] { son.Handle } });
         var before = await LatestTransactionAsync();
 
         object Records(string[]? notDuplicateOf) => new
@@ -116,10 +119,10 @@ public sealed class DuplicateCheckTests(GrampsWebFixture gramps)
     {
         var eventRefs = new List<string>();
         if (birthYear != null)
-            eventRefs.Add((await Session.CreateAsync("create_event", new { eventType = "Birth", date = birthYear })).Handle);
+            eventRefs.Add((await Session.CreateAsync("events", new { eventType = "Birth", date = birthYear })).Handle);
         if (deathYear != null)
-            eventRefs.Add((await Session.CreateAsync("create_event", new { eventType = "Death", date = deathYear })).Handle);
-        return await Session.CreateAsync("create_person",
+            eventRefs.Add((await Session.CreateAsync("events", new { eventType = "Death", date = deathYear })).Handle);
+        return await Session.CreateAsync("people",
             new { primaryName = new { first, surname, patronymic }, gender, eventRefs, notDuplicateOf });
     }
 

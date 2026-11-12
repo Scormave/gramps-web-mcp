@@ -14,7 +14,7 @@ public class McpToolProfileTests
             Tools =
             [
                 Tool("get_object", readOnly: true),
-                Tool("create_person", readOnly: false),
+                Tool("create_records", readOnly: false),
                 Tool("unannotated", readOnly: null)
             ]
         };
@@ -53,7 +53,7 @@ public class McpToolProfileTests
             [
                 Tool("get_object", readOnly: true),
                 Tool("read_media", readOnly: true),
-                Tool("create_person", readOnly: false)
+                Tool("create_records", readOnly: false)
             ]
         };
 

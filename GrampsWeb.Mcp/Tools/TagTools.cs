@@ -37,50 +37,10 @@ public static class TagTools
         }
     }
 
-    [McpServerTool(Title = "Create Tag", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create a tag: a colored label such as \"To check\" or \"Line of John Smith\" for grouping records. " +
-        "Returns the new handle, Gramps ID and name, with next steps. Does not check for duplicate names: " +
-        "look through list_objects(objectType: \"tags\") first. Keep names distinct: filter rules such as HasTag " +
-        "(list_objects rules) find a tag by its name, and update_tag rejects a name another tag uses. " +
-        "The tag labels nothing yet: add its handle to the " +
-        "tagHandles of each record (their create or update tool, linkMode add on update). Rename or recolor it later " +
-        "with update_tag. " + ToolDescriptionFragments.WriteAccess)]
-    public static async Task<string> CreateTag(
-        [Description("Tag name shown on records (required).")]
-        string name,
-        [Description("Color as six hex digits RRGGBB, with or without #, e.g. FF5733; stored as #ff5733. Default 000000 (black).")]
-        string color = "000000",
-        [Description("Sort priority among tags in Gramps (default 0).")]
-        int priority = 0,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                throw McpToolErrors.ValidationError("Error: name is required");
-
-            var request = new CreateTagRequest
-            {
-                Name = name,
-                Color = NormalizeColor(color),
-                Priority = priority
-            };
-
-            var (handle, grampsId) = await client.PostMutationAsync("/api/tags/", request, "Tag");
-            return ResponseEnvelope.CreateSuccess("Tag", handle, grampsId,
-                name, ResponseEnvelope.TagCreateNextSteps(handle!));
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
     [McpServerTool(Title = "Update Tag", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Rename a tag or change its color or priority; every record carrying the tag shows the change. " +
-        "For a new tag use create_tag; to remove one, delete_records. Which records carry a tag is stored on the " +
+        "For a new tag use create_records; to remove one, delete_records. Which records carry a tag is stored on the " +
         "records: change that through their tagHandles (their update tool, linkMode add or remove), not here. " +
         "Pass only what changes; omitted arguments stay as they are. A name another tag already uses is rejected, " +
         "because Gramps filters find tags by name. Returns the stored name, color and priority; a missing tag " +

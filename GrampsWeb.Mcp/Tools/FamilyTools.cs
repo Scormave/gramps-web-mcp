@@ -60,66 +60,7 @@ public static class FamilyTools
         }
     }
 
-    [McpServerTool(Title = "Create Family", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create a family: a couple (father and mother, each optional) with their relationship type, children and family events " +
-        "such as Marriage. People and events must already exist (create_person, create_event). Gramps Web links the father, " +
-        "mother and children back to the family in the same save, and if one of them does not exist it refuses the family and " +
-        "nothing is saved. relationshipType stays Unknown unless a source records the marriage: then pass Married and link the " +
-        "Marriage event in eventRefs, where a family event takes the Family role, which is what makes Gramps and Gramps Web " +
-        "show the family among the event's participants. Each child in childRefs carries its own relation to the father and " +
-        "to the mother, Birth unless the source says Adopted, Stepchild or another; children keep the order given, so list " +
-        "them by birth. Citations, notes, media, tags and attributes passed here belong to the family itself, not to its " +
-        "members or events. Returns the new handle, Gramps ID and stored relationship type; when children or events were " +
-        "left out, it also lists the update_family calls that add them with linkMode add. " +
-        "Does not check for duplicates: look at the parents' families first, " +
-        "and change an existing family with update_family. Children are added here through childRefs, " +
-        "not through the child's parentFamilyHandles. " + ToolDescriptionFragments.BatchCreate + " " +
-        ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
-    public static async Task<string> CreateFamily(
-        [Description("The father, optional. " + ToolDescriptionFragments.HandleDiscovery)]
-        string? fatherHandle = null,
-        [Description("The mother, optional. " + ToolDescriptionFragments.HandleDiscovery)]
-        string? motherHandle = null,
-        [Description("Relationship type: Married, Unmarried, Civil Union or Unknown (default, as in Gramps). Pass Married when " +
-                     "a source records the marriage. " + ToolDescriptionFragments.KnownType)]
-        string? relationshipType = "Unknown",
-        [Description("Children, each with its relation to the father and mother (Birth by default; Adopted, Stepchild, …). " + FlexibleChildRefList.DescriptionHint)]
-        FlexibleChildRefList? childRefs = null,
-        [Description("Existing family events such as Marriage or Divorce. " + FlexibleEventRefList.DescriptionHint)]
-        FlexibleEventRefList? eventRefs = null,
-        [Description("Media. " + FlexibleMediaLinkList.DescriptionHint)]
-        FlexibleMediaLinkList? mediaHandles = null,
-        [Description("Citations. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? citationHandles = null,
-        [Description("Notes. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? noteHandles = null,
-        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? tagHandles = null,
-        [Description(FlexibleAttributeList.DescriptionHint)]
-        FlexibleAttributeList? attributes = null,
-        [Description("Mark the family private (default false).")]
-        bool isPrivate = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var request = await BuildFamilyRequestAsync(fatherHandle, motherHandle, relationshipType, childRefs, eventRefs,
-                mediaHandles, citationHandles, noteHandles, tagHandles, attributes, isPrivate, client);
-            var (handle, grampsId) = await client.PostMutationAsync("/api/families/", request, "Family");
-            var relLabel = await FormatRelationshipAsync(request.Relationship, client);
-            return ResponseEnvelope.CreateSuccess(
-                "Family", handle, grampsId,
-                relLabel, ResponseEnvelope.FamilyCreateNextSteps(handle,
-                    hasChildren: request.ChildRefList is { Length: > 0 }, hasEvents: request.EventRefList is { Length: > 0 }));
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    /// <summary>The checked request body of create_family; create_records sends it too.</summary>
+    /// <summary>The checked request body of a new family for create_records.</summary>
     internal static async Task<CreateFamilyRequest> BuildFamilyRequestAsync(
         string? fatherHandle, string? motherHandle, string? relationshipType,
         FlexibleChildRefList? childRefs, FlexibleEventRefList? eventRefs, FlexibleMediaLinkList? mediaHandles,
@@ -170,7 +111,7 @@ public static class FamilyTools
     [McpServerTool(Title = "Update Family", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing family's father, mother, relationship type, children, family events, attributes or links to " +
-        "citations, notes, media and tags. For a new family use create_family; to remove one, delete_records. " +
+        "citations, notes, media and tags. For a new family use create_records; to remove one, delete_records. " +
         "To add one child, pass it in childRefs with linkMode add; in replace mode childRefs must hold every child the " +
         "family keeps. attributes replace the whole list whatever linkMode says, and sort reorders children, events, " +
         "citations or media by date without changing which are linked. " + ToolDescriptionFragments.UpdateSemantics + " " +

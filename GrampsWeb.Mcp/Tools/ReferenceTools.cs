@@ -13,7 +13,7 @@ public static class ReferenceTools
 {
     [McpServerTool(Title = "Get Reference", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
-        "Read the server's reference for writing valid arguments; it holds no family records. Call it before a create_*, " +
+        "Read the server's reference for writing valid arguments; it holds no family records. Call it before a create_records, " +
         "update_* or list_objects call when a date, name, link update, type or filter rule is unclear; to read the tree itself " +
         "use search, list_objects or get_object. topic picks the text: input-guide (argument formats), types (valid types, " +
         "with the tree's custom ones), metadata (server and tree info), name-settings (name formats, surname groups) or " +

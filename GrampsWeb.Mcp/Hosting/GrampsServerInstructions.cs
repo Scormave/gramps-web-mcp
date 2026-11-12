@@ -31,9 +31,8 @@ internal static class GrampsServerInstructions
 
 
         Changing the tree:
-        - Change data only when the user asked. Search for an existing record before creating one: only create_person and the people of create_records check for duplicates, refusing a probable one with action "refused" (pass notDuplicateOf when it is someone else) and listing namesakes after creating.
-        - Create what a record links to before the record: repositories before sources, sources before citations, places before events, people and events before the families that link them.
-        - To enter many linked records at once, such as a family from one register entry with its citation and events, use create_records: the records link each other by "#key", Gramps Web saves them all or none in one transaction, and one undo_change removes them.
+        - Change data only when the user asked. Search for an existing record before creating one: create_records does not check for duplicates except for the people it creates, refusing a probable duplicate with action "refused" (pass notDuplicateOf when it is someone else) and listing namesakes after creating.
+        - create_records creates new records, one or many: a record links to records already in the tree by handle and to records of the same call by "#key", and Gramps Web saves them all or none in one transaction, so one undo_change removes them. Enter one register entry, with its people, family, events, citation and transcript, in one call.
         - Each link is stored on one side only. Attach events, citations, notes and media through the owning person, family, event or place, and children through the family's childRefs; backlinks shown on a record are read-only.
         - update_* tools change only the arguments passed. Link lists follow linkMode, and replace (the default) overwrites every link of that kind, so use add or remove to change one link.
         - Argument formats (dates, names, structured fields) and valid types: get_reference.

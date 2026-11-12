@@ -394,22 +394,28 @@ public class RecordBatchToolsTests
         Assert.DoesNotContain("I0012", result);
     }
 
+    /// <summary>
+    /// Each record has the fields of its update tool, except those that only change a stored record, and every
+    /// field is described.
+    /// </summary>
     [Theory]
-    [InlineData(typeof(PersonRecord), typeof(PersonTools), nameof(PersonTools.CreatePerson))]
-    [InlineData(typeof(EventRecord), typeof(EventTools), nameof(EventTools.CreateEvent))]
-    [InlineData(typeof(FamilyRecord), typeof(FamilyTools), nameof(FamilyTools.CreateFamily))]
-    [InlineData(typeof(CitationRecord), typeof(CitationTools), nameof(CitationTools.CreateCitation))]
-    [InlineData(typeof(NoteRecord), typeof(NoteTools), nameof(NoteTools.CreateNote))]
-    [InlineData(typeof(SourceRecord), typeof(SourceTools), nameof(SourceTools.CreateSource))]
-    [InlineData(typeof(RepositoryRecord), typeof(RepositoryTools), nameof(RepositoryTools.CreateRepository))]
-    [InlineData(typeof(PlaceRecord), typeof(PlaceTools), nameof(PlaceTools.CreatePlace))]
-    [InlineData(typeof(TagRecord), typeof(TagTools), nameof(TagTools.CreateTag))]
-    public void Each_Record_Takes_The_Arguments_Of_Its_Create_Tool(Type record, Type tools, string method)
+    [InlineData(typeof(PersonRecord), typeof(PersonTools), nameof(PersonTools.UpdatePerson), new[] { "notDuplicateOf" })]
+    [InlineData(typeof(EventRecord), typeof(EventTools), nameof(EventTools.UpdateEvent), new string[0])]
+    [InlineData(typeof(FamilyRecord), typeof(FamilyTools), nameof(FamilyTools.UpdateFamily), new string[0])]
+    [InlineData(typeof(CitationRecord), typeof(CitationTools), nameof(CitationTools.UpdateCitation), new string[0])]
+    [InlineData(typeof(NoteRecord), typeof(NoteTools), nameof(NoteTools.UpdateNote), new string[0])]
+    [InlineData(typeof(SourceRecord), typeof(SourceTools), nameof(SourceTools.UpdateSource), new string[0])]
+    [InlineData(typeof(RepositoryRecord), typeof(RepositoryTools), nameof(RepositoryTools.UpdateRepository), new string[0])]
+    [InlineData(typeof(PlaceRecord), typeof(PlaceTools), nameof(PlaceTools.UpdatePlace), new string[0])]
+    [InlineData(typeof(TagRecord), typeof(TagTools), nameof(TagTools.UpdateTag), new string[0])]
+    public void Each_Record_Takes_The_Fields_Of_Its_Update_Tool(Type record, Type tools, string method, string[] createOnly)
     {
+        string[] updateOnly = ["handle", "linkMode", "sort", "familyHandles", "parentFamilyHandles", "appendText", "replaceText", "withText"];
         var arguments = tools.GetMethod(method)!.GetParameters()
             .Where(p => p.ParameterType != typeof(GrampsApiClient))
             .Select(p => p.Name!)
-            .Except(["familyHandles", "parentFamilyHandles"])
+            .Except(updateOnly)
+            .Concat(createOnly)
             .Order();
         var fields = record.GetProperties()
             .Select(p => p.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name)
@@ -422,21 +428,20 @@ public class RecordBatchToolsTests
             p => Assert.NotNull(p.GetCustomAttribute<DescriptionAttribute>()));
     }
 
-    /// <summary>Each create tool whose records create_records takes points to it for linked records.</summary>
-    [Theory]
-    [InlineData(typeof(PersonTools), nameof(PersonTools.CreatePerson))]
-    [InlineData(typeof(EventTools), nameof(EventTools.CreateEvent))]
-    [InlineData(typeof(FamilyTools), nameof(FamilyTools.CreateFamily))]
-    [InlineData(typeof(CitationTools), nameof(CitationTools.CreateCitation))]
-    [InlineData(typeof(NoteTools), nameof(NoteTools.CreateNote))]
-    [InlineData(typeof(SourceTools), nameof(SourceTools.CreateSource))]
-    [InlineData(typeof(RepositoryTools), nameof(RepositoryTools.CreateRepository))]
-    [InlineData(typeof(PlaceTools), nameof(PlaceTools.CreatePlace))]
-    public void Create_Tools_Point_To_CreateRecords(Type tools, string method)
+    /// <summary>The descriptions of create_records and its records name no create tool but itself.</summary>
+    [Fact]
+    public void CreateRecords_Names_No_Other_Create_Tool()
     {
-        var description = tools.GetMethod(method)!.GetCustomAttribute<DescriptionAttribute>()!.Description;
+        var method = typeof(RecordBatchTools).GetMethod(nameof(RecordBatchTools.CreateRecords))!;
+        var texts = method.GetParameters().Select(p => p.GetCustomAttribute<DescriptionAttribute>()?.Description)
+            .Append(method.GetCustomAttribute<DescriptionAttribute>()!.Description)
+            .Concat(typeof(BatchRecord).Assembly.GetTypes()
+                .Where(type => type.IsSubclassOf(typeof(BatchRecord)) || type == typeof(BatchRecord))
+                .SelectMany(type => type.GetProperties())
+                .Select(p => p.GetCustomAttribute<DescriptionAttribute>()?.Description))
+            .OfType<string>();
 
-        Assert.Contains(ToolDescriptionFragments.BatchCreate, description);
+        Assert.All(texts, text => Assert.DoesNotMatch(@"create_(?!records)", text));
     }
 
     /// <summary>create_records arguments for Иван Образцов (key ivan), born in <paramref name="birth"/> if given.</summary>
@@ -454,15 +459,8 @@ public class RecordBatchToolsTests
             """;
     }
 
-    private static Task<string> CreateRecords(string json, TreeHandler handler)
-    {
-        var arguments = JsonNode.Parse(json)!.AsObject();
-        T[]? Records<T>(string name) => arguments[name]?.Deserialize<T[]>();
-        return RecordBatchTools.CreateRecords(
-            Records<TagRecord>("tags"), Records<RepositoryRecord>("repositories"), Records<PlaceRecord>("places"), Records<SourceRecord>("sources"),
-            Records<NoteRecord>("notes"), Records<CitationRecord>("citations"), Records<EventRecord>("events"),
-            Records<PersonRecord>("people"), Records<FamilyRecord>("families"), CreateClient(handler));
-    }
+    private static Task<string> CreateRecords(string json, TreeHandler handler) =>
+        CreateRecordsCall.RunAsync(json, CreateClient(handler));
 
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
     {
@@ -492,12 +490,6 @@ public class RecordBatchToolsTests
               "place_types": ["Unknown", "Village", "City"]
             }
             """;
-
-        private static readonly Dictionary<string, string> Prefixes = new()
-        {
-            ["Person"] = "I", ["Family"] = "F", ["Event"] = "E", ["Place"] = "P", ["Source"] = "S",
-            ["Citation"] = "C", ["Repository"] = "R", ["Note"] = "N"
-        };
 
         private readonly ConcurrentQueue<string> _requests = new();
         private readonly ConcurrentQueue<string> _posts = new();
@@ -532,18 +524,7 @@ public class RecordBatchToolsTests
                 Body = JsonNode.Parse(await request.Content!.ReadAsStringAsync(cancellationToken));
                 if (Refusal is var (status, refusal))
                     return Json(refusal, status);
-                var changes = new JsonArray(Body!.AsArray().Select((o, i) =>
-                {
-                    var grampsClass = o!["_class"]!.GetValue<string>();
-                    var handle = o["handle"]!.GetValue<string>();
-                    var stored = new JsonObject { ["_class"] = grampsClass, ["handle"] = handle };
-                    if (grampsClass != "Tag") // tags have no Gramps ID
-                        stored["gramps_id"] = $"{Prefixes[grampsClass]}{i + 1:D4}";
-                    return (JsonNode)new JsonObject
-                    {
-                        ["_class"] = grampsClass, ["handle"] = handle, ["type"] = "add", ["old"] = null, ["new"] = stored
-                    };
-                }).ToArray());
+                var changes = CreateRecordsCall.Changes(Body!);
                 foreach (var change in JsonNode.Parse(ExtraChanges)!.AsArray())
                     changes.Add(change!.DeepClone());
                 return Json(changes.ToJsonString(), HttpStatusCode.Created);

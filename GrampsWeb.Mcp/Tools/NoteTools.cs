@@ -41,43 +41,7 @@ public static class NoteTools
         }
     }
 
-    [McpServerTool(Title = "Create Note", ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description(
-        "Create a free-text note (research notes, transcriptions, comments) of a given type. " +
-        "Returns the new handle, Gramps ID and type, with next steps. The note is attached to nothing yet: add its handle " +
-        "to the noteHandles of each person, family, event, place, source or citation it belongs to (their update tool, linkMode add). " +
-        "For the transcript of a cited record use type Transcript and attach the note to that citation. " +
-        "Change an existing note with update_note. An unknown type is rejected before anything is saved. " +
-        ToolDescriptionFragments.BatchCreate + " " + ToolDescriptionFragments.WriteAccess)]
-    public static async Task<string> CreateNote(
-        [Description("The note text (required).")]
-        string text,
-        [Description("Note type, default General; e.g. Research, Transcript, Person Note, Event Note, Citation. " + ToolDescriptionFragments.KnownType)]
-        string noteType = "General",
-        [Description("Text format: Plain (default) or Html.")]
-        string format = "Plain",
-        [Description("Tags. " + FlexibleHandleList.DescriptionHint)]
-        FlexibleHandleList? tagHandles = null,
-        [Description("Mark the note private (default false).")]
-        bool isPrivate = false,
-        GrampsApiClient client = null!)
-    {
-        try
-        {
-            var request = await BuildNoteRequestAsync(text, noteType, format, tagHandles, isPrivate, client);
-            var (handle, grampsId) = await client.PostMutationAsync("/api/notes/", request, "Note");
-            var typeLabel = await FormatNoteTypeAsync(request.Type, client);
-            return ResponseEnvelope.CreateSuccess(
-                "Note", handle, grampsId,
-                typeLabel, ResponseEnvelope.NoteCreateNextSteps(handle!));
-        }
-        catch (Exception ex)
-        {
-            throw McpToolErrors.ToMcpException(ex);
-        }
-    }
-
-    /// <summary>The checked request body of create_note; create_records sends it too.</summary>
+    /// <summary>The checked request body of a new note for create_records.</summary>
     internal static async Task<CreateNoteRequest> BuildNoteRequestAsync(
         string text, string noteType, string format, FlexibleHandleList? tagHandles, bool isPrivate,
         GrampsApiClient client)
@@ -112,7 +76,7 @@ public static class NoteTools
         "and keep the rest of it, styling and links included. " +
         ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing note returns a not-found message. " +
         "Which records the note is attached to is stored on them (their noteHandles), not here. " +
-        "For a new note use create_note; to remove one, delete_records. " + ToolDescriptionFragments.WriteAccess)]
+        "For a new note use create_records; to remove one, delete_records. " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> UpdateNote(
         [Description("The note to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
