@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GrampsWeb.Mcp.Formatters;
 using Xunit;
 
@@ -5,85 +6,63 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 public class GrampsDefaultTypeLabelsTests
 {
+    // Part of /api/types/default/event_types/map: the list route orders the names differently.
+    private const string EventTypeMap =
+        """{"-1":"Unknown","0":"Custom","1":"Marriage","11":"Adopted","12":"Birth","13":"Death","22":"Christening"}""";
+
     [Fact]
-    public void MergeDefaultAndCustomLabels_ConcatsDefaultThenCustom()
+    public void LabelsByValue_PutsEachNameAtItsValue()
     {
-        var def = new[] { "General", "Transcript", "Research" };
-        var custom = new[] { "", "Person Note", "" };
-        var merged = GrampsDefaultTypeLabels.MergeDefaultAndCustomLabels(def, custom);
-        Assert.NotNull(merged);
-        Assert.Equal(6, merged!.Count);
-        Assert.Equal("General", merged[0]);
-        Assert.Equal("Transcript", merged[1]);
-        Assert.Equal("Research", merged[2]);
-        Assert.Equal("", merged[3]);
-        Assert.Equal("Person Note", merged[4]);
-        Assert.Equal("", merged[5]);
+        var labels = GrampsDefaultTypeLabels.LabelsByValue(JsonDocument.Parse(EventTypeMap).RootElement);
+
+        Assert.NotNull(labels);
+        Assert.Equal(23, labels!.Count);
+        Assert.Equal("Custom", labels[0]);
+        Assert.Equal("Marriage", labels[1]);
+        Assert.Equal("", labels[2]);
+        Assert.Equal("Birth", labels[12]);
+        Assert.Equal("Christening", labels[22]);
+    }
+
+    [Theory]
+    [InlineData("[\"Unknown\",\"Birth\"]")]
+    [InlineData("{}")]
+    [InlineData("{\"-1\":\"Unknown\",\"x\":\"Birth\",\"5000\":\"Death\"}")]
+    public void LabelsByValue_WithoutValues_IsNull(string json)
+    {
+        Assert.Null(GrampsDefaultTypeLabels.LabelsByValue(JsonDocument.Parse(json).RootElement));
+    }
+
+    [Theory]
+    [InlineData("12", "Birth")]
+    [InlineData("22", "Christening")]
+    [InlineData("13", "Death")]
+    [InlineData("-1", "Unknown")]
+    [InlineData("2", "2")]
+    [InlineData("99", "99")]
+    [InlineData("Feast", "Feast")]
+    [InlineData("", "—")]
+    public void ResolveStored_NamesAStoredValue(string stored, string expected)
+    {
+        var labels = GrampsDefaultTypeLabels.LabelsByValue(JsonDocument.Parse(EventTypeMap).RootElement);
+
+        Assert.Equal(expected, GrampsDefaultTypeLabels.ResolveStored(stored, labels));
     }
 
     [Fact]
-    public void MergeDefaultAndCustomLabels_AppendsAllCustomEntries()
+    public void ResolveStored_WithoutLabels_KeepsTheNumber()
     {
-        var def = new[] { "A", "B" };
-        var custom = new[] { "", "", "Extra" };
-        var merged = GrampsDefaultTypeLabels.MergeDefaultAndCustomLabels(def, custom);
-        Assert.NotNull(merged);
-        Assert.Equal(5, merged!.Count);
-        Assert.Equal("A", merged[0]);
-        Assert.Equal("B", merged[1]);
-        Assert.Equal("", merged[2]);
-        Assert.Equal("", merged[3]);
-        Assert.Equal("Extra", merged[4]);
+        Assert.Equal("12", GrampsDefaultTypeLabels.ResolveStored("12", null));
+        Assert.Equal("Unknown", GrampsDefaultTypeLabels.ResolveStored("-1", null));
     }
 
     [Fact]
-    public void ResolveStored_NumericIndexUnknown_ReturnsRawIndex()
+    public void ResolveStored_NameOriginType_CountsFromCustom()
     {
-        var labels = new[] { "General", "Transcript" };
-        Assert.Equal("99", GrampsDefaultTypeLabels.ResolveStored("99", labels));
-    }
+        var labels = GrampsDefaultTypeLabels.LabelsByValue(JsonDocument.Parse(
+            """{"-1":"Unknown","0":"Custom","1":"","2":"Inherited","3":"Given","4":"Taken","5":"Patronymic"}""").RootElement);
 
-    [Fact]
-    public void ResolveStored_NonNumeric_ReturnsAsIs()
-    {
-        var labels = new[] { "General" };
-        Assert.Equal("Person Note", GrampsDefaultTypeLabels.ResolveStored("Person Note", labels));
-    }
-
-    [Fact]
-    public void ResolveStoredWithDefaultAndCustomLists_NumericIndexIntoConcatenatedList()
-    {
-        var def = new[] { "A", "B" };
-        var custom = new[] { "X" };
-        var r = GrampsDefaultTypeLabels.ResolveStoredWithDefaultAndCustomLists("2", def, custom);
-        Assert.Equal("X", r);
-    }
-
-    [Fact]
-    public void ResolveStoredWithDefaultAndCustomLists_CustomNameFromWireString_Unchanged()
-    {
-        var def = new[] { "General" };
-        var custom = new[] { "Person Note" };
-        Assert.Equal(
-            "Test",
-            GrampsDefaultTypeLabels.ResolveStoredWithDefaultAndCustomLists("Test", def, custom));
-    }
-
-    [Fact]
-    public void ResolveStoredWithDefaultAndCustomLists_NameOriginTypeIndexIntoMergedList()
-    {
-        var def = new[]
-        {
-            "Custom", "", "Inherited", "Given", "Taken", "Patronymic", "Matronymic",
-            "Feudal", "Pseudonym", "Patrilineal", "Matrilineal", "Occupation", "Location"
-        };
-        var custom = new[] { "Clan Name" };
-
-        Assert.Equal(
-            "Patronymic",
-            GrampsDefaultTypeLabels.ResolveStoredWithDefaultAndCustomLists("5", def, custom));
-        Assert.Equal(
-            "Clan Name",
-            GrampsDefaultTypeLabels.ResolveStoredWithDefaultAndCustomLists("13", def, custom));
+        Assert.Equal("Patronymic", GrampsDefaultTypeLabels.ResolveStored("5", labels));
+        Assert.Equal("Inherited", GrampsDefaultTypeLabels.ResolveStored("2", labels));
     }
 }

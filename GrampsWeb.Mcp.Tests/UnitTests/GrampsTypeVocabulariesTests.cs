@@ -24,14 +24,18 @@ public class GrampsTypeVocabulariesTests
         var second = Client(handler, vocabularies);
 
         // Separate tool calls: no read scope spans them.
-        Assert.Equal("Death", await GrampsDefaultTypeLabels.FormatEventTypeAsync(first, "1"));
-        Assert.Equal("Feast", await GrampsDefaultTypeLabels.FormatEventTypeAsync(second, "2"));
-        Assert.Equal(1, handler.Count("/api/types/default/event_types"));
-        Assert.Equal(1, handler.Count("/api/types/custom/"));
+        Assert.Equal("Death", await GrampsDefaultTypeLabels.FormatEventTypeAsync(first, "13"));
+        Assert.Equal("Birth", await GrampsDefaultTypeLabels.FormatEventTypeAsync(second, "12"));
+        Assert.Equal(1, handler.Count("/api/types/default/event_types/map"));
+
+        // A stored name needs no labels.
+        Assert.Equal("Feast", await GrampsDefaultTypeLabels.FormatEventTypeAsync(Client(handler), "Feast"));
+        Assert.Equal(1, handler.Count("/api/types/default/event_types/map"));
 
         // A client with its own cache does not see another cache's reads.
-        await GrampsDefaultTypeLabels.FormatEventTypeAsync(Client(handler), "1");
-        Assert.Equal(2, handler.Count("/api/types/default/event_types"));
+        await GrampsDefaultTypeLabels.FormatEventTypeAsync(Client(handler), "13");
+        Assert.Equal(2, handler.Count("/api/types/default/event_types/map"));
+        Assert.Equal(0, handler.Count("/api/types/custom/"));
     }
 
     [Fact]
@@ -58,16 +62,15 @@ public class GrampsTypeVocabulariesTests
         var time = new ManualTime();
         var client = Client(handler, new GrampsTypeVocabularies(time));
 
-        await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, "2");
+        await client.GetCustomTypesAsync();
         time.Advance(GrampsTypeVocabularies.CustomTypesTtl - TimeSpan.FromSeconds(1));
-        await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, "2");
+        handler.CustomTypes = """{"event_types":["Wake"]}""";
+        Assert.Contains("Feast", (await client.GetCustomTypesAsync()).GetRawText());
         Assert.Equal(1, handler.Count("/api/types/custom/"));
 
         time.Advance(TimeSpan.FromSeconds(1));
-        handler.CustomTypes = """{"event_types":["Wake"]}""";
-        Assert.Equal("Wake", await GrampsDefaultTypeLabels.FormatEventTypeAsync(client, "2"));
+        Assert.Contains("Wake", (await client.GetCustomTypesAsync()).GetRawText());
         Assert.Equal(2, handler.Count("/api/types/custom/"));
-        Assert.Equal(1, handler.Count("/api/types/default/event_types"));
     }
 
     [Fact]
@@ -173,7 +176,7 @@ public class GrampsTypeVocabulariesTests
             return Task.FromResult(Response(path switch
             {
                 "/api/types/default/" => """{"event_types":["Birth","Death"],"place_types":["City"]}""",
-                "/api/types/default/event_types" => """["Birth","Death"]""",
+                "/api/types/default/event_types/map" => """{"-1":"Unknown","0":"Custom","12":"Birth","13":"Death"}""",
                 "/api/types/custom/" => CustomTypes,
                 _ => "[]"
             }));

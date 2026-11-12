@@ -9,7 +9,7 @@ public static class PlaceTypeDisplayFormatter
 {
     /// <inheritdoc cref="GrampsDefaultTypeLabels.FormatStoredTypeAsync"/>
     public static Task<string> FormatStoredPlaceTypeAsync(GrampsApiClient client, string? storedType) =>
-        GrampsDefaultTypeLabels.FormatStoredTypeAsync(client, storedType, "place_types", "place_types", "placeTypes");
+        GrampsDefaultTypeLabels.FormatStoredTypeAsync(client, storedType, "place_types");
 
     /// <inheritdoc cref="GrampsDefaultTypeLabels.ResolveStored"/>
     internal static string ResolveStoredPlaceType(string? storedType, IReadOnlyList<string>? labels) =>

@@ -99,7 +99,7 @@ public class GrampsApiClient
     }
 
     /// <summary>
-    /// GET <c>/api/types/default/{category}</c>, or every category when it is empty.
+    /// GET <c>/api/types/default/{category}</c>, such as <c>event_types/map</c>, or every category when it is empty.
     /// Kept for the process lifetime by <see cref="GrampsTypeVocabularies"/>.
     /// </summary>
     public async Task<JsonElement> GetDefaultTypesAsync(string category = "")

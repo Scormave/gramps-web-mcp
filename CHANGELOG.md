@@ -34,6 +34,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `merge_objects` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
 
+### Fixed
+
+- `undo_change` named the type of a deleted event, note, place,
+  repository or family wrongly, such as a birth as a christening:
+  Gramps stores the type as a number, and it was looked up by its
+  position in the list of types instead of by its value. The names now
+  come from `/api/types/default/{type}/map`; a type that cannot be
+  named stays a number, and `-1` shows as Unknown
+
 ## [2.10.0] - 2026-11-10
 
 ### Added

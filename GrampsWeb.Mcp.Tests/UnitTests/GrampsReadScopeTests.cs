@@ -73,22 +73,21 @@ public class GrampsReadScopeTests
     }
 
     [Fact]
-    public async Task SearchLoadsOnlyRequiredCategories_AndSharesBulkFallback()
+    public async Task SearchLoadsOnlyRequiredCategories()
     {
         using var handler = new Handler();
         var client = Client(handler);
         using var scope = GrampsReadScope.Begin();
         var tables = await GrampsDefaultTypeLabels.PrefetchForSearchAsync(
             ["event", "events", "place", "person", "citation"], client);
-        Assert.Equal("Birth", Assert.Single(tables.EventTypes!));
-        Assert.Equal("City", Assert.Single(tables.PlaceTypes!));
+        Assert.Equal("Birth", tables.EventTypes![12]);
+        Assert.Equal("City", tables.PlaceTypes![4]);
         Assert.Null(tables.NameTypes);
-        Assert.Equal(3, handler.ReadCount);
-        Assert.Equal(1, handler.Count("/api/types/default/"));
+        Assert.Equal(2, handler.ReadCount);
     }
 
     [Fact]
-    public async Task CustomVocabularyLoadedOnceAndKeepsIndexOrder()
+    public async Task NameVocabulariesAreIndexedByValueWithoutCustomTypes()
     {
         using var handler = new Handler();
         var client = Client(handler);
@@ -96,9 +95,9 @@ public class GrampsReadScopeTests
         var results = await Task.WhenAll(
             GrampsDefaultTypeLabels.LoadNameTypeLabelsAsync(client),
             GrampsDefaultTypeLabels.LoadNameOriginTypeLabelsAsync(client));
-        Assert.Equal(["Birth Name", "Custom Name"], results[0]);
-        Assert.Equal(["Inherited", "Custom Origin"], results[1]);
-        Assert.Equal(1, handler.Count("/api/types/custom/"));
+        Assert.Equal(["Custom", "Also Known As", "Birth Name"], results[0]);
+        Assert.Equal(["Custom", "", "Inherited"], results[1]);
+        Assert.Equal(0, handler.Count("/api/types/custom/"));
     }
 
     private static GrampsApiClient Client(HttpMessageHandler handler)
@@ -135,9 +134,10 @@ public class GrampsReadScopeTests
             }
             return Response(path switch
             {
-                "/api/types/default/" => """{"event_types":["Birth"],"place_types":["City"]}""",
-                "/api/types/default/name_types" => """["Birth Name"]""",
-                "/api/types/default/name_origin_types" => """["Inherited"]""",
+                "/api/types/default/event_types/map" => """{"-1":"Unknown","0":"Custom","12":"Birth"}""",
+                "/api/types/default/place_types/map" => """{"-1":"Unknown","0":"Custom","4":"City"}""",
+                "/api/types/default/name_types/map" => """{"-1":"Unknown","0":"Custom","1":"Also Known As","2":"Birth Name"}""",
+                "/api/types/default/name_origin_types/map" => """{"-1":"Unknown","0":"Custom","1":"","2":"Inherited"}""",
                 "/api/types/custom/" => """{"name_types":["Custom Name"],"name_origin_types":["Custom Origin"]}""",
                 _ => "[]"
             });
