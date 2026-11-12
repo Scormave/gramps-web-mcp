@@ -330,7 +330,7 @@ public static class PersonTools
     [McpServerTool(Title = "Update Person", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing person's names, gender, attributes, addresses, URLs, associations or links to events, " +
-        "families, citations, notes, media and tags. For a new person use create_person; to remove one, delete_object. " +
+        "families, citations, notes, media and tags. For a new person use create_person; to remove one, delete_records. " +
         "Links live on one side: an event joins this person here through eventRefs (linkMode add) with the person's role, " +
         "not on the event; to make the person a child, add them to the family's childRefs with update_family. " +
         "alternateNames, attributes, addresses and urls replace their whole lists " +

@@ -170,7 +170,7 @@ public static class FamilyTools
     [McpServerTool(Title = "Update Family", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing family's father, mother, relationship type, children, family events, attributes or links to " +
-        "citations, notes, media and tags. For a new family use create_family; to remove one, delete_object. " +
+        "citations, notes, media and tags. For a new family use create_family; to remove one, delete_records. " +
         "To add one child, pass it in childRefs with linkMode add; in replace mode childRefs must hold every child the " +
         "family keeps. attributes replace the whole list whatever linkMode says, and sort reorders children, events, " +
         "citations or media by date without changing which are linked. " + ToolDescriptionFragments.UpdateSemantics + " " +

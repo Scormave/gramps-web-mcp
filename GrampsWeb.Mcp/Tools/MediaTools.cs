@@ -237,7 +237,7 @@ public static class MediaTools
         "or replace its file with filePath from the server's upload folder (GRAMPS_MEDIA_UPLOAD_DIRS). " +
         "attachTo shows the media on people, families, events, places, sources or citations, whole or as a region; " +
         "to take it off a record, use that record's update tool with mediaHandles and linkMode remove. " +
-        "For a new media record use create_media; to remove one, delete_object. " +
+        "For a new media record use create_media; to remove one, delete_records. " +
         ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing media object returns a not-found message, and an unreadable date or file is rejected before anything is saved. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]

@@ -47,7 +47,7 @@ public partial class ToolSurfaceDocumentationTests
 
     /// <summary>
     /// Every registered tool has a catalog heading under its method name, every heading is a registered tool, and
-    /// the heading's letter matches the annotations: R read-only, C create (not destructive), D delete_object,
+    /// the heading's letter matches the annotations: R read-only, C create (not destructive), D delete_records,
     /// U every other destructive tool.
     /// </summary>
     [Fact]

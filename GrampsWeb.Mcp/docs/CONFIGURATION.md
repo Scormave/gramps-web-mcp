@@ -61,11 +61,11 @@ the user or rotating the Gramps Web secret key invalidates it.
 
 ## Confirming deletes, merges and undos
 
-`delete_object`, `merge_objects` and `undo_change` ask the user to confirm in a
+`delete_records`, `merge_objects` and `undo_change` ask the user to confirm in a
 dialog before they change the tree, when the client supports
 [MCP elicitation](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation).
-The dialog names the record, or both records of a merge, or lists what the
-undo will change, and the user ticks a box to go ahead. Declining or closing it
+The dialog names the records to delete, or both records of a merge, or lists
+what the undo will change, and the user ticks a box to go ahead. Declining or closing it
 changes nothing. Dry runs and refusals do not ask.
 
 | Variable | Description | Default |

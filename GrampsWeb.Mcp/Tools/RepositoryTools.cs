@@ -117,7 +117,7 @@ public static class RepositoryTools
     [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing repository's name, type, address, website or links to notes and tags. " +
-        "For a new repository use create_repository; to remove one, delete_object. Which sources it holds, with their " +
+        "For a new repository use create_repository; to remove one, delete_records. Which sources it holds, with their " +
         "call numbers, is stored on the sources: change that with update_source (repositoryHandles), not here. " +
         "addresses sets street, city, postal code, country and the other address fields, and urls sets links with " +
         "their type and description; address is a shortcut for a single address with only a street line, and url for " +

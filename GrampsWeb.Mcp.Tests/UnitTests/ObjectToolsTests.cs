@@ -50,60 +50,104 @@ public class ObjectToolsTests
     }
 
     [Theory]
-    [InlineData("person", "I0001", "people")]
-    [InlineData("family", "F0001", "families")]
-    [InlineData("event", "E0001", "events")]
-    [InlineData("place", "P0001", "places")]
-    [InlineData("source", "S0001", "sources")]
-    [InlineData("citation", "C0001", "citations")]
-    [InlineData("note", "N0001", "notes")]
-    [InlineData("media", "O0001", "media")]
-    [InlineData("repository", "R0001", "repositories")]
-    [InlineData("tag", "T0001", "tags")]
-    public async Task DeleteObject_ResolvesGrampsIdAndUsesCorrectCollection(
-        string objectType, string grampsId, string collection)
+    [InlineData("I0001", "people")]
+    [InlineData("F0001", "families")]
+    [InlineData("E0001", "events")]
+    [InlineData("P0001", "places")]
+    [InlineData("S0001", "sources")]
+    [InlineData("C0001", "citations")]
+    [InlineData("N0001", "notes")]
+    [InlineData("O0001", "media")]
+    [InlineData("R0001", "repositories")]
+    [InlineData("T0001", "tags")]
+    public async Task DeleteRecords_ResolvesGrampsIdAndDeletesInItsCollection(string grampsId, string collection)
     {
+        HandleCache.Invalidate();
         using var handler = new DeletionHandler(collection, grampsId);
         using var http = new HttpClient(handler);
         var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");
         var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
         var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
 
-        var result = await ObjectTools.DeleteObject(objectType, grampsId, client: client);
+        var result = await ObjectTools.DeleteRecords([grampsId], client: client);
 
         Assert.Contains("action: deleted", result);
-        Assert.Equal($"/api/{collection}/resolved-handle", handler.DeletePath);
+        Assert.Equal($$"""{"namespace":"{{collection}}","handles":["resolved-handle"]}""", handler.DeleteBody);
     }
 
     [Fact]
-    public async Task DeleteObject_RejectsUnknownObjectType()
+    public async Task DeleteRecords_RejectsUnknownObjectType()
     {
-        var error = await Assert.ThrowsAnyAsync<Exception>(
-            () => ObjectTools.DeleteObject("unknown", "handle", client: null!));
+        var error = await Assert.ThrowsAsync<McpException>(
+            () => ObjectTools.DeleteRecords(["handle"], "unknown", client: null!));
 
         Assert.Contains("Invalid objectType", error.Message);
     }
 
+    [Fact]
+    public async Task DeleteRecords_RequiresTypeForAHandle()
+    {
+        var error = await Assert.ThrowsAsync<McpException>(
+            () => ObjectTools.DeleteRecords(["I0001", "opaque-handle"], client: null!));
+
+        Assert.StartsWith("objectType is required for the handle 'opaque-handle'.", error.Message);
+    }
+
+    [Fact]
+    public async Task DeleteRecords_RejectsTypeThatConflictsWithAGrampsIdPrefix()
+    {
+        var error = await Assert.ThrowsAsync<McpException>(
+            () => ObjectTools.DeleteRecords(["N0001", "I0001"], "note", client: null!));
+
+        Assert.Equal("objectType 'note' does not match Gramps ID 'I0001', which identifies a person.", error.Message);
+    }
+
+    [Theory]
+    [InlineData(0, "identifiers must name at least one record.")]
+    [InlineData(51, "identifiers names 51 records; one call deletes at most 50.")]
+    public async Task DeleteRecords_RejectsAnEmptyOrTooLongList(int count, string message)
+    {
+        var identifiers = Enumerable.Range(1, count).Select(i => $"N{i:0000}").ToArray();
+
+        var error = await Assert.ThrowsAsync<McpException>(
+            () => ObjectTools.DeleteRecords(identifiers, client: null!));
+
+        Assert.Equal(message, error.Message);
+    }
+
+    [Fact]
+    public async Task DeleteRecords_RejectsAnEmptyEntry()
+    {
+        var error = await Assert.ThrowsAsync<McpException>(
+            () => ObjectTools.DeleteRecords(["N0001", " "], client: null!));
+
+        Assert.Equal("identifiers must not contain empty entries.", error.Message);
+    }
+
     private sealed class DeletionHandler(string collection, string grampsId) : HttpMessageHandler
     {
-        public string? DeletePath { get; private set; }
+        public string? DeleteBody { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.PathAndQuery;
             if (path.StartsWith("/api/token/", StringComparison.Ordinal))
-                return Task.FromResult(JsonResponse("""{"access_token":"token","refresh_token":"refresh","expires_in":900}"""));
+                return JsonResponse(HttpStatusCode.OK, """{"access_token":"token","refresh_token":"refresh","expires_in":900}""");
             if (path == $"/api/{collection}/?gramps_id={grampsId}&pagesize=1")
-                return Task.FromResult(JsonResponse("""[{"handle":"resolved-handle"}]"""));
-            if (path == $"/api/{collection}/resolved-handle?backlinks=true")
-                return Task.FromResult(JsonResponse("""{"handle":"resolved-handle","backlinks":{}}"""));
+                return JsonResponse(HttpStatusCode.OK, """[{"handle":"resolved-handle"}]""");
+            if (path == $"/api/{collection}/resolved-handle?keys=handle,gramps_id,change,backlinks&backlinks=true")
+                return JsonResponse(HttpStatusCode.OK, $$"""{"handle":"resolved-handle","gramps_id":"{{grampsId}}","backlinks":{} }""");
+            if (request.Method == HttpMethod.Post && path == "/api/objects/delete-by-handle/")
+            {
+                DeleteBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+                return JsonResponse(HttpStatusCode.OK, "[]");
+            }
 
-            Assert.Equal(HttpMethod.Delete, request.Method);
-            DeletePath = path;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+            Assert.Equal(HttpMethod.Get, request.Method);
+            return JsonResponse(HttpStatusCode.NotFound, """{"error": {"code": 404, "message": "Not found"}}""");
         }
 
-        private static HttpResponseMessage JsonResponse(string json) => new(HttpStatusCode.OK)
+        private static HttpResponseMessage JsonResponse(HttpStatusCode status, string json) => new(status)
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };

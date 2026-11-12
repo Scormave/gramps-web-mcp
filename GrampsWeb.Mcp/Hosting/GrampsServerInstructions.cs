@@ -37,7 +37,7 @@ internal static class GrampsServerInstructions
         - Each link is stored on one side only. Attach events, citations, notes and media through the owning person, family, event or place, and children through the family's childRefs; backlinks shown on a record are read-only.
         - update_* tools change only the arguments passed. Link lists follow linkMode, and replace (the default) overwrites every link of that kind, so use add or remove to change one link.
         - Argument formats (dates, names, structured fields) and valid types: get_reference.
-        - Use delete_object only after the user confirmed that exact record, and force past backlinks only after a separate confirmation.
+        - Use delete_records only after the user confirmed those exact records, and force past links from other records only after a separate confirmation: Gramps Web then removes those links.
         - When two records describe the same person, family, event, place or other record, merge_objects joins the duplicate into the record to keep (find_duplicates finds such people), only after the user confirmed both: links move to the kept record, the duplicate is deleted, and undo_change reverts the merge.
         - undo_change reverts one transaction from get_recent_changes, deletions included: only after the user confirmed it, newest first, and force past conflicts only after a separate confirmation.
         """;

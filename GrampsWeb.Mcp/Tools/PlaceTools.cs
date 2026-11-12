@@ -152,7 +152,7 @@ public static class PlaceTools
     [Description(
         "Change an existing place's names, type, coordinates, code, enclosing places or links to notes, media, citations " +
         "and tags. The change shows on every event at this place: if only one event names the wrong place, give that event " +
-        "another placeHandle with update_event instead. For a new place use create_place; to remove one, delete_object. " +
+        "another placeHandle with update_event instead. For a new place use create_place; to remove one, delete_records. " +
         "name, nameLang and nameDate each change one part of the primary name, alternateNames replaces all the other names, " +
         "and an empty string clears lat, lon or nameDate. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID with the stored name, type, coordinates and enclosing places; " +

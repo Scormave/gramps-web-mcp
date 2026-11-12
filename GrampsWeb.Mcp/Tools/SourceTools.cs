@@ -125,7 +125,7 @@ public static class SourceTools
     [McpServerTool(Title = "Update Source", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Change an existing source's title, author, publication info, abbreviation, attributes or links to repositories, " +
-        "notes, media and tags. For a new source use create_source; to remove one, delete_object; a page or act inside " +
+        "notes, media and tags. For a new source use create_source; to remove one, delete_records; a page or act inside " +
         "the source is a citation, changed with update_citation. repositoryHandles carry each repository's call number, " +
         "so edit a call number with linkMode replace; attributes replace the whole list whatever linkMode says. " +
         ToolDescriptionFragments.UpdateSemantics + " " +

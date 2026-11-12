@@ -221,7 +221,7 @@ public static class EventTools
         "Change an existing event's type, date, place, description, attributes or links to citations, notes, media and tags; " +
         "everyone who shares the event sees the change. Who takes part is not set here: add or remove the event in a person's " +
         "or family's eventRefs with update_person or update_family, which also hold each participant's role. " +
-        "For a new event use create_event; to remove one, delete_object. An empty string clears date, and attributes " +
+        "For a new event use create_event; to remove one, delete_records. An empty string clears date, and attributes " +
         "replace the whole list whatever linkMode says. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing event returns a not-found message, and an unknown type or unreadable " +
         "date is rejected before anything is saved. " +

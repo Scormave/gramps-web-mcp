@@ -112,7 +112,7 @@ public static class NoteTools
         "and keep the rest of it, styling and links included. " +
         ToolDescriptionFragments.UpdateSemantics + " Returns the handle and Gramps ID; a missing note returns a not-found message. " +
         "Which records the note is attached to is stored on them (their noteHandles), not here. " +
-        "For a new note use create_note; to remove one, delete_object. " + ToolDescriptionFragments.WriteAccess)]
+        "For a new note use create_note; to remove one, delete_records. " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> UpdateNote(
         [Description("The note to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,

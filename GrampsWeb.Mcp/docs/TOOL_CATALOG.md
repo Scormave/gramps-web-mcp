@@ -34,7 +34,7 @@ tree, and a Gramps ID such as `I0012` works as well.
 The requests that only read the tree also work in
 [read-only mode](CONFIGURATION.md#runtime-mode). Reading scans needs
 [media access](CONFIGURATION.md#media-file-access), and attaching them needs an
-[upload folder](CONFIGURATION.md#media-upload). `delete_object`, `merge_objects` and
+[upload folder](CONFIGURATION.md#media-upload). `delete_records`, `merge_objects` and
 `undo_change` change the tree only after you confirm; see
 [Confirming deletes, merges and undos](CONFIGURATION.md#confirming-deletes-merges-and-undos). Clients that
 show MCP prompts also offer `research-person`, `find-connections`,
@@ -373,25 +373,46 @@ other than person or family.
 | `objectType` | `string?` | no | — | Required for an opaque handle; inferred from a Gramps ID. `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
 | `extended` | `bool` | no | `false` | For people and families only, resolve linked details inline |
 
-### D — `DeleteObject`
-Delete a person, family, event, place, source, citation, note, media record,
-repository, or tag. The server checks backlinks and blocks deletion unless
-`force=true`; the refusal lists the backlinks by type. Forcing may leave
-dangling references. On success the reply gives the type, `action: deleted`,
-and the handle. Deleting a media record does not necessarily delete its file on
-disk. `undo_change` with the deletion's transaction from `get_recent_changes`
-restores the record with its handle and Gramps ID.
+### D — `DeleteRecords`
+Delete up to 50 records of any types: people, families, events, places,
+sources, citations, notes, media records, repositories and tags. The records
+are checked together before anything is deleted, and nothing is deleted when:
+
+- a record is missing; the reply names each one not found;
+- records outside the call link to them and `force` is not set; the refusal
+  (`action: refused`) lists the links of each record by type. Unlink them with
+  the linking records' update tools (`linkMode: "remove"`), add those records
+  to the call, or pass `force=true`, and Gramps Web removes the links;
+- a place encloses places outside the call, even with `force=true`, since
+  Gramps Web would leave them pointing at a missing place; change their
+  `enclosedBy` with `update_place` or add them to the call.
+
+Gramps Web also deletes the citations of a deleted source and a family left
+without father, mother and children; the refusal and the confirmation say so.
+Links between the records of one call need no `force`. Deleting a media record
+does not delete its file on disk.
+
+Each record type is deleted in its own Gramps Web transaction, families first,
+then people, events, places, media, citations, sources, repositories, notes
+and tags. The reply (`type: Transaction`, `action: deleted`, `records: N`)
+lists each record with its type, label, handle and Gramps ID, then the records
+Gramps Web deleted along and the records it removed links from. Every
+transaction is in `get_recent_changes`; `undo_change` on each, newest first,
+restores the records with their handles and Gramps IDs and the removed links.
+If a later type fails, `action: partially_deleted` lists what was and was not
+deleted.
 
 When the client supports MCP elicitation, the user confirms the deletion in a
-[dialog](#confirmation-dialogs) that names the record and, with `force=true`,
-the records that will keep a link to it. A user who says no gets
-`action: declined` or `action: cancelled`, and nothing is deleted.
+[dialog](#confirmation-dialogs) that names the records and, with `force=true`,
+the records whose links to them go. A user who says no gets `action: declined`
+or `action: cancelled`, and nothing is deleted. Records changed or relinked
+while the user was deciding are not deleted (`action: refused`).
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `objectType` | `string` | yes | — | `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
-| `handle` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
-| `force` | `bool` | no | `false` | Delete despite backlinks |
+| `identifiers` | `string[]` | yes | — | 1–50 Gramps IDs, such as `I0001`, or handles, of any types |
+| `objectType` | `string?` | no | — | The type of the handles: `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag`. Required for handles; a Gramps ID of another type is rejected |
+| `force` | `bool` | no | `false` | Delete although records outside the call link to them; Gramps Web removes those links |
 
 ---
 
@@ -1309,17 +1330,20 @@ For structured write fields, request only the relevant subsection, such as
 
 ## Delete safety
 
-`delete_object` checks for backlinks before deleting. If the object is
-referenced by other objects, deletion is **blocked** unless `force=true`.
-Using `force=true` can leave **dangling references** in the database.
-A deletion can be reverted with `undo_change`, which restores the record with
-its handle, Gramps ID and its own links. `merge_objects` deletes the duplicate
-only after moving every link to the kept record, so it leaves no dangling
-references, and `undo_change` with its transaction restores the duplicate.
+`delete_records` checks the links to the records before deleting. If records
+outside the call link to them, deletion is **blocked** unless `force=true`, and
+with it Gramps Web removes those links in the same transaction. A place that
+encloses other places is blocked even with `force=true`, since Gramps Web would
+leave the enclosed places pointing at a missing place. A deletion can be
+reverted with `undo_change`, which restores the records with their handles,
+Gramps IDs and links, and the links removed from other records.
+`merge_objects` deletes the duplicate only after moving every link to the kept
+record, so it leaves no dangling references, and `undo_change` with its
+transaction restores the duplicate.
 
 ## Confirmation dialogs
 
-`delete_object`, `merge_objects` and `undo_change` ask the user, not the
+`delete_records`, `merge_objects` and `undo_change` ask the user, not the
 model, before they change the tree, through MCP elicitation. The client shows
 the question with a single checkbox, `confirm`, unticked by default:
 

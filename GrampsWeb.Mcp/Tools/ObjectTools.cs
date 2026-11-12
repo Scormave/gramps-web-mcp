@@ -5,7 +5,7 @@ using ModelContextProtocol.Server;
 namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
-/// MCP tool for reading a single Gramps object of any supported type.
+/// MCP tools for reading one record and deleting records of any supported type.
 /// </summary>
 [McpServerToolType]
 public static class ObjectTools
@@ -121,46 +121,113 @@ public static class ObjectTools
             }
             : null;
 
-    [McpServerTool(Title = "Delete Object", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [McpServerTool(Title = "Delete Records", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [McpMeta("anthropic/requiresUserInteraction", true)]
     [Description(
-        "Delete one record; undo_change with the deletion's transaction from get_recent_changes restores it. Call it only after the user confirmed " +
-        "this exact record. If other records still point to it, nothing is deleted and the reply lists those backlinks " +
-        "by type; unlink them first with the owners' update tools, or pass force=true after a separate confirmation. " +
-        "Clients that support it also show the user a confirmation dialog before deleting; action: declined or cancelled " +
-        "means the user said no and nothing was deleted. On success returns the type, action: deleted and the handle; " +
-        "a missing record returns a not-found message.")]
-    public static async Task<string> DeleteObject(
-        [Description("Record type: person, family, event, place, source, citation, note, media, repository or tag.")]
-        string objectType,
-        [Description("The record to delete. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
-        [Description("true deletes even when other records still point to it, leaving those links dangling (default false).")]
+        "Delete up to 50 records of any types, only after the user confirmed these exact records. Records are checked " +
+        "together: if any is missing, nothing is deleted. If records outside the call link to them, nothing is deleted " +
+        "and the reply lists those links by type; unlink them first with the linking records' update tools " +
+        "(linkMode \"remove\"), add those records to the call, or pass force=true after a separate confirmation, and " +
+        "Gramps Web removes the links. Gramps Web also deletes the citations of a deleted source and a family left " +
+        "without father, mother and children. A place that encloses places outside the call is never deleted, even " +
+        "with force: change their enclosedBy with update_place first. Clients that support it show the user a " +
+        "confirmation dialog first; action: declined or cancelled means the user said no and nothing was deleted. " +
+        "Each record type is deleted in its own transaction, families first, then people, events, places, media, " +
+        "citations, sources, repositories, notes and tags; undo_change on each transaction from get_recent_changes, " +
+        "newest first, restores the records. Returns action: deleted with one line per record (type, label, handle, " +
+        "Gramps ID) and the records Gramps Web deleted along or removed links from; if a later type fails, action: " +
+        "partially_deleted lists what was and was not deleted.")]
+    public static async Task<string> DeleteRecords(
+        [Description("Up to 50 Gramps IDs (e.g. I0001, F0002; the prefix gives the type) or handles, of any types; " +
+                     "find them with search or list_objects.")]
+        string[] identifiers,
+        [Description("Record type of the handles: person, family, event, place, source, citation, note, media, " +
+                     "repository or tag. Omit when every identifier is a Gramps ID; required for handles, which are " +
+                     "then all of this type, and a Gramps ID of another type is rejected.")]
+        string? objectType = null,
+        [Description("true deletes even when records outside the call link to them, and Gramps Web removes those " +
+                     "links; only after the user confirmed that (default false).")]
         bool force = false,
         GrampsApiClient client = null!,
         McpServer server = null!,
         CancellationToken cancellationToken = default) =>
-        await DeleteObjectAsync(objectType, handle, force, client,
-            UserConfirmation.For(server, "delete_object"), cancellationToken);
+        await DeleteRecordsAsync(identifiers, objectType, force, client,
+            UserConfirmation.For(server, "delete_records"), cancellationToken);
 
-    internal static async Task<string> DeleteObjectAsync(string objectType, string handle, bool force,
-        GrampsApiClient client, IUserConfirmation confirmation, CancellationToken cancellationToken = default)
+    internal static async Task<string> DeleteRecordsAsync(IReadOnlyList<string>? identifiers, string? objectType,
+        bool force, GrampsApiClient client, IUserConfirmation confirmation, CancellationToken cancellationToken = default)
     {
         try
         {
-            if (!ObjectKinds.TryGetValue(objectType, out var kind))
-            {
-                throw McpToolErrors.ValidationError(
-                    "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-            }
-
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, kind.ApiPath);
-            return await DeleteHelper.DeleteWithBacklinksAsync(
-                client, kind.DisplayName, kind.ApiPath, resolvedHandle, force, handle, confirmation, cancellationToken);
+            var targets = await ResolveTargetsAsync(identifiers, objectType, client);
+            return await DeleteHelper.DeleteAsync(client, targets, force, confirmation, cancellationToken);
         }
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>
+    /// The records to delete, in the order given and each once: Gramps IDs resolved to handles, with the type
+    /// from the prefix or <paramref name="objectType"/>.
+    /// </summary>
+    private static async Task<IReadOnlyList<DeleteHelper.Target>> ResolveTargetsAsync(
+        IReadOnlyList<string>? identifiers, string? objectType, GrampsApiClient client)
+    {
+        if (identifiers is null || identifiers.Count == 0)
+            throw McpToolErrors.ValidationError("identifiers must name at least one record.");
+        if (identifiers.Count > DeleteHelper.MaxRecords)
+        {
+            throw McpToolErrors.ValidationError(
+                $"identifiers names {identifiers.Count} records; one call deletes at most {DeleteHelper.MaxRecords}.");
+        }
+        if (identifiers.Any(string.IsNullOrWhiteSpace))
+            throw McpToolErrors.ValidationError("identifiers must not contain empty entries.");
+
+        ObjectKind? given = null;
+        var normalizedType = objectType?.Trim();
+        if (!string.IsNullOrEmpty(normalizedType))
+        {
+            if (!ObjectKinds.TryGetValue(normalizedType, out given))
+            {
+                throw McpToolErrors.ValidationError(
+                    "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
+            }
+            normalizedType = normalizedType.ToLowerInvariant();
+        }
+
+        var typed = identifiers.Select(raw =>
+        {
+            var identifier = raw.Trim();
+            var inferred = InferObjectType(identifier);
+            if (inferred is null && given is null)
+            {
+                throw McpToolErrors.ValidationError(
+                    $"objectType is required for the handle '{identifier}'. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
+            }
+            if (inferred is not null && given is not null && inferred != normalizedType)
+            {
+                throw McpToolErrors.ValidationError(
+                    $"objectType '{normalizedType}' does not match Gramps ID '{identifier}', which identifies a {inferred}.");
+            }
+            return (Identifier: identifier, Collection: inferred is null ? given!.ApiPath : ObjectKinds[inferred].ApiPath);
+        }).ToList();
+
+        using var gate = new SemaphoreSlim(4);
+        var resolved = await Task.WhenAll(typed.Select(async t =>
+        {
+            await gate.WaitAsync();
+            try
+            {
+                var handle = await HandleResolver.ResolveToHandleAsync(t.Identifier, client, t.Collection);
+                return new DeleteHelper.Target(t.Collection, handle.Trim(), t.Identifier);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }));
+        return resolved.DistinctBy(t => (t.Collection, t.Handle)).ToList();
     }
 }

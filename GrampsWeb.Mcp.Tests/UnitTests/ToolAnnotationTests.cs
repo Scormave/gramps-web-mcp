@@ -31,7 +31,7 @@ public class ToolAnnotationTests
         Assert.Single(toolMethods, method => method.Name == "ReadMedia");
         Assert.Single(toolMethods, method => method.Name == "CreateMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
-        Assert.Single(toolMethods, method => method.Name == "DeleteObject");
+        Assert.Single(toolMethods, method => method.Name == "DeleteRecords");
         Assert.Single(toolMethods, method => method.Name == "UndoChange");
         Assert.Single(toolMethods, method => method.Name == "MergeObjects");
         Assert.Single(toolMethods, method => method.Name == "FindDuplicates");
@@ -61,7 +61,7 @@ public class ToolAnnotationTests
         string[] idempotent =
         [
             "create_media", "update_citation", "update_event", "update_family", "update_media", "update_person",
-            "update_place", "update_repository", "update_source", "update_tag", "delete_object", "merge_objects"
+            "update_place", "update_repository", "update_source", "update_tag", "delete_records", "merge_objects"
         ];
         string[] repeatable =
         [
@@ -97,7 +97,7 @@ public class ToolAnnotationTests
     }
 
     /// <summary>
-    /// delete_object, merge_objects and undo_change ask the user to confirm through the client, so they tell clients that
+    /// delete_records, merge_objects and undo_change ask the user to confirm through the client, so they tell clients that
     /// they need a person present; the server and cancellation token the SDK passes them are not arguments.
     /// </summary>
     [Fact]
@@ -111,11 +111,11 @@ public class ToolAnnotationTests
             .ToList();
 
         Assert.Equal(
-            ["delete_object", "merge_objects", "undo_change"],
+            ["delete_records", "merge_objects", "undo_change"],
             tools.Where(tool => tool.Meta?["anthropic/requiresUserInteraction"]?.GetValue<bool>() == true)
                 .Select(tool => tool.Name)
                 .Order(StringComparer.Ordinal));
-        foreach (var tool in tools.Where(tool => tool.Name is "delete_object" or "merge_objects" or "undo_change"))
+        foreach (var tool in tools.Where(tool => tool.Name is "delete_records" or "merge_objects" or "undo_change"))
         {
             var properties = tool.InputSchema.GetProperty("properties");
             Assert.False(properties.TryGetProperty("server", out _), $"{tool.Name} exposes the server");

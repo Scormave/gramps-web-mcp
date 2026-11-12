@@ -13,13 +13,13 @@ using Xunit;
 namespace GrampsWeb.Mcp.Tests.IntegrationTests;
 
 /// <summary>
-/// delete_object over a stdio-like session with the SDK's own client: the confirmation reaches the
+/// delete_records over a stdio-like session with the SDK's own client: the confirmation reaches the
 /// client's elicitation handler, and only a ticked accept deletes.
 /// </summary>
 public class McpConfirmationTests
 {
     [Fact]
-    public async Task DeleteObject_AsksTheClient_AndDeletesOnATickedAccept()
+    public async Task DeleteRecords_AsksTheClient_AndDeletesOnATickedAccept()
     {
         var call = await DeleteNoteAsync(ConfirmationMode.WhenSupported, Answer("accept", ticked: true));
 
@@ -37,7 +37,7 @@ public class McpConfirmationTests
     [InlineData("accept", false, "declined")]
     [InlineData("decline", null, "declined")]
     [InlineData("cancel", null, "cancelled")]
-    public async Task DeleteObject_DeletesNothing_WithoutATickedAccept(string action, bool? ticked, string reply)
+    public async Task DeleteRecords_DeletesNothing_WithoutATickedAccept(string action, bool? ticked, string reply)
     {
         var call = await DeleteNoteAsync(ConfirmationMode.WhenSupported, Answer(action, ticked));
 
@@ -47,7 +47,7 @@ public class McpConfirmationTests
     }
 
     [Fact]
-    public async Task DeleteObject_WithoutElicitation_DeletesAsBefore()
+    public async Task DeleteRecords_WithoutElicitation_DeletesAsBefore()
     {
         var call = await DeleteNoteAsync(ConfirmationMode.WhenSupported, answer: null);
 
@@ -56,7 +56,7 @@ public class McpConfirmationTests
     }
 
     [Fact]
-    public async Task DeleteObject_WhenConfirmationIsRequired_RefusesAClientWithoutElicitation()
+    public async Task DeleteRecords_WhenConfirmationIsRequired_RefusesAClientWithoutElicitation()
     {
         var call = await DeleteNoteAsync(ConfirmationMode.Required, answer: null);
 
@@ -66,7 +66,7 @@ public class McpConfirmationTests
     }
 
     [Fact]
-    public async Task DeleteObject_WhenConfirmationIsOff_DoesNotAsk()
+    public async Task DeleteRecords_WhenConfirmationIsOff_DoesNotAsk()
     {
         var call = await DeleteNoteAsync(ConfirmationMode.Off, Answer("decline", ticked: null));
 
@@ -122,8 +122,8 @@ public class McpConfirmationTests
                          new StreamClientTransport(toServer.Writer.AsStream(), toClient.Reader.AsStream()),
                          options, cancellationToken: timeout.Token))
         {
-            var result = await client.CallToolAsync("delete_object",
-                new Dictionary<string, object?> { ["objectType"] = "note", ["handle"] = "n1" },
+            var result = await client.CallToolAsync("delete_records",
+                new Dictionary<string, object?> { ["identifiers"] = new[] { "N0001" } },
                 cancellationToken: timeout.Token);
             text = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
             Assert.False(result.IsError == true, text);
@@ -142,16 +142,17 @@ public class McpConfirmationTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.PathAndQuery;
-            if (request.Method == HttpMethod.Delete && path == "/api/notes/n1")
+            if (request.Method == HttpMethod.Post && path == "/api/objects/delete-by-handle/")
             {
                 Deleted = true;
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+                return Task.FromResult(Json("""[{"_class": "Note", "handle": "n1", "type": "delete", "old": {}, "new": null}]"""));
             }
 
             return Task.FromResult(path switch
             {
                 "/api/token/" => Json("""{"access_token":"token","refresh_token":"refresh","expires_in":900}"""),
-                "/api/notes/n1?backlinks=true" => Json("""{"handle": "n1", "gramps_id": "N0001", "change": 1, "backlinks": {}}"""),
+                "/api/notes/?gramps_id=N0001&pagesize=1" => Json("""[{"handle": "n1"}]"""),
+                "/api/notes/n1?keys=handle,gramps_id,change,backlinks&backlinks=true" => Json("""{"handle": "n1", "gramps_id": "N0001", "change": 1, "backlinks": {}}"""),
                 "/api/notes/n1" => Json("""{"handle": "n1", "gramps_id": "N0001", "text": "A new note", "type": "General"}"""),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound)
                 {

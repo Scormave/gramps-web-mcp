@@ -80,7 +80,7 @@ public static class TagTools
     [McpServerTool(Title = "Update Tag", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
         "Rename a tag or change its color or priority; every record carrying the tag shows the change. " +
-        "For a new tag use create_tag; to remove one, delete_object. Which records carry a tag is stored on the " +
+        "For a new tag use create_tag; to remove one, delete_records. Which records carry a tag is stored on the " +
         "records: change that through their tagHandles (their update tool, linkMode add or remove), not here. " +
         "Pass only what changes; omitted arguments stay as they are. A name another tag already uses is rejected, " +
         "because Gramps filters find tags by name. Returns the stored name, color and priority; a missing tag " +

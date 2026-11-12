@@ -50,7 +50,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     {
         var text = TestNames.Unique("note");
         var note = await Session.CreateAsync("create_note", new { text });
-        await Session.CallAsync("delete_object", new { objectType = "note", handle = note.Handle });
+        await Session.CallAsync("delete_records", new { identifiers = new[] { note.Handle }, objectType = "note" });
         var transaction = await LatestTransactionAsync();
 
         var result = await Session.CallAsync("undo_change", new { transactionId = transaction });
@@ -115,7 +115,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
         });
         await Session.CallAsync("update_person", new { handle = person.Handle, noteHandles = Array.Empty<string>() });
         var transaction = await LatestTransactionAsync();
-        await Session.CallAsync("delete_object", new { objectType = "note", handle = note.Handle });
+        await Session.CallAsync("delete_records", new { identifiers = new[] { note.Handle }, objectType = "note" });
 
         var refused = await Session.CallAsync("undo_change", new { transactionId = transaction });
 

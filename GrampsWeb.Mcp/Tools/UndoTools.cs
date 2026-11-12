@@ -387,40 +387,11 @@ public static partial class UndoTools
         foreach (var change in deleted)
         {
             var data = change.Source.OldData!.Value;
-            if (ReadModel(change.Collection, data) is { } model
-                && SearchFormatter.FormatSummary(model, tables)?.Trim() is { Length: > 0 } summary)
+            if (StoredRecordLabels.Label(change.Collection, data, tables) is { } summary)
                 labels[change.Handle] = summary;
             if (data.TryGetProperty("gramps_id", out var id) && id.ValueKind == JsonValueKind.String
                 && id.GetString()?.Trim() is { Length: > 0 } grampsId)
                 grampsIds[change.Handle] = grampsId;
-        }
-    }
-
-    /// <summary>
-    /// The stored record as the model its summary line needs. A family is left out: its summary names the
-    /// partners from data the stored record does not carry.
-    /// </summary>
-    private static object? ReadModel(string collection, JsonElement data)
-    {
-        try
-        {
-            return collection switch
-            {
-                "people" => data.Deserialize<GrampsPerson>(GrampsJson.Options),
-                "events" => data.Deserialize<GrampsEvent>(GrampsJson.Options),
-                "places" => data.Deserialize<GrampsPlace>(GrampsJson.Options),
-                "sources" => data.Deserialize<GrampsSource>(GrampsJson.Options),
-                "citations" => data.Deserialize<GrampsCitation>(GrampsJson.Options),
-                "notes" => data.Deserialize<GrampsNote>(GrampsJson.Options),
-                "media" => data.Deserialize<GrampsMedia>(GrampsJson.Options),
-                "repositories" => data.Deserialize<GrampsRepository>(GrampsJson.Options),
-                "tags" => data.Deserialize<GrampsTag>(GrampsJson.Options),
-                _ => null
-            };
-        }
-        catch (JsonException)
-        {
-            return null; // The record keeps its bare handle.
         }
     }
 

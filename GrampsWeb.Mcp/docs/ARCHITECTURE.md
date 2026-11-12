@@ -119,7 +119,7 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
   coordinate with external clients. Writes run in parallel only when this is
   `false` and `GRAMPS_MUTATION_MIN_INTERVAL_MS` is `0`; a minimum interval
   keeps the single-flight lock.
-- `GRAMPS_CONFIRMATION`: whether `delete_object`, `merge_objects` and
+- `GRAMPS_CONFIRMATION`: whether `delete_records`, `merge_objects` and
   `undo_change` ask the user through MCP elicitation before they change the
   tree. `when-supported` asks clients that advertise form elicitation and runs
   as before elsewhere; `required` refuses the change (`action: not_confirmed`)

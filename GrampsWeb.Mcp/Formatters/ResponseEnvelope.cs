@@ -108,23 +108,6 @@ public static class ResponseEnvelope
     }
 
     /// <summary>
-    /// Formats a successful delete response.
-    /// </summary>
-    public static string DeleteSuccess(string objectType, string handle)
-    {
-        return $"---\ntype: {objectType}\naction: deleted\nhandle: {handle}\n---";
-    }
-
-    /// <summary>
-    /// Formats a delete that did not happen because the user did not confirm it, or the record changed
-    /// meanwhile: <paramref name="action"/> such as <c>declined</c>, then why.
-    /// </summary>
-    public static string DeleteNotDone(string objectType, string handle, string action, string reason)
-    {
-        return $"---\ntype: {objectType}\naction: {action}\nhandle: {handle}\n---\n{reason}";
-    }
-
-    /// <summary>
     /// Formats a merge that did not happen because the user did not confirm it, Gramps refused it, or a record
     /// changed meanwhile: <paramref name="action"/> such as <c>declined</c> or <c>refused</c>, then why.
     /// </summary>

@@ -15,6 +15,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   log says so once instead of retrying. Keep Gramps Web MCP 2.x until
   Gramps Web can be updated. The startup log also shows the Gramps Web
   API version
+- **Breaking:** `delete_object` is replaced by `delete_records`, which
+  deletes up to 50 records of any types in one call. `identifiers` takes
+  Gramps IDs or handles; `objectType` is needed only for handles. The
+  records are checked together, and nothing is deleted when one is
+  missing or, without `force`, when records outside the call link to
+  them; links between the records of one call need no `force`. With
+  `force`, Gramps Web now removes the links from the other records
+  instead of leaving them pointing at a missing record, and it deletes
+  the citations of a deleted source and a family left without father,
+  mother and children; the refusal and the confirmation say so. A place
+  that encloses places outside the call is refused even with `force`,
+  since Gramps Web would leave them pointing at a missing place. Each
+  record type is deleted in its own transaction, which `undo_change`
+  reverts. The reply has `type: Transaction`, `records:` and lists the
+  records deleted along and those whose links were removed;
+  `action: partially_deleted` reports a later type that failed
 - `merge_objects` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
 

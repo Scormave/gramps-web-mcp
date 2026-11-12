@@ -26,7 +26,7 @@ public class GrampsServerInstructionsTests
         Assert.Contains("This server is read-only", text);
         Assert.Contains("find_duplicates", text);
         Assert.DoesNotContain("Changing the tree:", text);
-        Assert.DoesNotContain("delete_object", text);
+        Assert.DoesNotContain("delete_records", text);
     }
 
     [Fact]

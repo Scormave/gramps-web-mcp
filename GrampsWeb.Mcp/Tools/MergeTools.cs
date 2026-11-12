@@ -180,7 +180,7 @@ public static class MergeTools
         if (string.Equals(type, "tag", StringComparison.OrdinalIgnoreCase))
             throw McpToolErrors.ValidationError(
                 "Tags cannot be merged: Gramps Web has no merge for tags. Add the kept tag to the records of the other " +
-                "with their update tools (tagHandles, linkMode add), then delete the other tag with delete_object.");
+                "with their update tools (tagHandles, linkMode add), then delete the other tag with delete_records.");
         if (!MergeKinds.TryGetValue(type, out var kind))
             throw McpToolErrors.ValidationError($"Invalid objectType. Must be one of: {ValidTypes}.");
         if (string.IsNullOrWhiteSpace(keepHandle) || string.IsNullOrWhiteSpace(duplicateHandle))

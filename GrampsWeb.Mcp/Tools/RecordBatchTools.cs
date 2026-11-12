@@ -413,7 +413,7 @@ public static class RecordBatchTools
         sb.AppendLine("Next steps:");
         if (unlinked.Count > 0)
             sb.AppendLine("  • Link the records above from existing ones with update_* and linkMode \"add\" " +
-                          "(eventRefs, citationHandles, noteHandles), or remove them with delete_object.");
+                          "(eventRefs, citationHandles, noteHandles), or remove them with delete_records.");
         if (unplaced.Count > 0)
             sb.AppendLine($"  • {string.Join(", ", unplaced.Select(e => e.Where))} " +
                           $"{(unplaced.Count == 1 ? "is" : "are")} in no new family: add to an existing family with " +
