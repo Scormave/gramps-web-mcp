@@ -90,6 +90,12 @@ changes nothing. Dry runs and refusals do not ask.
   like any other write tool. Only `true` and `false` are accepted, so a
   mistyped value stops the server instead of removing the prompt, and the
   server logs at startup that the metadata is off.
+- With the metadata off, a user can still have Claude Code ask before any one
+  of the three tools. An
+  [ask rule](https://code.claude.com/docs/en/permissions#manage-permissions)
+  in its settings, such as `"ask": ["mcp__<server>__delete_object"]` with the
+  name the server has in the client's configuration, asks on every call in
+  every permission mode, and the user can remove it again.
 - The tool call lasts until the user answers. If the client cancels the call
   first, nothing changes.
 - The server logs once per client whether it asks.
