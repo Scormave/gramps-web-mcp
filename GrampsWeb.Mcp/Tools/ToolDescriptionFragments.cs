@@ -12,9 +12,9 @@ public static class ToolDescriptionFragments
     /// <summary>Tool-level sentence for update tools: what omitting a value and linkMode do.</summary>
     public const string UpdateSemantics =
         "Pass only what changes; omitted arguments stay as they are. " +
-        "Link lists (…Handles, …Refs) follow linkMode: replace (default) sets the whole list, add appends, " +
-        "remove drops the given handles; in replace mode [] REMOVES every link of that kind, " +
-        "though the linked records themselves stay in the tree.";
+        "Link lists (…Handles, …Refs) follow linkMode: add (default) adds new links and changes only the fields given " +
+        "on a link already stored, remove drops the given handles, replace sets the whole list; only in replace mode " +
+        "does [] REMOVE every link of that kind, though the linked records themselves stay in the tree.";
 
     /// <summary>Tool-level sentence for write tools: the permission they need and the failures worth retrying.</summary>
     public const string WriteAccess =

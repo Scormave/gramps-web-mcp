@@ -113,7 +113,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
             primaryName = new { first = "Pyotr", surname = TestNames.Surname() },
             noteHandles = new[] { note.Handle }
         });
-        await Session.CallAsync("update_person", new { handle = person.Handle, noteHandles = Array.Empty<string>() });
+        await Session.CallAsync("update_person", new { handle = person.Handle, noteHandles = Array.Empty<string>(), linkMode = "replace" });
         var transaction = await LatestTransactionAsync();
         await Session.CallAsync("delete_records", new { identifiers = new[] { note.Handle }, objectType = "note" });
 

@@ -20,7 +20,7 @@ public sealed class FlexibleEventRefList
     public const string UpdateHint =
         "A link given without attributes keeps the stored ones. In replace mode a link's attributes replace its stored ones " +
         "([] removes them; one with the same type and value keeps its citations and notes); in add mode an event already " +
-        "linked keeps its link and gains the attributes it lacks.";
+        "linked takes the role given and gains the citations, notes and attributes it lacks, and a bare handle leaves it as it is.";
 
     public required EventRefRequest[] Items { get; init; }
 

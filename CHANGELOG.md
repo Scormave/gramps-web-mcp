@@ -67,6 +67,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   record the tree lacks gets its not-found message in its place while
   the others are still read. `extended` applies to the people and
   families among them and is refused when there are none
+- **Breaking:** `linkMode` on the `update_*` tools defaults to `add`
+  instead of `replace`. Without `linkMode`, a link list adds its links
+  to the stored ones instead of replacing them, and `[]` no longer
+  clears a list: pass `linkMode: "replace"` for that. An update whose
+  only arguments are empty link lists is refused unless `linkMode` is
+  `replace`, since it would change nothing
+- **Breaking:** `linkMode: "add"` updates a link that is already stored
+  with the fields the call sends for it: an event's role, a child's
+  `frel` and `mrel`, a repository's call number and media type, an
+  enclosing place's date. It adds the citations, notes and attributes
+  the link lacks and keeps the rest. Before, `add` left a stored link as
+  it was apart from its attributes, so changing one role or call number
+  took the whole list in `replace` mode. When a handle is linked more
+  than once, a link with a role updates the stored link with that role
+  first. A bare handle changes nothing on a stored link
+- **Breaking:** in `replace` mode a bare event or child handle keeps the
+  role or relations of its stored link; before, it reset them to
+  `Primary` (`Family` for a family's events) or `Birth`
 - Link fields take Gramps IDs as well as handles in `create_records`,
   the `update_*` tools and `upload_media`: the `…Handles` lists,
   `eventRefs`, `childRefs`, `personAssociations`, `enclosedBy`,

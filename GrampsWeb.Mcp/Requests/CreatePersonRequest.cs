@@ -193,7 +193,8 @@ public class EventRefRequest
 
     /// <summary>
     /// Set for a bare handle string (no <c>::Role</c>), which takes the default role of the record that links it:
-    /// Primary on a person, Family on a family. Not sent to Gramps.
+    /// Primary on a person, Family on a family. An update gives that role only to a new link and leaves a stored
+    /// link to the event as it is. Not sent to Gramps.
     /// </summary>
     [JsonIgnore]
     public bool BareHandle { get; init; }

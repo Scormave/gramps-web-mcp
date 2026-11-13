@@ -70,15 +70,42 @@ internal static class ToolArgumentValidator
     /// An error for an update_* call that gives no field to change besides handle and linkMode;
     /// null otherwise. Clients such as Claude Code drop arguments the schema does not list, so
     /// update_event(place: …) arrives as update_event(handle) and would save the record unchanged.
+    /// An empty link list counts as no field unless linkMode is replace, the only mode in which [] clears it.
     /// </summary>
     public static string? CheckSomethingToUpdate(string toolName, JsonElement schema, IDictionary<string, JsonElement>? arguments)
     {
-        if (!toolName.StartsWith("update_", StringComparison.Ordinal)
-            || arguments?.Any(a => a.Key is not ("handle" or "linkMode") && a.Value.ValueKind != JsonValueKind.Null) == true)
+        if (!toolName.StartsWith("update_", StringComparison.Ordinal))
             return null;
+        var properties = Properties(schema);
+        var mode = arguments?.TryGetValue("linkMode", out var given) == true && given.ValueKind == JsonValueKind.String
+            ? given.GetString()
+            : "add";
+        var emptyLinkLists = new List<string>();
+        foreach (var (name, value) in arguments ?? new Dictionary<string, JsonElement>())
+        {
+            if (name is "handle" or "linkMode" || value.ValueKind == JsonValueKind.Null)
+                continue;
+            if (mode != "replace" && value.ValueKind == JsonValueKind.Array && value.GetArrayLength() == 0
+                && IsLinkList(properties.GetValueOrDefault(name)))
+                emptyLinkLists.Add(name);
+            else
+                return null;
+        }
+
+        if (emptyLinkLists.Count > 0)
+            return $"Nothing to update: an empty {string.Join(" or ", emptyLinkLists)} changes nothing in linkMode {mode}. " +
+                   "To remove every link of that kind, pass [] with linkMode replace; " +
+                   "to remove some links, pass their handles with linkMode remove.";
         return "Nothing to update: the call gives no field to change. If you passed one, check its name; " +
-               "clients drop arguments a tool does not have. " + DescribeParameters(schema, Properties(schema));
+               "clients drop arguments a tool does not have. " + DescribeParameters(schema, properties);
     }
+
+    /// <summary>Whether the parameter is a link list, which follows linkMode (its description says so).</summary>
+    private static bool IsLinkList(JsonElement property) =>
+        property.ValueKind == JsonValueKind.Object
+        && property.TryGetProperty("description", out var description)
+        && description.ValueKind == JsonValueKind.String
+        && description.GetString()!.Contains(Tools.ToolDescriptionFragments.LinkListOnUpdate, StringComparison.Ordinal);
 
     /// <summary>
     /// The arguments with each JSON number given for a string parameter turned into its text

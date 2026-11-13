@@ -82,7 +82,8 @@ public static class SourceTools
         "Change an existing source's title, author, publication info, abbreviation, attributes or links to repositories, " +
         "notes, media and tags. For a new source use create_records; to remove one, delete_records; a page or act inside " +
         "the source is a citation, changed with update_citation. repositoryHandles carry each repository's call number, " +
-        "so edit a call number with linkMode replace; attributes replace the whole list whatever linkMode says. " +
+        "so pass a linked repository with a new call number to change it; attributes replace the whole list whatever " +
+        "linkMode says. " +
         ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing source returns a not-found message. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
@@ -112,7 +113,7 @@ public static class SourceTools
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
-        string linkMode = "replace")
+        string linkMode = "add")
     {
         try
         {

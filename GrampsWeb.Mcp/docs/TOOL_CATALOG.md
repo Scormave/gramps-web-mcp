@@ -86,8 +86,8 @@ error instead of a generic 500.
 
 ## Incremental link updates
 
-The nine `update_*` tools with link lists accept `linkMode`: `replace` (default),
-`add`, or `remove`. It applies to every supplied link list in that call:
+The nine `update_*` tools with link lists accept `linkMode`: `add` (default),
+`remove`, or `replace`. It applies to every supplied link list in that call:
 notes, citations, tags, media, events, children, families, parent families,
 person associations, repository references and enclosing places where supported.
 Names, attributes, addresses and URLs still use replacement semantics; the
@@ -95,21 +95,33 @@ attributes of event and media links follow `linkMode` with their link (see
 [Link attributes](#link-attributes)).
 
 ```text
-update_person(handle: "PERSON_HANDLE", noteHandles: ["NOTE_HANDLE"], linkMode: "add")
+update_person(handle: "PERSON_HANDLE", noteHandles: ["NOTE_HANDLE"])
+update_person(handle: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"])
 update_family(handle: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "remove")
 ```
 
-Use actual handles in link lists. `add` appends missing handles in input order
-and leaves existing links and their metadata unchanged, except that an event or
-media link already there gains the link attributes it lacks. `remove` removes all
-references matching a supplied handle, regardless of role or other metadata;
-missing handles are harmless. Omitted lists stay unchanged; `[]` clears only
-in `replace` mode. In `replace` mode a reference that stays keeps its stored
-privacy, citations, notes and crop; fields the call sends (including the
-default role or relationship of a bare handle) overwrite them, so use `replace`
-to change existing link metadata. An attribute with the same type and value as
-a stored one keeps its citations, notes and privacy. Adding and removing in the
-same workflow requires separate calls or one full replacement.
+`add` appends the links whose handles are not linked yet, once each, in input
+order. A link that is already stored takes the fields the call sends for it
+(role, `frel` and `mrel`, call number, media type, date, region) and gains the
+citations, notes and attributes it lacks; everything else on it stays. So the
+second example above makes the person a witness of an event they are already
+linked to, and keeps that link's citations and notes. A bare handle changes
+nothing on a stored link: the default role of an event (`Primary`, `Family` for
+families) and the `Birth` relations of a child apply only to a new link. When a
+handle is linked more than once, a link object with a role updates the stored
+link with that role first, otherwise the first one the call has not updated.
+
+`remove` removes all references matching a supplied handle, regardless of role
+or other metadata; missing handles are harmless. Omitted lists stay unchanged;
+`[]` clears only in `replace` mode, and an update whose only arguments are empty
+link lists is refused in the other modes, since it would change nothing.
+
+`replace` sets each list to the links given. A reference that stays keeps its
+stored privacy, citations, notes and crop; fields the call sends overwrite them,
+and a bare handle keeps the stored role or relationship. An attribute with the
+same type and value as a stored one keeps its citations, notes and privacy.
+Adding and removing in the same workflow requires separate calls or one full
+replacement.
 
 `update_person` and `update_family` also take `sort`, which names the lists
 to put in date order after the link lists are applied, so a link added with
@@ -630,7 +642,7 @@ returns the usual not-found message.
 | `handle2` | `string` | yes | Second person handle or Gramps ID |
 
 ### U — `UpdatePerson`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update an existing person.  Only include arguments to change.
 Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
@@ -653,7 +665,7 @@ and children, so a person joins a family through the family's `fatherHandle`,
 ## Family (`FamilyTools.cs`) — 1 tool
 
 ### U — `UpdateFamily`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update an existing family.  The fields of a [`families` record](#families),
 all optional, plus `sort` to put `Events`, `Children`, `Citations` or `Media` in date order; see
@@ -669,7 +681,7 @@ not the changed family; read it back with `get_records`.
 ## Event (`EventTools.cs`) — 1 tool
 
 ### U — `UpdateEvent`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update an existing event (the fields of an [`events` record](#events), all
 optional). Omit `date` to keep
@@ -680,7 +692,7 @@ the current date; an empty string removes it.
 ## Place (`PlaceTools.cs`) — 1 tool
 
 ### U — `UpdatePlace`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update a place. The fields of a [`places` record](#places), all optional. `enclosedBy` is a link list and follows `linkMode`; `alternateNames` always uses replacement. Use `enclosedBy` (not `enclosedByHandles`) for parent refs and enclosure dates. Omit `nameDate` or `nameLang` to keep the primary name's date or language; an empty string removes it. The same goes for `lat` and `lon`. The result's header shows the place as saved: its name, `placeType`, `lat`, `lon` and `enclosedBy` handles, whether or not the call changed them.
 
@@ -689,7 +701,7 @@ Update a place. The fields of a [`places` record](#places), all optional. `enclo
 ## Source (`SourceTools.cs`) — 1 tool
 
 ### U — `UpdateSource`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update a source (the fields of a [`sources` record](#sources), all optional).
 
@@ -698,7 +710,7 @@ Update a source (the fields of a [`sources` record](#sources), all optional).
 ## Citation (`CitationTools.cs`) — 1 tool
 
 ### U — `UpdateCitation`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update a citation (the fields of a [`citations` record](#citations), all
 optional). Omit `date` to keep the current date; an empty string removes it. A change shows on every record that
@@ -709,7 +721,7 @@ cites the citation; to cite another page for one record, create a new citation.
 ## Note (`NoteTools.cs`) — 1 tool
 
 ### U — `UpdateNote`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update a note (the fields of a [`notes` record](#notes), all optional). `text`
 replaces the whole body;
@@ -793,7 +805,7 @@ its file, with `update_media`; check a region with `get_media_image`.
 | `isPrivate` | `bool` | no | `false` | Mark private |
 
 ### U — `UpdateMedia`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update media metadata, or replace the stored file with `filePath` from an
 upload folder. The new file is checked like in `UploadMedia`; a file identical
@@ -820,7 +832,7 @@ media off a record, use that record's update tool with `mediaHandles` and
 ## Repository (`RepositoryTools.cs`) — 1 tool
 
 ### U — `UpdateRepository`
-`linkMode: "replace" | "add" | "remove"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
+`linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update a repository (the fields of a [`repositories` record](#repositories),
 all optional). `addresses` and `urls`

@@ -368,21 +368,26 @@ This is a critical distinction for update tools:
 | **Passes `[]` (empty array)** | **Clears** all items of that kind (link lists: only with `linkMode: "replace"`) |
 | **Passes `null`** | Same as omit (ignored) |
 
-This is documented in tool descriptions via `ToolDescriptionFragments.OmitToKeepEmptyClears`
-and `UpdateEmptyListRemovesLinks`.
+This is documented in tool descriptions via `ToolDescriptionFragments.UpdateSemantics`,
+`LinkListOnUpdate` and `ReplacedListOnUpdate`.
 
 ### Link list modes
 
-Every update tool takes `linkMode` (`replace`, the default; `add`; `remove`),
-applied by `Tools/LinkUpdates.cs` to every link list supplied in the call
-(handles of citations, notes, media, tags, events, children, and so on):
+Every update tool takes `linkMode` (`add`, the default; `remove`; `replace`),
+checked by `Tools/LinkUpdates.cs` and applied by `GrampsObjectPatch.ApplyLinks`
+to every link list supplied in the call (handles of citations, notes, media,
+tags, events, children, and so on):
 
-- `replace`: the supplied list replaces the current one; `[]` clears it.
-- `add`: appends handles not linked yet and keeps the metadata of existing links.
+- `add`: appends handles not linked yet; a link already stored takes the fields
+  the call sends for it and gains the citations, notes and attributes it lacks.
+  A bare event or child handle (`BareHandle`) leaves a stored link as it is.
 - `remove`: drops links whose handle was supplied.
+- `replace`: the supplied list replaces the current one; `[]` clears it. A link
+  that stays keeps its stored fields unless the call sends new ones.
 
-With `add` or `remove`, `[]` changes nothing. Names, attributes, addresses, and
-URLs always use replacement.
+With `add` or `remove`, `[]` changes nothing, and `ToolArgumentValidator`
+refuses an update whose only arguments are empty link lists. Names,
+attributes, addresses, and URLs always use replacement.
 
 ### Read-modify-write pattern
 
@@ -394,8 +399,8 @@ Update tools follow this pattern:
 2. `GrampsObjectPatch.LoadAsync` GETs the stored object as raw JSON
 3. Change only the keys the agent passed: `Set` for values (null keeps the
    stored one), `SetOrRemove` for values an empty argument removes,
-   `ApplyHandles` / `ApplyMediaHandles` / `ApplyRefs` for link lists (through
-   `LinkUpdates.Apply`), `ReplaceAttributes` for attributes
+   `ApplyHandles` / `ApplyMediaLinks` / `ApplyRefs` for link lists (through
+   `ApplyLinks`), `ReplaceAttributes` for attributes
 4. `SaveAsync` PUTs the patched object back (`PutMutationAsync`)
 
 Gramps Web replaces the whole object on `PUT`, so the body must carry every

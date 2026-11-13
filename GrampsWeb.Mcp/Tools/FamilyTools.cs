@@ -117,8 +117,8 @@ public static class FamilyTools
     [Description(
         "Change an existing family's father, mother, relationship type, children, family events, attributes or links to " +
         "citations, notes, media and tags. For a new family use create_records; to remove one, delete_records. " +
-        "To add one child, pass it in childRefs with linkMode add; in replace mode childRefs must hold every child the " +
-        "family keeps. attributes replace the whole list whatever linkMode says, and sort reorders children, events, " +
+        "To add one child, pass it in childRefs; to change a child's relations, pass the child with frel or mrel; in " +
+        "replace mode childRefs must hold every child the family keeps. attributes replace the whole list whatever linkMode says, and sort reorders children, events, " +
         "citations or media by date without changing which are linked. " + ToolDescriptionFragments.UpdateSemantics + " " +
         "Gramps Web keeps the people's side in step in the same save: a new father, mother or child gets the family on " +
         "their record, and one replaced or removed loses it; a father, mother or new child that does not exist makes it " +
@@ -152,7 +152,7 @@ public static class FamilyTools
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
-        string linkMode = "replace",
+        string linkMode = "add",
         [Description(LinkOrder.FamilyDescription)]
         FlexibleSortList? sort = null)
     {
@@ -187,8 +187,8 @@ public static class FamilyTools
             family.Set("father_handle", fatherHandle);
             family.Set("mother_handle", motherHandle);
             family.Set("type", relationshipType);
-            family.ApplyRefs("child_ref_list", (GrampsChildRef[]?)childRefs, linkMode);
-            family.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
+            family.ApplyRefs("child_ref_list", (GrampsChildRef[]?)childRefs, linkMode, r => r.BareHandle);
+            family.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode, r => r.BareHandle);
             if (eventRefs is not null)
                 EventRoles.SetMissingFamilyRoles(family.Root);
             family.ApplyMediaLinks(mediaHandles, linkMode);

@@ -512,16 +512,17 @@ public sealed class GrampsResources
         applies_to = "Link-list parameters on update_person, update_family, update_event, update_place, update_source, update_citation, update_note, update_media, and update_repository. Names, attributes, addresses, and URLs always use replacement semantics; an attribute with the same type and value as a stored one keeps its citations, notes, and privacy. The attributes of event and media links follow linkMode with their link.",
         link_mode = new
         {
-            replace = "Default. Each supplied link list replaces the entire existing list; [] clears it. A reference that stays keeps its stored privacy, citations, notes, crop, and other metadata; fields the call sends (including the default role or relationship of a bare handle) overwrite them. Several references to the same handle are matched in order. List every reference that should stay, even when changing only one.",
-            add = "Append only missing handles. Existing references and their role, relationship, crop, and other metadata stay unchanged, except that an event or media link already there gains the link attributes it lacks. [] does nothing.",
-            remove = "Remove every reference matching each supplied handle; other references and metadata stay unchanged. [] does nothing."
+            add = "Default. Appends each reference whose handle is not linked yet, once. A reference already stored takes the fields the call sends for it (role, frel and mrel, call number, media type, date, region) and gains the citations, notes, and attributes it lacks; everything else stays. A bare handle changes nothing on a stored reference: its default role or Birth relations apply only to a new one. When a handle is linked more than once, a reference with a role updates the stored one with that role first, otherwise the first one the call has not updated. [] changes nothing.",
+            remove = "Remove every reference matching each supplied handle; other references and metadata stay unchanged. Reference fields in the call are ignored. [] changes nothing.",
+            replace = "Each supplied link list replaces the entire existing list; [] clears it. A reference that stays keeps its stored privacy, citations, notes, crop, and other metadata; fields the call sends overwrite them, and a bare handle keeps the stored role or relationship. Several references to the same handle are matched in order. List every reference that should stay."
         },
         rules = new[]
         {
             "Omit a link-list parameter to leave that list unchanged. One linkMode applies to every supplied link list in the call.",
             "Give an existing record by handle or Gramps ID, a tag by handle. A Gramps ID is looked up among the records the list links; " +
             "an unknown one is an error that names the field, and nothing is changed. Resolve an ambiguous name before changing links.",
-            "For an event, child, repository, or place reference, include role or relationship metadata when adding if it is known. To change metadata on an existing link, read the record and replace the full list with the new values on that link; metadata the call does not send stays.",
+            "For an event, child, repository, or place reference, include role or relationship metadata when adding if it is known. To change metadata on a stored link, pass that link with the new values in add mode; metadata the call does not send stays.",
+            "An update whose only arguments are empty link lists is refused unless linkMode is replace, since it would change nothing.",
             "Add and remove in one workflow require separate calls. Concurrent edits by other Gramps Web clients or server processes are not locked by this MCP server."
         },
         examples = new[]
@@ -530,7 +531,8 @@ public sealed class GrampsResources
             "update_person(handle: \"PERSON_HANDLE\", eventRefs: [{ref: \"EVENT_HANDLE\", role: \"Primary\", attributes: [\"Age: 65\"]}], linkMode: \"add\")",
             "update_family(handle: \"FAMILY_HANDLE\", childRefs: [\"CHILD_HANDLE\"], linkMode: \"remove\")",
             "update_event(handle: \"EVENT_HANDLE\", citationHandles: [\"CITATION_HANDLE\"], linkMode: \"add\")",
-            "update_family(handle: \"F0023\", childRefs: [\"I0045\"], linkMode: \"add\")"
+            "update_family(handle: \"F0023\", childRefs: [\"I0045\"])",
+            "update_person(handle: \"PERSON_HANDLE\", eventRefs: [\"EVENT_HANDLE::Witness\"])"
         }
     };
 

@@ -70,43 +70,130 @@ internal sealed class GrampsObjectPatch
     }
 
     /// <summary>
-    /// Applies a supplied link list to the stored one (see <see cref="LinkUpdates"/>). Stored entries are kept
-    /// as they are. In replace mode a supplied object whose ref matches a stored entry is laid over that entry,
-    /// so metadata the caller did not send (privacy, citations, notes, crop rectangle, …) stays;
-    /// several references to the same handle are matched in order. Link attributes are matched by type and value
-    /// (see <see cref="ReplaceAttributes"/>); in add mode the attributes of a link already stored are added to it.
+    /// Applies a supplied link list to the stored one (see <see cref="LinkUpdates"/>). replace sets the list in the
+    /// order given, laying each supplied link over the stored link to the same handle (see <see cref="Overlay"/>);
+    /// add updates or appends links (see <see cref="Add"/>); remove drops every stored link to a supplied handle.
+    /// A link marked in <paramref name="bare"/> was given as a handle alone, so it takes defaults only as a new link
+    /// and leaves a stored one as it is.
     /// </summary>
-    public void ApplyLinks(string key, IEnumerable<JsonNode?>? supplied, string mode)
+    public void ApplyLinks(string key, IEnumerable<JsonNode?>? supplied, string mode, IReadOnlyList<bool>? bare = null)
     {
         if (supplied is null)
             return;
-        var stored = (Root[key] as JsonArray)?.ToArray();
-        var suppliedArray = supplied.ToArray();
-        if (mode == "add" && stored is not null)
-            AddAttributesToStoredLinks(stored, suppliedArray);
-        var result = LinkUpdates.Apply(stored, suppliedArray, mode, LinkKey);
-        if (result is null || ReferenceEquals(result, stored))
-            return;
-        if (mode == "replace")
-            result = Overlay(stored ?? [], result, LinkKey);
+        LinkUpdates.Validate(mode);
+        var stored = (Root[key] as JsonArray)?.ToArray() ?? [];
+        var links = supplied.ToArray();
+        if (mode != "replace")
+        {
+            if (links.Any(link => LinkKey(link) is not { Length: > 0 }))
+                throw McpToolErrors.ValidationError("Each link must have a non-empty handle/ref.");
+            if (links.Length == 0)
+                return;
+        }
+
+        var result = mode switch
+        {
+            "replace" => Overlay(stored, links, bare),
+            "remove" => Remove(stored, links),
+            _ => Add(stored, links, bare)
+        };
         Root[key] = new JsonArray(result.Select(node => node?.DeepClone()).ToArray());
     }
 
-    /// <summary>
-    /// Adds the attributes of each supplied link whose handle is stored to that stored link: the one with the same
-    /// role when there is one, otherwise the first. <see cref="LinkUpdates"/> leaves links already stored as they are.
-    /// </summary>
-    private static void AddAttributesToStoredLinks(JsonNode?[] stored, JsonNode?[] supplied)
+    /// <summary>The stored links whose handle no supplied link names.</summary>
+    private static JsonNode?[] Remove(JsonNode?[] stored, JsonNode?[] supplied)
     {
-        foreach (var link in supplied.OfType<JsonObject>())
+        var handles = supplied.Select(LinkKey).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        return stored.Where(node => LinkKey(node) is not { } handle || !handles.Contains(handle)).ToArray();
+    }
+
+    /// <summary>
+    /// linkMode add. A supplied link to a handle that is not stored is appended, once. A supplied link to a stored
+    /// handle updates that stored link with the fields it sends (see <see cref="UpdateLink"/>) and leaves the rest,
+    /// so a bare handle changes nothing. A link with a role goes to the stored link with the same role first, so
+    /// repeating a call changes nothing, and otherwise to the first stored link to the handle that the call has not
+    /// updated yet; a repeated link with no such stored link left is ignored.
+    /// </summary>
+    private static JsonNode?[] Add(JsonNode?[] stored, JsonNode?[] supplied, IReadOnlyList<bool>? bare)
+    {
+        var used = new bool[stored.Length];
+        var targets = new int[supplied.Length];
+        Array.Fill(targets, -1);
+        for (var i = 0; i < supplied.Length; i++)
         {
-            if (link["attribute_list"] is not JsonArray { Count: > 0 } attributes || LinkKey(link) is not { Length: > 0 } handle)
+            if (supplied[i] is not JsonObject link || TypeString(link["role"]) is not { Length: > 0 } role)
                 continue;
-            var matches = stored.OfType<JsonObject>().Where(o => LinkKey(o) == handle).ToArray();
-            var role = TypeString(link["role"]);
-            var target = matches.FirstOrDefault(o => role is not null && TypeString(o["role"]) == role) ?? matches.FirstOrDefault();
-            if (target is not null)
-                AddAttributes(target, attributes);
+            var handle = LinkKey(link);
+            for (var j = 0; j < stored.Length && targets[i] < 0; j++)
+            {
+                if (!used[j] && LinkKey(stored[j]) == handle && stored[j] is JsonObject o && TypeString(o["role"]) == role)
+                {
+                    used[j] = true;
+                    targets[i] = j;
+                }
+            }
+        }
+
+        for (var i = 0; i < supplied.Length; i++)
+        {
+            if (targets[i] >= 0)
+                continue;
+            targets[i] = FindUnused(stored, used, LinkKey(supplied[i])!, LinkKey);
+            if (targets[i] >= 0)
+                used[targets[i]] = true;
+        }
+
+        var result = stored.Select(node => node?.DeepClone()).ToList();
+        var linked = stored.Select(LinkKey).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        for (var i = 0; i < supplied.Length; i++)
+        {
+            if (targets[i] < 0)
+            {
+                if (linked.Add(LinkKey(supplied[i])!))
+                    result.Add(supplied[i]);
+            }
+            else if (bare?[i] != true && supplied[i] is JsonObject patch && result[targets[i]] is JsonObject link)
+                UpdateLink(link, patch);
+        }
+
+        return result.ToArray();
+    }
+
+    /// <summary>
+    /// Lays the fields a supplied link sends over a stored link: a single value, such as a role, a child's relation,
+    /// a call number or a date, replaces the stored one, and a list, such as attributes, citations or notes, gains
+    /// the entries the stored link lacks (attributes by type and value).
+    /// </summary>
+    private static void UpdateLink(JsonObject link, JsonObject patch)
+    {
+        foreach (var (name, value) in patch)
+        {
+            if (name is "ref" or "_class")
+                continue;
+            if (name == "attribute_list")
+                AddAttributes(link, value as JsonArray);
+            else if (value is JsonArray items)
+                AddMissing(link, name, items);
+            else
+                link[name] = value?.DeepClone();
+        }
+    }
+
+    /// <summary>Appends to the list <paramref name="name"/> of <paramref name="link"/> the items it does not have yet.</summary>
+    private static void AddMissing(JsonObject link, string name, JsonArray items)
+    {
+        if (items.Count == 0)
+            return;
+        if (link[name] is not JsonArray existing)
+        {
+            existing = new JsonArray();
+            link[name] = existing;
+        }
+
+        foreach (var item in items)
+        {
+            if (!existing.Any(stored => JsonNode.DeepEquals(stored, item)))
+                existing.Add(item?.DeepClone());
         }
     }
 
@@ -243,9 +330,12 @@ internal sealed class GrampsObjectPatch
             ? array.Select(item => item!.GetValue<int>()).ToArray()
             : null;
 
-    /// <summary>Applies typed references, written by their converters (which leave out empty fields).</summary>
-    public void ApplyRefs<T>(string key, T[]? refs, string mode) =>
-        ApplyLinks(key, refs?.Select(r => ToNode(r)), mode);
+    /// <summary>
+    /// Applies typed references, written by their converters (which leave out empty fields). <paramref name="isBare"/>
+    /// tells the references given as a handle alone, whose defaults (a role, a child's relation) apply only to a new link.
+    /// </summary>
+    public void ApplyRefs<T>(string key, T[]? refs, string mode, Func<T, bool>? isBare = null) =>
+        ApplyLinks(key, refs?.Select(r => ToNode(r)), mode, isBare is null ? null : refs?.Select(isBare).ToArray());
 
     /// <summary>
     /// Replaces <c>attribute_list</c> with the supplied attributes. An attribute whose type and value match a
@@ -327,29 +417,36 @@ internal sealed class GrampsObjectPatch
     private static string? StoredAttributeKey(JsonNode? node) =>
         node is JsonObject o ? AttributeKey(TypeString(o["type"]), StringValue(o["value"])) : null;
 
-    private static JsonNode?[] Overlay(JsonNode?[] stored, JsonNode?[] supplied, Func<JsonNode?, string?> key)
+    /// <summary>
+    /// linkMode replace: the supplied links in their order, each laid over the stored link to the same handle, so
+    /// metadata the caller did not send (privacy, citations, notes, crop rectangle, …) stays; several references to
+    /// the same handle are matched in order, link attributes by type and value (see <see cref="ReplaceAttributes"/>),
+    /// and a bare link keeps the stored one as it is.
+    /// </summary>
+    private static JsonNode?[] Overlay(JsonNode?[] stored, JsonNode?[] supplied, IReadOnlyList<bool>? bare)
     {
         var used = new bool[stored.Length];
         var result = new JsonNode?[supplied.Length];
         for (var i = 0; i < supplied.Length; i++)
         {
             result[i] = supplied[i];
-            if (supplied[i] is not JsonObject patch || key(patch) is not { Length: > 0 } handle)
+            if (supplied[i] is not JsonObject patch || LinkKey(patch) is not { Length: > 0 } handle)
                 continue;
-            var index = FindUnused(stored, used, handle, key);
+            var index = FindUnused(stored, used, handle, LinkKey);
             if (index < 0 || stored[index] is not JsonObject match)
                 continue;
 
             used[index] = true;
             var merged = (JsonObject)match.DeepClone();
+            result[i] = merged;
+            if (bare?[i] == true)
+                continue;
             foreach (var (name, value) in patch)
             {
                 merged[name] = name == "attribute_list" && value is JsonArray attributes && match[name] is JsonArray storedAttributes
                     ? MergeAttributes(storedAttributes.ToArray(), attributes)
                     : value?.DeepClone();
             }
-
-            result[i] = merged;
         }
 
         return result;

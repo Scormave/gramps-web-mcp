@@ -70,7 +70,7 @@ public class UpdateToolsPreserveStoredDataTests
 
         await PersonTools.UpdatePerson("h-person",
             eventRefs: Deserialize<FlexibleEventRefList>("""["e1::Primary", "e1::Witness", "e3"]"""),
-            client: CreateClient(handler));
+            client: CreateClient(handler), linkMode: "replace");
 
         var refs = handler.Body!["event_ref_list"]!.AsArray();
         Assert.Equal(3, refs.Count);
@@ -123,7 +123,8 @@ public class UpdateToolsPreserveStoredDataTests
     {
         var handler = new StoredObjectHandler(StoredScanLinks);
 
-        await PersonTools.UpdatePerson("h-person", mediaHandles: MediaLinks(mediaHandles), client: CreateClient(handler));
+        await PersonTools.UpdatePerson("h-person", mediaHandles: MediaLinks(mediaHandles), client: CreateClient(handler),
+            linkMode: "replace");
 
         AssertJsonEqual(JsonNode.Parse(expected), handler.Body!["media_list"]);
     }

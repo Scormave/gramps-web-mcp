@@ -119,7 +119,7 @@ public class LinkAttributesTests
         var handler = new TreeHandler(PersonWithEvent(StoredAge));
 
         await PersonTools.UpdatePerson("h-person", eventRefs: Deserialize<FlexibleEventRefList>(eventRefs),
-            client: CreateClient(handler));
+            client: CreateClient(handler), linkMode: "replace");
 
         var link = handler.Body!["event_ref_list"]![0]!;
         Assert.Equal("Primary", link["role"]!.GetValue<string>());
@@ -216,7 +216,7 @@ public class LinkAttributesTests
             """);
 
         await PersonTools.UpdatePerson("h-person", mediaHandles: Deserialize<FlexibleMediaLinkList>(mediaHandles),
-            client: CreateClient(handler));
+            client: CreateClient(handler), linkMode: "replace");
 
         var link = Assert.Single(handler.Body!["media_list"]!.AsArray())!;
         AssertJsonEqual(JsonNode.Parse("[5,50,95,75]"), link["rect"]);

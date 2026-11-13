@@ -73,7 +73,7 @@ Write tools:
 - undo_change reverts one transaction from get_recent_changes, deletions included, only after the user confirmed that transaction. dryRun shows what it would change. If it reports conflicts, undo the later transactions first, newest first; force=true only after a separate confirmation.
 - In some clients these two tools also show the user a confirmation dialog. A reply with action declined or cancelled means the user said no there and nothing changed: do not call again unless the user asks.
 
-Important update rule: in `update_*` tools, omitting a list parameter leaves that list unchanged. For link lists, `linkMode: "replace"` (default) replaces the complete list, `"add"` appends missing handles and preserves existing link metadata, and `"remove"` unlinks the supplied handles. Passing `[]` clears links only in replace mode; in add/remove mode it does nothing. Never clear a list unless the user asked to remove those links. Non-link lists such as names and attributes always use replacement.
+Important update rule: in `update_*` tools, omitting a list parameter leaves that list unchanged. For link lists, `linkMode: "add"` (default) appends missing handles and changes only the fields given on a link already stored (such as its role), keeping the rest; `"remove"` unlinks the supplied handles; `"replace"` replaces the complete list. Passing `[]` clears links only in replace mode; in add/remove mode it changes nothing. Never clear a list unless the user asked to remove those links. Non-link lists such as names and attributes always use replacement.
 
 ## Ownership Model — Links Are One-Way
 
@@ -91,7 +91,7 @@ Gramps uses a one-way ownership model. Each link is stored on exactly one side �
 
 **Rule:** "Linked people", "Referenced by …", and any backlink section shown in a tool response are **read-only**. They tell you which other objects point to this one. You **cannot** change those links by updating the object you are currently viewing — you must update the object that owns the link.
 
-Example: to attach an event to a person, call `update_person` with the event handle in `eventRefs` and `linkMode: "add"`. Events do not hold person references; the person owns this link. `linkMode: "replace"` is the default and replaces the complete supplied link list. To remove one reference, pass its handle with `linkMode: "remove"`.
+Example: to attach an event to a person, call `update_person` with the event handle in `eventRefs` and `linkMode: "add"`. Events do not hold person references; the person owns this link. `linkMode: "add"` is the default, so the same call with another role changes the role of that link. `linkMode: "replace"` replaces the complete link list. To remove one reference, pass its handle with `linkMode: "remove"`.
 
 Be especially careful with deletion. If a delete tool reports backlinks or references, explain the risk and do not force deletion unless the user gives a separate explicit confirmation.
 

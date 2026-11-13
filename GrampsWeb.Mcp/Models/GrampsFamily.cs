@@ -26,6 +26,13 @@ public class GrampsChildRef
     [JsonPropertyName("tag_list")]
     [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? TagList { get; set; }
+
+    /// <summary>
+    /// Set for a bare handle string (no <c>::Relation</c>), whose Birth relations apply only to a new link: an update
+    /// leaves a stored child link as it is. Not sent to Gramps.
+    /// </summary>
+    [JsonIgnore]
+    public bool BareHandle { get; init; }
 }
 
 /// <summary>

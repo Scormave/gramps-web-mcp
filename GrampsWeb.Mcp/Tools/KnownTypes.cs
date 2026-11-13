@@ -57,7 +57,7 @@ internal static class KnownTypes
     /// Checks the attribute types on media links. linkMode remove matches links by handle only, so their attributes
     /// are not checked.
     /// </summary>
-    public static async Task CheckMediaLinksAsync(MediaLink[]? links, GrampsApiClient client, string linkMode = "replace",
+    public static async Task CheckMediaLinksAsync(MediaLink[]? links, GrampsApiClient client, string linkMode = "add",
         string argument = "mediaHandles")
     {
         if (linkMode == "remove")
@@ -83,7 +83,7 @@ internal static class KnownTypes
     /// Checks the father's and mother's relation of each child link. linkMode remove matches links by handle only, so
     /// their relations are not checked.
     /// </summary>
-    public static async Task CheckChildRefsAsync(GrampsChildRef[]? refs, GrampsApiClient client, string linkMode = "replace")
+    public static async Task CheckChildRefsAsync(GrampsChildRef[]? refs, GrampsApiClient client, string linkMode = "add")
     {
         if (linkMode == "remove")
             return;
@@ -95,7 +95,7 @@ internal static class KnownTypes
     }
 
     /// <summary>Checks the media type of each repository link; as with child links, linkMode remove is not checked.</summary>
-    public static async Task CheckRepositoryRefsAsync(GrampsRepositoryRef[]? refs, GrampsApiClient client, string linkMode = "replace")
+    public static async Task CheckRepositoryRefsAsync(GrampsRepositoryRef[]? refs, GrampsApiClient client, string linkMode = "add")
     {
         if (linkMode == "remove")
             return;

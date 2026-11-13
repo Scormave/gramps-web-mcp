@@ -66,7 +66,7 @@ public class EventRoleTests
     }
 
     [Fact]
-    public async Task UpdateFamily_Replace_Gives_Bare_Handles_The_Family_Role_And_Keeps_Stored_Roles_Of_Link_Objects()
+    public async Task UpdateFamily_Replace_Gives_A_New_Bare_Handle_The_Family_Role_And_Keeps_Stored_Roles()
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
@@ -80,10 +80,10 @@ public class EventRoleTests
 
         await FamilyTools.UpdateFamily(
             "h-family", eventRefs: Refs("""["e-marriage", { "ref": "e-banns" }, { "ref": "e-divorce" }]"""),
-            client: CreateClient(handler));
+            client: CreateClient(handler), linkMode: "replace");
 
         Assert.Equal(
-            ["Family", "Восприемник", "Family"],
+            ["Primary", "Восприемник", "Family"],
             handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["role"]!.GetValue<string>()));
     }
 

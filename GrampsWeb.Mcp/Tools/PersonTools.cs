@@ -302,7 +302,7 @@ public static class PersonTools
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
-        string linkMode = "replace",
+        string linkMode = "add",
         [Description(LinkOrder.PersonDescription)]
         FlexibleSortList? sort = null)
     {
@@ -340,7 +340,7 @@ public static class PersonTools
                 person.Set("primary_name", ConvertNameToRequest(primaryName.Name));
             person.Set("gender", GrampsGenderParser.ParseOptional(gender));
             person.Set("alternate_names", ((GrampsName[]?)alternateNames)?.Select(ConvertNameToRequest).ToArray());
-            person.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode);
+            person.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode, r => r.BareHandle);
             person.ApplyHandles("family_list", familyHandles, linkMode);
             person.ApplyHandles("parent_family_list", parentFamilyHandles, linkMode);
             person.ApplyMediaLinks(mediaHandles, linkMode);

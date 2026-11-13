@@ -80,20 +80,23 @@ public sealed class FlexibleChildRefListJsonConverter : JsonConverter<FlexibleCh
 
         var idx = line.IndexOf("::", StringComparison.Ordinal);
         var href = idx < 0 ? line : line[..idx];
-        var relType = idx < 0 ? "Birth" : line[(idx + 2)..];
+        var relType = idx < 0 ? "" : line[(idx + 2)..];
         href = href.Trim();
         relType = relType.Trim();
 
         if (string.IsNullOrEmpty(href))
             throw new JsonException($"Child handle cannot be empty. Line: \"{line}\"");
 
-        relType = string.IsNullOrEmpty(relType) ? "Birth" : relType;
+        // A bare handle takes Birth for a new link; an update leaves a stored link to the child as it is.
+        var bare = string.IsNullOrEmpty(relType);
+        relType = bare ? "Birth" : relType;
 
         return new GrampsChildRef
         {
             Ref = href,
             FatherRelType = relType,
-            MotherRelType = relType
+            MotherRelType = relType,
+            BareHandle = bare
         };
     }
 

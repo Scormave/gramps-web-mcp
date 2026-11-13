@@ -21,11 +21,11 @@ internal static class EventRoles
     /// <summary>
     /// Rejects a role that is neither a standard Gramps role nor a custom one the tree already uses, since Gramps would
     /// store a misspelt role as a new custom role, and writes each accepted role in its known spelling. A bare handle
-    /// (no <c>::Role</c>) takes <paramref name="defaultRole"/>. A link object without a role stays without one, so in
-    /// replace mode it keeps the stored role, and linkMode remove matches links by handle only, so its roles are
-    /// not checked. The attribute types of each link, such as Age, are checked as well.
+    /// (no <c>::Role</c>) takes <paramref name="defaultRole"/>, which an update gives only to a new link (see
+    /// <see cref="GrampsObjectPatch.ApplyLinks"/>). A link object without a role stays without one, so it keeps the
+    /// stored role, and linkMode remove matches links by handle only, so its roles are not checked. The attribute types of each link, such as Age, are checked as well.
     /// </summary>
-    public static async Task CheckAsync(EventRefRequest[]? refs, GrampsApiClient client, string linkMode = "replace",
+    public static async Task CheckAsync(EventRefRequest[]? refs, GrampsApiClient client, string linkMode = "add",
         string defaultRole = Primary)
     {
         if (refs is null || linkMode == "remove")

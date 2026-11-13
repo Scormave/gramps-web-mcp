@@ -103,6 +103,41 @@ public class ToolArgumentValidatorTests
             ToolArgumentValidator.CheckSomethingToUpdate("update_event", Schema, Args(arguments)));
     }
 
+    private static readonly JsonElement UpdateSchema = JsonDocument.Parse($$"""
+        {
+          "type": "object",
+          "properties": {
+            "handle": { "type": "string" },
+            "noteHandles": { "type": ["array", "null"], "description": "Notes. {{GrampsWeb.Mcp.Tools.ToolDescriptionFragments.LinkListOnUpdate}}" },
+            "tagHandles": { "type": ["array", "null"], "description": "Tags. {{GrampsWeb.Mcp.Tools.ToolDescriptionFragments.LinkListOnUpdate}}" },
+            "attributes": { "type": ["array", "null"], "description": "Attributes. {{GrampsWeb.Mcp.Tools.ToolDescriptionFragments.ReplacedListOnUpdate}}" },
+            "linkMode": { "type": "string", "default": "add" }
+          },
+          "required": ["handle"]
+        }
+        """).RootElement;
+
+    [Theory]
+    [InlineData("""{"handle":"I0001","noteHandles":[]}""", "an empty noteHandles changes nothing in linkMode add")]
+    [InlineData("""{"handle":"I0001","noteHandles":[],"tagHandles":[],"linkMode":"remove"}""",
+        "an empty noteHandles or tagHandles changes nothing in linkMode remove")]
+    public void CheckSomethingToUpdate_Refuses_Only_Empty_Link_Lists_Outside_Replace(string arguments, string expected)
+    {
+        Assert.Equal(
+            $"Nothing to update: {expected}. To remove every link of that kind, pass [] with linkMode replace; " +
+            "to remove some links, pass their handles with linkMode remove.",
+            ToolArgumentValidator.CheckSomethingToUpdate("update_person", UpdateSchema, Args(arguments)));
+    }
+
+    [Theory]
+    [InlineData("""{"handle":"I0001","noteHandles":[],"linkMode":"replace"}""")]
+    [InlineData("""{"handle":"I0001","attributes":[]}""")]
+    [InlineData("""{"handle":"I0001","noteHandles":[],"tagHandles":["t1"]}""")]
+    public void CheckSomethingToUpdate_Accepts_A_List_That_Changes_Something(string arguments)
+    {
+        Assert.Null(ToolArgumentValidator.CheckSomethingToUpdate("update_person", UpdateSchema, Args(arguments)));
+    }
+
     [Theory]
     [InlineData("update_event", """{"handle":"E0001","extended":false}""")]
     [InlineData("update_event", """{"handle":"E0001","objectType":""}""")]

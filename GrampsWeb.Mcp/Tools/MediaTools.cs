@@ -267,7 +267,7 @@ public static class MediaTools
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
-        string linkMode = "replace",
+        string linkMode = "add",
         [Description("Replace the stored file with this one: an absolute path inside an upload folder, ~/…, or a name relative to the folder. " +
                      "Accepts " + MediaUploadFile.SupportedTypes + ", judged by content; a file another media record already holds is rejected. Omit to keep the file.")]
         string? filePath = null,

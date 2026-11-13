@@ -200,7 +200,7 @@ public static class EventTools
         bool? isPrivate = null,
         GrampsApiClient client = null!,
         [Description(LinkUpdates.Description)]
-        string linkMode = "replace")
+        string linkMode = "add")
     {
         try
         {

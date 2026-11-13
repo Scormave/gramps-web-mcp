@@ -83,7 +83,7 @@ public class ReferenceToolsTests
         Assert.Contains("update_person(handle:", result);
         Assert.Contains("linkMode:", result);
         Assert.Contains("add", result);
-        Assert.Contains("Existing references and their role", result);
+        Assert.Contains("A reference already stored takes the fields the call sends", result);
         Assert.Contains("[] clears it", result);
         Assert.DoesNotContain("\"dates\"", result);
     }
