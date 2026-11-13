@@ -88,7 +88,7 @@ internal static class McpToolProfileExtensions
     }
 
     private static bool IsMediaByteTool(Tool tool) =>
-        tool.Name == "read_media";
+        tool.Name == "get_media_image";
 
     private static bool IsMediaUploadTool(Tool tool) =>
         tool.Name == "upload_media";

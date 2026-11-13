@@ -25,7 +25,7 @@ public static class MediaTools
 {
     [Description(
         "Read-only: media object metadata (path, MIME, checksum, description). " +
-        "For Open WebUI vision access, use read_media with mode thumbnail or file. " +
+        "For Open WebUI vision access, use get_media_image with mode thumbnail or file. " +
         "Full MCP clients may also read resources gramps://media/{handle}/thumbnail/{size} or gramps://media/{handle}/file.")]
     internal static async Task<string> ReadMediaAsync(
         [Description("Media handle. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -48,7 +48,7 @@ public static class MediaTools
         }
     }
 
-    [McpServerTool(Title = "Read Media", ReadOnly = true, Destructive = false, OpenWorld = false)]
+    [McpServerTool(Title = "Get Media Image", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Download a media file's bytes so you can see it. Default mode thumbnail renders a JPEG preview (PNG when transparent) from an image original " +
         "as MCP image content, 1568 pixels on the long edge unless size is given; EXIF and other metadata are stripped. " +
@@ -56,8 +56,8 @@ public static class MediaTools
         "Use mode file only when the original is needed: returns image, audio, " +
         "or embedded blob resource content according to MIME type. " +
         "Requires GRAMPS_MEDIA_RESOURCES_ENABLED=true and respects size and private-record safeguards. " +
-        "For the media record itself (path, description, links) use get_object; to change it use update_media.")]
-    public static async Task<CallToolResult> ReadMedia(
+        "For the media record itself (path, description, links) use get_records; to change it use update_media.")]
+    public static async Task<CallToolResult> GetMediaImage(
         [Description("The media object to show. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
         [Description("Download mode: thumbnail | file. Default thumbnail. Use file only when a preview is insufficient.")]
@@ -115,7 +115,7 @@ public static class MediaTools
         "or handles of people, families, events, places, sources or citations. JSON array, one value, or a comma-separated string. " +
         "To show only part of the image, such as one record on a page scan, give an object {\"ref\":\"I0001\",\"region\":[left, top, right, bottom]} " +
         "in place of the ID. " + MediaRegion.DescriptionHint + " A record already showing the media keeps its link and takes the region; " +
-        "list a record twice to show two regions. Check a region with read_media first. " +
+        "list a record twice to show two regions. Check a region with get_media_image first. " +
         "The object may also carry \"attributes\" of the link (not of the media), such as [\"Page: 12\"]; " +
         "a link already there gains the ones it lacks.";
 
@@ -146,7 +146,7 @@ public static class MediaTools
         "Returns the handle and Gramps ID; an unreadable date or unknown attachTo record is rejected before anything is uploaded. " +
         "It is the only tool that uploads a file: create_records takes no media, and a transcription of a document " +
         "belongs in a note (create_records), not here. Change the record later, or swap its file, with update_media; " +
-        "check what a region shows with read_media. " +
+        "check what a region shows with get_media_image. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UploadMedia(
         [Description("The file to upload: an absolute path inside an upload folder, ~/…, or a name relative to the folder, e.g. scan.jpg.")]

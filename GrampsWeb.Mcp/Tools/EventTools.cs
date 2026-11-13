@@ -14,7 +14,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Event objects from the Gramps Web API.
-/// Covers event mutations (browse events via list_objects('events') or search).
+/// Covers event mutations (browse events via list_records('events') or search).
 /// </summary>
 [McpServerToolType]
 public static class EventTools

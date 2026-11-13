@@ -19,7 +19,7 @@ public sealed class FlexibleMediaLinkList
         "Media handles or Gramps IDs: JSON array [\"h1\",\"h2\"], one handle or ID, or a comma/semicolon/newline-separated string. " +
         "To show only part of an image, such as one record on a page scan, give an object {\"ref\":\"…\",\"region\":[left, top, right, bottom]} " +
         "in place of the handle. " + MediaRegion.DescriptionHint + " [0, 0, 100, 100] shows the whole image again; " +
-        "read_media with the same region shows what it covers. " +
+        "get_media_image with the same region shows what it covers. " +
         "The object may also carry \"attributes\" of this link (not of the media), in the forms of the attributes argument, " +
         "such as [\"Page: 12\"]; their types are checked like media attributes.";
 

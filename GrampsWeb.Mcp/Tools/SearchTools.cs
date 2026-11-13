@@ -20,8 +20,8 @@ public static class SearchTools
     [Description(
         "Find records by words in them: one query across people, families, events, places, sources, citations, repositories, " +
         "notes, media and tags. Start here when you have a name, place, title or other text but no Gramps ID; " +
-        "to browse or filter one type by its fields (all people, citations of one source, sorted by change) use list_objects, " +
-        "and to read a hit in full pass its Gramps ID or handle to get_object. " +
+        "to browse or filter one type by its fields (all people, citations of one source, sorted by change) use list_records, " +
+        "and to read a hit in full pass its Gramps ID or handle to get_records. " +
         "Add * to a word to match any ending (Smith* also finds Smithson). There is no type filter: hits of all types come " +
         "ranked by relevance, and page and pagesize (up to 100) step through them. " +
         "Returns one line per hit (type, Gramps ID, summary, handle) with the page and total count; a page past the end " +
@@ -73,16 +73,16 @@ public static class SearchTools
         }
     }
 
-    [McpServerTool(Title = "List Objects", ReadOnly = true, Destructive = false, OpenWorld = false)]
+    [McpServerTool(Title = "List Records", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "List the records of one type a page at a time, optionally filtered and sorted: one line per record " +
         "(Gramps ID, summary, handle) with the page and total count. Use it to browse a type, fetch one Gramps ID, " +
         "list a source's citations (sourceHandle), filter by field values (gql) or select by relationships with Gramps " +
         "filter rules (rules), such as a person's ancestors or people with no family links. To find records by text use " +
-        "search; to read one record in full use get_object. rules run first and gql must then also match; grampsId " +
+        "search; to read one record in full use get_records. rules run first and gql must then also match; grampsId " +
         "cannot be combined with rules. Filtering runs on the Gramps Web server: invalid gql returns its error, invalid " +
         "rules are explained, and an ID, tag or saved filter the tree lacks matches nothing instead of failing.")]
-    public static async Task<string> ListObjects(
+    public static async Task<string> ListRecords(
         [Description("Which records to list: people, families, events, places, sources, citations, repositories, notes, media or tags.")]
         string objectType,
         [Description("Page number, from 1 (default 1).")]

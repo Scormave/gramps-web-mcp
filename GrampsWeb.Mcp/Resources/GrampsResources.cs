@@ -103,7 +103,7 @@ public sealed class GrampsResources
         Name = "filter-rules",
         UriTemplate = "gramps://filter-rules",
         MimeType = "text/plain")]
-    [Description("How Gramps filter rules select records in list_objects, with the number of rules and the saved filters of each type.")]
+    [Description("How Gramps filter rules select records in list_records, with the number of rules and the saved filters of each type.")]
     public static async Task<TextResourceContents> GetFilterRules(GrampsApiClient client)
     {
         try
@@ -433,7 +433,7 @@ public sealed class GrampsResources
 
         var hint = $"'{mimeType}' is returned as an embedded resource because MCP clients cannot display it as an image.";
         if (MediaPreviewRenderer.CanRenderMime(mimeType))
-            hint += " Use read_media with mode thumbnail for a viewable JPEG or PNG preview.";
+            hint += " Use get_media_image with mode thumbnail for a viewable JPEG or PNG preview.";
         return [blob, new TextContentBlock { Text = hint }];
     }
 

@@ -49,7 +49,7 @@ internal static class NotFoundHelper
     private static string GrampsIdHint(string objectType, string id)
     {
         if (string.Equals(objectType, "Tag", StringComparison.OrdinalIgnoreCase))
-            return "Tags have no Gramps ID; find the tag's handle with list_objects(objectType: \"tags\").";
+            return "Tags have no Gramps ID; find the tag's handle with list_records(objectType: \"tags\").";
         if (!Kinds.TryGetValue(objectType, out var wanted))
             return $"No {objectType.ToLowerInvariant()} has Gramps ID {id}.";
 
@@ -59,10 +59,10 @@ internal static class NotFoundHelper
         if (idKind != wanted)
         {
             return $"{id} has the {idKind.Noun} prefix {idKind.Prefix}; {wanted.Noun} IDs start with {wanted.Prefix}. " +
-                   $"To read the {idKind.Noun} with this ID, call get_object(identifier: \"{id}\").";
+                   $"To read the {idKind.Noun} with this ID, call get_records(identifiers: [\"{id}\"]).";
         }
 
         return $"No {wanted.Noun} has Gramps ID {id}. " +
-               $"Find the {wanted.Noun} with search, or browse list_objects(objectType: \"{wanted.Collection}\").";
+               $"Find the {wanted.Noun} with search, or browse list_records(objectType: \"{wanted.Collection}\").";
     }
 }

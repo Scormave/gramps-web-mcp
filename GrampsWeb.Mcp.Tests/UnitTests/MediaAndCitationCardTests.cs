@@ -27,7 +27,7 @@ public class MediaAndCitationCardTests
         Assert.DoesNotContain("defaults to mode thumbnail", result);
         Assert.Contains(
             "  file resource: gramps://media/m1/file\n" +
-            "  read_media needs mode file: thumbnails are rendered only from images, and this record is application/pdf\n",
+            "  get_media_image needs mode file: thumbnails are rendered only from images, and this record is application/pdf\n",
             result);
     }
 
@@ -42,7 +42,7 @@ public class MediaAndCitationCardTests
 
         Assert.Contains("\nDate: 1930-08-21\n", result);
         Assert.Contains("  thumbnail resource: gramps://media/m1/thumbnail/1568\n", result);
-        Assert.DoesNotContain("read_media needs mode file", result);
+        Assert.DoesNotContain("get_media_image needs mode file", result);
     }
 
     [Fact]

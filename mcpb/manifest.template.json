@@ -107,7 +107,7 @@
     "gramps_media_resources_enabled": {
       "type": "boolean",
       "title": "Enable media file access",
-      "description": "Allow read_media for image previews (rendered locally, location and other metadata removed) and original files, and uploads from the media upload folder. Disabled by default for privacy; when disabled, read_media and upload_media are hidden from the catalog.",
+      "description": "Allow get_media_image for image previews (rendered locally, location and other metadata removed) and original files, and uploads from the media upload folder. Disabled by default for privacy; when disabled, get_media_image and upload_media are hidden from the catalog.",
       "default": false,
       "required": false
     },

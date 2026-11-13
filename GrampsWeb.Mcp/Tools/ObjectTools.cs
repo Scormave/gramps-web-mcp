@@ -27,81 +27,125 @@ public static class ObjectTools
             ["tag"] = new("Tag", "tags")
         };
 
-    [McpServerTool(Title = "Get Object", ReadOnly = true, Destructive = false, OpenWorld = false)]
+    /// <summary>The most records one get_records call reads.</summary>
+    internal const int MaxReadRecords = 20;
+
+    private const string ObjectTypeList = "person, family, event, place, source, citation, note, media, repository, tag";
+
+    [McpServerTool(Title = "Get Records", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
-        "Read one record in full: its fields, its links to other records, and the records that point to it (backlinks, " +
-        "read-only here). Use it once you know the Gramps ID or handle; to find a record by text use search, to browse " +
-        "a type use list_objects, and for a person's relatives or dated events get_person_tree and get_timeline are shorter. " +
-        "A Gramps ID names its type by prefix, so objectType is needed only with a handle, and an objectType that " +
-        "disagrees with the prefix is rejected rather than guessed. extended (people and families only) puts each " +
-        "event's date and place on its line, names the others in an event where the person is not Primary, such as a " +
-        "child's birth, and adds note text, tag names, citations and media in the same call. Returns plain text for one " +
-        "record, without paging: a header with its type, label, handle and Gramps ID, then its fields, its links one per " +
-        "line with label, handle and, for events, the role, and \"Referenced by\" sections for the backlinks. A missing record returns a " +
-        "not-found message with a hint.")]
-    public static async Task<string> GetObject(
-        [Description("Gramps ID (e.g. I0001) or handle. ID prefixes give the type: I person, F family, E event, P place, S source, C citation, N note, O media, R repository; tags have no Gramps ID.")]
-        string identifier,
-        [Description("Record type: person, family, event, place, source, citation, note, media, repository or tag. Omit for a Gramps ID; required for a handle.")]
+        "Read up to 20 records of any types in full: each one's fields, its links to other records, and the records " +
+        "that point to it (backlinks, read-only here). Use it once you know the Gramps IDs or handles, and pass all the " +
+        "records you need in one call; to find records by text use search, to browse a type use list_records, and for " +
+        "a person's relatives or dated events get_person_tree and get_timeline are shorter. A Gramps ID names its type " +
+        "by prefix, so objectType is needed only for handles, and an objectType that disagrees with a prefix is " +
+        "rejected rather than guessed. extended (people and families) puts each event's date and place on its line, " +
+        "names the others in an event where the person is not Primary, such as a child's birth, and adds note text, " +
+        "tag names, citations and media in the same call. Returns plain text without paging, the records in the order " +
+        "given and separated by a line \"---\": for each a header with its type, label, handle and Gramps ID, then its " +
+        "fields, its links one per line with label, handle and, for events, the role, and \"Referenced by\" sections " +
+        "for the backlinks. A record the tree lacks gets a not-found message with a hint in its place, and the others " +
+        "are still read.")]
+    public static async Task<string> GetRecords(
+        [Description("Up to 20 Gramps IDs or handles, one record as a one-element array. ID prefixes give the type: " +
+                     "I person, F family, E event, P place, S source, C citation, N note, O media, R repository; " +
+                     "tags have no Gramps ID.")]
+        string[] identifiers,
+        [Description("Record type of the handles: person, family, event, place, source, citation, note, media, " +
+                     "repository or tag. Omit when every identifier is a Gramps ID; required for handles, which are " +
+                     "then all of this type, and a Gramps ID of another type is rejected.")]
         string? objectType = null,
-        [Description("People and families only: also resolve the linked records (event dates and places, note text, tag names, citations, media) in the same call; default false is faster. Rejected for other types.")]
+        [Description("People and families: also resolve the linked records (event dates and places, note text, tag " +
+                     "names, citations, media) in the same call; default false is faster. Other records are read as " +
+                     "usual; rejected when none of the records is a person or family.")]
         bool extended = false,
         GrampsApiClient client = null!)
     {
         try
         {
-            var inferredType = InferObjectType(identifier);
-            var normalizedType = objectType?.Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(normalizedType))
+            var records = TypeIdentifiers(identifiers, objectType, MaxReadRecords, "reads");
+            if (extended && !records.Any(r => r.Type is "person" or "family"))
             {
-                if (inferredType is null)
+                throw McpToolErrors.ValidationError(
+                    "extended is supported only for people and families, and identifiers names neither.");
+            }
+
+            using var gate = new SemaphoreSlim(4);
+            var texts = await Task.WhenAll(records.Select(async record =>
+            {
+                await gate.WaitAsync();
+                try
                 {
-                    throw McpToolErrors.ValidationError(
-                        "objectType is required when identifier is an opaque handle. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
+                    return await ReadRecordAsync(record.Identifier, record.Type, extended, client);
                 }
-
-                normalizedType = inferredType;
-            }
-
-            if (normalizedType is not ("person" or "family" or "event" or "place" or "source" or
-                "citation" or "note" or "media" or "repository" or "tag"))
-            {
-                throw McpToolErrors.ValidationError(
-                    "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-            }
-
-            if (inferredType is not null && !string.Equals(normalizedType, inferredType, StringComparison.Ordinal))
-            {
-                throw McpToolErrors.ValidationError(
-                    $"objectType '{normalizedType}' does not match Gramps ID '{identifier}', which identifies a {inferredType}.");
-            }
-
-            if (extended && normalizedType is not ("person" or "family"))
-            {
-                throw McpToolErrors.ValidationError(
-                    "extended is supported only for objectType person or family.");
-            }
-
-            return normalizedType switch
-            {
-                "person" => await PersonTools.ReadPersonAsync(identifier, extended, client),
-                "family" => await FamilyTools.ReadFamilyAsync(identifier, extended, client),
-                "event" => await EventTools.ReadEventAsync(identifier, client),
-                "place" => await PlaceTools.ReadPlaceAsync(identifier, client),
-                "source" => await SourceTools.ReadSourceAsync(identifier, client),
-                "citation" => await CitationTools.ReadCitationAsync(identifier, client),
-                "note" => await NoteTools.ReadNoteAsync(identifier, client),
-                "media" => await MediaTools.ReadMediaAsync(identifier, client),
-                "repository" => await RepositoryTools.ReadRepositoryAsync(identifier, client),
-                "tag" => await TagTools.ReadTagAsync(identifier, client),
-                _ => throw new InvalidOperationException("Validated object type was not dispatched.")
-            };
+                finally
+                {
+                    gate.Release();
+                }
+            }));
+            return string.Join("\n\n---\n\n", texts.Select(text => text.TrimEnd()));
         }
         catch (Exception ex)
         {
             throw McpToolErrors.ToMcpException(ex);
         }
     }
+
+    /// <summary>
+    /// The records named by <paramref name="identifiers"/>, in the order given and each identifier once, with the type
+    /// from the Gramps ID prefix or <paramref name="objectType"/>; at most <paramref name="max"/> of them, which one
+    /// call <paramref name="verb"/>.
+    /// </summary>
+    private static IReadOnlyList<(string Identifier, string Type)> TypeIdentifiers(
+        IReadOnlyList<string>? identifiers, string? objectType, int max, string verb)
+    {
+        if (identifiers is null || identifiers.Count == 0)
+            throw McpToolErrors.ValidationError("identifiers must name at least one record.");
+        if (identifiers.Any(string.IsNullOrWhiteSpace))
+            throw McpToolErrors.ValidationError("identifiers must not contain empty entries.");
+
+        var distinct = identifiers.Select(i => i.Trim()).Distinct(StringComparer.Ordinal).ToList();
+        if (distinct.Count > max)
+            throw McpToolErrors.ValidationError($"identifiers names {distinct.Count} records; one call {verb} at most {max}.");
+
+        var given = objectType?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(given))
+            given = null;
+        else if (!ObjectKinds.ContainsKey(given))
+            throw McpToolErrors.ValidationError($"Invalid objectType. Must be one of: {ObjectTypeList}.");
+
+        return distinct.Select(identifier =>
+        {
+            var inferred = InferObjectType(identifier);
+            if (inferred is null && given is null)
+            {
+                throw McpToolErrors.ValidationError(
+                    $"objectType is required for the handle '{identifier}'. Must be one of: {ObjectTypeList}.");
+            }
+            if (inferred is not null && given is not null && inferred != given)
+            {
+                throw McpToolErrors.ValidationError(
+                    $"objectType '{given}' does not match Gramps ID '{identifier}', which identifies a {inferred}.");
+            }
+            return (identifier, inferred ?? given!);
+        }).ToList();
+    }
+
+    private static async Task<string> ReadRecordAsync(string identifier, string type, bool extended,
+        GrampsApiClient client) => type switch
+    {
+        "person" => await PersonTools.ReadPersonAsync(identifier, extended, client),
+        "family" => await FamilyTools.ReadFamilyAsync(identifier, extended, client),
+        "event" => await EventTools.ReadEventAsync(identifier, client),
+        "place" => await PlaceTools.ReadPlaceAsync(identifier, client),
+        "source" => await SourceTools.ReadSourceAsync(identifier, client),
+        "citation" => await CitationTools.ReadCitationAsync(identifier, client),
+        "note" => await NoteTools.ReadNoteAsync(identifier, client),
+        "media" => await MediaTools.ReadMediaAsync(identifier, client),
+        "repository" => await RepositoryTools.ReadRepositoryAsync(identifier, client),
+        "tag" => await TagTools.ReadTagAsync(identifier, client),
+        _ => throw new InvalidOperationException("Validated object type was not dispatched.")
+    };
 
     private static string? InferObjectType(string identifier) =>
         HandleResolver.LooksLikeGrampsId(identifier)
@@ -138,7 +182,7 @@ public static class ObjectTools
         "partially_deleted lists what was and was not deleted.")]
     public static async Task<string> DeleteRecords(
         [Description("Up to 50 Gramps IDs (e.g. I0001, F0002; the prefix gives the type) or handles, of any types; " +
-                     "find them with search or list_objects.")]
+                     "find them with search or list_records.")]
         string[] identifiers,
         [Description("Record type of the handles: person, family, event, place, source, citation, note, media, " +
                      "repository or tag. Omit when every identifier is a Gramps ID; required for handles, which are " +
@@ -174,44 +218,9 @@ public static class ObjectTools
     private static async Task<IReadOnlyList<DeleteHelper.Target>> ResolveTargetsAsync(
         IReadOnlyList<string>? identifiers, string? objectType, GrampsApiClient client)
     {
-        if (identifiers is null || identifiers.Count == 0)
-            throw McpToolErrors.ValidationError("identifiers must name at least one record.");
-        if (identifiers.Count > DeleteHelper.MaxRecords)
-        {
-            throw McpToolErrors.ValidationError(
-                $"identifiers names {identifiers.Count} records; one call deletes at most {DeleteHelper.MaxRecords}.");
-        }
-        if (identifiers.Any(string.IsNullOrWhiteSpace))
-            throw McpToolErrors.ValidationError("identifiers must not contain empty entries.");
-
-        ObjectKind? given = null;
-        var normalizedType = objectType?.Trim();
-        if (!string.IsNullOrEmpty(normalizedType))
-        {
-            if (!ObjectKinds.TryGetValue(normalizedType, out given))
-            {
-                throw McpToolErrors.ValidationError(
-                    "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-            }
-            normalizedType = normalizedType.ToLowerInvariant();
-        }
-
-        var typed = identifiers.Select(raw =>
-        {
-            var identifier = raw.Trim();
-            var inferred = InferObjectType(identifier);
-            if (inferred is null && given is null)
-            {
-                throw McpToolErrors.ValidationError(
-                    $"objectType is required for the handle '{identifier}'. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-            }
-            if (inferred is not null && given is not null && inferred != normalizedType)
-            {
-                throw McpToolErrors.ValidationError(
-                    $"objectType '{normalizedType}' does not match Gramps ID '{identifier}', which identifies a {inferred}.");
-            }
-            return (Identifier: identifier, Collection: inferred is null ? given!.ApiPath : ObjectKinds[inferred].ApiPath);
-        }).ToList();
+        var typed = TypeIdentifiers(identifiers, objectType, DeleteHelper.MaxRecords, "deletes")
+            .Select(t => (t.Identifier, Collection: ObjectKinds[t.Type].ApiPath))
+            .ToList();
 
         using var gate = new SemaphoreSlim(4);
         var resolved = await Task.WhenAll(typed.Select(async t =>

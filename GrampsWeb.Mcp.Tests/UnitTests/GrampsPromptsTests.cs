@@ -23,7 +23,7 @@ public class GrampsPromptsTests
     {
         var text = GrampsPrompts.ResearchPerson("I0001");
 
-        Assert.Contains("get_object", text);
+        Assert.Contains("get_records", text);
         Assert.Contains("only for chronological questions", text);
         Assert.Contains("only for the requested branch", text);
     }

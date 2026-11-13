@@ -103,11 +103,11 @@ public static class MediaFormatter
             if (string.IsNullOrWhiteSpace(media.Mime) || MediaPreviewRenderer.CanRenderMime(media.Mime.Trim()))
             {
                 sb.AppendLine($"  thumbnail resource: gramps://media/{escapedHandle}/thumbnail/{MediaPreviewRenderer.DefaultSize}");
-                sb.AppendLine($"  read_media defaults to mode thumbnail (JPEG/PNG preview, {MediaPreviewRenderer.DefaultSize} px long edge); mode file returns image, audio, or embedded-resource content depending on MIME type");
+                sb.AppendLine($"  get_media_image defaults to mode thumbnail (JPEG/PNG preview, {MediaPreviewRenderer.DefaultSize} px long edge); mode file returns image, audio, or embedded-resource content depending on MIME type");
             }
             else
             {
-                sb.AppendLine($"  read_media needs mode file: thumbnails are rendered only from images, and this record is {media.Mime.Trim()}");
+                sb.AppendLine($"  get_media_image needs mode file: thumbnails are rendered only from images, and this record is {media.Mime.Trim()}");
             }
         }
 

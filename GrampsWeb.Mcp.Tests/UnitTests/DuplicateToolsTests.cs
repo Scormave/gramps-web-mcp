@@ -164,9 +164,9 @@ public class DuplicateToolsTests
         Assert.Contains("   • Образцов, Иван (I0003) [handle: h3], b. 1880, child of Образцов, Петр (I0001) and Образцова, Анна (I0002)",
             text);
         Assert.DoesNotContain("Similar pairs", text);
-        Assert.Contains("get_object(objectType: \"person\", identifier: \"I0003\", extended: true), and the same for \"I0004\".",
+        Assert.Contains("get_records(objectType: \"person\", identifiers: [\"I0003\", \"I0004\"], extended: true).",
             text);
-        Assert.Contains("merge_objects(objectType: \"person\"", text);
+        Assert.Contains("merge_records(objectType: \"person\"", text);
         Assert.Contains("More pairs: find_duplicates(offset: 2).", text);
     }
 

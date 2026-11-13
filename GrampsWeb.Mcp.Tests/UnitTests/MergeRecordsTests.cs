@@ -9,8 +9,8 @@ using Xunit;
 
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
-/// <summary>merge_objects asks the user, then has Gramps Web merge the duplicate into the record to keep.</summary>
-public class MergeObjectsTests
+/// <summary>merge_records asks the user, then has Gramps Web merge the duplicate into the record to keep.</summary>
+public class MergeRecordsTests
 {
     private const string NoteMerge = "POST /api/notes/n1/merge/n2";
     private const string HistoryPath = "/api/transactions/history/?page=1&pagesize=10&sort=-id";
@@ -77,7 +77,7 @@ public class MergeObjectsTests
     {
         using var server = NoteServer();
 
-        var result = await MergeTools.MergeObjectsAsync("note", "n1", "n2", true, null, null,
+        var result = await MergeTools.MergeRecordsAsync("note", "n1", "n2", true, null, null,
             CreateClient(server), UserConfirmation.None);
 
         Assert.Contains("action: merged", result);
@@ -141,7 +141,7 @@ public class MergeObjectsTests
         var result = await MergePeople(server, new FakeConfirmation(ConfirmationAnswer.Confirmed));
 
         Assert.Contains("now has two parent families", result);
-        Assert.Contains("merge_objects(objectType: \"family\"", result);
+        Assert.Contains("merge_records(objectType: \"family\"", result);
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public class MergeObjectsTests
         var user = new FakeConfirmation(ConfirmationAnswer.Confirmed);
 
         var ex = await Assert.ThrowsAsync<McpException>(() =>
-            MergeTools.MergeObjectsAsync(objectType, keep, duplicate, true, null, null, CreateClient(server), user));
+            MergeTools.MergeRecordsAsync(objectType, keep, duplicate, true, null, null, CreateClient(server), user));
 
         Assert.Contains(error, ex.Message);
         Assert.Empty(user.Questions);
@@ -288,7 +288,7 @@ public class MergeObjectsTests
         using var server = NoteServer();
 
         var ex = await Assert.ThrowsAsync<McpException>(() =>
-            MergeTools.MergeObjectsAsync("note", "n1", "n2", true, "a1", null, CreateClient(server),
+            MergeTools.MergeRecordsAsync("note", "n1", "n2", true, "a1", null, CreateClient(server),
                 new FakeConfirmation(ConfirmationAnswer.Confirmed)));
 
         Assert.Contains("apply only to objectType family", ex.Message);
@@ -301,20 +301,20 @@ public class MergeObjectsTests
         var user = new FakeConfirmation(ConfirmationAnswer.Confirmed);
 
         await Assert.ThrowsAsync<McpException>(() =>
-            MergeTools.MergeObjectsAsync("note", "n1", "n2", true, null, null, CreateClient(server, readOnly: true), user));
+            MergeTools.MergeRecordsAsync("note", "n1", "n2", true, null, null, CreateClient(server, readOnly: true), user));
 
         Assert.Empty(user.Questions);
         Assert.Empty(server.Requests);
     }
 
     private static Task<string> Merge(RouteServer server, IUserConfirmation user) =>
-        MergeTools.MergeObjectsAsync("note", "n1", "n2", true, null, null, CreateClient(server), user);
+        MergeTools.MergeRecordsAsync("note", "n1", "n2", true, null, null, CreateClient(server), user);
 
     private static Task<string> MergePeople(RouteServer server, IUserConfirmation user, bool mergeFamilies = true) =>
-        MergeTools.MergeObjectsAsync("person", "p1", "p2", mergeFamilies, null, null, CreateClient(server), user);
+        MergeTools.MergeRecordsAsync("person", "p1", "p2", mergeFamilies, null, null, CreateClient(server), user);
 
     private static Task<string> MergeFamilies(RouteServer server, IUserConfirmation user, string? fatherHandle = null) =>
-        MergeTools.MergeObjectsAsync("family", "k1", "d1", true, fatherHandle, null, CreateClient(server), user);
+        MergeTools.MergeRecordsAsync("family", "k1", "d1", true, fatherHandle, null, CreateClient(server), user);
 
     private static string Note(string handle, string id, long change = 1700000000) =>
         $$"""{"handle": "{{handle}}", "gramps_id": "{{id}}", "change": {{change}}, "type": "General", "text": {"string": "x"} }""";

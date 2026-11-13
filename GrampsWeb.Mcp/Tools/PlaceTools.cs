@@ -12,7 +12,7 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// MCP tools for reading Place objects from the Gramps Web API.
-/// Covers place mutations (browse places via list_objects('places') or search).
+/// Covers place mutations (browse places via list_records('places') or search).
 /// </summary>
 [McpServerToolType]
 public static class PlaceTools

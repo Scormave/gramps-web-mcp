@@ -67,7 +67,7 @@ public static class PersonTools
         "where the person is a parent, so relatives not linked that way are missing, and someone reached by two lines is " +
         "listed once. generations counts steps from the person (1 = parents or children); each extra one costs another " +
         "round of reads, so start with the default 3. For how two given people are related use get_relations; " +
-        "for dated events around one person use get_timeline; for one full record use get_object. " +
+        "for dated events around one person use get_timeline; for one full record use get_records. " +
         "A missing person returns a not-found message.")]
     public static async Task<string> GetPersonTree(
         [Description("The person to start from. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -97,7 +97,7 @@ public static class PersonTools
             {
                 return normalizedDirection == "ancestors"
                     ? $"No ancestors found for {person}. Only people linked through a parent family (where this person is the child) appear. " +
-                      "Spouse-only links do not count as ancestors. Use get_object(objectType: \"person\", extended: true) to inspect family links."
+                      $"Spouse-only links do not count as ancestors. Use get_records(objectType: \"person\", identifiers: [\"{person}\"], extended: true) to inspect family links."
                     : $"No descendants found for {person}. Only children linked on families where this person is a parent are included; if none are recorded, the list is empty.";
             }
 

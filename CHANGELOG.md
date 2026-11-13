@@ -55,6 +55,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and `linkMode: "add"`. The catalog now
   has up to 26 tools. The `add-person` and `add-family` prompts and the
   `cite-fact` prompt use `create_records`
+- **Breaking:** tools renamed: `get_object` to `get_records`,
+  `list_objects` to `list_records`, `merge_objects` to `merge_records`
+  and `read_media` to `get_media_image`. Only `get_records` changes its
+  arguments. The server instructions, prompts and the hints in replies
+  name the new tools
+- **Breaking:** `get_records` reads up to 20 records of any types in one
+  call: `identifiers`, an array, replaces `identifier`, and `objectType`
+  is needed only for handles. The records come back in the order given,
+  separated by a line `---`; a repeated identifier is read once, and a
+  record the tree lacks gets its not-found message in its place while
+  the others are still read. `extended` applies to the people and
+  families among them and is refused when there are none
 - Link fields take Gramps IDs as well as handles in `create_records`,
   the `update_*` tools and `upload_media`: the `…Handles` lists,
   `eventRefs`, `childRefs`, `personAssociations`, `enclosedBy`,
@@ -66,7 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   ID, and the type the prefix belongs to when that is another one, such
   as `noteHandles: there is no note I0012`. Tags have no Gramps ID, so
   a tag field rejects one
-- `merge_objects` no longer explains a bare HTTP 404 as a server older
+- `merge_records` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
 
 ### Fixed

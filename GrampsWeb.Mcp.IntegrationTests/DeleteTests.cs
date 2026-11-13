@@ -15,7 +15,7 @@ public sealed class DeleteTests(GrampsWebFixture gramps)
         var deleted = await Session.CallAsync("delete_records", new { identifiers = new[] { note.GrampsId } });
 
         Assert.Equal("deleted", McpSession.Header(deleted, "action"));
-        var gone = await Session.CallAsync("get_object", new { identifier = note.Handle, objectType = "note" });
+        var gone = await Session.CallAsync("get_records", new { identifiers = new[] { note.Handle }, objectType = "note" });
         Assert.Contains($"Note not found: {note.Handle}", gone);
     }
 
@@ -33,17 +33,17 @@ public sealed class DeleteTests(GrampsWebFixture gramps)
         Assert.Equal("refused", McpSession.Header(refused, "action"));
         Assert.Contains("Nothing was deleted: other records link to it.", refused);
         Assert.Contains("linked from people: 1", refused);
-        Assert.Contains(birth.Handle, await Session.CallAsync("get_object", new { identifier = person.GrampsId }));
+        Assert.Contains(birth.Handle, await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } }));
 
         var forced = await Session.CallAsync("delete_records", new { identifiers = new[] { birth.Handle }, objectType = "event", force = true });
         Assert.Equal("deleted", McpSession.Header(forced, "action"));
         Assert.Contains("Links to them removed from (1):", forced);
         Assert.Contains(person.Handle, forced);
 
-        var gone = await Session.CallAsync("get_object", new { identifier = birth.Handle, objectType = "event" });
+        var gone = await Session.CallAsync("get_records", new { identifiers = new[] { birth.Handle }, objectType = "event" });
         Assert.Contains("Event not found", gone);
         // The person outlives the deleted event, and Gramps Web removed the link to it.
-        var stored = await Session.CallAsync("get_object", new { identifier = person.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } });
         Assert.Contains(person.Handle, stored);
         Assert.DoesNotContain(birth.Handle, stored);
     }

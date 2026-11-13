@@ -23,7 +23,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
             lon = "39.8845"
         });
 
-        var stored = await Session.CallAsync("get_object", new { identifier = village.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { village.GrampsId } });
         Assert.Contains("Village", stored);
         Assert.Contains(townName, stored);
         Assert.Contains(town.Handle, stored);
@@ -55,19 +55,19 @@ public sealed class RecordTests(GrampsWebFixture gramps)
             citationHandles = new[] { citation.Handle }
         });
 
-        var storedCitation = await Session.CallAsync("get_object", new { identifier = citation.GrampsId });
+        var storedCitation = await Session.CallAsync("get_records", new { identifiers = new[] { citation.GrampsId } });
         Assert.Contains($"Source: {title} [handle: {source.Handle}]", storedCitation);
         Assert.Contains("Page/Location: f. 12, No. 34", storedCitation);
         Assert.Contains("Confidence: High", storedCitation);
         Assert.Contains("Date: 1890", storedCitation);
 
-        var storedSource = await Session.CallAsync("get_object", new { identifier = source.GrampsId });
+        var storedSource = await Session.CallAsync("get_records", new { identifiers = new[] { source.GrampsId } });
         Assert.Contains(archive.Handle, storedSource);
 
-        var storedEvent = await Session.CallAsync("get_object", new { identifier = birth.GrampsId });
+        var storedEvent = await Session.CallAsync("get_records", new { identifiers = new[] { birth.GrampsId } });
         Assert.Contains(citation.Handle, storedEvent);
 
-        var citations = await Session.CallAsync("list_objects", new { objectType = "citations", sourceHandle = source.Handle });
+        var citations = await Session.CallAsync("list_records", new { objectType = "citations", sourceHandle = source.Handle });
         Assert.Contains("Total: 1", citations);
         Assert.Contains(citation.Handle, citations);
     }
@@ -80,7 +80,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
         await Session.CallAsync("update_note", new { handle = note.Handle, appendText = "Second line." });
         await Session.CallAsync("update_note", new { handle = note.Handle, replaceText = "Fixme", withText = "Fixed" });
 
-        var stored = await Session.CallAsync("get_object", new { identifier = note.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { note.GrampsId } });
         Assert.Contains("Type:   Research", stored);
         Assert.Contains("First line. Fixed here.\nSecond line.", stored.ReplaceLineEndings("\n"));
     }
@@ -93,7 +93,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
         var error = await Session.CallErrorAsync("update_note", new { handle = note.Handle, replaceText = "Missing", withText = "x" });
 
         Assert.Contains("replaceText was not found in the note", error);
-        var stored = await Session.CallAsync("get_object", new { identifier = note.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { note.GrampsId } });
         Assert.Contains("Original text.", stored);
     }
 
@@ -106,7 +106,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
 
         await Session.CallAsync("update_person", new { handle = person.Handle, tagHandles = new[] { tag.Handle }, linkMode = "add" });
 
-        var stored = await Session.CallAsync("get_object", new { identifier = person.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } });
         Assert.Contains(tagName, stored);
     }
 
@@ -123,11 +123,11 @@ public sealed class RecordTests(GrampsWebFixture gramps)
 
         Assert.Equal(tag.Handle, McpSession.Header(updated, "handle"));
         Assert.Equal("\"#00aa55\"", McpSession.Header(updated, "color"));
-        var storedTag = await Session.CallAsync("get_object", new { identifier = tag.Handle, objectType = "tag" });
+        var storedTag = await Session.CallAsync("get_records", new { identifiers = new[] { tag.Handle }, objectType = "tag" });
         Assert.Contains($"TAG: {newName}", storedTag);
         Assert.Contains("Color: #00aa55", storedTag);
         Assert.Contains("Priority: 2", storedTag);
-        var storedPerson = await Session.CallAsync("get_object", new { identifier = person.GrampsId, extended = true });
+        var storedPerson = await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId }, extended = true });
         Assert.Contains(newName, storedPerson);
         Assert.DoesNotContain(oldName, storedPerson);
     }
@@ -159,7 +159,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
 
         var created = await Session.CreateAsync("events", new { eventType = "Birth", date, description });
 
-        var stored = await Session.CallAsync("get_object", new { identifier = created.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { created.GrampsId } });
         Assert.Contains(shown, stored);
     }
 

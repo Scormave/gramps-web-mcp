@@ -47,7 +47,7 @@ public static class TagTools
         "returns a not-found message. " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> UpdateTag(
         [Description("The tag to change: its handle or exact name. Tags have no Gramps ID; " +
-                     "find them with list_objects(objectType: \"tags\").")]
+                     "find them with list_records(objectType: \"tags\").")]
         string handle,
         [Description("New name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,

@@ -9,7 +9,7 @@ using GrampsWeb.Mcp.Input;
 namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
-/// The rules argument of list_objects: Gramps filter rules, which Gramps Web applies before gql. The shape is
+/// The rules argument of list_records: Gramps filter rules, which Gramps Web applies before gql. The shape is
 /// checked here, so a mistake is named by its place in the JSON instead of the server's "Filter does not adhere
 /// to schema", and the bare 404 the server returns for an unknown rule name is explained from its rule list.
 /// </summary>

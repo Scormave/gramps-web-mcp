@@ -6,7 +6,7 @@ namespace GrampsWeb.Mcp.Formatters;
 
 /// <summary>
 /// Text of the Gramps filter rules that Gramps Web offers (<c>/api/filters/</c>), for the rules argument of
-/// list_objects. Gramps Web API 3.23 describes each value of a rule; older versions give only the labels.
+/// list_records. Gramps Web API 3.23 describes each value of a rule; older versions give only the labels.
 /// </summary>
 internal static class FilterRulesFormatter
 {
@@ -19,7 +19,7 @@ internal static class FilterRulesFormatter
         sb.AppendLine("FILTER RULES");
         sb.AppendLine(new string('=', SeparatorWidth));
         sb.AppendLine();
-        sb.AppendLine("list_objects selects records with Gramps filter rules in its rules argument:");
+        sb.AppendLine("list_records selects records with Gramps filter rules in its rules argument:");
         sb.AppendLine("  {\"function\": \"and\", \"invert\": false, \"rules\": [{\"name\": \"IsAncestorOf\", \"values\": [\"I0001\", true]}]}");
         sb.AppendLine("function is and (the default), or, or one (exactly one item matches); invert: true keeps the records that do not match.");
         sb.AppendLine("A rule takes one value per label, in order; regex: true makes its text values regular expressions.");

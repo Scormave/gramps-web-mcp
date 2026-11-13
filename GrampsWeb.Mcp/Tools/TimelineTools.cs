@@ -17,7 +17,7 @@ public static class TimelineTools
     [Description(
         "List the events around one person, family or place in date order, grouped by decade with undated ones last: " +
         "date, event type, place, and whose event it is, with Gramps IDs. Use it to check a life's sequence or gaps; " +
-        "for the full record use get_object, for ancestors or descendants use get_person_tree, for how two people are " +
+        "for the full record use get_records, for ancestors or descendants use get_person_tree, for how two people are " +
         "related use get_relations. events filters the subject's own events and relativeEvents those of the relatives " +
         "chosen in relatives (person timelines only, rejected otherwise); dates narrows both. " +
         "Without dates, a person timeline lists relatives' events " +

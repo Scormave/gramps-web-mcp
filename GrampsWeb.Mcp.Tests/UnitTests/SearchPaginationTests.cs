@@ -37,7 +37,7 @@ public class SearchPaginationTests
     [InlineData(false, true, 2, 20, 20, 40, 2, 21)]
     [InlineData(false, true, 1, 20, 5, 5, 1, 1)]
     [InlineData(false, true, 3, 7, 2, 16, 3, 15)]
-    public async Task ListObjects_UsesRequestedPageSizeForPageCountAndRowNumbers(
+    public async Task ListRecords_UsesRequestedPageSizeForPageCountAndRowNumbers(
         bool arrayResponse, bool includeTotal, int page, int pageSize,
         int count, int total, int expectedPages, int firstRow)
     {
@@ -52,7 +52,7 @@ public class SearchPaginationTests
         var provider = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
         var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, provider);
 
-        var result = await SearchTools.ListObjects("tags", page, pageSize, client: client);
+        var result = await SearchTools.ListRecords("tags", page, pageSize, client: client);
 
         Assert.Equal($"/api/tags/?page={page}&pagesize={pageSize}", handler.ListPath);
         Assert.Contains(expectedPages > 0

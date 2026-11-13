@@ -14,7 +14,7 @@ public class GrampsServerInstructionsTests
         Assert.Contains("start with search", text);
         Assert.Contains("Changing the tree:", text);
         Assert.Contains("check for duplicates", text);
-        Assert.DoesNotContain("read_media", text);
+        Assert.DoesNotContain("get_media_image", text);
         Assert.DoesNotContain("read-only: no tool", text);
     }
 
@@ -30,11 +30,11 @@ public class GrampsServerInstructionsTests
     }
 
     [Fact]
-    public void For_MediaEnabled_MentionsReadMedia()
+    public void For_MediaEnabled_MentionsGetMediaImage()
     {
         var text = GrampsServerInstructions.For(Config(readOnly: true, mediaResourcesEnabled: true));
 
-        Assert.Contains("read_media", text);
+        Assert.Contains("get_media_image", text);
     }
 
     [Fact]
@@ -69,12 +69,12 @@ public class GrampsServerInstructionsTests
         foreach (var (name, toolReadOnly) in published)
         {
             var hidden = (readOnly && !toolReadOnly)
-                         || (!mediaResourcesEnabled && name == "read_media")
+                         || (!mediaResourcesEnabled && name == "get_media_image")
                          || (!(mediaResourcesEnabled && uploadFolders) && name == "upload_media");
             if (hidden)
                 Assert.DoesNotContain(name, text);
         }
-        foreach (var named in new[] { "search", "list_objects", "get_object", "get_person_tree", "get_relations", "get_timeline" })
+        foreach (var named in new[] { "search", "list_records", "get_records", "get_person_tree", "get_relations", "get_timeline" })
             Assert.Contains(published, tool => tool.Name == named);
     }
 

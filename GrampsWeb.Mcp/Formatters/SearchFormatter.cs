@@ -7,7 +7,7 @@ using GrampsWeb.Mcp.Serialization;
 namespace GrampsWeb.Mcp.Formatters;
 
 /// <summary>
-/// Formats search hits and generic object list results. Per-item lines are shared so <c>search</c> and <c>list_objects</c> match.
+/// Formats search hits and generic object list results. Per-item lines are shared so <c>search</c> and <c>list_records</c> match.
 /// </summary>
 public static class SearchFormatter
 {

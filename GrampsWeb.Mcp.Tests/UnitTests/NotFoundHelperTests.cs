@@ -11,7 +11,7 @@ public class NotFoundHelperTests
     {
         Assert.Equal(
             "Person not found: I0044\n\nHint: No person has Gramps ID I0044. " +
-            "Find the person with search, or browse list_objects(objectType: \"people\").",
+            "Find the person with search, or browse list_records(objectType: \"people\").",
             NotFoundHelper.NotFoundMessage("Person", "I0044"));
     }
 
@@ -20,7 +20,7 @@ public class NotFoundHelperTests
     {
         Assert.Equal(
             "Person not found: F0001\n\nHint: F0001 has the family prefix F; person IDs start with I. " +
-            "To read the family with this ID, call get_object(identifier: \"F0001\").",
+            "To read the family with this ID, call get_records(identifiers: [\"F0001\"]).",
             NotFoundHelper.NotFoundMessage("Person", "F0001"));
     }
 
@@ -47,7 +47,7 @@ public class NotFoundHelperTests
     {
         Assert.Equal(collection, HandleResolver.PrefixToObjectType(prefix));
         Assert.EndsWith(
-            $"list_objects(objectType: \"{collection}\").",
+            $"list_records(objectType: \"{collection}\").",
             NotFoundHelper.NotFoundMessage(objectType, $"{prefix}0001"));
     }
 
@@ -56,7 +56,7 @@ public class NotFoundHelperTests
     {
         Assert.Null(HandleResolver.PrefixToObjectType('T'));
         Assert.EndsWith(
-            "Tags have no Gramps ID; find the tag's handle with list_objects(objectType: \"tags\").",
+            "Tags have no Gramps ID; find the tag's handle with list_records(objectType: \"tags\").",
             NotFoundHelper.NotFoundMessage("Tag", "T0001"));
     }
 

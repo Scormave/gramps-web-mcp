@@ -41,7 +41,7 @@ internal interface IUserConfirmation
 }
 
 /// <summary>
-/// Confirmation through MCP elicitation for delete_records, merge_objects and undo_change. The client shows the
+/// Confirmation through MCP elicitation for delete_records, merge_records and undo_change. The client shows the
 /// question to the user and the tool waits for the answer; <c>GRAMPS_CONFIRMATION</c> chooses
 /// whether to ask when the client supports it (default), always, or never.
 /// </summary>
@@ -75,7 +75,7 @@ internal static class UserConfirmation
         if (LoggedClients.TryAdd($"{client}|{mode}|{supported}", 0))
         {
             logger.LogInformation(
-                "Client {Client} {Support} elicitation; delete_records, merge_objects and undo_change {Behaviour} (GRAMPS_CONFIRMATION={Mode})",
+                "Client {Client} {Support} elicitation; delete_records, merge_records and undo_change {Behaviour} (GRAMPS_CONFIRMATION={Mode})",
                 client, supported ? "supports" : "does not support",
                 !asks ? "run without asking" : supported ? "ask the user to confirm" : "refuse to change the tree",
                 ModeName(mode));

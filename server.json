@@ -66,7 +66,7 @@
         },
         {
           "name": "GRAMPS_CONFIRMATION",
-          "description": "Whether delete_records, merge_objects and undo_change ask the user to confirm through MCP elicitation: when-supported, required (refuse in clients that cannot ask), or off",
+          "description": "Whether delete_records, merge_records and undo_change ask the user to confirm through MCP elicitation: when-supported, required (refuse in clients that cannot ask), or off",
           "default": "when-supported"
         },
         {
@@ -76,12 +76,12 @@
         },
         {
           "name": "GRAMPS_MEDIA_RESOURCES_ENABLED",
-          "description": "Set to true to expose read_media and the media resources for thumbnails and full files, and to allow uploads from GRAMPS_MEDIA_UPLOAD_DIRS",
+          "description": "Set to true to expose get_media_image and the media resources for thumbnails and full files, and to allow uploads from GRAMPS_MEDIA_UPLOAD_DIRS",
           "default": "false"
         },
         {
           "name": "GRAMPS_MEDIA_MAX_BYTES",
-          "description": "Maximum bytes returned by read_media or a media resource",
+          "description": "Maximum bytes returned by get_media_image or a media resource",
           "default": "5242880"
         },
         {

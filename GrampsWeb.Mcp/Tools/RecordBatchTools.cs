@@ -77,10 +77,10 @@ public static class RecordBatchTools
     public static async Task<string> CreateRecords(
         [Description("New tags, colored labels such as \"To check\" for grouping records: name, color, priority. Other " +
                      "records of the call carry them through tagHandles [\"#key\"]; existing records get them with " +
-                     "update_* and linkMode \"add\". Look through list_objects(objectType: \"tags\") first.")]
+                     "update_* and linkMode \"add\". Look through list_records(objectType: \"tags\") first.")]
         TagRecord[]? tags = null,
         [Description("New repositories: archives, libraries, churches, websites or other holders of sources. Look " +
-                     "through list_objects(objectType: \"repositories\") first so one holder is not entered twice. " +
+                     "through list_records(objectType: \"repositories\") first so one holder is not entered twice. " +
                      "Sources link them through repositoryHandles with the call number.")]
         RepositoryRecord[]? repositories = null,
         [Description("New places, such as a village, parish or county. enclosedBy links the larger places, existing or " +
@@ -477,7 +477,7 @@ public static class RecordBatchTools
             sb.AppendLine($"  • {string.Join(", ", unplaced.Select(e => e.Where))} " +
                           $"{(unplaced.Count == 1 ? "is" : "are")} in no new family: add to an existing family with " +
                           "update_family (fatherHandle, motherHandle, or childRefs with linkMode \"add\").");
-        sb.AppendLine("  • Read a new record with get_object, or a new family's people with get_person_tree.");
+        sb.AppendLine("  • Read a new record with get_records, or a new family's people with get_person_tree.");
         sb.AppendLine("  • To take the whole call back, undo_change on its transaction from get_recent_changes, " +
                       "after the user confirms.");
         return sb.ToString();

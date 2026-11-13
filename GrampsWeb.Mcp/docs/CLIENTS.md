@@ -110,7 +110,7 @@ Keep in mind:
   a project's repository.
 - Every client works as the Gramps Web account the server is configured with,
   and Gramps Web records all their edits under that account.
-- Over stateless HTTP, the default, `delete_records`, `merge_objects` and
+- Over stateless HTTP, the default, `delete_records`, `merge_records` and
   `undo_change` cannot show their confirmation dialog; see
   [Confirming deletes, merges and undos](CONFIGURATION.md#confirming-deletes-merges-and-undos).
 
@@ -274,10 +274,10 @@ the developer guide.
 ## Images for vision-capable agents
 
 Vision-capable agents can read opt-in media
-([media file access](CONFIGURATION.md#media-file-access)) through `read_media`
+([media file access](CONFIGURATION.md#media-file-access)) through `get_media_image`
 or through binary MCP resources such as
 `gramps://media/{handle}/thumbnail/{size}` and `gramps://media/{handle}/file`.
-`read_media` defaults to a thumbnail: a JPEG preview (PNG when the image has
+`get_media_image` defaults to a thumbnail: a JPEG preview (PNG when the image has
 transparency) rendered by the server from the original, 1568 pixels on the long
 edge so handwriting and small print in document scans stay legible. Pass `size`
 (1–4096) for a smaller or larger preview; images are never upscaled. Previews are

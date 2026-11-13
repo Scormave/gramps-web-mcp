@@ -25,7 +25,7 @@ public sealed class MediaTests(GrampsWebFixture gramps)
         Assert.Equal("created", media.Action);
         Assert.Equal("\"image/png\"", McpSession.Header(media.Text, "mime"));
         Assert.Equal($"[\"{person.GrampsId}\"]", McpSession.Header(media.Text, "attached_to"));
-        var stored = await Session.CallAsync("get_object", new { identifier = person.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } });
         Assert.Contains($"[image] Birth record", stored);
         Assert.Contains(media.Handle, stored);
     }
@@ -54,7 +54,7 @@ public sealed class MediaTests(GrampsWebFixture gramps)
             attachTo = new object[] { new { @ref = person.GrampsId, region = new[] { 10, 20, 60, 80 } } }
         });
 
-        var stored = await Session.CallAsync("get_object", new { identifier = person.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } });
         Assert.Contains(media.Handle, stored);
         Assert.Contains("10, 20, 60, 80", stored);
     }
@@ -77,7 +77,7 @@ public sealed class MediaTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
-    public async Task ReadMedia_ReturnsThumbnailFileAndRegion()
+    public async Task GetMediaImage_ReturnsThumbnailFileAndRegion()
     {
         var bytes = TestImages.Png(width: 200, height: 120);
         var media = await Session.UploadAsync(new { filePath = gramps.WriteUpload(".png", bytes) });
@@ -116,13 +116,13 @@ public sealed class MediaTests(GrampsWebFixture gramps)
 
         var file = await ReadImageAsync(new { handle = media.Handle, mode = "file" });
         Assert.Equal(replacement, file.DecodedData.ToArray());
-        var stored = await Session.CallAsync("get_object", new { identifier = media.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { media.GrampsId } });
         Assert.Contains("Scan", stored);
     }
 
     private async Task<ImageContentBlock> ReadImageAsync(object arguments)
     {
-        var result = await Session.CallToolAsync("read_media", arguments);
+        var result = await Session.CallToolAsync("get_media_image", arguments);
         Assert.False(result.IsError == true, McpSession.TextOf(result));
         return Assert.Single(result.Content.OfType<ImageContentBlock>());
     }

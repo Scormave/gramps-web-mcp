@@ -68,7 +68,7 @@ public sealed class GrampsPrompts
     {
         var text =
             $"Research person \"{person}\" in the Gramps database.\n" +
-            "1. If the input is a Gramps ID, call get_object(identifier: ID). If it is an opaque handle, call get_object(objectType: \"person\", identifier: HANDLE). Otherwise search by name, confirm the match, then get_object.\n" +
+            "1. If the input is a Gramps ID, call get_records(identifiers: [ID]). If it is an opaque handle, call get_records(objectType: \"person\", identifiers: [HANDLE]). Otherwise search by name, confirm the match, then get_records.\n" +
             "2. Start with the person's record. Set extended=true only when linked family or event details are needed.\n" +
             "3. Call get_timeline(objectType: \"person\", ...) only for chronological questions. Call get_person_tree(direction: \"ancestors\" or \"descendants\", ...) only for the requested branch; use a small generation count first.\n" +
             "4. Report only facts supported by the retrieved records, distinguish uncertainty, and mention missing citations when relevant.";
@@ -110,7 +110,7 @@ public sealed class GrampsPrompts
         sb.AppendLine("3. If a marriage date is provided, add the Marriage event to the same call, events:");
         sb.AppendLine("   [{key: \"marriage\", eventType: \"Marriage\", date, placeHandle}] with the place found by search,");
         sb.AppendLine("   and list \"#marriage\" in the family's eventRefs.");
-        sb.AppendLine("4. Show the created family details with get_object(objectType: \"family\", ...).");
+        sb.AppendLine("4. Show the created family details with get_records(objectType: \"family\", ...).");
         return sb.ToString();
     }
 
@@ -124,7 +124,7 @@ public sealed class GrampsPrompts
             $"Find the genealogical relationship between \"{person1}\" and \"{person2}\".\n" +
             "Steps:\n" +
             "1. Resolve both people to handles. If given names, use search() to find them.\n" +
-            "   If given Gramps IDs (like I0001), use get_object with the ID.\n" +
+            "   If given Gramps IDs (like I0001), use get_records with the ID.\n" +
             "2. Call get_relations(handle1, handle2) to find their relationship.\n" +
             "3. If related, explain the connection in plain language (e.g. \"3rd cousin once removed\").\n" +
             "4. If no direct relationship found, try showing both their ancestor trees\n" +
@@ -178,7 +178,7 @@ public sealed class GrampsPrompts
     {
         var text =
             $"{action} one existing link on {ownerType} \"{owner}\" using {linkField} and target \"{target}\".\n" +
-            "1. Resolve both records to handles with get_object or search; confirm ambiguous names. Inspect the owner to confirm it owns this link field. Events do not own person-event links: update_person(eventRefs) or update_family(eventRefs).\n" +
+            "1. Resolve both records to handles with get_records or search; confirm ambiguous names. Inspect the owner to confirm it owns this link field. Events do not own person-event links: update_person(eventRefs) or update_family(eventRefs).\n" +
             "2. Use the matching update_* tool with handle: OWNER_HANDLE, the chosen link field containing TARGET_HANDLE, and linkMode: \"add\" or \"remove\". For childRefs, eventRefs, repositoryHandles, or enclosedBy, include known relationship/role metadata on add; do not guess unknown relationship facts.\n" +
             "3. Read the owner again to verify the link changed. Do not create a new record to satisfy this request. For metadata changes to an existing reference, read and replace the full list instead.\n" +
             "See get_reference(topic: \"input-guide\", section: \"link_updates\") if the list semantics are unclear.";
@@ -201,7 +201,7 @@ public sealed class GrampsPrompts
         sb.AppendLine($"Attach a citation from source \"{source}\" to {recordType} \"{record}\".");
         if (!string.IsNullOrWhiteSpace(page))
             sb.AppendLine($"Page/location: {page}");
-        sb.AppendLine("1. Resolve and inspect the target with get_object; confirm an ambiguous name before editing. Check its existing citations for the same source and page to avoid duplicates.");
+        sb.AppendLine("1. Resolve and inspect the target with get_records; confirm an ambiguous name before editing. Check its existing citations for the same source and page to avoid duplicates.");
         sb.AppendLine("2. Find the source by handle/Gramps ID or search by title. Reuse a matching source; only if no matching source exists and the supplied information is sufficient, create it in the same create_records call as the citation: sources: [{key: \"src\", title}].");
         sb.AppendLine("3. Reuse an existing matching citation if available; otherwise create_records(citations: [{sourceHandle: SOURCE_HANDLE or \"#src\", page: PAGE_IF_KNOWN}]). Do not invent page, confidence, or other evidence details.");
         sb.AppendLine("4. Attach with the target's update_* tool: handle: TARGET_HANDLE, citationHandles: [CITATION_HANDLE], linkMode: \"add\". Read the target again to verify it is linked.");
@@ -227,9 +227,9 @@ public sealed class GrampsPrompts
         sb.AppendLine();
         if (branch)
         {
-            sb.AppendLine("Scope: resolve the person to a Gramps ID with search or get_object, and confirm an ambiguous name. BRANCH below is the filter " +
+            sb.AppendLine("Scope: resolve the person to a Gramps ID with search or get_records, and confirm an ambiguous name. BRANCH below is the filter " +
                           "{\"function\": \"or\", \"rules\": [{\"name\": \"IsAncestorOf\", \"values\": [ID, true]}, {\"name\": \"IsDescendantFamilyOf\", \"values\": [ID, true]}]}: " +
-                          "list_objects(objectType: \"people\", rules: BRANCH) lists the branch, and BRANCH as one more item of a check's rules keeps the check inside it. " +
+                          "list_records(objectType: \"people\", rules: BRANCH) lists the branch, and BRANCH as one more item of a check's rules keeps the check inside it. " +
                           "Checks marked whole tree run only without a person.");
         }
         else
@@ -237,7 +237,7 @@ public sealed class GrampsPrompts
             sb.AppendLine("Scope: the whole tree; leave BRANCH out of the rules below.");
         }
 
-        sb.AppendLine("Lists come from list_objects with pagesize 100; rules are Gramps filter rules, explained by get_reference(topic: \"filter-rules\", section: type).");
+        sb.AppendLine("Lists come from list_records with pagesize 100; rules are Gramps filter rules, explained by get_reference(topic: \"filter-rules\", section: type).");
         sb.AppendLine();
         sb.AppendLine("Checks:");
         sb.AppendLine("1. dates: impossible or unlikely dates.");
@@ -258,7 +258,7 @@ public sealed class GrampsPrompts
         sb.AppendLine("3. sources: people with an event that has no citation, rules [BRANCH, {\"namespace\": \"Event\", \"rules\": [{\"name\": \"HasSourceCount\", \"values\": [\"0\", \"equal to\"]}]}]; " +
                       "people with no citation at all, on themselves or any event, rules [BRANCH, {\"name\": \"HasSourceCount\", \"values\": [\"0\", \"equal to\"]}, " +
                       "{\"invert\": true, \"rules\": [{\"namespace\": \"Event\", \"rules\": [{\"name\": \"HasSourceCount\", \"values\": [\"0\", \"greater than\"]}]}]}]. " +
-                      "Whole tree: the number of events without a citation, list_objects(objectType: \"events\", gql: \"citation_list.length = 0\").");
+                      "Whole tree: the number of events without a citation, list_records(objectType: \"events\", gql: \"citation_list.length = 0\").");
         sb.AppendLine("4. links: people with no family links, rules [BRANCH, {\"name\": \"Disconnected\"}]. Whole tree: records that nothing links to, " +
                       "rules [{\"name\": \"HasReferenceCountOf\", \"values\": [\"equal to\", \"0\"]}] for events, families, places, citations, sources, notes and media. " +
                       "An unlinked event, family or citation is usually left over from an edit; a source, note or media file can stand alone on purpose, so list those as information.");
@@ -269,7 +269,7 @@ public sealed class GrampsPrompts
         sb.AppendLine("- Group the findings by check, most serious first: impossible dates and loops, likely duplicates, unsourced facts, unlinked records, missing data.");
         sb.AppendLine("- One line per finding: the person's name and dates with the Gramps ID, and what is wrong. For a long list give the count and the first ten.");
         sb.AppendLine("- Say which checks ran, how many records each covered, and what was skipped.");
-        sb.AppendLine("- Offer fixes, such as update_person, update_family or merge_objects, and make each only after the user confirms it.");
+        sb.AppendLine("- Offer fixes, such as update_person, update_family or merge_records, and make each only after the user confirms it.");
         return sb.ToString();
     }
 }

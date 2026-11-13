@@ -2,7 +2,7 @@ using Xunit;
 
 namespace GrampsWeb.Mcp.IntegrationTests;
 
-/// <summary>search, list_objects, get_object, get_recent_changes, get_bookmarks and get_reference.</summary>
+/// <summary>search, list_records, get_records, get_recent_changes, get_bookmarks and get_reference.</summary>
 [Collection(GrampsWebCollection.Name)]
 public sealed class ReadToolTests(GrampsWebFixture gramps)
 {
@@ -21,39 +21,39 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
-    public async Task ListObjects_FiltersWithGql()
+    public async Task ListRecords_FiltersWithGql()
     {
         var first = TestNames.Surname();
         var match = await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() } });
         await Session.CreateAsync("people", new { primaryName = new { first = TestNames.Surname(), surname = TestNames.Surname() } });
 
-        var listed = await Session.CallAsync("list_objects", new { objectType = "people", gql = $"primary_name.first_name = {first}" });
+        var listed = await Session.CallAsync("list_records", new { objectType = "people", gql = $"primary_name.first_name = {first}" });
 
         Assert.Contains("Total: 1", listed);
         Assert.Contains(match.Handle, listed);
     }
 
     [IntegrationFact]
-    public async Task ListObjects_FindsByGrampsId()
+    public async Task ListRecords_FindsByGrampsId()
     {
         var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
 
-        var listed = await Session.CallAsync("list_objects", new { objectType = "notes", grampsId = note.GrampsId });
+        var listed = await Session.CallAsync("list_records", new { objectType = "notes", grampsId = note.GrampsId });
 
         Assert.Contains("Total: 1", listed);
         Assert.Contains(note.Handle, listed);
     }
 
-    // The gql description of list_objects promises this syntax; these two tests hold Gramps Web to it.
+    // The gql description of list_records promises this syntax; these two tests hold Gramps Web to it.
     [IntegrationFact]
-    public async Task ListObjects_GqlComparesWithOneEqualsSignAndQuotedText()
+    public async Task ListRecords_GqlComparesWithOneEqualsSignAndQuotedText()
     {
         var first = TestNames.Surname();
         var man = await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "male" });
         await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "female" });
 
-        var listed = await Session.CallAsync("list_objects", new { objectType = "people", gql = $"gender = 1 and primary_name.first_name = \"{first}\"" });
-        var error = await Session.CallErrorAsync("list_objects", new { objectType = "people", gql = $"gender == 1 and primary_name.first_name = \"{first}\"" });
+        var listed = await Session.CallAsync("list_records", new { objectType = "people", gql = $"gender = 1 and primary_name.first_name = \"{first}\"" });
+        var error = await Session.CallErrorAsync("list_records", new { objectType = "people", gql = $"gender == 1 and primary_name.first_name = \"{first}\"" });
 
         Assert.Contains("Total: 1", listed);
         Assert.Contains(man.Handle, listed);
@@ -61,13 +61,13 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
-    public async Task ListObjects_GqlMatchesEventTypesByNumber()
+    public async Task ListRecords_GqlMatchesEventTypesByNumber()
     {
         var description = TestNames.Unique("birth");
         var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1901", description });
 
-        var byNumber = await Session.CallAsync("list_objects", new { objectType = "events", gql = $"type.value = 12 and description = \"{description}\"" });
-        var byName = await Session.CallAsync("list_objects", new { objectType = "events", gql = $"type = \"Birth\" and description = \"{description}\"" });
+        var byNumber = await Session.CallAsync("list_records", new { objectType = "events", gql = $"type.value = 12 and description = \"{description}\"" });
+        var byName = await Session.CallAsync("list_records", new { objectType = "events", gql = $"type = \"Birth\" and description = \"{description}\"" });
 
         Assert.Contains("Total: 1", byNumber);
         Assert.Contains(birth.Handle, byNumber);
@@ -75,19 +75,35 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
-    public async Task ListObjects_InvalidGql_ReportsGrampsWebError()
+    public async Task ListRecords_InvalidGql_ReportsGrampsWebError()
     {
-        var error = await Session.CallErrorAsync("list_objects", new { objectType = "people", gql = "((" });
+        var error = await Session.CallErrorAsync("list_records", new { objectType = "people", gql = "((" });
 
         Assert.NotEmpty(error);
     }
 
     [IntegrationFact]
-    public async Task GetObject_UnknownGrampsId_SaysNotFound()
+    public async Task GetRecords_UnknownGrampsId_SaysNotFound()
     {
-        var text = await Session.CallAsync("get_object", new { identifier = "I9999" });
+        var text = await Session.CallAsync("get_records", new { identifiers = new[] { "I9999" } });
 
         Assert.Contains("Person not found: I9999", text);
+    }
+
+    [IntegrationFact]
+    public async Task GetRecords_ReadsSeveralRecordsInTheOrderGiven()
+    {
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
+        var person = await Session.CreateAsync("people", new { primaryName = new { first = "Olga", surname = TestNames.Surname() } });
+
+        var text = await Session.CallAsync("get_records",
+            new { identifiers = new[] { note.GrampsId, person.GrampsId, "I9999" } });
+
+        var records = text.Split("\n\n---\n\n");
+        Assert.Equal(3, records.Length);
+        Assert.Contains(note.Handle, records[0]);
+        Assert.Contains(person.Handle, records[1]);
+        Assert.Contains("Person not found: I9999", records[2]);
     }
 
     [IntegrationFact]

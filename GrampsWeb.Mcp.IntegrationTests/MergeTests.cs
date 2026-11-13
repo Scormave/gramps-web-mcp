@@ -3,7 +3,7 @@ using Xunit;
 namespace GrampsWeb.Mcp.IntegrationTests;
 
 /// <summary>
-/// merge_objects against a real Gramps Web. The test server has no confirmation dialog, so each merge runs
+/// merge_records against a real Gramps Web. The test server has no confirmation dialog, so each merge runs
 /// without a question.
 /// </summary>
 [Collection(GrampsWebCollection.Name)]
@@ -28,7 +28,7 @@ public sealed class MergeTests(GrampsWebFixture gramps)
             eventRefs = new[] { $"{birth.Handle}::Primary" }
         });
 
-        var merged = await Session.CallAsync("merge_objects", new
+        var merged = await Session.CallAsync("merge_records", new
         {
             objectType = "person",
             keepHandle = keep.Handle,
@@ -80,7 +80,7 @@ public sealed class MergeTests(GrampsWebFixture gramps)
         });
         await Session.CreateAsync("families", new { fatherHandle = husband.Handle, motherHandle = wife.Handle });
 
-        var refused = await Session.CallAsync("merge_objects", new
+        var refused = await Session.CallAsync("merge_records", new
         {
             objectType = "person",
             keepHandle = husband.Handle,
@@ -125,7 +125,7 @@ public sealed class MergeTests(GrampsWebFixture gramps)
             childRefs = new[] { $"{son.Handle}::Birth" }
         });
 
-        var merged = await Session.CallAsync("merge_objects", new
+        var merged = await Session.CallAsync("merge_records", new
         {
             objectType = "family",
             keepHandle = keep.Handle,
@@ -134,14 +134,14 @@ public sealed class MergeTests(GrampsWebFixture gramps)
 
         Assert.Equal("merged", McpSession.Header(merged, "action"));
         Assert.Contains("The same merge also joined and deleted 1 person.", merged);
-        var family = await Session.CallAsync("get_object", new { objectType = "family", identifier = keep.Handle, extended = true });
+        var family = await Session.CallAsync("get_records", new { objectType = "family", identifiers = new[] { keep.Handle }, extended = true });
         Assert.Contains($"[handle: {father.Handle}]", family);
         Assert.Contains($"[handle: {mother.Handle}]", family);
         Assert.Contains($"[handle: {son.Handle}]", family);
         // The kept family's type was Unknown, so it takes the duplicate's.
         Assert.Contains("Relationship: Married", family);
         Assert.Contains($"Family not found: {duplicate.Handle}",
-            await Session.CallAsync("get_object", new { objectType = "family", identifier = duplicate.Handle }));
+            await Session.CallAsync("get_records", new { objectType = "family", identifiers = new[] { duplicate.Handle } }));
         Assert.Contains($"Person not found: {otherFather.Handle}", await GetPersonAsync(otherFather.Handle));
         Assert.Contains($"Merged Gramps ID: {otherFather.GrampsId}", await GetPersonAsync(father.Handle));
     }
@@ -159,7 +159,7 @@ public sealed class MergeTests(GrampsWebFixture gramps)
             noteHandles = new[] { duplicate.Handle }
         });
 
-        var merged = await Session.CallAsync("merge_objects", new
+        var merged = await Session.CallAsync("merge_records", new
         {
             objectType = "note",
             keepHandle = keep.GrampsId,
@@ -169,14 +169,14 @@ public sealed class MergeTests(GrampsWebFixture gramps)
         Assert.Equal("merged", McpSession.Header(merged, "action"));
         Assert.Equal(keep.Handle, McpSession.Header(merged, "handle"));
         Assert.Equal(duplicate.Handle, McpSession.Header(merged, "duplicate_handle"));
-        var note = await Session.CallAsync("get_object", new { objectType = "note", identifier = keep.Handle });
+        var note = await Session.CallAsync("get_records", new { objectType = "note", identifiers = new[] { keep.Handle } });
         Assert.Contains(keptText, note);
         Assert.DoesNotContain(droppedText, note);
         Assert.Contains($"[handle: {person.Handle}]", note);
         Assert.Contains($"Note not found: {duplicate.Handle}",
-            await Session.CallAsync("get_object", new { objectType = "note", identifier = duplicate.Handle }));
+            await Session.CallAsync("get_records", new { objectType = "note", identifiers = new[] { duplicate.Handle } }));
     }
 
     private Task<string> GetPersonAsync(string handle) =>
-        Session.CallAsync("get_object", new { objectType = "person", identifier = handle, extended = true });
+        Session.CallAsync("get_records", new { objectType = "person", identifiers = new[] { handle }, extended = true });
 }

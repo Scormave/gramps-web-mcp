@@ -20,7 +20,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
 
         Assert.Equal("created", person.Action);
         Assert.Matches("^I[0-9]{4}$", person.GrampsId);
-        var stored = await Session.CallAsync("get_object", new { identifier = person.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } });
         Assert.Contains($"[handle: {person.Handle}]", stored);
         Assert.Contains("Gender:    Male", stored);
         Assert.Contains("first:   Petr", stored);
@@ -41,7 +41,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
             eventRefs = new object[] { new { @ref = birth.Handle, role = "Primary" }, $"{baptism.Handle}::Primary" },
             linkMode = "add"
         });
-        var linked = await Session.CallAsync("get_object", new { identifier = person.Handle, objectType = "person" });
+        var linked = await Session.CallAsync("get_records", new { identifiers = new[] { person.Handle }, objectType = "person" });
         Assert.Contains(birth.Handle, linked);
         Assert.Contains(baptism.Handle, linked);
 
@@ -51,7 +51,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
             eventRefs = new[] { baptism.Handle },
             linkMode = "remove"
         });
-        var unlinked = await Session.CallAsync("get_object", new { identifier = person.Handle, objectType = "person" });
+        var unlinked = await Session.CallAsync("get_records", new { identifiers = new[] { person.Handle }, objectType = "person" });
         Assert.Contains(birth.Handle, unlinked);
         Assert.DoesNotContain(baptism.Handle, unlinked);
     }
@@ -61,7 +61,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
     {
         var family = await CreateFamilyAsync();
 
-        var stored = await Session.CallAsync("get_object", new { identifier = family.Family.GrampsId });
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { family.Family.GrampsId } });
         Assert.Contains($"Father: {family.Surname}, Ivan ({family.Father.GrampsId})", stored);
         Assert.Contains($"Mother: {family.MotherSurname}, Maria ({family.Mother.GrampsId})", stored);
         Assert.Contains("Relationship: Married", stored);
@@ -69,7 +69,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
         Assert.Contains("Children (2):", stored);
         Assert.Contains($"({family.Son.GrampsId}) [handle: {family.Son.Handle}], b. 1890-05-03", stored);
 
-        var son = await Session.CallAsync("get_object", new { identifier = family.Son.GrampsId });
+        var son = await Session.CallAsync("get_records", new { identifiers = new[] { family.Son.GrampsId } });
         Assert.Contains($"[handle: {family.Family.Handle}]", son);
     }
 
@@ -78,13 +78,13 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
     {
         // The son was born in 1890 and added first, the daughter in 1885.
         var family = await CreateFamilyAsync();
-        var before = await Session.CallAsync("get_object", new { identifier = family.Family.GrampsId });
+        var before = await Session.CallAsync("get_records", new { identifiers = new[] { family.Family.GrampsId } });
         Assert.True(before.IndexOf(family.Son.Handle, StringComparison.Ordinal)
                     < before.IndexOf(family.Daughter.Handle, StringComparison.Ordinal));
 
         await Session.CallAsync("update_family", new { handle = family.Family.Handle, sort = new[] { "Children" } });
 
-        var after = await Session.CallAsync("get_object", new { identifier = family.Family.GrampsId });
+        var after = await Session.CallAsync("get_records", new { identifiers = new[] { family.Family.GrampsId } });
         Assert.True(after.IndexOf(family.Daughter.Handle, StringComparison.Ordinal)
                     < after.IndexOf(family.Son.Handle, StringComparison.Ordinal), after);
     }

@@ -42,8 +42,8 @@ public static class DuplicateTools
         "possible duplicates; the others are similar pairs. Each call reads every person of the tree, up to 20000, " +
         "so a tree of a few thousand people takes 10 to 20 seconds. Returns how many people were compared and the " +
         "pairs, possible duplicates first and then by how close the births are, numbered across pages; each person " +
-        "with Gramps ID, handle, birth, death and parents. Nothing changes: compare a pair with get_object, and merge " +
-        "it with merge_objects only after the user confirmed they are one person. create_records runs the same " +
+        "with Gramps ID, handle, birth, death and parents. Nothing changes: compare a pair with get_records, and merge " +
+        "it with merge_records only after the user confirmed they are one person. create_records runs the same " +
         "check on the people it creates; to find one name, use search.")]
     public static Task<string> FindDuplicates(
         [Description("Only pairs with this person. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -288,9 +288,9 @@ public static class DuplicateTools
         var first = shown[0];
         sb.AppendLine();
         sb.AppendLine("Next steps:");
-        sb.AppendLine($"  • Compare a pair: get_object(objectType: \"person\", identifier: \"{Identifier(first.First)}\", " +
-                      $"extended: true), and the same for \"{Identifier(first.Second)}\".");
-        sb.AppendLine("  • One person, once the user confirmed it: merge_objects(objectType: \"person\", " +
+        sb.AppendLine("  • Compare a pair: get_records(objectType: \"person\", " +
+                      $"identifiers: [\"{Identifier(first.First)}\", \"{Identifier(first.Second)}\"], extended: true).");
+        sb.AppendLine("  • One person, once the user confirmed it: merge_records(objectType: \"person\", " +
                       "keepHandle: \"<the record to keep>\", duplicateHandle: \"<the other>\").");
         if (offset + shown.Count < scan.Pairs.Count)
         {

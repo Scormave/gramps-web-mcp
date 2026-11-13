@@ -20,7 +20,7 @@ public sealed class FlexibleHandleList
 
     /// <summary>Description hint for a list of tags, which have no Gramps ID.</summary>
     public const string TagHint =
-        "Tag handles; tags have no Gramps ID, and list_objects(objectType: \"tags\") lists them: JSON array " +
+        "Tag handles; tags have no Gramps ID, and list_records(objectType: \"tags\") lists them: JSON array " +
         "[\"h1\",\"h2\"], one handle, or a comma/semicolon/newline-separated string.";
 
     public required string[] Handles { get; init; }

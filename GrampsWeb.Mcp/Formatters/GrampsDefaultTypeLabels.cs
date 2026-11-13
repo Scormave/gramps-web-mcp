@@ -198,7 +198,7 @@ public static class GrampsDefaultTypeLabels
     private const int MaxTypeValue = 1000;
 }
 
-/// <summary>Optional label tables for batched formatting (search / list_objects).</summary>
+/// <summary>Optional label tables for batched formatting (search / list_records).</summary>
 public sealed record GrampsTypeLabelTables(
     IReadOnlyList<string>? RepositoryTypes,
     IReadOnlyList<string>? PlaceTypes,

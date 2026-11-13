@@ -7,7 +7,7 @@ public static class ToolDescriptionFragments
 {
     /// <summary>Suffix for parameters that take one Gramps object handle.</summary>
     public const string HandleDiscovery =
-        "Handle or Gramps ID (e.g. I0001), resolved automatically; find it with search or list_objects.";
+        "Handle or Gramps ID (e.g. I0001), resolved automatically; find it with search or list_records.";
 
     /// <summary>Tool-level sentence for update tools: what omitting a value and linkMode do.</summary>
     public const string UpdateSemantics =

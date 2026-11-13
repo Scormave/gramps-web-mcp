@@ -24,7 +24,7 @@ public sealed class AuthenticationTests(GrampsWebFixture gramps)
         await using var session = await gramps.StartSessionAsync(
             gramps.Config with { Password = "", RefreshToken = gramps.RefreshToken });
 
-        var found = await session.CallAsync("get_object", new { identifier = "I9999" });
+        var found = await session.CallAsync("get_records", new { identifiers = new[] { "I9999" } });
 
         Assert.Contains("Person not found", found);
         Assert.Equal(["/api/token/refresh/"], session.TokenRequests.Paths);
@@ -89,13 +89,13 @@ public sealed class AuthenticationTests(GrampsWebFixture gramps)
 
         var tools = (await session.Client.ListToolsAsync()).Select(tool => tool.Name).ToArray();
 
-        Assert.Contains("get_object", tools);
-        Assert.Contains("read_media", tools);
+        Assert.Contains("get_records", tools);
+        Assert.Contains("get_media_image", tools);
         Assert.DoesNotContain(tools, name => name.StartsWith("create_", StringComparison.Ordinal)
                                              || name.StartsWith("update_", StringComparison.Ordinal)
                                              || name.StartsWith("upload_", StringComparison.Ordinal)
                                              || name.StartsWith("delete_", StringComparison.Ordinal));
-        Assert.Contains("Person not found", await session.CallAsync("get_object", new { identifier = "I9999" }));
+        Assert.Contains("Person not found", await session.CallAsync("get_records", new { identifiers = new[] { "I9999" } }));
     }
 
     private Task<McpSession> StartWithRejectedTokenAsync(string kind)

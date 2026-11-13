@@ -24,8 +24,8 @@ to `demo.grampsweb.org`.
 
 ### Naming
 
-- **Tool methods**: PascalCase static methods (e.g. `GetObject`, `CreateRecords`).
-  The MCP SDK derives the wire name from the method name (→ `get_object`,
+- **Tool methods**: PascalCase static methods (e.g. `GetRecords`, `CreateRecords`).
+  The MCP SDK derives the wire name from the method name (→ `get_records`,
   `create_records`).
 - **Models**: `Gramps` prefix (e.g. `GrampsPerson`, `GrampsEvent`).
 - **Request DTOs**: `Create*Request` (bodies of new records; update tools use
@@ -63,7 +63,7 @@ Key rules:
 - Tools return `Task<string>` — always formatted text, never raw JSON.
 - Binary payloads belong in MCP resources, not tools. Media files use
   `BlobResourceContents` from `Resources/GrampsResources.cs`.
-- Exception: `ReadMedia` returns `CallToolResult` with typed content:
+- Exception: `GetMediaImage` returns `CallToolResult` with typed content:
   image for thumbnails (rendered by `Resources/MediaPreviewRenderer.cs`) and
   JPEG, PNG, GIF, or WebP files, audio for audio MIME types, and
   `EmbeddedResourceBlock` with `BlobResourceContents` for other types. Other
@@ -201,7 +201,7 @@ Full checklist for adding support for a completely new entity type
      `RecordBatchTools.CreateRecords` to create it
    - add the entity to `ObjectTools.cs` when it supports generic reads or deletion
 6. **Search support** → update `SearchFormatter.cs` and
-   `SearchTools.ListObjects` if the new type should appear in listings.
+   `SearchTools.ListRecords` if the new type should appear in listings.
 7. **Contract mapping** → update `swagger-dto-map.json`
 8. **API inventory** → update `API_INVENTORY.md`
 9. **Tests** → fixture JSON + unit tests + contract mapping
@@ -511,7 +511,7 @@ per type, and keeps the rows the API sent when a request fails:
 - Media: fetch by handle when `extended.media` is empty but `media_list` has handles
 
 This is applied automatically by `PersonTools.ReadPersonAsync` and
-`FamilyTools.ReadFamilyAsync` when `get_object` is called with `extended: true`.
+`FamilyTools.ReadFamilyAsync` when `get_records` is called with `extended: true`.
 
 ---
 

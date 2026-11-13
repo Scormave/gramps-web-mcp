@@ -140,7 +140,7 @@ public class RecordBatchToolsTests
 
         Assert.Equal(
             "Error: notes[0]: tagHandles: T0001 is not a tag handle; tags have no Gramps ID, so give the tag's handle " +
-            "from list_objects(objectType: \"tags\"). Nothing was saved.",
+            "from list_records(objectType: \"tags\"). Nothing was saved.",
             error.Message);
         Assert.DoesNotContain(handler.Requests, r => r.Contains("gramps_id=", StringComparison.Ordinal));
         Assert.Empty(handler.Posts);
@@ -457,7 +457,7 @@ public class RecordBatchToolsTests
         Assert.Contains("Similar people already in the tree, possibly the same as a new person:\n" +
                         $"  people[0] (key ivan), Иван Образцов — handle: {person["handle"]!.GetValue<string>()} (1):\n" +
                         "    • Образцов, Иван (I0012) [handle: h-ivan], b. 1884 — same name, born 4 years apart", result);
-        Assert.Contains("merge_objects(objectType: \"person\"", result);
+        Assert.Contains("merge_records(objectType: \"person\"", result);
     }
 
     [Fact]

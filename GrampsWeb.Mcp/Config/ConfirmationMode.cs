@@ -1,7 +1,7 @@
 namespace GrampsWeb.Mcp.Config;
 
 /// <summary>
-/// When delete_records, merge_objects and undo_change ask the user to confirm through MCP elicitation
+/// When delete_records, merge_records and undo_change ask the user to confirm through MCP elicitation
 /// before changing the tree. Set with <c>GRAMPS_CONFIRMATION</c>.
 /// </summary>
 public enum ConfirmationMode

@@ -15,7 +15,7 @@ With it, the server must, over each transport tested:
 
 - answer initialize with serverInfo.version equal to --version (default: the
   <Version> in GrampsWeb.Mcp.csproj);
-- list tools, among them search, get_object, list_objects and get_reference,
+- list tools, among them search, get_records, list_records and get_reference,
   with the editing tools exactly when GRAMPS_READ_ONLY is not true, and list
   prompts and resources;
 - run get_reference with topic metadata, which logs in to the stand-in and
@@ -76,7 +76,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PROJECT = ROOT / "GrampsWeb.Mcp" / "GrampsWeb.Mcp.csproj"
 
 PROTOCOL_VERSION = "2025-06-18"
-CORE_TOOLS = ("search", "get_object", "list_objects", "get_reference")
+CORE_TOOLS = ("search", "get_records", "list_records", "get_reference")
 EDIT_TOOL_PREFIXES = ("create_", "update_", "delete_", "undo_")
 
 TREE_ID = "smoke-tree"

@@ -28,15 +28,15 @@ public class ToolAnnotationTests
         }
 
         Assert.Equal(26, toolMethods.Count);
-        Assert.Single(toolMethods, method => method.Name == "ReadMedia");
+        Assert.Single(toolMethods, method => method.Name == "GetMediaImage");
         Assert.Single(toolMethods, method => method.Name == "UploadMedia");
         Assert.DoesNotContain(toolMethods, method => method.Name is "GetMediaThumbnail" or "GetMediaFile");
         Assert.Single(toolMethods, method => method.Name == "DeleteRecords");
         Assert.Single(toolMethods, method => method.Name == "UndoChange");
-        Assert.Single(toolMethods, method => method.Name == "MergeObjects");
+        Assert.Single(toolMethods, method => method.Name == "MergeRecords");
         Assert.Single(toolMethods, method => method.Name == "FindDuplicates");
         Assert.Single(toolMethods, method => method.Name == "CreateRecords");
-        Assert.Single(toolMethods, method => method.Name == "GetObject");
+        Assert.Single(toolMethods, method => method.Name == "GetRecords");
         Assert.Single(toolMethods, method => method.Name == "GetReference");
         Assert.Single(toolMethods, method => method.Name == "GetPersonTree");
         Assert.Single(toolMethods, method => method.Name == "GetTimeline");
@@ -61,7 +61,7 @@ public class ToolAnnotationTests
         string[] idempotent =
         [
             "upload_media", "update_citation", "update_event", "update_family", "update_media", "update_person",
-            "update_place", "update_repository", "update_source", "update_tag", "delete_records", "merge_objects"
+            "update_place", "update_repository", "update_source", "update_tag", "delete_records", "merge_records"
         ];
         string[] repeatable =
         [
@@ -97,7 +97,7 @@ public class ToolAnnotationTests
     }
 
     /// <summary>
-    /// delete_records, merge_objects and undo_change ask the user to confirm through the client, so they tell clients that
+    /// delete_records, merge_records and undo_change ask the user to confirm through the client, so they tell clients that
     /// they need a person present; the server and cancellation token the SDK passes them are not arguments.
     /// </summary>
     [Fact]
@@ -111,11 +111,11 @@ public class ToolAnnotationTests
             .ToList();
 
         Assert.Equal(
-            ["delete_records", "merge_objects", "undo_change"],
+            ["delete_records", "merge_records", "undo_change"],
             tools.Where(tool => tool.Meta?["anthropic/requiresUserInteraction"]?.GetValue<bool>() == true)
                 .Select(tool => tool.Name)
                 .Order(StringComparer.Ordinal));
-        foreach (var tool in tools.Where(tool => tool.Name is "delete_records" or "merge_objects" or "undo_change"))
+        foreach (var tool in tools.Where(tool => tool.Name is "delete_records" or "merge_records" or "undo_change"))
         {
             var properties = tool.InputSchema.GetProperty("properties");
             Assert.False(properties.TryGetProperty("server", out _), $"{tool.Name} exposes the server");

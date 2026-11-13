@@ -106,7 +106,7 @@ public class ToolArgumentValidatorTests
     [Theory]
     [InlineData("update_event", """{"handle":"E0001","extended":false}""")]
     [InlineData("update_event", """{"handle":"E0001","objectType":""}""")]
-    [InlineData("get_object", """{"identifier":"E0001"}""")]
+    [InlineData("get_records", """{"identifiers":["E0001"]}""")]
     public void CheckSomethingToUpdate_Accepts_A_Field_Or_Another_Tool(string tool, string arguments)
     {
         Assert.Null(ToolArgumentValidator.CheckSomethingToUpdate(tool, Schema, Args(arguments)));

@@ -65,7 +65,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
         }
 
         Assert.Equal("undone", McpSession.Header(result, "action"));
-        var restored = await Session.CallAsync("get_object", new { identifier = note.GrampsId });
+        var restored = await Session.CallAsync("get_records", new { identifiers = new[] { note.GrampsId } });
         Assert.Contains(note.Handle, restored);
         Assert.Contains(text, restored);
     }
@@ -121,11 +121,11 @@ public sealed class UndoTests(GrampsWebFixture gramps)
 
         Assert.Equal("refused", McpSession.Header(refused, "action"));
         Assert.Contains($"to restore links Note [handle: {note.Handle}], which no longer exist", refused);
-        Assert.DoesNotContain(note.Handle, await Session.CallAsync("get_object", new { identifier = person.GrampsId }));
+        Assert.DoesNotContain(note.Handle, await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } }));
     }
 
     private Task<string> GetNoteAsync(string handle) =>
-        Session.CallAsync("get_object", new { identifier = handle, objectType = "note" });
+        Session.CallAsync("get_records", new { identifiers = new[] { handle }, objectType = "note" });
 
     private async Task<int> LatestTransactionAsync()
     {

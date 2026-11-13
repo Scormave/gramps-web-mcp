@@ -57,19 +57,19 @@ public sealed class RecordBatchTests(GrampsWebFixture gramps)
         var father = Record(result, "ivan");
         var son = Record(result, "petr");
         var family = Record(result, "family");
-        var storedFamily = await Session.CallAsync("get_object", new { identifier = family.GrampsId });
+        var storedFamily = await Session.CallAsync("get_records", new { identifiers = new[] { family.GrampsId } });
         Assert.Contains($"Father: {surname}, Ivan ({father.GrampsId})", storedFamily);
         Assert.Contains($"({mother.GrampsId})", storedFamily);
         Assert.Contains("Marriage: about 1884", storedFamily);
         Assert.Contains("Children (1):", storedFamily);
         Assert.Contains($"({son.GrampsId}) [handle: {son.Handle}], b. 1890-05-03", storedFamily);
 
-        Assert.Contains($"[handle: {family.Handle}]", await Session.CallAsync("get_object", new { identifier = son.GrampsId }));
-        Assert.Contains($"[handle: {family.Handle}]", await Session.CallAsync("get_object", new { identifier = mother.GrampsId }));
+        Assert.Contains($"[handle: {family.Handle}]", await Session.CallAsync("get_records", new { identifiers = new[] { son.GrampsId } }));
+        Assert.Contains($"[handle: {family.Handle}]", await Session.CallAsync("get_records", new { identifiers = new[] { mother.GrampsId } }));
 
-        var storedBirth = await Session.CallAsync("get_object", new { identifier = Record(result, "birth").GrampsId });
+        var storedBirth = await Session.CallAsync("get_records", new { identifiers = new[] { Record(result, "birth").GrampsId } });
         Assert.Contains(Record(result, "entry").Handle, storedBirth);
-        var storedCitation = await Session.CallAsync("get_object", new { identifier = Record(result, "entry").GrampsId });
+        var storedCitation = await Session.CallAsync("get_records", new { identifiers = new[] { Record(result, "entry").GrampsId } });
         Assert.Contains($"Source: {title} [handle: {Record(result, "book").Handle}]", storedCitation);
     }
 
@@ -99,7 +99,7 @@ public sealed class RecordBatchTests(GrampsWebFixture gramps)
         foreach (var key in new[] { "birth", "ivan", "anna", "family" })
         {
             var record = Record(result, key);
-            Assert.Contains($"not found: {record.GrampsId}", await Session.CallAsync("get_object", new { identifier = record.GrampsId }));
+            Assert.Contains($"not found: {record.GrampsId}", await Session.CallAsync("get_records", new { identifiers = new[] { record.GrampsId } }));
         }
     }
 

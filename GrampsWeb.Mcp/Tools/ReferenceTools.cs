@@ -14,10 +14,10 @@ public static class ReferenceTools
     [McpServerTool(Title = "Get Reference", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Read the server's reference for writing valid arguments; it holds no family records. Call it before a create_records, " +
-        "update_* or list_objects call when a date, name, link update, type or filter rule is unclear; to read the tree itself " +
-        "use search, list_objects or get_object. topic picks the text: input-guide (argument formats), types (valid types, " +
+        "update_* or list_records call when a date, name, link update, type or filter rule is unclear; to read the tree itself " +
+        "use search, list_records or get_records. topic picks the text: input-guide (argument formats), types (valid types, " +
         "with the tree's custom ones), metadata (server and tree info), name-settings (name formats, surname groups) or " +
-        "filter-rules (rules for list_objects, saved filters). section returns one part of a topic, e.g. topic types with " +
+        "filter-rules (rules for list_records, saved filters). section returns one part of a topic, e.g. topic types with " +
         "section event_types; an unknown topic or section is rejected with the valid values. Returns input-guide as fixed " +
         "JSON and the other topics as plain text read live from the tree. Clients that read MCP resources get the same " +
         "texts at gramps://input-guide and its siblings.")]

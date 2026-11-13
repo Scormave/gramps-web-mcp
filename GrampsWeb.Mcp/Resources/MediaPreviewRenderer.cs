@@ -34,7 +34,7 @@ internal static class MediaPreviewRenderer
 
     private const string NotRenderableMessage =
         "The media file is not an image the server can render. Supported originals: " + SupportedFormats +
-        " (multi-page files use the first page). Use read_media with mode file for the original.";
+        " (multi-page files use the first page). Use get_media_image with mode file for the original.";
 
     private static readonly HashSet<string> UnsupportedImageMimeTypes = new(StringComparer.Ordinal)
     {
@@ -68,11 +68,11 @@ internal static class MediaPreviewRenderer
 
         if (!mimeType.StartsWith("image/", StringComparison.Ordinal))
             throw McpToolErrors.ValidationError(
-                $"Thumbnails are only available for image media; this record is '{mimeType}'. Use read_media with mode file for the original.");
+                $"Thumbnails are only available for image media; this record is '{mimeType}'. Use get_media_image with mode file for the original.");
 
         if (UnsupportedImageMimeTypes.Contains(mimeType))
             throw McpToolErrors.ValidationError(
-                $"Thumbnails cannot be rendered from '{mimeType}' images. Supported originals: {SupportedFormats}. Use read_media with mode file for the original.");
+                $"Thumbnails cannot be rendered from '{mimeType}' images. Supported originals: {SupportedFormats}. Use get_media_image with mode file for the original.");
     }
 
     /// <summary>
@@ -93,7 +93,7 @@ internal static class MediaPreviewRenderer
             var info = Image.Identify(source);
             if ((long)info.Width * info.Height > maxSourcePixels)
                 throw McpToolErrors.ValidationError(
-                    $"Image is {info.Width}x{info.Height} pixels, exceeding the preview limit of {maxSourcePixels / 1_000_000} megapixels. Use read_media with mode file for the original.");
+                    $"Image is {info.Width}x{info.Height} pixels, exceeding the preview limit of {maxSourcePixels / 1_000_000} megapixels. Use get_media_image with mode file for the original.");
 
             // A region keeps its share of the pixels: decode large enough that its narrower side can still fill size.
             var decodeSize = region is null ? size : (int)Math.Min(int.MaxValue, Math.Ceiling(size * 100.0 / Math.Min(region.Width, region.Height)));
@@ -128,7 +128,7 @@ internal static class MediaPreviewRenderer
         catch (InvalidMemoryOperationException)
         {
             throw McpToolErrors.ValidationError(
-                "The image is too large to render a preview. Use read_media with mode file for the original.");
+                "The image is too large to render a preview. Use get_media_image with mode file for the original.");
         }
     }
 

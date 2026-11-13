@@ -123,7 +123,7 @@ public static class FamilyTools
         "Gramps Web keeps the people's side in step in the same save: a new father, mother or child gets the family on " +
         "their record, and one replaced or removed loses it; a father, mother or new child that does not exist makes it " +
         "refuse the change, and nothing is saved. Returns a short header with the type, action updated, handle and " +
-        "Gramps ID, not the changed family: read it back with get_object. A missing family returns a not-found message. " +
+        "Gramps ID, not the changed family: read it back with get_records. A missing family returns a not-found message. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateFamily(
         [Description("The family to change. " + ToolDescriptionFragments.HandleDiscovery)]

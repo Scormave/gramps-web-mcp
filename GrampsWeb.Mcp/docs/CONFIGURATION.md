@@ -61,7 +61,7 @@ the user or rotating the Gramps Web secret key invalidates it.
 
 ## Confirming deletes, merges and undos
 
-`delete_records`, `merge_objects` and `undo_change` ask the user to confirm in a
+`delete_records`, `merge_records` and `undo_change` ask the user to confirm in a
 dialog before they change the tree, when the client supports
 [MCP elicitation](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation).
 The dialog names the records to delete, or both records of a merge, or lists
@@ -89,10 +89,10 @@ for the dialog and the replies.
 
 ## Media file access
 
-Media byte tools/resources are disabled by default. `get_object` with
+Media byte tools/resources are disabled by default. `get_records` with
 `objectType: "media"` remains
 available for metadata without enabling file downloads.
-When disabled, `read_media` is omitted from
+When disabled, `get_media_image` is omitted from
 `tools/list`; direct calls by a client that already knows its name return a
 configuration error without downloading bytes. The same setting switches
 [uploads](#media-upload) on and off.
@@ -100,10 +100,10 @@ configuration error without downloading bytes. The same setting switches
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Enables binary media tools/resources for thumbnails and full files, and uploads | `false` |
-| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by `read_media` or any media resource | `5242880` |
+| `GRAMPS_MEDIA_MAX_BYTES` | Maximum bytes returned by `get_media_image` or any media resource | `5242880` |
 | `GRAMPS_MEDIA_ALLOW_PRIVATE` | Allows bytes for Gramps media records marked private | `false` |
 
-Prefer `read_media(mode: "thumbnail")` or `gramps://media/{handle}/thumbnail/{size}` for AI
+Prefer `get_media_image(mode: "thumbnail")` or `gramps://media/{handle}/thumbnail/{size}` for AI
 analysis. Full files can be large and sensitive, carry their original metadata,
 and are still subject to the size and private-record checks.
 

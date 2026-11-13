@@ -44,7 +44,7 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
   spellings and name forms, and `create_records` refuses a person the tree
   already has
 - **Undo and confirmation** — `undo_change` reverts one transaction of the
-  edit history; it, `delete_records` and `merge_objects` ask the user, not
+  edit history; it, `delete_records` and `merge_records` ask the user, not
   the model, before they change the tree, in clients that support MCP
   elicitation
 - **Scans and photos** — opt-in previews that vision-capable agents can read,

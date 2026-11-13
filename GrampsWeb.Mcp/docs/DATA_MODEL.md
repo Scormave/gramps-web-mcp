@@ -257,7 +257,7 @@ patch the raw stored JSON instead (`Tools/GrampsObjectPatch.cs`, see
 
 | Class | Location | Purpose |
 |-------|----------|---------|
-| `NotFoundHelper` | `Tools/NotFoundHelper.cs` | Builds not-found messages with contextual hints (e.g. names the type of a Gramps ID passed for another type, or says no object has a missing Gramps ID and points to `search` and `list_objects`) |
+| `NotFoundHelper` | `Tools/NotFoundHelper.cs` | Builds not-found messages with contextual hints (e.g. names the type of a Gramps ID passed for another type, or says no object has a missing Gramps ID and points to `search` and `list_records`) |
 | `ResponseEnvelope` | `Formatters/ResponseEnvelope.cs` | Adds machine-readable YAML-like headers (`type`, `handle`, `gramps_id`, `action`) to tool responses and provides next-step hints for create operations |
 
 ---

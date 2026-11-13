@@ -18,10 +18,10 @@ public static class SystemTools
         "user, an undo marker, and each changed object's class, change kind (added/updated/deleted) and handle, " +
         "with the first 10 objects of each transaction and how many more it changed. A link added or removed between " +
         "objects appears as Reference from one handle to the other. limit counts transactions, not objects, and stops at " +
-        "the latest 100, so older history is out of reach here; list_objects with sort -change lists records by last edit " +
+        "the latest 100, so older history is out of reach here; list_records with sort -change lists records by last edit " +
         "instead. Use it to see what was changed last and by whom, to check that your own writes landed, or to find the " +
         "number undo_change takes to revert a transaction; " +
-        "for the dated events of one person use get_timeline, and read a changed record with get_object.")]
+        "for the dated events of one person use get_timeline, and read a changed record with get_records.")]
     public static async Task<string> GetRecentChanges(
         [Description("How many transactions to show, 1–100 (default 20); other values are clamped.")]
         int limit = 20,
@@ -50,7 +50,7 @@ public static class SystemTools
         "not through this server, and a tree may have none. All bookmarks come in one response, without paging: types in the " +
         "order above, records in the tree's bookmark order, and a record that can no longer be read as its bare handle. " +
         "Use it to start from the records the tree's users marked; " +
-        "to find records by name use search, to browse one type use list_objects, for recent edits use get_recent_changes.")]
+        "to find records by name use search, to browse one type use list_records, for recent edits use get_recent_changes.")]
     public static async Task<string> GetBookmarks(GrampsApiClient client)
     {
         try

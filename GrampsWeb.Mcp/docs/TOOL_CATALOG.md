@@ -14,27 +14,27 @@ tree, and a Gramps ID such as `I0012` works as well.
 
 | You ask | The agent uses | You get |
 |---------|----------------|---------|
-| "Tell me about Maria García." | `search`, then `get_object` with `extended: true` | Her names, events with dates and places, parents, spouses and children, citations and notes |
+| "Tell me about Maria García." | `search`, then `get_records` with `extended: true` | Her names, events with dates and places, parents, spouses and children, citations and notes |
 | "Who were Kenji Tanaka's great-grandparents?" | `get_person_tree` with `direction: "ancestors"` and `generations: 3` | Each ancestor with a kinship label such as Father's mother, and birth and death dates and places |
 | "How is Ivan Petrov related to Maria García?" | `search` for both, then `get_relations` | The relationship in words, such as second cousin once removed, and the common ancestors by name |
 | "What happened in Liam Murphy's family from 1900 to 1920?" | `get_timeline` with `relatives` and `dates: "1900-1920"` | The dated events of Liam, his parents, siblings, wife and children, in date order |
-| "Who in the tree has no parents, spouse or children?" | `list_objects` with the filter rule `Disconnected` | The people with no family links, page by page |
-| "Who was born in Dublin before 1900? Oldest first." | `list_objects` with the filter rule `HasBirth` and `sort` | The matching people in order of birth |
-| "Transcribe the baptism scan O0012." | `read_media`, with `region` to zoom in on one entry | The scan for the agent to read, and the transcription in its reply |
+| "Who in the tree has no parents, spouse or children?" | `list_records` with the filter rule `Disconnected` | The people with no family links, page by page |
+| "Who was born in Dublin before 1900? Oldest first." | `list_records` with the filter rule `HasBirth` and `sort` | The matching people in order of birth |
+| "Transcribe the baptism scan O0012." | `get_media_image`, with `region` to zoom in on one entry | The scan for the agent to read, and the transcription in its reply |
 | "Add Thomas Weber, born 3 May 1881 in Hamburg, son of Karl and Anna Weber." | `search` for each person and place, then `create_records` | The new places, events, people and family saved in one transaction with their Gramps IDs, people already in the tree reused, and what the text left open |
 | "Enter entry 12 of the 1884 marriage register: the couple, their fathers and the witnesses." | `search` for each person, then `create_records` | The citation, the marriage, the new people and families saved in one transaction, which one `undo_change` takes back |
 | "Cite entry 45 of the 1881 St Michael register for Thomas's birth." | `search` for the source, then `create_records` for the citation (and the source, when it is new) and `update_event` with `linkMode: "add"` | The citation on the birth, the event's other citations kept |
 | "Attach ~/Downloads/baptism-1881.jpg to Thomas's birth." | `upload_media` with `attachTo` | The scan on the birth event; a file the tree already stores is linked, not uploaded again |
 | "Add today's findings to my research note." | `update_note` with `appendText` | The note extended at the end, its earlier text, styling and links untouched |
-| "Check my grandfather's branch for mistakes." | the `audit-tree` prompt: `list_objects` with filter rules, `get_timeline`, `get_person_tree` and `find_duplicates` | A report of impossible dates, possible duplicates, unsourced facts, unlinked records and missing data, most serious first, with nothing changed |
-| "Is anyone in the tree entered twice?" | `find_duplicates`, then `get_object` for both people of a pair | The pairs with the same name in any spelling, possible duplicates first, each person with birth, death and parents |
-| "I0042 and I0107 are the same Anna Petrova. Merge them." | `get_object` for both, then `merge_objects` once you confirm | One person with the events, families, citations and notes of both, the other name kept as an alternate name, which one `undo_change` takes back |
+| "Check my grandfather's branch for mistakes." | the `audit-tree` prompt: `list_records` with filter rules, `get_timeline`, `get_person_tree` and `find_duplicates` | A report of impossible dates, possible duplicates, unsourced facts, unlinked records and missing data, most serious first, with nothing changed |
+| "Is anyone in the tree entered twice?" | `find_duplicates`, then `get_records` for both people of a pair | The pairs with the same name in any spelling, possible duplicates first, each person with birth, death and parents |
+| "I0042 and I0107 are the same Anna Petrova. Merge them." | `get_records` for both, then `merge_records` once you confirm | One person with the events, families, citations and notes of both, the other name kept as an alternate name, which one `undo_change` takes back |
 | "What changed today? Undo the last edit." | `get_recent_changes`, then `undo_change` once you confirm | The edit history, then the earlier versions back, or a refusal naming the later edits the undo would overwrite |
 
 The requests that only read the tree also work in
 [read-only mode](CONFIGURATION.md#runtime-mode). Reading scans needs
 [media access](CONFIGURATION.md#media-file-access), and attaching them needs an
-[upload folder](CONFIGURATION.md#media-upload). `delete_records`, `merge_objects` and
+[upload folder](CONFIGURATION.md#media-upload). `delete_records`, `merge_records` and
 `undo_change` change the tree only after you confirm; see
 [Confirming deletes, merges and undos](CONFIGURATION.md#confirming-deletes-merges-and-undos). Clients that
 show MCP prompts also offer `research-person`, `find-connections`,
@@ -53,8 +53,8 @@ show MCP prompts also offer `research-person`, `find-connections`,
 Read-only mode (`GRAMPS_READ_ONLY=true`) publishes only the read-only tools.
 Direct calls to a previously known write-tool name still return an MCP error
 before any mutation request is sent to Gramps Web.
-When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media`
-is also omitted from the catalog; `get_object` still reads
+When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `get_media_image`
+is also omitted from the catalog; `get_records` still reads
 media metadata. `upload_media` is published only when media access is enabled
 and `GRAMPS_MEDIA_UPLOAD_DIRS` names at least one upload folder.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
@@ -73,7 +73,7 @@ The server also sends **instructions** at initialization
 and `linkMode` work, the order to create linked records in, and when to delete.
 They name only the tools the configuration publishes: read-only mode replaces
 the writing guidance with one line saying no tool changes the tree,
-`read_media` is mentioned only when media access is enabled, and
+`get_media_image` is mentioned only when media access is enabled, and
 `upload_media` only when media access is enabled and an upload folder is set.
 
 Create/update/delete HTTP calls are serialized in-process by default
@@ -152,11 +152,11 @@ link that already shows that region is left as it is, so repeating a call
 changes nothing. To show two regions of one image on a record, list the media
 twice, each with its region. In `replace` mode a region is laid over the
 matching stored link like other link fields. Records list each media link with
-its region, and `read_media` with `region` shows what a region covers before it
+its region, and `get_media_image` with `region` shows what a region covers before it
 is saved.
 
 ```text
-read_media(handle: "O0100", region: [5, 50, 95, 75])
+get_media_image(handle: "O0100", region: [5, 50, 95, 75])
 update_person(handle: "PERSON_HANDLE", mediaHandles: [{"ref": "MEDIA_HANDLE", "region": [5, 50, 95, 75]}], linkMode: "add")
 upload_media(filePath: "page12.jpg", attachTo: [{"ref": "I0001", "region": [5, 50, 95, 75]}, "C0001"])
 ```
@@ -208,11 +208,11 @@ Parameters that take a handle also accept a Gramps ID: an uppercase prefix
 letter followed by digits, 2–8 characters in total. Tags have no Gramps ID and
 are given by handle.
 
-A parameter that names one record, such as `handle` or `identifier`, resolves
-the ID by the Gramps default prefixes: `I` person, `F` family, `E` event, `P`
-place, `S` source, `C` citation, `R` repository, `N` note, `O` media. An ID
-with another type's prefix, or one that no object has, is passed on unchanged
-and ends in a not-found result.
+A parameter that names the records a tool acts on, such as `handle` or
+`identifiers`, resolves each Gramps ID by the Gramps default prefixes: `I`
+person, `F` family, `E` event, `P` place, `S` source, `C` citation, `R`
+repository, `N` note, `O` media. An ID with another type's prefix, or one that
+no object has, is passed on unchanged and ends in a not-found result.
 
 A link field, such as `noteHandles`, `eventRefs`, `fatherHandle` or
 `placeHandle`, links one type, so its Gramps IDs are looked up among the
@@ -230,10 +230,10 @@ A missing object returns `<Type> not found: <identifier>` as normal tool
 output, with a hint when the identifier looks like a Gramps ID:
 
 - An ID with another type's prefix names that type and suggests
-  `get_object(identifier: "…")` to read it.
+  `get_records(identifiers: ["…"])` to read it.
 - An ID with an unknown prefix gets the prefix the tool expects.
 - An ID with the right prefix that no object has points to `search` and
-  `list_objects(objectType: "…")`.
+  `list_records(objectType: "…")`.
 - An identifier shorter than five characters that is not a Gramps ID gets a
   reminder that handles are long strings and Gramps IDs need their prefix.
 
@@ -301,7 +301,7 @@ An error occurred invoking 'create_records': Unknown field "maidenName" in name 
 ```
 
 ```text
-An error occurred invoking 'get_object': Unknown argument: extend (did you mean extended?). Parameters: identifier (string, required), objectType (string), extended (boolean).
+An error occurred invoking 'get_records': Unknown argument: extend (did you mean extended?). Parameters: identifiers (array of strings, required), objectType (string), extended (boolean).
 ```
 
 ## Resources
@@ -314,7 +314,7 @@ Read-only reference/discovery data exposed as MCP resources:
 | `gramps://types` | Built-in and custom type vocabularies (event/place/note/etc.) |
 | `gramps://metadata` | Connection/tree metadata (API version, tree id/name, owner, default person) |
 | `gramps://name-settings` | Name display formats and surname grouping rules |
-| `gramps://filter-rules` | How to write the `rules` of `list_objects`, with the number of rules and the saved filters of each type |
+| `gramps://filter-rules` | How to write the `rules` of `list_records`, with the number of rules and the saved filters of each type |
 | `gramps://filter-rules/{objectType}` | The filter rules of one type (such as `people`) by category, with the values each takes, and the tree's saved filters |
 | `gramps://media/{handle}/thumbnail/{size}` | Opt-in JPEG preview (PNG when transparent) rendered from an image original, at most `{size}` (1–4096) pixels on the long edge, metadata stripped; recommended for vision agents |
 | `gramps://media/{handle}/file` | Opt-in full media file bytes, subject to size and private-record safeguards |
@@ -346,7 +346,7 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 |------|------------|---------|
 | `add-person` | `name`, `gender` (default Unknown), optional `birthDate`, `birthPlace`, `deathDate`, `deathPlace` | Add a new person with optional birth/death details: search for the person and the places, then one `create_records` call with the new places, the birth and death events and the person linking them by `"#key"`; on a refusal show the possible duplicates and ask; then confirm with handle and Gramps ID. |
 | `research-person` | `person` (handle, Gramps ID such as I0001, or name) | Start with the person record; retrieve extended details, a timeline, or the requested tree branch only when relevant. |
-| `add-family` | optional `father`, `mother`, `relationship`, optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, one `create_records` call with the family and, when a marriage date is given, its Marriage event linked by `"#marriage"`, then `get_object` for the family. |
+| `add-family` | optional `father`, `mother`, `relationship`, optional `marriageDate`, `marriagePlace` | Create a couple family: verify or find parents, one `create_records` call with the family and, when a marriage date is given, its Marriage event linked by `"#marriage"`, then `get_records` for the family. |
 | `find-connections` | `person1`, `person2` (name, handle, or Gramps ID) | Resolve both handles, `get_relations`, explain kinship or compare ancestor trees with `get_person_tree` if no direct link. |
 | `import-from-text` | `text` | Parse free-form genealogy text: search for existing people, places and the source, save the new places, source, citation, events, people and families in one `create_records` call linked by `"#key"`, attach new events to existing people and new children to existing families with `linkMode: "add"`, then report import summary and gaps. |
 | `change-link` | `ownerType`, `owner`, `linkField`, `target`, optional `action` (`add` by default) | Resolve existing records, add or remove one link with `linkMode`, then verify the owner. |
@@ -357,10 +357,14 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 
 ## Object tools (`ObjectTools.cs`) — 2 tools
 
-### R — `GetObject`
-Fetch one record by handle or Gramps ID. A Gramps ID determines its type from
-its prefix; an opaque handle requires `objectType`. `extended=true` resolves
-linked details for people and families only; an extended person names the
+### R — `GetRecords`
+Read up to 20 records of any types by handle or Gramps ID, in the order given,
+each card separated from the next by a line `---`. A Gramps ID determines its
+type from its prefix; opaque handles require `objectType`, and are then all of
+that type. Repeated identifiers are read once, and a record the tree lacks
+gets its not-found message in its place while the others are still read.
+`extended=true` resolves linked details for the people and families among
+them, and other records are read as usual; an extended person names the
 parents, spouse, and children in each family, with the marriage and divorce,
 from the person request, and names the others in each event the person takes
 part in under another role, such as the child of a `[Father]` birth, in one
@@ -376,16 +380,17 @@ and for objects that cannot be read, the handle stays bare. A person card is
 headed by the name in the tree's display format, as lists and `search` show it
 (`Petrova, Anna Ivanovna`), and spells out the primary name as stored below.
 
-Validation errors name the problem: an opaque handle without `objectType`, an
-unknown `objectType`, an `objectType` that disagrees with the Gramps ID prefix
-(such as `objectType: "family"` with `I0001`), or `extended=true` for a type
-other than person or family.
+Validation errors name the problem and nothing is read: no identifiers, an
+empty one, more than 20, an opaque handle without `objectType`, an unknown
+`objectType`, an `objectType` that disagrees with a Gramps ID prefix (such as
+`objectType: "family"` with `I0001`), or `extended=true` when none of the
+records is a person or family.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `identifier` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
-| `objectType` | `string?` | no | — | Required for an opaque handle; inferred from a Gramps ID. `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
-| `extended` | `bool` | no | `false` | For people and families only, resolve linked details inline |
+| `identifiers` | `string[]` | yes | — | 1–20 Gramps IDs, such as `I0001`, or handles, of any types |
+| `objectType` | `string?` | no | — | Required for opaque handles, which are then all of this type; inferred from a Gramps ID. `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
+| `extended` | `bool` | no | `false` | For the people and families among the records, resolve linked details inline |
 
 ### D — `DeleteRecords`
 Delete up to 50 records of any types: people, families, events, places,
@@ -460,7 +465,7 @@ people of demo.grampsweb.org take 13 to 20 seconds.
 Possible duplicates come first, then pairs by how close the births are. Pairs
 are numbered across pages; `limit` and `offset` step through them. Each person
 shows the Gramps ID, handle, birth, death and parents, and the next steps name
-`get_object` for the first pair and `merge_objects`, which needs the user's
+`get_records` for the first pair and `merge_records`, which needs the user's
 confirmation. Nothing in the tree changes. Gramps keeps no record that two
 people are not the same, so a pair the user rejected is listed again; children
 given the name of an earlier child who died show up when the tree has no death
@@ -483,7 +488,7 @@ find_duplicates(personHandle: "I0012")
 
 ## Merge (`MergeTools.cs`) — 1 tool
 
-### U — `MergeObjects`
+### U — `MergeRecords`
 Merge a duplicate into the record to keep through Gramps Web's merge endpoint
 (`POST /api/{type}/{keep}/merge/{duplicate}`), which runs Gramps' own merge in one transaction: the duplicate's details and
 every link to it move to the kept record, and the duplicate is deleted. Works
@@ -531,7 +536,7 @@ Marriage events that came along, and `undo_change` with the transaction to
 restore the duplicate.
 
 ```text
-merge_objects(objectType: "person", keepHandle: "I0042", duplicateHandle: "I0107")
+merge_records(objectType: "person", keepHandle: "I0042", duplicateHandle: "I0107")
 undo_change(transactionId: 415)
 ```
 
@@ -657,7 +662,7 @@ people's side in the same transaction: a new father, mother or child gets the
 family on their record, one replaced or removed loses it, and a father, mother
 or new child that does not exist makes it refuse the change, so nothing is
 saved. Returns the update header (type, `action: updated`, handle, Gramps ID),
-not the changed family; read it back with `get_object`.
+not the changed family; read it back with `get_records`.
 
 ---
 
@@ -730,7 +735,7 @@ is not found, or found more than once, is rejected and nothing is saved.
 
 ## Media (`MediaTools.cs`) — 3 tools
 
-Use `get_object(objectType: "media", ...)` for media metadata. It does not
+Use `get_records` for media metadata. It does not
 upload or download file bytes. Media byte tools/resources require
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect `GRAMPS_MEDIA_MAX_BYTES`, and
 block private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
@@ -738,7 +743,7 @@ Uploading with `upload_media` or `update_media(filePath)` requires
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true` and `GRAMPS_MEDIA_UPLOAD_DIRS`, and
 respects `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`.
 
-### R — `ReadMedia`
+### R — `GetMediaImage`
 Download media bytes as typed MCP content. Default mode `thumbnail` returns a
 JPEG preview (PNG when the image has transparency) rendered by the server from
 the original, with EXIF, GPS, and other metadata stripped. Previews can be
@@ -755,11 +760,6 @@ an embedded blob with a text hint. Prefer thumbnails before full files.
 | `mode` | `string` | no | `thumbnail` | `thumbnail` or `file` |
 | `size` | `int?` | no | — | Thumbnail long edge in pixels, 1 to 4096; omitted means 1568, which keeps document scans legible. Images are never upscaled. Must be omitted in file mode |
 | `region` | `double[]?` | no | — | Show only this part of the image, `[left, top, right, bottom]` in percent as on a media link (see [Image regions](#image-regions)), at up to `size` pixels on its long edge; a small region is read from the full-resolution original. Thumbnail mode only |
-
-Migration: replace `get_media_thumbnail(handle, size)` with
-`read_media(handle, mode: "thumbnail", size: size)` and replace
-`get_media_file(handle)` with `read_media(handle, mode: "file")`.
-The old tool names are no longer registered. Media resource URIs are unchanged.
 
 ### C — `UploadMedia`
 Upload a photo, document scan or PDF from an upload folder as a new media
@@ -780,7 +780,7 @@ where the file itself came from; to show a scan as the evidence of a register
 entry, attach it to that entry's citation with `attachTo` instead. It is the
 only tool that uploads a file: `create_records` takes no media, and a
 transcription belongs in one of its `notes`. Change the record later, or swap
-its file, with `update_media`; check a region with `read_media`.
+its file, with `update_media`; check a region with `get_media_image`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
@@ -914,7 +914,7 @@ also takes `key`.
 
 #### `tags`
 Colored labels for grouping records, saved first; tags have no Gramps ID.
-Call `list_objects('tags')` first, and keep names distinct: filters such as
+Call `list_records('tags')` first, and keep names distinct: filters such as
 `HasTag` find tags by name. Other records of the call carry a new tag through
 `tagHandles` (`["#todo"]`); existing records get it with `update_*` and
 `linkMode: "add"`.
@@ -927,7 +927,7 @@ Call `list_objects('tags')` first, and keep names distinct: filters such as
 
 #### `repositories`
 An archive, library, church, website or other holder of sources. Call
-`list_objects('repositories')` first so one holder is not entered twice.
+`list_records('repositories')` first so one holder is not entered twice.
 Sources link to a repository through `repositoryHandles`, which also carry the
 call number.
 
@@ -1114,7 +1114,7 @@ role; the death year is the death's, else a burial's or cremation's.
 | Namesake | Result |
 |----------|--------|
 | Born up to two years apart, or a child of the same parents when either year is missing | Possible duplicate: nothing is saved, `action: refused`, with the candidates and next steps |
-| Born three to five years apart, or either year missing | Similar person: the records are saved and the reply lists them after the records, with the new person's handle for a `merge_objects` hint |
+| Born three to five years apart, or either year missing | Similar person: the records are saved and the reply lists them after the records, with the new person's handle for a `merge_records` hint |
 | Born more than five years apart | Not listed |
 
 `notDuplicateOf` takes the Gramps IDs or handles from a refusal that are
@@ -1134,7 +1134,7 @@ someone else.
 ### R — `Search`
 Full-text search across all object types.  Supports `*` wildcards: `Smith*`
 also finds `Smithson`. Hits of all types come ranked by relevance; there is no
-type filter, so use `ListObjects` for one type. The header
+type filter, so use `ListRecords` for one type. The header
 reads `Search Results (Page 1 of 3, Total: 47):`; each row is a one-line
 summary such as `Person: …` or `Place: … (City)` followed by
 `— handle: … | gramps_id: …`. A page past the last one says so and gives the
@@ -1146,7 +1146,7 @@ total instead of returning nothing.
 | `page` | `int` | no | `1` | 1-based page |
 | `pagesize` | `int` | no | `20` | Page size (max 100) |
 
-### R — `ListObjects`
+### R — `ListRecords`
 Paginated list of one object type with optional filtering. The header reads
 `PEOPLE (Page 1 of 5, Total: 93)`; rows are numbered across pages and use the
 same summary and `handle | gramps_id` suffix as `search`. An empty page returns
@@ -1179,9 +1179,9 @@ levels deep. A saved filter of the tree is the rule `MatchesFilter` with its
 name.
 
 ```text
-list_objects(objectType: "people", rules: {"rules": [{"name": "Disconnected"}]})
-list_objects(objectType: "people", rules: {"invert": true, "rules": [{"name": "IsRelatedWith", "values": ["I0001"]}]})
-list_objects(objectType: "people", rules: [{"namespace": "Event", "rules": [{"name": "HasType", "values": ["Residence"]}]}])
+list_records(objectType: "people", rules: {"rules": [{"name": "Disconnected"}]})
+list_records(objectType: "people", rules: {"invert": true, "rules": [{"name": "IsRelatedWith", "values": ["I0001"]}]})
+list_records(objectType: "people", rules: [{"namespace": "Event", "rules": [{"name": "HasType", "values": ["Residence"]}]}])
 ```
 
 The shape, keys and namespaces are checked before the request, with the path
@@ -1314,7 +1314,7 @@ undo_change(transactionId: 412)
 | Undo | 0 | 0 | 1 | 0 | 1 |
 | **Total with media access and upload enabled** | **11** | **2** | **12** | **1** | **26** |
 
-With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `read_media` and
+With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `get_media_image` and
 `upload_media` are hidden: the default catalog contains 24 tools in read/write
 mode. With media access enabled, `upload_media` also needs
 `GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 11 tools
@@ -1345,13 +1345,13 @@ encloses other places is blocked even with `force=true`, since Gramps Web would
 leave the enclosed places pointing at a missing place. A deletion can be
 reverted with `undo_change`, which restores the records with their handles,
 Gramps IDs and links, and the links removed from other records.
-`merge_objects` deletes the duplicate only after moving every link to the kept
+`merge_records` deletes the duplicate only after moving every link to the kept
 record, so it leaves no dangling references, and `undo_change` with its
 transaction restores the duplicate.
 
 ## Confirmation dialogs
 
-`delete_records`, `merge_objects` and `undo_change` ask the user, not the
+`delete_records`, `merge_records` and `undo_change` ask the user, not the
 model, before they change the tree, through MCP elicitation. The client shows
 the question with a single checkbox, `confirm`, unticked by default:
 

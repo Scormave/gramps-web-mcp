@@ -5,7 +5,7 @@ using Xunit;
 
 namespace GrampsWeb.Mcp.IntegrationTests;
 
-/// <summary>The rules argument of list_objects and the filter-rules reference, against Gramps Web's own filters.</summary>
+/// <summary>The rules argument of list_records and the filter-rules reference, against Gramps Web's own filters.</summary>
 [Collection(GrampsWebCollection.Name)]
 public sealed class FilterRuleTests(GrampsWebFixture gramps)
 {
@@ -41,7 +41,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
     {
         var kin = await CreateKinAsync();
 
-        var listed = await Session.CallAsync("list_objects", new
+        var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
             gql = kin.Gql,
@@ -57,7 +57,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
     {
         var kin = await CreateKinAsync();
 
-        var listed = await Session.CallAsync("list_objects", new
+        var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
             gql = kin.Gql,
@@ -78,7 +78,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
         var kin = await CreateKinAsync();
 
         // The array of rules alone is an "and" filter.
-        var listed = await Session.CallAsync("list_objects", new
+        var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
             gql = kin.Gql,
@@ -107,7 +107,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
             eventRefs = new[] { $"{birth.Handle}::Primary" }
         });
 
-        var listed = await Session.CallAsync("list_objects", new
+        var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
             gql = $"primary_name.first_name = {first}",
@@ -126,7 +126,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
         await SaveFilterAsync("people", new { name = filterName, comment = "Integration test", rules = new[] { new { name = "IsFemale" } } });
 
         // A JSON string works as well as JSON, for clients that send arguments as text.
-        var listed = await Session.CallAsync("list_objects", new
+        var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
             gql = kin.Gql,
@@ -142,7 +142,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task Rules_NamingAMissingTagSayWhyNothingMatched()
     {
-        var listed = await Session.CallAsync("list_objects", new
+        var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
             rules = new[] { new { name = "HasTag", values = new[] { TestNames.Unique("tag") } } }
@@ -154,7 +154,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
     [IntegrationFact]
     public async Task Rules_UnknownRuleIsNamedWithTheClosestOne()
     {
-        var error = await Session.CallErrorAsync("list_objects", new
+        var error = await Session.CallErrorAsync("list_records", new
         {
             objectType = "people",
             rules = new[] { new { name = "IsRelatedwith", values = new[] { "I0001" } } }
@@ -168,7 +168,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
     public async Task Rules_RuleThatCannotRunKeepsTheServersReason()
     {
         // MatchesFilter needs the filter's name; without it Gramps fails while evaluating the rule.
-        var error = await Session.CallErrorAsync("list_objects", new
+        var error = await Session.CallErrorAsync("list_records", new
         {
             objectType = "people",
             rules = new[] { new { name = "MatchesFilter" } }

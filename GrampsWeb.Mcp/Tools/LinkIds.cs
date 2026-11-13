@@ -183,7 +183,7 @@ internal sealed class LinkIds
     {
         if (pending.Collection == "tags")
             return $"{pending.Field}: {pending.Id} is not a tag handle; tags have no Gramps ID, so give the tag's handle " +
-                   "from list_objects(objectType: \"tags\").";
+                   "from list_records(objectType: \"tags\").";
 
         var noun = Noun(pending.Collection);
         var prefixType = HandleResolver.PrefixToObjectType(pending.Id[0]);

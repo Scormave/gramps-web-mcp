@@ -457,7 +457,7 @@ public class DuplicatePeopleTests
         Assert.Contains("    • Образцов, Иван (I0012) [handle: h-ivan], b. 1881, " +
                         "child of Образцов, Петр (I0100) — same name, born 1 year apart\n", result);
         Assert.Contains("  Similar people (1):\n    • Образцов, Иван (I0013) [handle: h-namesake]", result);
-        Assert.Contains("get_object(objectType: \"person\", identifier: \"I0012\", extended: true)", result);
+        Assert.Contains("get_records(objectType: \"person\", identifiers: [\"I0012\"], extended: true)", result);
         Assert.Contains("people[0] notDuplicateOf: [\"I0012\"]", result);
     }
 
@@ -474,7 +474,7 @@ public class DuplicatePeopleTests
         Assert.Contains("action: created", result);
         Assert.Contains("Similar people already in the tree, possibly the same as a new person:\n", result);
         Assert.Contains("    • Образцов, Иван (I0013) [handle: h-namesake] — same name, no birth years to compare\n", result);
-        Assert.Contains("merge_objects(objectType: \"person\", keepHandle: \"<their handle>\", " +
+        Assert.Contains("merge_records(objectType: \"person\", keepHandle: \"<their handle>\", " +
                         "duplicateHandle: \"<the new person's handle>\")", result);
         Assert.DoesNotContain("h-ivan", result);
     }

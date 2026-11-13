@@ -40,13 +40,13 @@ public static class MergeTools
 
     private const string ValidTypes = "person, family, event, place, source, citation, note, media or repository";
 
-    [McpServerTool(Title = "Merge Objects", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [McpServerTool(Title = "Merge Records", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [McpMeta("anthropic/requiresUserInteraction", true)]
     [Description(
         "Merge a duplicate into the record to keep when both describe the same person, family, event, place, source, " +
         "citation, note, media object or repository: Gramps Web moves the duplicate's details and every link to it onto " +
         "the kept record and deletes the duplicate, all in one transaction. Call it only after the user confirmed that " +
-        "the two records are the same; read both with get_object first, and find candidates with search or list_objects. " +
+        "the two records are the same; read both with get_records first, and find candidates with search or list_records. " +
         "The kept record keeps its own fields: a person's primary name, gender, birth and death, an event's type, date, " +
         "place and description, a source's title, a citation's page, date and source, a note's text, a media object's " +
         "file. The duplicate's name becomes an alternate name of the kept person or place, and its events, children, " +
@@ -56,7 +56,7 @@ public static class MergeTools
         "child, and tags cannot be merged. Clients that support it show the user a confirmation dialog first; action " +
         "declined or cancelled means nothing changed. Returns action merged with the kept and deleted records and the " +
         "transaction number: undo_change with it restores the duplicate.")]
-    public static Task<string> MergeObjects(
+    public static Task<string> MergeRecords(
         [Description("Type of both records: " + ValidTypes + ".")]
         string objectType,
         [Description("The record that stays and keeps its own fields. " + ToolDescriptionFragments.HandleDiscovery)]
@@ -72,10 +72,10 @@ public static class MergeTools
         GrampsApiClient client = null!,
         McpServer server = null!,
         CancellationToken cancellationToken = default) =>
-        MergeObjectsAsync(objectType, keepHandle, duplicateHandle, mergeFamilies, fatherHandle, motherHandle, client,
-            UserConfirmation.For(server, "merge_objects"), cancellationToken);
+        MergeRecordsAsync(objectType, keepHandle, duplicateHandle, mergeFamilies, fatherHandle, motherHandle, client,
+            UserConfirmation.For(server, "merge_records"), cancellationToken);
 
-    internal static async Task<string> MergeObjectsAsync(string objectType, string keepHandle, string duplicateHandle,
+    internal static async Task<string> MergeRecordsAsync(string objectType, string keepHandle, string duplicateHandle,
         bool mergeFamilies, string? fatherHandle, string? motherHandle, GrampsApiClient client,
         IUserConfirmation? confirmation = null, CancellationToken cancellationToken = default)
     {
@@ -252,7 +252,7 @@ public static class MergeTools
             if (kept != ofKeep && kept != ofDuplicate)
                 throw McpToolErrors.ValidationError(
                     $"{role}Handle must be the {role} of one of the two families; {requested.Trim()} is neither. " +
-                    $"Read both families with get_object to see their {role}s.");
+                    $"Read both families with get_records to see their {role}s.");
         }
         else
         {
@@ -447,29 +447,29 @@ public static class MergeTools
     {
         if (kind.ApiPath is "people" or "families")
         {
-            yield return $"Read the result: get_object(objectType: \"{kind.Type}\", identifier: \"{keep}\", extended: true). " +
+            yield return $"Read the result: get_records(objectType: \"{kind.Type}\", identifiers: [\"{keep}\"], extended: true). " +
                          (kind.ApiPath == "people"
                              ? "Two Birth or two Death events mean the duplicate's came along: "
                              : "Two Marriage events mean the duplicate's came along: ") +
-                         "merge them with merge_objects(objectType: \"event\", …) once the user confirms.";
+                         "merge them with merge_records(objectType: \"event\", …) once the user confirms.";
         }
         else
         {
-            yield return $"Read the result: get_object(objectType: \"{kind.Type}\", identifier: \"{keep}\").";
+            yield return $"Read the result: get_records(objectType: \"{kind.Type}\", identifiers: [\"{keep}\"]).";
         }
 
         if (kind.ApiPath == "people" && ReadHandles(keepData, "parent_family_list").Count > 0
                                      && ReadHandles(duplicateData, "parent_family_list").Count > 0)
         {
             yield return "Both people had parents, so the kept person now has two parent families; if they are the " +
-                         "same parents, merge the families with merge_objects(objectType: \"family\", …).";
+                         "same parents, merge the families with merge_records(objectType: \"family\", …).";
         }
 
         if (kind.ApiPath == "people" && !mergeFamilies && ReadHandles(keepData, "family_list").Count > 0
             && ReadHandles(duplicateData, "family_list").Count > 0)
         {
             yield return "Families with the same partner were kept apart; merge them with " +
-                         "merge_objects(objectType: \"family\", …) if they are one marriage.";
+                         "merge_records(objectType: \"family\", …) if they are one marriage.";
         }
 
         yield return transaction is not null

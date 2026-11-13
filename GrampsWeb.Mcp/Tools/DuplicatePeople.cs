@@ -304,8 +304,8 @@ internal static partial class DuplicatePeople
 
         sb.AppendLine();
         sb.AppendLine("Next steps:");
-        sb.AppendLine("  • Compare: get_object(objectType: \"person\", " +
-                      $"identifier: \"{Identifier(refused[0].Result.Strong[0])}\", extended: true).");
+        sb.AppendLine("  • Compare: get_records(objectType: \"person\", " +
+                      $"identifiers: [\"{Identifier(refused[0].Result.Strong[0])}\"], extended: true).");
         sb.AppendLine("  • The same person: leave the record out, give the existing person's handle where its \"#key\" " +
                       "was, and add the new details with update_person.");
         sb.AppendLine("  • A different person: call create_records again with the same records, adding notDuplicateOf " +
@@ -332,8 +332,8 @@ internal static partial class DuplicatePeople
                 AppendCandidates(sb, check.Result.Weak, "    ");
             }
 
-            sb.AppendLine("If one of them is the new person, compare them with get_object and merge the new record into " +
-                          "theirs: merge_objects(objectType: \"person\", keepHandle: \"<their handle>\", " +
+            sb.AppendLine("If one of them is the new person, compare them with get_records and merge the new record into " +
+                          "theirs: merge_records(objectType: \"person\", keepHandle: \"<their handle>\", " +
                           "duplicateHandle: \"<the new person's handle>\").");
         }
 

@@ -119,7 +119,7 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
   coordinate with external clients. Writes run in parallel only when this is
   `false` and `GRAMPS_MUTATION_MIN_INTERVAL_MS` is `0`; a minimum interval
   keeps the single-flight lock.
-- `GRAMPS_CONFIRMATION`: whether `delete_records`, `merge_objects` and
+- `GRAMPS_CONFIRMATION`: whether `delete_records`, `merge_records` and
   `undo_change` ask the user through MCP elicitation before they change the
   tree. `when-supported` asks clients that advertise form elicitation and runs
   as before elsewhere; `required` refuses the change (`action: not_confirmed`)
@@ -130,8 +130,8 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
 ### Media
 
 When media access (`GRAMPS_MEDIA_RESOURCES_ENABLED`) is disabled, `tools/list`
-omits `read_media` and `upload_media`; media metadata remains available through
-`get_object`. `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig`
+omits `get_media_image` and `upload_media`; media metadata remains available through
+`get_records`. `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig`
 lists it as retired, and startup logs a warning when it is still set.
 
 Uploading needs media access and `GRAMPS_MEDIA_UPLOAD_DIRS`:
@@ -195,14 +195,14 @@ adds the call-tool filters for argument checks and read scopes, and, when
 needed, a `tools/list` filter that publishes only tools enabled by the current
 configuration:
 read-only mode removes write tools, disabled media access removes
-`read_media` and `upload_media`, and no upload folder removes `upload_media`. Hidden tools remain
+`get_media_image` and `upload_media`, and no upload folder removes `upload_media`. Hidden tools remain
 registered so direct calls still receive the normal read-only or configuration
 error.
 
 `Program.cs` sets `McpServerOptions.ServerInstructions` from
 `Hosting/GrampsServerInstructions.cs` in both transports. The instructions
 tell the client how the tools fit together and follow the same profile: no
-write guidance in read-only mode, no `read_media` while media access is
+write guidance in read-only mode, no `get_media_image` while media access is
 disabled, and no `upload_media` without both media access and an upload
 folder.
 
@@ -213,7 +213,7 @@ folder.
 `gramps://name-settings`, `gramps://filter-rules` and
 `gramps://filter-rules/{objectType}`. The filter rules come from Gramps Web's
 `/api/filters/` and are formatted by `FilterRulesFormatter`; `Tools/FilterRules.cs`
-checks the `rules` argument of `list_objects` before the request and explains
+checks the `rules` argument of `list_records` before the request and explains
 the server's refusals.
 
 It also exposes opt-in binary media resources:
@@ -245,7 +245,7 @@ display those four as image content.
 
 For clients that cannot call MCP `resources/read`, the same payloads are also
 available through the `GetReference` compatibility tool in `ReferenceTools.cs`.
-Media bytes are mirrored through `read_media` for clients that consume MCP
+Media bytes are mirrored through `get_media_image` for clients that consume MCP
 tool content directly. It always returns `CallToolResult`: mode `thumbnail`
 (default) contains image content, while mode `file` contains image, audio, or
 embedded blob resource content depending on MIME type. Thumbnail size defaults
@@ -368,7 +368,7 @@ line is built from the hit alone when its handle matches and it contains the
 fields that entity needs. Missing, partial, or incompatible objects are read
 again in one `GetByHandlesAsync` batch per type with the same profile; a hit
 the batch does not return is shown with "(error loading details)".
-`list_objects` requests the same profile for people, families, events, and
+`list_records` requests the same profile for people, families, events, and
 citations and formats rows with the same code. Result order follows the hits.
 
 ### 3. Models (`Models/`)

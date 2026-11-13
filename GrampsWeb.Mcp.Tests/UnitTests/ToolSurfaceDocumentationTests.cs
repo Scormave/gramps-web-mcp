@@ -24,11 +24,8 @@ public partial class ToolSurfaceDocumentationTests
         "README.md", "GrampsWeb.Mcp/docs/README.md", CatalogPath, "mcpb/manifest.template.json", "site/index.html"
     ];
 
-    /// <summary>
-    /// Names in the catalog that are not tools: the media tools 2.0 replaced, named in the migration note, and
-    /// the reply header field of undo_change.
-    /// </summary>
-    private static readonly string[] CatalogNonTools = ["get_media_file", "get_media_thumbnail", "undo_transaction"];
+    /// <summary>Names in the catalog that are not tools: the reply header field of undo_change.</summary>
+    private static readonly string[] CatalogNonTools = ["undo_transaction"];
 
     private static readonly Dictionary<string, int> NumberWords = new(StringComparer.OrdinalIgnoreCase)
     {

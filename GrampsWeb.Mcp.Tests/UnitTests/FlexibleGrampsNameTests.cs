@@ -401,7 +401,7 @@ public class FlexibleGrampsNameTests
     [Fact]
     public void Object_As_Returned_By_Gramps_Is_Accepted()
     {
-        // A name copied from get_object: _class markers, wire types, empty strings and empty lists.
+        // A name copied from get_records: _class markers, wire types, empty strings and empty lists.
         const string json = """
             {"_class":"Name","private":false,"surname_list":[
                 {"_class":"Surname","surname":"Garcia","prefix":"","primary":true,
