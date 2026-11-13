@@ -57,8 +57,9 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
   Desktop extension, a Docker image, or a single-file release binary
 
 The [tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) describes every tool,
-resource and prompt. Upgrading from 1.x? Follow the
-[2.0 migration guide](GrampsWeb.Mcp/docs/MIGRATING_TO_2.md).
+resource and prompt. Upgrading from 2.x? Follow the
+[3.0 migration guide](GrampsWeb.Mcp/docs/MIGRATING_TO_3.md); from 1.x, the
+[2.0 migration guide](GrampsWeb.Mcp/docs/MIGRATING_TO_2.md) first.
 
 ## What to ask
 
@@ -157,6 +158,7 @@ transports, browser origins and logging.
 | [Configuration](GrampsWeb.Mcp/docs/CONFIGURATION.md) | Every environment variable |
 | [Tool catalog](GrampsWeb.Mcp/docs/TOOL_CATALOG.md) | Every tool, resource and prompt, and more example requests |
 | [System prompt](GrampsWeb.Mcp/docs/SYSTEM_PROMPT.md) | Suggested prompt for MCP clients |
+| [Migrating to 3.0](GrampsWeb.Mcp/docs/MIGRATING_TO_3.md) | Renamed tools, create_records and the new linkMode default for 2.x users |
 | [Migrating to 2.0](GrampsWeb.Mcp/docs/MIGRATING_TO_2.md) | Tool replacements and setup changes for 1.x users |
 | [Claude Desktop MCPB](mcpb/README.md) | Desktop extension packaging |
 | [Architecture](GrampsWeb.Mcp/docs/ARCHITECTURE.md) | System design overview |

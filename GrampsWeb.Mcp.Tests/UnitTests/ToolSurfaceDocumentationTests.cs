@@ -218,8 +218,8 @@ public partial class ToolSurfaceDocumentationTests
     }
 
     /// <summary>
-    /// The documentation names only registered tools. The changelog and the 2.0 migration guide keep old names on
-    /// purpose and are not checked.
+    /// The documentation names only registered tools. The changelog and the migration guides keep old names on purpose
+    /// and are not checked.
     /// </summary>
     [Fact]
     public void Documentation_Names_Only_Registered_Tools()
@@ -231,7 +231,7 @@ public partial class ToolSurfaceDocumentationTests
             }
             .Concat(Directory.GetFiles(Path.Combine(Root, "GrampsWeb.Mcp", "docs"), "*.md")
                 .Select(path => Path.GetRelativePath(Root, path).Replace('\\', '/'))
-                .Where(path => path != "GrampsWeb.Mcp/docs/MIGRATING_TO_2.md"));
+                .Where(path => path is not ("GrampsWeb.Mcp/docs/MIGRATING_TO_2.md" or "GrampsWeb.Mcp/docs/MIGRATING_TO_3.md")));
 
         var stale = files
             .SelectMany(file => UnknownToolNames(ReadText(file), file == CatalogPath ? CatalogNonTools : [])

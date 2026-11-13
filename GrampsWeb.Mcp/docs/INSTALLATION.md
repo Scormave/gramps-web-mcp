@@ -176,8 +176,9 @@ To upgrade, pull the new image and recreate the container, install the bundle
 of the new release in Claude Desktop, or
 [download the release binary again](CLIENTS.md#over-stdio-with-the-release-binary).
 The [changelog](../../CHANGELOG.md) lists what each release changed. Upgrading
-from 1.x? Follow the [2.0 migration guide](MIGRATING_TO_2.md) to update saved
-tool calls and client settings.
+from 2.x? Follow the [3.0 migration guide](MIGRATING_TO_3.md) to update saved
+tool calls and client settings; from 1.x, follow the
+[2.0 migration guide](MIGRATING_TO_2.md) first.
 
 ### Data dropped by updates before 2.3.1
 

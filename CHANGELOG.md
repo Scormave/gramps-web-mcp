@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   tree or the call already has, ignoring case, stops the call before
   saving, and the error gives the existing tag's handle. A new tag no
   record of the call links to is listed in the reply
+- A [migration guide from 2.x](GrampsWeb.Mcp/docs/MIGRATING_TO_3.md)
+  maps every renamed and removed tool to its 3.0 call, shows which
+  saved `update_*` calls need `linkMode: "replace"`, and lists the
+  Gramps Web version check and the changed replies
 
 ### Changed
 
