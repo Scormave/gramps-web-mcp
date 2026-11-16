@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-11-16
+
 ### Fixed
 
 - `undo_change` named the type of a deleted event, note, place,
@@ -14,6 +16,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   position in the list of types instead of by its value. The names now
   come from `/api/types/default/{type}/map`; a type that cannot be
   named stays a number, and `-1` shows as Unknown
+
+### Security
+
+- The Docker image, MCP Bundles and binary archives are built on the
+  .NET runtime 10.0.15. The 2.10.0 image carries ASP.NET Core 10.0.14,
+  which has three HIGH vulnerabilities fixed in 10.0.15:
+  CVE-2026-114146 (elevation of privilege), CVE-2026-114147 and
+  CVE-2026-114149 (denial of service). The weekly image scan found them
+  in the 2.10.0 image; `latest` was already rebuilt on 10.0.15
 
 ## [2.10.0] - 2026-11-10
 
@@ -1330,7 +1341,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...HEAD
+[2.10.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.1...v2.10.0
 [2.9.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.1...v2.9.0
