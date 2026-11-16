@@ -134,10 +134,13 @@ omits `read_media` and `create_media`; media metadata remains available through
 `get_object`. `GRAMPS_MEDIA_ALLOWED_MIME_TYPES` is no longer read; `GrampsConfig`
 lists it as retired, and startup logs a warning when it is still set.
 
-Uploading needs media access and `GRAMPS_MEDIA_UPLOAD_DIRS`:
-`GrampsConfig.MediaUploadEnabled` is true only with both, and startup logs why
-uploading is off when folders are set without media access. Until then
-`tools/list` omits `create_media`, and `update_media` rejects `filePath`.
+Uploading needs media access and a source: `GRAMPS_MEDIA_UPLOAD_DIRS` for
+`filePath`, `GRAMPS_MEDIA_UPLOAD_HOSTS` for `file`, a file attached in the chat.
+`GrampsConfig.MediaUploadFromFoldersEnabled` and `MediaUploadFromLinksEnabled`
+say which sources are on, `MediaUploadEnabled` whether either is, and startup
+logs why uploading is off when either setting is set without media access.
+Until then `tools/list` omits `create_media`, and `update_media` rejects
+`filePath` and `file`.
 `GrampsConfig` expands a leading `~` or `${HOME}` in the folders, because Claude
 Desktop passes the MCPB default `${HOME}/Downloads` unexpanded until the user
 saves the setting. `MediaUploadFile` resolves symbolic links before checking
@@ -146,6 +149,16 @@ type from the file's first bytes (JPEG, PNG, GIF, WebP, TIFF, BMP, PDF). Gramps
 Web's `POST /api/media/` creates a record without checking for duplicates, so
 `create_media` first looks for a record with the file's MD5 checksum and reuses
 it.
+
+`file` is `Input/FileReference`, the shape ChatGPT passes for an attached file
+when a tool names the argument in its `openai/fileParams` metadata (set with
+`McpMeta` on both tools). `Tools/MediaDownloader`, a singleton, downloads it:
+HTTPS only, hosts and their subdomains from `GRAMPS_MEDIA_UPLOAD_HOSTS`,
+redirects followed by hand (at most 3) and checked like the first link, a
+`ConnectCallback` that resolves the host and connects only to public addresses,
+no proxy, cookies or decompression, a 60-second limit, and the upload size limit
+applied while reading. The bytes then go through `MediaUploadFile.FromBytes`,
+the same type check as a file from a folder.
 
 ### Logging
 
@@ -191,20 +204,24 @@ fallback while keeping the public catalog to one timeline tool.
 
 Tools are registered through `WithGrampsToolProfile()` in
 `Hosting/McpToolProfileExtensions.cs`. It calls `WithToolsFromAssembly()`,
-adds the call-tool filters for argument checks and read scopes, and, when
-needed, a `tools/list` filter that publishes only tools enabled by the current
+adds the call-tool filters for argument checks and read scopes, and a
+`tools/list` filter that publishes only tools enabled by the current
 configuration:
 read-only mode removes write tools, disabled media access removes
-`read_media` and `create_media`, and no upload folder removes `create_media`. Hidden tools remain
-registered so direct calls still receive the normal read-only or configuration
-error.
+`read_media` and `create_media`, and no upload folder or upload host
+removes `create_media`. The filter also lists only the upload sources the
+configuration allows on `create_media` and `update_media`: without upload hosts
+it drops `file` and `openai/fileParams`, and without upload folders it drops
+`filePath` and makes `file` required on `create_media`. Hidden tools and
+arguments remain registered so direct calls still receive the normal read-only
+or configuration error.
 
 `Program.cs` sets `McpServerOptions.ServerInstructions` from
 `Hosting/GrampsServerInstructions.cs` in both transports. The instructions
 tell the client how the tools fit together and follow the same profile: no
 write guidance in read-only mode, no `read_media` while media access is
 disabled, and no `create_media` without both media access and an upload
-folder.
+folder or upload host; the `create_media` line names only the sources allowed.
 
 ### 1b. Resources (`Resources/`)
 

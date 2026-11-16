@@ -9,8 +9,9 @@
 #   npm ci --prefix scripts/tdqs --ignore-scripts
 #   ./scripts/lint-tools.sh [--format text|markdown|json] [--output <file>]
 #
-# The server starts with every tool listed (editing and media uploads on) and
-# a Gramps Web address nothing answers, which listing the tools never calls.
+# The server starts with every tool and argument listed (editing and media
+# uploads on, from a folder and from attached files) and a Gramps Web address
+# nothing answers, which listing the tools never calls.
 # Errors and warnings fail; notes, such as no-output-schema for the tools that
 # return text, pass. Exit code: 0 when it passes, 1 on an error or warning,
 # 2 when the server does not start ("Connection closed": run the env command
@@ -36,6 +37,7 @@ fi
 # more), not this one, so env passes the settings.
 SETTINGS="GRAMPS_API_URL=http://127.0.0.1:9 GRAMPS_USERNAME=lint GRAMPS_PASSWORD=lint GRAMPS_TREE_ID=lint"
 SETTINGS+=" GRAMPS_MEDIA_RESOURCES_ENABLED=true GRAMPS_MEDIA_UPLOAD_DIRS='${TMPDIR:-/tmp}'"
+SETTINGS+=" GRAMPS_MEDIA_UPLOAD_HOSTS=files.example.com"
 
 exec "$TDQS" lint --server-name gramps-web-mcp --fail-on warning "$@" \
   --command "env $SETTINGS dotnet '$DLL'"

@@ -44,6 +44,19 @@ public class GrampsServerInstructionsTests
         Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: true, mediaResourcesEnabled: true, uploadFolders: true)));
         Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: true, uploadFolders: false)));
         Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: false, uploadFolders: true)));
+        Assert.Contains("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: true, uploadHosts: true)));
+        Assert.DoesNotContain("create_media", GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: false, uploadHosts: true)));
+    }
+
+    [Theory]
+    [InlineData(true, false, "create_media uploads a photo, scan or PDF from the server's upload folder and shows it")]
+    [InlineData(false, true, "create_media uploads a photo, scan or PDF attached in the chat (file) and shows it")]
+    [InlineData(true, true, "create_media uploads a photo, scan or PDF from the server's upload folder (filePath) or attached in the chat (file) and shows it")]
+    public void For_NamesTheUploadSourcesTheServerAllows(bool uploadFolders, bool uploadHosts, string expected)
+    {
+        var text = GrampsServerInstructions.For(Config(readOnly: false, mediaResourcesEnabled: true, uploadFolders, uploadHosts));
+
+        Assert.Contains(expected, text);
     }
 
     [Theory]
@@ -81,12 +94,13 @@ public class GrampsServerInstructionsTests
     private static string ToSnakeCase(string name) =>
         string.Concat(name.Select((c, i) => char.IsUpper(c) && i > 0 ? "_" + char.ToLowerInvariant(c) : char.ToLowerInvariant(c).ToString()));
 
-    private static GrampsConfig Config(bool readOnly, bool mediaResourcesEnabled, bool uploadFolders = false) => new(
+    private static GrampsConfig Config(bool readOnly, bool mediaResourcesEnabled, bool uploadFolders = false, bool uploadHosts = false) => new(
         ApiUrl: "https://gramps-web.test",
         Username: "user",
         Password: "pass",
         TreeId: "tree",
         ReadOnly: readOnly,
         MediaResourcesEnabled: mediaResourcesEnabled,
-        MediaUploadDirs: uploadFolders ? ["/srv/uploads"] : null);
+        MediaUploadDirs: uploadFolders ? ["/srv/uploads"] : null,
+        MediaUploadHosts: uploadHosts ? ["files.example.com"] : null);
 }

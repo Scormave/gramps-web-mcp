@@ -73,8 +73,8 @@ resource content.
 
 Uploading is off unless media file access is enabled
 (`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and `GRAMPS_MEDIA_UPLOAD_DIRS` lists at
-least one folder; until then, and in read-only mode, `create_media` is hidden
-from `tools/list`.
+least one folder or `GRAMPS_MEDIA_UPLOAD_HOSTS` at least one host; until then,
+and in read-only mode, `create_media` is hidden from `tools/list`.
 `create_media` and `update_media` read files only from those folders and their
 subfolders: symbolic links are resolved before the check, so a link cannot lead
 outside, and `..` cannot climb out. The type is judged from the file's first
@@ -83,6 +83,18 @@ Files larger than `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` (50 MiB by default) are
 refused. Point the setting at a folder that holds only files meant for the
 tree, such as a downloads or scan inbox, not at a home directory: any model
 connected to the server can upload whatever the folder holds.
+
+`GRAMPS_MEDIA_UPLOAD_HOSTS` lets the server download a file attached in the
+chat from a link the client passes in `file`. It fetches only HTTPS links whose
+host is one of those hosts or a subdomain of one, checks every redirect the
+same way (at most 3), and connects only to public addresses, so a link cannot
+reach the server's own network, such as Gramps Web, a router or a cloud
+metadata service, even through a host name that resolves there. It sends no
+credentials or cookies, uses no proxy, stops at
+`GRAMPS_MEDIA_UPLOAD_MAX_BYTES` and after 60 seconds, and judges the type by
+content. Download links are signed, so errors and logs name only the host.
+List only the chat client's file hosts: any model connected to the server can
+make it fetch from them.
 
 ## HTTP MCP exposure
 

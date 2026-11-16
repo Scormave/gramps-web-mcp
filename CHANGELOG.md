@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `create_media` and `update_media` take `file`, a file attached in the
+  chat ([#18](https://github.com/Scormave/gramps-web-mcp/issues/18),
+  requested by @ws-mkulas): the tools name it in `openai/fileParams`, so
+  ChatGPT passes an attached file as a temporary download link. Set
+  `GRAMPS_MEDIA_UPLOAD_HOSTS` to the hosts the chat client serves
+  attached files from. The server fetches only HTTPS links on those
+  hosts and their subdomains, redirects included, connects only to
+  public addresses, sends no credentials or cookies, and stops at
+  `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`; errors name the host, never the
+  signed link. Uploading still needs media file access. `tools/list`
+  shows only the sources the server allows: with upload hosts alone,
+  `create_media` requires `file`; with upload folders alone, `file` and
+  `openai/fileParams` are not listed
+
 ### Fixed
 
 - `undo_change` named the type of a deleted event, note, place,
