@@ -76,7 +76,7 @@
         },
         {
           "name": "GRAMPS_MEDIA_RESOURCES_ENABLED",
-          "description": "Set to true to expose read_media and the media resources for thumbnails and full files, and to allow uploads from GRAMPS_MEDIA_UPLOAD_DIRS",
+          "description": "Set to true to expose read_media and the media resources for thumbnails and full files, and to allow uploads from GRAMPS_MEDIA_UPLOAD_DIRS and GRAMPS_MEDIA_UPLOAD_HOSTS",
           "default": "false"
         },
         {
@@ -91,7 +91,11 @@
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_DIRS",
-          "description": "Absolute folders, separated by : (; on Windows), that create_media and update_media may upload photos, scans and PDFs from while GRAMPS_MEDIA_RESOURCES_ENABLED is true. Unset turns uploading off and hides create_media"
+          "description": "Absolute folders, separated by : (; on Windows), that create_media and update_media may upload photos, scans and PDFs from while GRAMPS_MEDIA_RESOURCES_ENABLED is true. With this and GRAMPS_MEDIA_UPLOAD_HOSTS unset, uploading is off and create_media is hidden"
+        },
+        {
+          "name": "GRAMPS_MEDIA_UPLOAD_HOSTS",
+          "description": "Host names, separated by commas, that files attached in the chat (ChatGPT file parameters) may be downloaded from over HTTPS by create_media and update_media while GRAMPS_MEDIA_RESOURCES_ENABLED is true; each also allows its subdomains. Unset turns uploading attached files off"
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_MAX_BYTES",
