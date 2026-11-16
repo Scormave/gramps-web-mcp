@@ -56,7 +56,10 @@ before any mutation request is sent to Gramps Web.
 When `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `get_media_image`
 is also omitted from the catalog; `get_records` still reads
 media metadata. `upload_media` is published only when media access is enabled
-and `GRAMPS_MEDIA_UPLOAD_DIRS` names at least one upload folder.
+and `GRAMPS_MEDIA_UPLOAD_DIRS` names at least one upload folder or
+`GRAMPS_MEDIA_UPLOAD_HOSTS` at least one host for files attached in the chat.
+`upload_media` and `update_media` list only the source arguments the server
+allows: `filePath` with upload folders, `file` with upload hosts.
 Binary media resources are read-only GETs and are not blocked by read-only mode.
 
 Tool descriptions state what a tool does, what it returns, when to use a
@@ -74,7 +77,8 @@ and `linkMode` work, the order to create linked records in, and when to delete.
 They name only the tools the configuration publishes: read-only mode replaces
 the writing guidance with one line saying no tool changes the tree,
 `get_media_image` is mentioned only when media access is enabled, and
-`upload_media` only when media access is enabled and an upload folder is set.
+`upload_media` only when media access is enabled and an upload folder or
+upload host is set, naming only the sources the server allows.
 
 Create/update/delete HTTP calls are serialized in-process by default
 (`GRAMPS_MUTATION_SERIALIZE=true`) and may wait
@@ -751,8 +755,9 @@ Use `get_records` for media metadata. It does not
 upload or download file bytes. Media byte tools/resources require
 `GRAMPS_MEDIA_RESOURCES_ENABLED=true`, respect `GRAMPS_MEDIA_MAX_BYTES`, and
 block private media records unless `GRAMPS_MEDIA_ALLOW_PRIVATE=true`.
-Uploading with `upload_media` or `update_media(filePath)` requires
-`GRAMPS_MEDIA_RESOURCES_ENABLED=true` and `GRAMPS_MEDIA_UPLOAD_DIRS`, and
+Uploading with `upload_media` or `update_media` requires
+`GRAMPS_MEDIA_RESOURCES_ENABLED=true` and, for `filePath`,
+`GRAMPS_MEDIA_UPLOAD_DIRS` or, for `file`, `GRAMPS_MEDIA_UPLOAD_HOSTS`, and
 respects `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`.
 
 ### R — `GetMediaImage`
@@ -774,11 +779,14 @@ an embedded blob with a text hint. Prefer thumbnails before full files.
 | `region` | `double[]?` | no | — | Show only this part of the image, `[left, top, right, bottom]` in percent as on a media link (see [Image regions](#image-regions)), at up to `size` pixels on its long edge; a small region is read from the full-resolution original. Thumbnail mode only |
 
 ### C — `UploadMedia`
-Upload a photo, document scan or PDF from an upload folder as a new media
-record, and show it on people, families, events, places, sources or citations
-through `attachTo`. Only files inside `GRAMPS_MEDIA_UPLOAD_DIRS` (subfolders
-included) can be read; symbolic links are resolved first, so a link cannot lead
-outside. The type is judged from the file's first bytes: JPEG, PNG, GIF, WebP,
+Upload a photo, document scan or PDF as a new media record, and show it on
+people, families, events, places, sources or citations through `attachTo`.
+The file is `filePath`, in an upload folder, or `file`, attached in the chat;
+give one of them. Only files inside `GRAMPS_MEDIA_UPLOAD_DIRS` (subfolders
+included) can be read by path; symbolic links are resolved first, so a link
+cannot lead outside. An attached file is downloaded as described in
+[Files attached in the chat](#files-attached-in-the-chat). The type is judged
+from the file's first bytes: JPEG, PNG, GIF, WebP,
 TIFF, BMP or PDF. Gramps Web does not check uploads for duplicates, so the tool
 first looks for a media record with the same MD5 checksum: when one exists,
 nothing is uploaded, its fields stay as they are, only `attachTo` is applied,
@@ -796,7 +804,8 @@ its file, with `update_media`; check a region with `get_media_image`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `filePath` | `string` | yes | — | Absolute path inside an upload folder, `~/…`, or a name relative to a folder, such as `scan.jpg`, looked up in each folder in turn |
+| `filePath` | `string?` | one of `filePath`, `file` | — | Absolute path inside an upload folder, `~/…`, or a name relative to a folder, such as `scan.jpg`, looked up in each folder in turn |
+| `file` | `FileReference?` | one of `filePath`, `file` | — | A file attached in the chat: `{download_url, file_id, mime_type, file_name}`, as ChatGPT passes it |
 | `description` | `string?` | no | file name without extension | Description (caption) |
 | `date` | `string?` | no | — | Date of the photo or document |
 | `attachTo` | `FlexibleMediaLinkList?` | no | — | Records to show the media on: Gramps IDs (`I`, `F`, `E`, `P`, `S`, `C`) or handles, or `{ref, region, attributes}` objects |
@@ -808,7 +817,8 @@ its file, with `update_media`; check a region with `get_media_image`.
 `linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
 
 Update media metadata, or replace the stored file with `filePath` from an
-upload folder. The new file is checked like in `UploadMedia`; a file identical
+upload folder or `file` attached in the chat. The new file is checked like in
+`UploadMedia`; a file identical
 to the stored one uploads nothing, and a file another media record already
 holds is rejected. The date and file are checked before anything is saved.
 `attachTo` shows the media on more records, whole or as a region, like in
@@ -824,8 +834,26 @@ media off a record, use that record's update tool with `mediaHandles` and
 | `noteHandles`, `tagHandles`, `citationHandles` | `FlexibleHandleList?` | no | — | Handles or Gramps IDs; tags by handle |
 | `attributes` | `FlexibleAttributeList?` | no | — | Attributes, each with optional citations, notes and private flag |
 | `isPrivate` | `bool?` | no | — | Private flag |
-| `filePath` | `string?` | no | — | Replacement file inside an upload folder; omit to keep the file |
+| `filePath` | `string?` | no | — | Replacement file inside an upload folder; omit it and `file` to keep the file |
 | `attachTo` | `FlexibleMediaLinkList?` | no | — | Records to show the media on, as in `UploadMedia`; not affected by `linkMode` |
+| `file` | `FileReference?` | no | — | Replacement file attached in the chat, as in `UploadMedia`; give `filePath` or `file`, not both |
+
+#### Files attached in the chat
+
+`upload_media` and `update_media` name `file` in their `openai/fileParams`
+metadata. A client that supports it, such as ChatGPT, fills the argument with
+the file the user attached in the chat: a temporary `download_url`, a
+`file_id`, and usually `mime_type` and `file_name`. The server downloads it
+only when `GRAMPS_MEDIA_UPLOAD_HOSTS` allows the link's host (or a parent
+domain of it), only over HTTPS, and follows at most 3 redirects, each checked
+the same way. It connects only to public addresses, sends no credentials or
+cookies, gives up after 60 seconds, and stops reading at
+`GRAMPS_MEDIA_UPLOAD_MAX_BYTES`. The type is judged by content, not by
+`mime_type`, and the default description is `file_name` without its
+extension. Errors name the link's host, never the link, since download links
+are signed. With only upload folders set, `file` and `openai/fileParams` are
+left out of `tools/list`; with only upload hosts set, `filePath` is left out
+and `upload_media` requires `file`.
 
 ---
 
@@ -1329,7 +1357,7 @@ undo_change(transactionId: 412)
 With the default `GRAMPS_MEDIA_RESOURCES_ENABLED=false`, `get_media_image` and
 `upload_media` are hidden: the default catalog contains 24 tools in read/write
 mode. With media access enabled, `upload_media` also needs
-`GRAMPS_MEDIA_UPLOAD_DIRS`. Read-only mode publishes 11 tools
+`GRAMPS_MEDIA_UPLOAD_DIRS` or `GRAMPS_MEDIA_UPLOAD_HOSTS`. Read-only mode publishes 11 tools
 with media access enabled, or 10 with it disabled.
 
 ## Prerequisites for write tools

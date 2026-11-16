@@ -5,8 +5,8 @@ using GrampsWeb.Mcp.Config;
 namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
-/// A local file read for upload to Gramps Web: its real path, bytes, sniffed MIME type and the MD5
-/// checksum Gramps uses to name and identify media files.
+/// A file read for upload to Gramps Web: its real path (for a downloaded file, the name it came with), bytes,
+/// sniffed MIME type and the MD5 checksum Gramps uses to name and identify media files.
 /// </summary>
 internal sealed record MediaUploadFile(string Path, byte[] Bytes, string MimeType, string Checksum)
 {
@@ -24,11 +24,12 @@ internal sealed record MediaUploadFile(string Path, byte[] Bytes, string MimeTyp
     /// </summary>
     public static async Task<MediaUploadFile> ReadAsync(string filePath, GrampsConfig config)
     {
-        if (!config.MediaUploadEnabled)
+        if (!config.MediaUploadFromFoldersEnabled)
             throw McpToolErrors.ValidationError("Uploading files is turned off: " + (
                 config.MediaUploadDirs is not { Count: > 0 }
                     ? "set GRAMPS_MEDIA_UPLOAD_DIRS to the folders files may be uploaded from"
                       + (config.MediaResourcesEnabled ? "." : ", and GRAMPS_MEDIA_RESOURCES_ENABLED=true.")
+                      + (config.MediaUploadFromLinksEnabled ? " Pass a file attached in the chat as file instead of filePath." : "")
                     : "media file access is disabled; set GRAMPS_MEDIA_RESOURCES_ENABLED=true."));
         if (string.IsNullOrWhiteSpace(filePath))
             throw McpToolErrors.ValidationError("filePath is required.");
@@ -67,6 +68,15 @@ internal sealed record MediaUploadFile(string Path, byte[] Bytes, string MimeTyp
         if (bytes.Length > config.MediaUploadMaxBytes)
             throw FileTooLarge(path, bytes.Length, config.MediaUploadMaxBytes);
 
+        return FromBytes(path, bytes);
+    }
+
+    /// <summary>
+    /// The upload for <paramref name="bytes"/> read from <paramref name="path"/>, once its type is known from
+    /// its first bytes; anything other than a photo, scan or PDF is refused.
+    /// </summary>
+    internal static MediaUploadFile FromBytes(string path, byte[] bytes)
+    {
         var mimeType = SniffMimeType(bytes)
             ?? throw McpToolErrors.ValidationError(
                 $"{System.IO.Path.GetFileName(path)} is not a {SupportedTypes} file (judged by its content, not its name). " +
@@ -174,7 +184,7 @@ internal sealed record MediaUploadFile(string Path, byte[] Bytes, string MimeTyp
         return current;
     }
 
-    private static Exception FileTooLarge(string path, long length, long maxBytes) =>
+    internal static Exception FileTooLarge(string path, long length, long maxBytes) =>
         McpToolErrors.ValidationError(
             $"{System.IO.Path.GetFileName(path)} is {length} bytes, more than the upload limit of {maxBytes} bytes (GRAMPS_MEDIA_UPLOAD_MAX_BYTES).");
 }
