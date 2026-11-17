@@ -96,6 +96,11 @@ changes nothing. Dry runs and refusals do not ask.
   in its settings, such as `"ask": ["mcp__<server>__delete_object"]` with the
   name the server has in the client's configuration, asks on every call in
   every permission mode, and the user can remove it again.
+- For no prompt at all, both settings matter. Over stdio, which keeps a
+  session, Claude Code supports elicitation and shows the server's own dialog
+  as well, so set `GRAMPS_CONFIRMATION=off` along with
+  `GRAMPS_REQUIRE_USER_INTERACTION=false`. Over stateless Streamable HTTP
+  that dialog never runs.
 - The tool call lasts until the user answers. If the client cancels the call
   first, nothing changes.
 - The server logs once per client whether it asks.
