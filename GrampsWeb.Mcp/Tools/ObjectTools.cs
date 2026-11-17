@@ -50,32 +50,7 @@ public static class ObjectTools
     {
         try
         {
-            var inferredType = InferObjectType(identifier);
-            var normalizedType = objectType?.Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(normalizedType))
-            {
-                if (inferredType is null)
-                {
-                    throw McpToolErrors.ValidationError(
-                        "objectType is required when identifier is an opaque handle. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-                }
-
-                normalizedType = inferredType;
-            }
-
-            if (normalizedType is not ("person" or "family" or "event" or "place" or "source" or
-                "citation" or "note" or "media" or "repository" or "tag"))
-            {
-                throw McpToolErrors.ValidationError(
-                    "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-            }
-
-            if (inferredType is not null && !string.Equals(normalizedType, inferredType, StringComparison.Ordinal))
-            {
-                throw McpToolErrors.ValidationError(
-                    $"objectType '{normalizedType}' does not match Gramps ID '{identifier}', which identifies a {inferredType}.");
-            }
-
+            var normalizedType = ResolveObjectType(identifier, objectType);
             if (extended && normalizedType is not ("person" or "family"))
             {
                 throw McpToolErrors.ValidationError(
@@ -102,6 +77,45 @@ public static class ObjectTools
             throw McpToolErrors.ToMcpException(ex);
         }
     }
+
+    /// <summary>
+    /// The record type of <paramref name="identifier"/>, such as <c>person</c>: <paramref name="objectType"/> when
+    /// given, else the type its Gramps ID prefix names. Rejects an unknown type, a handle without a type, and a
+    /// type that disagrees with the prefix.
+    /// </summary>
+    internal static string ResolveObjectType(string identifier, string? objectType)
+    {
+        var inferredType = InferObjectType(identifier);
+        var normalizedType = objectType?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(normalizedType))
+        {
+            if (inferredType is null)
+            {
+                throw McpToolErrors.ValidationError(
+                    "objectType is required when identifier is an opaque handle. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
+            }
+
+            normalizedType = inferredType;
+        }
+
+        if (!ObjectKinds.ContainsKey(normalizedType))
+        {
+            throw McpToolErrors.ValidationError(
+                "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
+        }
+
+        if (inferredType is not null && !string.Equals(normalizedType, inferredType, StringComparison.Ordinal))
+        {
+            throw McpToolErrors.ValidationError(
+                $"objectType '{normalizedType}' does not match Gramps ID '{identifier}', which identifies a {inferredType}.");
+        }
+
+        return normalizedType;
+    }
+
+    /// <summary>The Gramps class name (<c>Person</c>) and API collection (<c>people</c>) of a resolved type.</summary>
+    internal static (string ClassName, string ApiPath) KindOf(string objectType) =>
+        ObjectKinds[objectType] is var kind ? (kind.DisplayName, kind.ApiPath) : default;
 
     private static string? InferObjectType(string identifier) =>
         HandleResolver.LooksLikeGrampsId(identifier)

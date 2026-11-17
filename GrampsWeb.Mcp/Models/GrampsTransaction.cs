@@ -80,6 +80,28 @@ public class GrampsTransactionChange
     /// <summary>The object as stored before the change, null for an add; sent only with <c>old=true</c>.</summary>
     [JsonPropertyName("old_data")]
     public JsonElement? OldData { get; set; }
+
+    /// <summary>
+    /// The object as stored after the change; sent only with <c>new=true</c>. Gramps Web sends an empty
+    /// object for the side a change does not have, such as this side of a delete.
+    /// </summary>
+    [JsonPropertyName("new_data")]
+    public JsonElement? NewData { get; set; }
+}
+
+/// <summary>
+/// One row of <c>GET /api/transactions/history/objects/{class}/{handle}</c> (Gramps Web API 3.22+): a change of
+/// one record with the session that made it. Its <see cref="GrampsTransactionChange.Id"/> is unique only
+/// within that session.
+/// </summary>
+public class GrampsObjectChange : GrampsTransactionChange
+{
+    [JsonPropertyName("connection")]
+    public GrampsTransactionConnection? Connection { get; set; }
+
+    /// <summary>The transaction the change belongs to, the number <c>undo_change</c> takes; null when unknown.</summary>
+    [JsonPropertyName("transaction_id")]
+    public int? TransactionId { get; set; }
 }
 
 /// <summary>

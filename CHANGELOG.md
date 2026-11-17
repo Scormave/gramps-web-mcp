@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- History of one record: `get_recent_changes` with `identifier` (a
+  Gramps ID, or a handle with `objectType`) shows that record's own
+  changes from its first save, newest first: the time, added, updated or
+  deleted, the user and the transaction, and the fields each change
+  changed as `field: before → after`, such as
+  `primary_name.first_name: "John" → "Johann"`, with linked records
+  named. It answers who changed a field and what it held before, which
+  the list of transactions shows only as an object and its handle. A
+  deleted record is found by its handle. It needs Gramps Web API 3.22 or
+  later
+
 ## [2.10.1] - 2026-11-16
 
 ### Fixed

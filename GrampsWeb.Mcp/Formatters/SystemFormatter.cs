@@ -205,7 +205,7 @@ public static class SystemFormatter
         return $"Reference{from}{to}";
     }
 
-    private static string? FormatUnixTime(double? seconds)
+    internal static string? FormatUnixTime(double? seconds)
     {
         if (seconds is not { } value || double.IsNaN(value) || value <= 0)
             return null;
@@ -213,7 +213,7 @@ public static class SystemFormatter
             .UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    private static string? FormatUser(GrampsTransactionUser? user)
+    internal static string? FormatUser(GrampsTransactionUser? user)
     {
         if (!string.IsNullOrWhiteSpace(user?.FullName))
             return user.FullName.Trim();
