@@ -19,6 +19,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   deleted record is found by its handle. It needs Gramps Web API 3.22 or
   later
 
+### Fixed
+
+- `delete_object` said that `force=true` leaves links to the deleted
+  record dangling, and its confirmation dialog warned that the linking
+  records would keep a link to a missing record. Gramps Web removes
+  those links in the same transaction, and `undo_change` restores them.
+  The description, the refusal and the dialog now say what a forced
+  delete does: the links go, the citations of a deleted source and a
+  family left without father, mother and children are deleted with it,
+  and only the places inside a deleted place keep a link to it, so their
+  `enclosedBy` is better changed first
+
 ## [2.10.1] - 2026-11-16
 
 ### Fixed

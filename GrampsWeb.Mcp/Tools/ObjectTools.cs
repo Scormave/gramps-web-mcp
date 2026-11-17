@@ -140,7 +140,10 @@ public static class ObjectTools
     [Description(
         "Delete one record; undo_change with the deletion's transaction from get_recent_changes restores it. Call it only after the user confirmed " +
         "this exact record. If other records still point to it, nothing is deleted and the reply lists those backlinks " +
-        "by type; unlink them first with the owners' update tools, or pass force=true after a separate confirmation. " +
+        "by type; unlink them first with the owners' update tools, or pass force=true after a separate confirmation, " +
+        "and Gramps Web removes those links. Gramps Web also deletes the citations of a deleted source and a family " +
+        "left without father, mother and children; the places inside a deleted place keep a link to it, so change " +
+        "their enclosedBy with update_place first. " +
         "Clients that support it also show the user a confirmation dialog before deleting; action: declined or cancelled " +
         "means the user said no and nothing was deleted. On success returns the type, action: deleted and the handle; " +
         "a missing record returns a not-found message.")]
@@ -149,7 +152,8 @@ public static class ObjectTools
         string objectType,
         [Description("The record to delete. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("true deletes even when other records still point to it, leaving those links dangling (default false).")]
+        [Description("true deletes even when other records still point to it, and Gramps Web removes those links " +
+                     "(places inside a place keep theirs); only after the user confirmed that (default false).")]
         bool force = false,
         GrampsApiClient client = null!,
         McpServer server = null!,

@@ -377,22 +377,28 @@ other than person or family.
 ### D — `DeleteObject`
 Delete a person, family, event, place, source, citation, note, media record,
 repository, or tag. The server checks backlinks and blocks deletion unless
-`force=true`; the refusal lists the backlinks by type. Forcing may leave
-dangling references. On success the reply gives the type, `action: deleted`,
-and the handle. Deleting a media record does not necessarily delete its file on
-disk. `undo_change` with the deletion's transaction from `get_recent_changes`
-restores the record with its handle and Gramps ID.
+`force=true`; the refusal lists the backlinks by type. With `force=true`
+Gramps Web removes the links from the other records in the same transaction.
+It also deletes the citations of a deleted source and a family left without
+father, mother and children. The places inside a deleted place keep a link to
+it, so change their `enclosedBy` with `update_place` first. On success the
+reply gives the type, `action: deleted`, and the handle. Deleting a media
+record does not necessarily delete its file on disk. `undo_change` with the
+deletion's transaction from `get_recent_changes` restores the record with its
+handle and Gramps ID, and the links and records removed with it.
 
 When the client supports MCP elicitation, the user confirms the deletion in a
 [dialog](#confirmation-dialogs) that names the record and, with `force=true`,
-the records that will keep a link to it. A user who says no gets
-`action: declined` or `action: cancelled`, and nothing is deleted.
+the records whose links to it Gramps Web removes, the citations it deletes
+with a source, and the places that keep a link to a deleted place. A user who
+says no gets `action: declined` or `action: cancelled`, and nothing is
+deleted.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `objectType` | `string` | yes | — | `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
 | `handle` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
-| `force` | `bool` | no | `false` | Delete despite backlinks |
+| `force` | `bool` | no | `false` | Delete despite backlinks; Gramps Web removes them, except the links of the places inside a place |
 
 ---
 
@@ -1339,10 +1345,12 @@ For structured write fields, request only the relevant subsection, such as
 ## Delete safety
 
 `delete_object` checks for backlinks before deleting. If the object is
-referenced by other objects, deletion is **blocked** unless `force=true`.
-Using `force=true` can leave **dangling references** in the database.
-A deletion can be reverted with `undo_change`, which restores the record with
-its handle, Gramps ID and its own links. `merge_objects` deletes the duplicate
+referenced by other objects, deletion is **blocked** unless `force=true`, and
+with it Gramps Web removes those links in the same transaction. Only the
+places inside a deleted place keep a link to the missing place, so change
+their `enclosedBy` with `update_place` before deleting it. A deletion can be
+reverted with `undo_change`, which restores the record with its handle, Gramps
+ID and its own links, and the links removed from other records. `merge_objects` deletes the duplicate
 only after moving every link to the kept record, so it leaves no dangling
 references, and `undo_change` with its transaction restores the duplicate.
 
