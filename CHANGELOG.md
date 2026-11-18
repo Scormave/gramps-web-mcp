@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.11.0] - 2026-11-18
+
 ### Added
 
 - History of one record: `get_recent_changes` with `identifier` (a
@@ -18,15 +20,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the list of transactions shows only as an object and its handle. A
   deleted record is found by its handle. It needs Gramps Web API 3.22 or
   later
-- `GRAMPS_REQUIRE_USER_INTERACTION` (default `true`): `false` publishes
-  `delete_object`, `merge_objects` and `undo_change` without the
-  `anthropic/requiresUserInteraction` tool metadata. Claude Code asks for
-  a tool with that metadata on every call, in every permission mode but
-  `dontAsk` (which refuses the call), and no allow rule skips the prompt;
-  the operator of a tree with one trusted user can now let the client's
-  own permission settings decide. The default is unchanged. A value other
-  than `true`, `false`, `1` or `0` stops the server at startup, and the
-  server logs when the metadata is off
+- `GRAMPS_REQUIRE_USER_INTERACTION` (default `true`;
+  [#19](https://github.com/Scormave/gramps-web-mcp/issues/19),
+  contributed by @aegershman in
+  [#20](https://github.com/Scormave/gramps-web-mcp/pull/20)): `false`
+  publishes `delete_object`, `merge_objects` and `undo_change` without
+  the `anthropic/requiresUserInteraction` tool metadata. Claude Code
+  asks for a tool with that metadata on every call, in every permission
+  mode but `dontAsk` (which refuses the call), and no allow rule skips
+  the prompt; the operator of a tree with one trusted user can now let
+  the client's own permission settings decide. The default is unchanged.
+  A value other than `true`, `false`, `1` or `0` stops the server at
+  startup, and the server logs when the metadata is off
 - Experimental: `create_media` and `update_media` take `file`, a file
   attached in the chat
   ([#18](https://github.com/Scormave/gramps-web-mcp/issues/18),
@@ -1391,7 +1396,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.0...HEAD
+[2.11.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...v2.11.0
 [2.10.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.1...v2.10.0
 [2.9.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.0...v2.9.1
