@@ -116,7 +116,7 @@ public static class PersonTools
     [McpServerTool(Title = "Get Relations", ReadOnly = true, Destructive = false, OpenWorld = false)]
     [Description(
         "Explain how two people are related, read as 'person 2 is the X of person 1' " +
-        "(e.g. 'third cousin twice removed', 'husband'); the order matters, and swapping handle1 and handle2 gives the " +
+        "(e.g. 'third cousin twice removed', 'husband'); the order matters, and swapping person1 and person2 gives the " +
         "inverse term, such as 'wife' instead of 'husband'. Returns both people with Gramps IDs, the closest relationship " +
         "with the generations from each person to the common ancestor, then every relationship found, closest first, " +
         "with its common ancestors (up to 10 by name, any more by handle), all in one response without paging. " +
@@ -125,15 +125,15 @@ public static class PersonTools
         "Find both people first with search. To list a whole line of ancestors or descendants use get_person_tree.")]
     public static async Task<string> GetRelations(
         [Description("Person 1, the one the relationship is told from. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle1,
+        string person1,
         [Description("Person 2, the one whose relationship to person 1 is named. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle2,
+        string person2,
         GrampsApiClient client)
     {
         try
         {
-            var resolvedHandle1 = await HandleResolver.ResolveToHandleAsync(handle1, client, "people");
-            var resolvedHandle2 = await HandleResolver.ResolveToHandleAsync(handle2, client, "people");
+            var resolvedHandle1 = await HandleResolver.ResolveToHandleAsync(person1, client, "people");
+            var resolvedHandle2 = await HandleResolver.ResolveToHandleAsync(person2, client, "people");
             var escaped1 = Uri.EscapeDataString(resolvedHandle1);
             var escaped2 = Uri.EscapeDataString(resolvedHandle2);
 
@@ -142,7 +142,7 @@ public static class PersonTools
             {
                 var person = await person1Task;
                 return person is null
-                    ? NotFoundHelper.NotFoundMessage("Person", handle1)
+                    ? NotFoundHelper.NotFoundMessage("Person", person1)
                     : $"{PersonFormatter.FormatRelationPerson(person.Profile, resolvedHandle1)}: both handles refer to the same person.";
             }
 
@@ -152,12 +152,12 @@ public static class PersonTools
             var allTask = client.GetOrNullIfNotFoundAsync<GrampsRelationshipItem[]>($"/api/relations/{escaped1}/{escaped2}/all");
             await Task.WhenAll(person1Task, person2Task, relationTask, allTask);
 
-            var person1 = await person1Task;
-            var person2 = await person2Task;
-            if (person1 is null)
-                return NotFoundHelper.NotFoundMessage("Person", handle1);
-            if (person2 is null)
-                return NotFoundHelper.NotFoundMessage("Person", handle2);
+            var first = await person1Task;
+            var second = await person2Task;
+            if (first is null)
+                return NotFoundHelper.NotFoundMessage("Person", person1);
+            if (second is null)
+                return NotFoundHelper.NotFoundMessage("Person", person2);
             var relation = await relationTask;
             if (relation is null)
                 return "Could not retrieve relationship data for these handles.";
@@ -165,9 +165,9 @@ public static class PersonTools
             var all = await allTask ?? [];
             // A direct ancestor is its own common ancestor, so both people are already known.
             var ancestors = new Dictionary<string, GrampsPersonProfile>();
-            if (person1.Profile is { } profile1)
+            if (first.Profile is { } profile1)
                 ancestors[resolvedHandle1] = profile1;
-            if (person2.Profile is { } profile2)
+            if (second.Profile is { } profile2)
                 ancestors[resolvedHandle2] = profile2;
             var ancestorHandles = all.SelectMany(PersonFormatter.CommonAncestorHandles)
                 .Distinct()
@@ -182,7 +182,7 @@ public static class PersonTools
             }
 
             return PersonFormatter.FormatRelationships(
-                resolvedHandle1, person1.Profile, resolvedHandle2, person2.Profile, relation, all, ancestors);
+                resolvedHandle1, first.Profile, resolvedHandle2, second.Profile, relation, all, ancestors);
         }
         catch (Exception ex)
         {
@@ -269,7 +269,7 @@ public static class PersonTools
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdatePerson(
         [Description("The person to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("New primary name; replaces the whole current one. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName = null,
         [Description("Gender: Female, Male, or Unknown. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -331,10 +331,10 @@ public static class PersonTools
                 .PersonRefs("personAssociations", personAssociations)
                 .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "people");
             var person = await GrampsObjectPatch.LoadAsync(client, $"/api/people/{Uri.EscapeDataString(resolvedHandle)}");
             if (person == null)
-                return NotFoundHelper.NotFoundMessage("Person", handle);
+                return NotFoundHelper.NotFoundMessage("Person", identifier);
 
             if (primaryName?.Name != null)
                 person.Set("primary_name", ConvertNameToRequest(primaryName.Name));

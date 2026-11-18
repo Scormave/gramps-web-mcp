@@ -127,7 +127,7 @@ public static class FamilyTools
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateFamily(
         [Description("The family to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("New father. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? fatherHandle = null,
         [Description("New mother. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
@@ -179,10 +179,10 @@ public static class FamilyTools
             if (relationshipType != null)
                 relationshipType = await KnownTypes.ResolveAsync(relationshipType, "family_relation_types", client);
 
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "families");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "families");
             var family = await GrampsObjectPatch.LoadAsync(client, $"/api/families/{Uri.EscapeDataString(resolvedHandle)}");
             if (family == null)
-                return NotFoundHelper.NotFoundMessage("Family", handle);
+                return NotFoundHelper.NotFoundMessage("Family", identifier);
 
             family.Set("father_handle", fatherHandle);
             family.Set("mother_handle", motherHandle);

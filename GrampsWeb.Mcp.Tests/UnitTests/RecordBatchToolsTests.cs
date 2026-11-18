@@ -487,7 +487,7 @@ public class RecordBatchToolsTests
     [InlineData(typeof(TagRecord), typeof(TagTools), nameof(TagTools.UpdateTag), new string[0])]
     public void Each_Record_Takes_The_Fields_Of_Its_Update_Tool(Type record, Type tools, string method, string[] createOnly)
     {
-        string[] updateOnly = ["handle", "linkMode", "sort", "familyHandles", "parentFamilyHandles", "appendText", "replaceText", "withText"];
+        string[] updateOnly = ["identifier", "linkMode", "sort", "familyHandles", "parentFamilyHandles", "appendText", "replaceText", "withText"];
         var arguments = tools.GetMethod(method)!.GetParameters()
             .Where(p => p.ParameterType != typeof(GrampsApiClient))
             .Select(p => p.Name!)

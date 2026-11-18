@@ -91,7 +91,7 @@ public static class CitationTools
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateCitation(
         [Description("The citation to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("Another source to cite instead. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.HandleDiscovery)]
         string? sourceHandle = null,
         [Description("New page, act or entry number. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleString.DescriptionHint)]
@@ -129,10 +129,10 @@ public static class CitationTools
                 .Handles("tagHandles", tagHandles, "tags")
                 .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "citations");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "citations");
             var citation = await GrampsObjectPatch.LoadAsync(client, $"/api/citations/{Uri.EscapeDataString(resolvedHandle)}");
             if (citation == null)
-                return NotFoundHelper.NotFoundMessage("Citation", handle);
+                return NotFoundHelper.NotFoundMessage("Citation", identifier);
 
             citation.Set("source_handle", sourceHandle);
             citation.Set("page", (string?)page);

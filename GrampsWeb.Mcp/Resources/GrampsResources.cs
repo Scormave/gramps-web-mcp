@@ -527,12 +527,12 @@ public sealed class GrampsResources
         },
         examples = new[]
         {
-            "update_person(handle: \"PERSON_HANDLE\", noteHandles: [\"NOTE_HANDLE\"], linkMode: \"add\")",
-            "update_person(handle: \"PERSON_HANDLE\", eventRefs: [{ref: \"EVENT_HANDLE\", role: \"Primary\", attributes: [\"Age: 65\"]}], linkMode: \"add\")",
-            "update_family(handle: \"FAMILY_HANDLE\", childRefs: [\"CHILD_HANDLE\"], linkMode: \"remove\")",
-            "update_event(handle: \"EVENT_HANDLE\", citationHandles: [\"CITATION_HANDLE\"], linkMode: \"add\")",
-            "update_family(handle: \"F0023\", childRefs: [\"I0045\"])",
-            "update_person(handle: \"PERSON_HANDLE\", eventRefs: [\"EVENT_HANDLE::Witness\"])"
+            "update_person(identifier: \"PERSON_HANDLE\", noteHandles: [\"NOTE_HANDLE\"], linkMode: \"add\")",
+            "update_person(identifier: \"PERSON_HANDLE\", eventRefs: [{ref: \"EVENT_HANDLE\", role: \"Primary\", attributes: [\"Age: 65\"]}], linkMode: \"add\")",
+            "update_family(identifier: \"FAMILY_HANDLE\", childRefs: [\"CHILD_HANDLE\"], linkMode: \"remove\")",
+            "update_event(identifier: \"EVENT_HANDLE\", citationHandles: [\"CITATION_HANDLE\"], linkMode: \"add\")",
+            "update_family(identifier: \"F0023\", childRefs: [\"I0045\"])",
+            "update_person(identifier: \"PERSON_HANDLE\", eventRefs: [\"EVENT_HANDLE::Witness\"])"
         }
     };
 
@@ -649,8 +649,9 @@ public sealed class GrampsResources
         urls = new
         {
             grammar =
-                "Type: URL - first colon separates type from path. Optional description after path: em dash - or ASCII \" - \" (space hyphen space).",
-            examples = new[] { "Web Home: http://example.com", "Web Home: https://x.org - my site" },
+                "Type: URL - first colon separates type from path. Optional description after path: em dash - or ASCII \" - \" (space hyphen space). " +
+                "A bare link such as https://x.org, with no type, is a Web Home link.",
+            examples = new[] { "Web Home: http://example.com", "Web Home: https://x.org - my site", "https://x.org" },
             forms = new[]
             {
                 "JSON array of objects {\"type\",\"path\",\"desc\"}",

@@ -60,9 +60,9 @@ public static class MergeTools
         [Description("Type of both records: " + ValidTypes + ".")]
         string objectType,
         [Description("The record that stays and keeps its own fields. " + ToolDescriptionFragments.HandleDiscovery)]
-        string keepHandle,
+        string keep,
         [Description("The duplicate: its details and links move to the kept record, then it is deleted. " + ToolDescriptionFragments.HandleDiscovery)]
-        string duplicateHandle,
+        string duplicate,
         [Description("People only: true (default) also merges a family the duplicate had with the same partner as one of the kept person's families; false keeps both families. Ignored for other types.")]
         bool mergeFamilies = true,
         [Description("Families only: the father who stays when the two families name different fathers, who then become one person. The father of either family; default is the kept family's father, or the duplicate's when the kept family has none.")]
@@ -72,7 +72,7 @@ public static class MergeTools
         GrampsApiClient client = null!,
         McpServer server = null!,
         CancellationToken cancellationToken = default) =>
-        MergeRecordsAsync(objectType, keepHandle, duplicateHandle, mergeFamilies, fatherHandle, motherHandle, client,
+        MergeRecordsAsync(objectType, keep, duplicate, mergeFamilies, fatherHandle, motherHandle, client,
             UserConfirmation.For(server, "merge_records"), cancellationToken);
 
     internal static async Task<string> MergeRecordsAsync(string objectType, string keepHandle, string duplicateHandle,
@@ -88,7 +88,7 @@ public static class MergeTools
             var duplicate = await HandleResolver.ResolveToHandleAsync(duplicateHandle.Trim(), client, kind.ApiPath);
             if (string.Equals(keep, duplicate, StringComparison.Ordinal))
                 throw McpToolErrors.ValidationError(
-                    "keepHandle and duplicateHandle name the same record; pass two different records.");
+                    "keep and duplicate name the same record; pass two different records.");
 
             var pair = await ReadPairAsync(client, kind, keep, duplicate, keepHandle, duplicateHandle);
             if (pair.Missing is not null)
@@ -184,7 +184,7 @@ public static class MergeTools
         if (!MergeKinds.TryGetValue(type, out var kind))
             throw McpToolErrors.ValidationError($"Invalid objectType. Must be one of: {ValidTypes}.");
         if (string.IsNullOrWhiteSpace(keepHandle) || string.IsNullOrWhiteSpace(duplicateHandle))
-            throw McpToolErrors.ValidationError("keepHandle and duplicateHandle are both required.");
+            throw McpToolErrors.ValidationError("keep and duplicate are both required.");
         if (kind.ApiPath != "families" && (!string.IsNullOrWhiteSpace(fatherHandle) || !string.IsNullOrWhiteSpace(motherHandle)))
             throw McpToolErrors.ValidationError("fatherHandle and motherHandle apply only to objectType family.");
         return kind;

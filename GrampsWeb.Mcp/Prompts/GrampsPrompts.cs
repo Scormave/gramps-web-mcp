@@ -125,7 +125,7 @@ public sealed class GrampsPrompts
             "Steps:\n" +
             "1. Resolve both people to handles. If given names, use search() to find them.\n" +
             "   If given Gramps IDs (like I0001), use get_records with the ID.\n" +
-            "2. Call get_relations(handle1, handle2) to find their relationship.\n" +
+            "2. Call get_relations(person1, person2) to find their relationship.\n" +
             "3. If related, explain the connection in plain language (e.g. \"3rd cousin once removed\").\n" +
             "4. If no direct relationship found, try showing both their ancestor trees\n" +
             "   with get_person_tree(direction=ancestors, 3 generations each) to see if there's a common ancestor.";

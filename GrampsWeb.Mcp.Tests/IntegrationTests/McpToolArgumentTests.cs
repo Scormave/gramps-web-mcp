@@ -39,13 +39,13 @@ public class McpToolArgumentTests
     }
 
     [Theory]
-    [InlineData("""{"handle":"E0001","date":"1877"}""", false, "updated E0001 1877")]
-    [InlineData("""{"handle":"E0001","linkMode":"add","isPrivate":false}""", false, "updated E0001  False")]
-    [InlineData("""{"handle":"E0001"}""", true,
+    [InlineData("""{"identifier":"E0001","date":"1877"}""", false, "updated E0001 1877")]
+    [InlineData("""{"identifier":"E0001","linkMode":"add","isPrivate":false}""", false, "updated E0001  False")]
+    [InlineData("""{"identifier":"E0001"}""", true,
         "An error occurred invoking 'update_probe': Nothing to update: the call gives no field to change. " +
         "If you passed one, check its name; clients drop arguments a tool does not have. " +
-        "Parameters: handle (string, required), date (string), isPrivate (boolean), linkMode (string).")]
-    [InlineData("""{"handle":"E0001","linkMode":"add","date":null}""", true,
+        "Parameters: identifier (string, required), date (string), isPrivate (boolean), linkMode (string).")]
+    [InlineData("""{"identifier":"E0001","linkMode":"add","date":null}""", true,
         "An error occurred invoking 'update_probe': Nothing to update")]
     public async Task McpPipeline_Refuses_An_Update_With_Nothing_To_Change(string arguments, bool isError, string text)
     {
@@ -127,8 +127,8 @@ public class McpToolArgumentTests
 
         [McpServerTool(Name = "update_probe")]
         [Description("Echoes an update.")]
-        public static string UpdateProbe(string handle, string? date = null, bool? isPrivate = null, string linkMode = "replace") =>
-            $"updated {handle} {date} {isPrivate}".TrimEnd();
+        public static string UpdateProbe(string identifier, string? date = null, bool? isPrivate = null, string linkMode = "replace") =>
+            $"updated {identifier} {date} {isPrivate}".TrimEnd();
 
         [McpServerTool(Name = "old_server_probe", ReadOnly = true)]
         [Description("Fails as on a server that is too old.")]

@@ -166,7 +166,7 @@ public class McpToolProfileTests
             if (tool.Name == "upload_media")
                 Assert.Equal(uploadRequires is null ? [] : [uploadRequires], required);
             else
-                Assert.Equal(["handle"], required);
+                Assert.Equal(["identifier"], required);
 
             Assert.Equal(uploadHosts, tool.Meta?["openai/fileParams"] is not null);
             if (!uploadHosts)

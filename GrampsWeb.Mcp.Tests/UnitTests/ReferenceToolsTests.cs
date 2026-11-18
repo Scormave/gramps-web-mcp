@@ -80,7 +80,7 @@ public class ReferenceToolsTests
     {
         var result = await ReferenceTools.GetReference("input-guide", "link_updates");
 
-        Assert.Contains("update_person(handle:", result);
+        Assert.Contains("update_person(identifier:", result);
         Assert.Contains("linkMode:", result);
         Assert.Contains("add", result);
         Assert.Contains("A reference already stored takes the fields the call sends", result);

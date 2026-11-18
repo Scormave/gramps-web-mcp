@@ -82,14 +82,14 @@ public sealed class MediaTests(GrampsWebFixture gramps)
         var bytes = TestImages.Png(width: 200, height: 120);
         var media = await Session.UploadAsync(new { filePath = gramps.WriteUpload(".png", bytes) });
 
-        var thumbnail = await ReadImageAsync(new { handle = media.Handle });
+        var thumbnail = await ReadImageAsync(new { identifier = media.Handle });
         Assert.Equal("image/jpeg", thumbnail.MimeType);
 
-        var file = await ReadImageAsync(new { handle = media.Handle, mode = "file" });
+        var file = await ReadImageAsync(new { identifier = media.Handle, mode = "file" });
         Assert.Equal("image/png", file.MimeType);
         Assert.Equal(bytes, file.DecodedData.ToArray());
 
-        var region = await ReadImageAsync(new { handle = media.Handle, region = new[] { 0, 0, 50, 50 } });
+        var region = await ReadImageAsync(new { identifier = media.Handle, region = new[] { 0, 0, 50, 50 } });
         Assert.Equal("image/jpeg", region.MimeType);
     }
 
@@ -112,9 +112,9 @@ public sealed class MediaTests(GrampsWebFixture gramps)
         var media = await Session.UploadAsync(new { filePath = gramps.WriteUpload(".png", TestImages.Png()), description = "Scan" });
         var replacement = TestImages.Png(width: 32, height: 32);
 
-        await Session.CallAsync("update_media", new { handle = media.Handle, filePath = gramps.WriteUpload(".png", replacement) });
+        await Session.CallAsync("update_media", new { identifier = media.Handle, filePath = gramps.WriteUpload(".png", replacement) });
 
-        var file = await ReadImageAsync(new { handle = media.Handle, mode = "file" });
+        var file = await ReadImageAsync(new { identifier = media.Handle, mode = "file" });
         Assert.Equal(replacement, file.DecodedData.ToArray());
         var stored = await Session.CallAsync("get_records", new { identifiers = new[] { media.GrampsId } });
         Assert.Contains("Scan", stored);

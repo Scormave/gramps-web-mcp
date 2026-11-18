@@ -41,13 +41,11 @@ public static class RepositoryTools
 
     /// <summary>The checked request body of a new repository for create_records.</summary>
     internal static async Task<CreateRepositoryRequest> BuildRepositoryRequestAsync(
-        string name, string? repoType, string? address, FlexibleAddressList? addresses, string? url, FlexibleUrlList? urls,
+        string name, string? repoType, FlexibleAddressList? addresses, FlexibleUrlList? urls,
         FlexibleHandleList? noteHandles, FlexibleHandleList? tagHandles, bool isPrivate, GrampsApiClient client)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw McpToolErrors.ValidationError("Error: name is required");
-        CheckOneAddressForm(address, addresses);
-        CheckOneUrlForm(url, urls);
 
         if (repoType != null)
             repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
@@ -62,8 +60,8 @@ public static class RepositoryTools
         {
             Name = name,
             Type = repoType,
-            AddressList = (GrampsAddress[]?)addresses is { Length: > 0 } a ? a : RepositoryAddressListFromStreet(address),
-            UrlList = (GrampsUrl[]?)urls is { Length: > 0 } u ? u : RepositoryUrlListFromPath(url),
+            AddressList = (GrampsAddress[]?)addresses is { Length: > 0 } a ? a : null,
+            UrlList = (GrampsUrl[]?)urls is { Length: > 0 } u ? u : null,
             NoteList = noteHandles,
             TagList = tagHandles,
             Private = isPrivate
@@ -72,32 +70,26 @@ public static class RepositoryTools
 
     [McpServerTool(Title = "Update Repository", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
     [Description(
-        "Change an existing repository's name, type, address, website or links to notes and tags. " +
+        "Change an existing repository's name, type, addresses, website links or links to notes and tags. " +
         "For a new repository use create_records; to remove one, delete_records. Which sources it holds, with their " +
         "call numbers, is stored on the sources: change that with update_source (repositoryHandles), not here. " +
-        "addresses sets street, city, postal code, country and the other address fields, and urls sets links with " +
-        "their type and description; address is a shortcut for a single address with only a street line, and url for " +
-        "a single Web Home link. Each replaces every stored address or link; an empty address or url string, or " +
-        "addresses or urls [], removes them. A change shows on every source that lists the repository. " +
+        "addresses sets street, city, postal code, country and the other address fields, or just the street when " +
+        "given as one plain line, and urls sets links with their type and description, a bare https://… link being " +
+        "a Web Home link. Each replaces every stored address or link, and addresses or urls [] removes them. " +
+        "A change shows on every source that lists the repository. " +
         ToolDescriptionFragments.UpdateSemantics + " " +
         "Returns the handle and Gramps ID; a missing repository returns a not-found message, and an unknown type is " +
         "rejected before anything is saved. " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> UpdateRepository(
         [Description("The repository to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("New name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
         [Description("New type, e.g. Archive, Library, Church. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? repoType = null,
-        [Description("New postal address as one line, stored as the street of a single address; replaces every stored " +
-                     "address, and an empty string removes them. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string? address = null,
-        [Description(AddressesText + " Not together with address. " + ToolDescriptionFragments.ReplacedListOnUpdate)]
+        [Description(AddressesText + " " + ToolDescriptionFragments.ReplacedListOnUpdate)]
         FlexibleAddressList? addresses = null,
-        [Description("New website, stored as a single Web Home link; replaces every stored link, and an empty string " +
-                     "removes them. " + ToolDescriptionFragments.OmitToKeepScalar)]
-        string? url = null,
-        [Description(UrlsText + " Not together with url. " + ToolDescriptionFragments.ReplacedListOnUpdate)]
+        [Description(UrlsText + " " + ToolDescriptionFragments.ReplacedListOnUpdate)]
         FlexibleUrlList? urls = null,
         [Description("Notes. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleHandleList.DescriptionHint)]
         FlexibleHandleList? noteHandles = null,
@@ -112,8 +104,6 @@ public static class RepositoryTools
         try
         {
             LinkUpdates.Validate(linkMode);
-            CheckOneAddressForm(address, addresses);
-            CheckOneUrlForm(url, urls);
             await KnownTypes.CheckUrlsAsync(urls, client);
             await new LinkIds()
                 .Addresses("addresses", addresses)
@@ -124,18 +114,14 @@ public static class RepositoryTools
             if (repoType != null)
                 repoType = await KnownTypes.ResolveAsync(repoType, "repository_types", client);
 
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "repositories");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "repositories");
             var repo = await GrampsObjectPatch.LoadAsync(client, $"/api/repositories/{Uri.EscapeDataString(resolvedHandle)}");
             if (repo == null)
-                return NotFoundHelper.NotFoundMessage("Repository", handle);
+                return NotFoundHelper.NotFoundMessage("Repository", identifier);
 
             repo.Set("name", name);
             repo.Set("type", repoType);
-            if (address != null)
-                repo.Root["address_list"] = GrampsObjectPatch.ToNode(RepositoryAddressListFromStreet(address));
             repo.Set("address_list", (GrampsAddress[]?)addresses);
-            if (url != null)
-                repo.Root["urls"] = GrampsObjectPatch.ToNode(RepositoryUrlListFromPath(url));
             repo.Set("urls", (GrampsUrl[]?)urls);
             repo.ApplyHandles("note_list", noteHandles, linkMode);
             repo.ApplyHandles("tag_list", tagHandles, linkMode);
@@ -157,42 +143,4 @@ public static class RepositoryTools
     private const string UrlsText =
         "Links with a type and an optional description, e.g. \"Web Home: https://archive.example.org — reading room\\n" +
         "E-mail: info@archive.example.org\". " + FlexibleUrlList.DescriptionHint;
-
-    /// <summary>address is a one-line shortcut for addresses, so a call gives one or the other.</summary>
-    private static void CheckOneAddressForm(string? address, FlexibleAddressList? addresses)
-    {
-        if (address != null && addresses != null)
-            throw McpToolErrors.ValidationError(
-                "Error: give address or addresses, not both. address is one street line; addresses takes street, city, " +
-                "postal code, country and the other fields.");
-    }
-
-    /// <summary>url is a shortcut for one Web Home link in urls, so a call gives one or the other.</summary>
-    private static void CheckOneUrlForm(string? url, FlexibleUrlList? urls)
-    {
-        if (url != null && urls != null)
-            throw McpToolErrors.ValidationError(
-                "Error: give url or urls, not both. url is one Web Home link; urls takes several links, each with its " +
-                "type and description.");
-    }
-
-    /// <summary>Single street line as Gramps address_list entry; null input omits the field on create.</summary>
-    private static GrampsAddress[]? RepositoryAddressListFromStreet(string? street)
-    {
-        if (street == null)
-            return null;
-        if (string.IsNullOrWhiteSpace(street))
-            return [];
-        return [new GrampsAddress { Street = street.Trim() }];
-    }
-
-    /// <summary>Single URL as urls entry; null input omits on create.</summary>
-    private static GrampsUrl[]? RepositoryUrlListFromPath(string? path)
-    {
-        if (path == null)
-            return null;
-        if (string.IsNullOrWhiteSpace(path))
-            return [];
-        return [new GrampsUrl { Path = path.Trim(), Type = "Web Home" }];
-    }
 }

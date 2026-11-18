@@ -52,6 +52,7 @@ public class ToolArgumentValidatorTests
     [InlineData("extend", "extended")]
     [InlineData("identifer", "identifier")]
     [InlineData("page_size", "pagesize")]
+    [InlineData("handle", "identifier")]
     public void CheckNames_Suggests_The_Likely_Parameter(string name, string suggestion)
     {
         var error = ToolArgumentValidator.CheckNames(Schema, Args($$"""{"identifier":"I0001","{{name}}":1}"""));
@@ -93,8 +94,8 @@ public class ToolArgumentValidatorTests
     }
 
     [Theory]
-    [InlineData("""{"handle":"E0001"}""")]
-    [InlineData("""{"handle":"E0001","linkMode":"add","objectType":null}""")]
+    [InlineData("""{"identifier":"E0001"}""")]
+    [InlineData("""{"identifier":"E0001","linkMode":"add","objectType":null}""")]
     public void CheckSomethingToUpdate_Refuses_An_Update_Without_A_Field(string arguments)
     {
         Assert.Equal(
@@ -107,19 +108,19 @@ public class ToolArgumentValidatorTests
         {
           "type": "object",
           "properties": {
-            "handle": { "type": "string" },
+            "identifier": { "type": "string" },
             "noteHandles": { "type": ["array", "null"], "description": "Notes. {{GrampsWeb.Mcp.Tools.ToolDescriptionFragments.LinkListOnUpdate}}" },
             "tagHandles": { "type": ["array", "null"], "description": "Tags. {{GrampsWeb.Mcp.Tools.ToolDescriptionFragments.LinkListOnUpdate}}" },
             "attributes": { "type": ["array", "null"], "description": "Attributes. {{GrampsWeb.Mcp.Tools.ToolDescriptionFragments.ReplacedListOnUpdate}}" },
             "linkMode": { "type": "string", "default": "add" }
           },
-          "required": ["handle"]
+          "required": ["identifier"]
         }
         """).RootElement;
 
     [Theory]
-    [InlineData("""{"handle":"I0001","noteHandles":[]}""", "an empty noteHandles changes nothing in linkMode add")]
-    [InlineData("""{"handle":"I0001","noteHandles":[],"tagHandles":[],"linkMode":"remove"}""",
+    [InlineData("""{"identifier":"I0001","noteHandles":[]}""", "an empty noteHandles changes nothing in linkMode add")]
+    [InlineData("""{"identifier":"I0001","noteHandles":[],"tagHandles":[],"linkMode":"remove"}""",
         "an empty noteHandles or tagHandles changes nothing in linkMode remove")]
     public void CheckSomethingToUpdate_Refuses_Only_Empty_Link_Lists_Outside_Replace(string arguments, string expected)
     {
@@ -130,17 +131,17 @@ public class ToolArgumentValidatorTests
     }
 
     [Theory]
-    [InlineData("""{"handle":"I0001","noteHandles":[],"linkMode":"replace"}""")]
-    [InlineData("""{"handle":"I0001","attributes":[]}""")]
-    [InlineData("""{"handle":"I0001","noteHandles":[],"tagHandles":["t1"]}""")]
+    [InlineData("""{"identifier":"I0001","noteHandles":[],"linkMode":"replace"}""")]
+    [InlineData("""{"identifier":"I0001","attributes":[]}""")]
+    [InlineData("""{"identifier":"I0001","noteHandles":[],"tagHandles":["t1"]}""")]
     public void CheckSomethingToUpdate_Accepts_A_List_That_Changes_Something(string arguments)
     {
         Assert.Null(ToolArgumentValidator.CheckSomethingToUpdate("update_person", UpdateSchema, Args(arguments)));
     }
 
     [Theory]
-    [InlineData("update_event", """{"handle":"E0001","extended":false}""")]
-    [InlineData("update_event", """{"handle":"E0001","objectType":""}""")]
+    [InlineData("update_event", """{"identifier":"E0001","extended":false}""")]
+    [InlineData("update_event", """{"identifier":"E0001","objectType":""}""")]
     [InlineData("get_records", """{"identifiers":["E0001"]}""")]
     public void CheckSomethingToUpdate_Accepts_A_Field_Or_Another_Tool(string tool, string arguments)
     {

@@ -89,7 +89,7 @@ public static class SourceTools
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateSource(
         [Description("The source to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("New title. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? title = null,
         [Description("New author. " + ToolDescriptionFragments.OmitToKeepScalar)]
@@ -130,10 +130,10 @@ public static class SourceTools
                 .Handles("tagHandles", tagHandles, "tags")
                 .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "sources");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "sources");
             var source = await GrampsObjectPatch.LoadAsync(client, $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}");
             if (source == null)
-                return NotFoundHelper.NotFoundMessage("Source", handle);
+                return NotFoundHelper.NotFoundMessage("Source", identifier);
 
             source.Set("title", title);
             source.Set("author", author);

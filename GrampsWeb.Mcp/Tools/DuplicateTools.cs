@@ -47,7 +47,7 @@ public static class DuplicateTools
         "check on the people it creates; to find one name, use search.")]
     public static Task<string> FindDuplicates(
         [Description("Only pairs with this person. " + ToolDescriptionFragments.HandleDiscovery)]
-        string? personHandle = null,
+        string? person = null,
         [Description("Only pairs where one of the people has this surname, in any spelling or form: Kowalski also " +
                      "finds Kowalska and Kowalski in Cyrillic letters, and Novák also finds Nováková.")]
         string? surname = null,
@@ -56,7 +56,7 @@ public static class DuplicateTools
         [Description("How many pairs to skip, to show the next ones (default 0).")]
         int offset = 0,
         GrampsApiClient client = null!) =>
-        FindDuplicatesAsync(personHandle, surname, limit, offset, client);
+        FindDuplicatesAsync(person, surname, limit, offset, client);
 
     internal static async Task<string> FindDuplicatesAsync(
         string? personHandle, string? surname, int limit, int offset, GrampsApiClient client)
@@ -291,10 +291,10 @@ public static class DuplicateTools
         sb.AppendLine("  • Compare a pair: get_records(objectType: \"person\", " +
                       $"identifiers: [\"{Identifier(first.First)}\", \"{Identifier(first.Second)}\"], extended: true).");
         sb.AppendLine("  • One person, once the user confirmed it: merge_records(objectType: \"person\", " +
-                      "keepHandle: \"<the record to keep>\", duplicateHandle: \"<the other>\").");
+                      "keep: \"<the record to keep>\", duplicate: \"<the other>\").");
         if (offset + shown.Count < scan.Pairs.Count)
         {
-            var filters = (person == null ? "" : $"personHandle: \"{Identifier(person)}\", ") +
+            var filters = (person == null ? "" : $"person: \"{Identifier(person)}\", ") +
                           (surname == null ? "" : $"surname: \"{surname}\", ");
             sb.AppendLine($"  • More pairs: find_duplicates({filters}offset: {offset + shown.Count}).");
         }

@@ -474,8 +474,8 @@ public class DuplicatePeopleTests
         Assert.Contains("action: created", result);
         Assert.Contains("Similar people already in the tree, possibly the same as a new person:\n", result);
         Assert.Contains("    • Образцов, Иван (I0013) [handle: h-namesake] — same name, no birth years to compare\n", result);
-        Assert.Contains("merge_records(objectType: \"person\", keepHandle: \"<their handle>\", " +
-                        "duplicateHandle: \"<the new person's handle>\")", result);
+        Assert.Contains("merge_records(objectType: \"person\", keep: \"<their handle>\", " +
+                        "duplicate: \"<the new person's handle>\")", result);
         Assert.DoesNotContain("h-ivan", result);
     }
 

@@ -77,8 +77,8 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     {
         var note = await Session.CreateAsync("notes", new { text = "First line. Fixme here.", noteType = "Research" });
 
-        await Session.CallAsync("update_note", new { handle = note.Handle, appendText = "Second line." });
-        await Session.CallAsync("update_note", new { handle = note.Handle, replaceText = "Fixme", withText = "Fixed" });
+        await Session.CallAsync("update_note", new { identifier = note.Handle, appendText = "Second line." });
+        await Session.CallAsync("update_note", new { identifier = note.Handle, replaceText = "Fixme", withText = "Fixed" });
 
         var stored = await Session.CallAsync("get_records", new { identifiers = new[] { note.GrampsId } });
         Assert.Contains("Type:   Research", stored);
@@ -90,7 +90,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
     {
         var note = await Session.CreateAsync("notes", new { text = "Original text." });
 
-        var error = await Session.CallErrorAsync("update_note", new { handle = note.Handle, replaceText = "Missing", withText = "x" });
+        var error = await Session.CallErrorAsync("update_note", new { identifier = note.Handle, replaceText = "Missing", withText = "x" });
 
         Assert.Contains("replaceText was not found in the note", error);
         var stored = await Session.CallAsync("get_records", new { identifiers = new[] { note.GrampsId } });
@@ -104,7 +104,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
         var tag = await Session.CreateAsync("tags", new { name = tagName, color = "#ff0000" });
         var person = await Session.CreateAsync("people", new { primaryName = new { first = "Anna", surname = TestNames.Surname() } });
 
-        await Session.CallAsync("update_person", new { handle = person.Handle, tagHandles = new[] { tag.Handle }, linkMode = "add" });
+        await Session.CallAsync("update_person", new { identifier = person.Handle, tagHandles = new[] { tag.Handle }, linkMode = "add" });
 
         var stored = await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } });
         Assert.Contains(tagName, stored);
@@ -116,10 +116,10 @@ public sealed class RecordTests(GrampsWebFixture gramps)
         var oldName = TestNames.Unique("tag");
         var tag = await Session.CreateAsync("tags", new { name = oldName, color = "FF0000" });
         var person = await Session.CreateAsync("people", new { primaryName = new { first = "Anna", surname = TestNames.Surname() } });
-        await Session.CallAsync("update_person", new { handle = person.Handle, tagHandles = new[] { tag.Handle }, linkMode = "add" });
+        await Session.CallAsync("update_person", new { identifier = person.Handle, tagHandles = new[] { tag.Handle }, linkMode = "add" });
         var newName = TestNames.Unique("tag");
 
-        var updated = await Session.CallAsync("update_tag", new { handle = oldName, name = newName, color = "#00AA55", priority = 2 });
+        var updated = await Session.CallAsync("update_tag", new { identifier = oldName, name = newName, color = "#00AA55", priority = 2 });
 
         Assert.Equal(tag.Handle, McpSession.Header(updated, "handle"));
         Assert.Equal("\"#00aa55\"", McpSession.Header(updated, "color"));
@@ -139,7 +139,7 @@ public sealed class RecordTests(GrampsWebFixture gramps)
         await Session.CreateAsync("tags", new { name = taken });
         var tag = await Session.CreateAsync("tags", new { name = TestNames.Unique("tag") });
 
-        var error = await Session.CallErrorAsync("update_tag", new { handle = tag.Handle, name = taken.ToUpperInvariant() });
+        var error = await Session.CallErrorAsync("update_tag", new { identifier = tag.Handle, name = taken.ToUpperInvariant() });
 
         Assert.Contains("another tag is already named", error);
     }

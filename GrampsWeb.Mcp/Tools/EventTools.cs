@@ -177,7 +177,7 @@ public static class EventTools
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateEvent(
         [Description("The event to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("New event type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
         string? eventType = null,
         [Description("New date. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.DateText)]
@@ -219,10 +219,10 @@ public static class EventTools
             if (eventType != null)
                 eventType = await KnownTypes.ResolveAsync(eventType, "event_types", client);
 
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "events");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "events");
             var evt = await GrampsObjectPatch.LoadAsync(client, $"/api/events/{Uri.EscapeDataString(resolvedHandle)}");
             if (evt is null)
-                return NotFoundHelper.NotFoundMessage("Event", handle);
+                return NotFoundHelper.NotFoundMessage("Event", identifier);
 
             evt.Set("type", eventType);
             if (date != null)

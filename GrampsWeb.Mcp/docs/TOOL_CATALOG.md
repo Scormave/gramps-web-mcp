@@ -100,9 +100,9 @@ attributes of event and media links follow `linkMode` with their link (see
 [Link attributes](#link-attributes)).
 
 ```text
-update_person(handle: "PERSON_HANDLE", noteHandles: ["NOTE_HANDLE"])
-update_person(handle: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"])
-update_family(handle: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "remove")
+update_person(identifier: "PERSON_HANDLE", noteHandles: ["NOTE_HANDLE"])
+update_person(identifier: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"])
+update_family(identifier: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "remove")
 ```
 
 `add` appends the links whose handles are not linked yet, once each, in input
@@ -144,8 +144,8 @@ sort an existing list. Equal dates keep their stored order.
 | `Citations`, `Media` | both | The citation's or media object's own date; undated ones last. Gramps shows the first media as the person's picture, so sorting `Media` can change it |
 
 ```text
-update_person(handle: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"], linkMode: "add", sort: "Events")
-update_family(handle: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "add", sort: ["Children"])
+update_person(identifier: "PERSON_HANDLE", eventRefs: ["EVENT_HANDLE::Witness"], linkMode: "add", sort: "Events")
+update_family(identifier: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode: "add", sort: ["Children"])
 ```
 
 ### Image regions
@@ -173,8 +173,8 @@ its region, and `get_media_image` with `region` shows what a region covers befor
 is saved.
 
 ```text
-get_media_image(handle: "O0100", region: [5, 50, 95, 75])
-update_person(handle: "PERSON_HANDLE", mediaHandles: [{"ref": "MEDIA_HANDLE", "region": [5, 50, 95, 75]}], linkMode: "add")
+get_media_image(identifier: "O0100", region: [5, 50, 95, 75])
+update_person(identifier: "PERSON_HANDLE", mediaHandles: [{"ref": "MEDIA_HANDLE", "region": [5, 50, 95, 75]}], linkMode: "add")
 upload_media(filePath: "page12.jpg", attachTo: [{"ref": "I0001", "region": [5, 50, 95, 75]}, "C0001"])
 ```
 
@@ -201,7 +201,7 @@ them on the link with the role given. Records show each link's attributes next
 to it, and an event shows them by each person who took part.
 
 ```text
-update_person(handle: "PERSON_HANDLE", eventRefs: [{"ref": "EVENT_HANDLE", "role": "Primary", "attributes": ["Age: 65"]}], linkMode: "add")
+update_person(identifier: "PERSON_HANDLE", eventRefs: [{"ref": "EVENT_HANDLE", "role": "Primary", "attributes": ["Age: 65"]}], linkMode: "add")
 upload_media(filePath: "page12.jpg", attachTo: [{"ref": "C0001", "region": [5, 50, 95, 75], "attributes": ["Description: entry 14"]}])
 ```
 
@@ -225,11 +225,13 @@ Parameters that take a handle also accept a Gramps ID: an uppercase prefix
 letter followed by digits, 2–8 characters in total. Tags have no Gramps ID and
 are given by handle.
 
-A parameter that names the records a tool acts on, such as `handle` or
-`identifiers`, resolves each Gramps ID by the Gramps default prefixes: `I`
+A parameter that names the records a tool acts on, such as `identifier`,
+`identifiers`, `person`, or `keep` and `duplicate`, resolves each Gramps ID by the Gramps default prefixes: `I`
 person, `F` family, `E` event, `P` place, `S` source, `C` citation, `R`
 repository, `N` note, `O` media. An ID with another type's prefix, or one that
-no object has, is passed on unchanged and ends in a not-found result.
+no object has, is passed on unchanged and ends in a not-found result. Every
+`update_*` tool and `get_media_image` name their record in `identifier`;
+`update_tag` also takes the tag's exact name there.
 
 A link field, such as `noteHandles`, `eventRefs`, `fatherHandle` or
 `placeHandle`, links one type, so its Gramps IDs are looked up among the
@@ -258,12 +260,13 @@ output, with a hint when the identifier looks like a Gramps ID:
 
 Before a tool runs, the server checks the argument names against the tool's
 input schema. An unknown argument (with a suggestion for a close match, such as
-`extend` for `extended`), a missing required argument, or a value the server
+`extend` for `extended`, or for the new name of an argument renamed in 3.0,
+such as `identifier` for `handle`), a missing required argument, or a value the server
 cannot convert to the parameter's type returns a tool error that names the
 argument and lists the tool's parameters, their types, and which are required.
 Numbers sent as strings are accepted, and a JSON number sent for a text
 parameter is read as its text. An `update_*` call that gives no field to change
-besides `handle` and `linkMode` is refused with the same parameter list instead
+besides `identifier` and `linkMode` is refused with the same parameter list instead
 of saving the record unchanged: clients such as Claude Code drop arguments a
 tool does not have, so `update_event(place: …)` arrives without `place`.
 For the same reason `update_place` shows the place's `placeType`, `lat`,
@@ -491,12 +494,12 @@ date for the first.
 ```text
 find_duplicates()
 find_duplicates(surname: "Nováková")
-find_duplicates(personHandle: "I0012")
+find_duplicates(person: "I0012")
 ```
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `personHandle` | `string?` | no | — | Only pairs with this person; handle or Gramps ID |
+| `person` | `string?` | no | — | Only pairs with this person; handle or Gramps ID |
 | `surname` | `string?` | no | — | Only pairs where one of the people has this surname, in any spelling, alphabet or form: Nováková also finds Novák, Nowak and Новак |
 | `limit` | `int` | no | `20` | Pairs to show, 1–100 |
 | `offset` | `int` | no | `0` | Pairs to skip |
@@ -553,15 +556,15 @@ Marriage events that came along, and `undo_change` with the transaction to
 restore the duplicate.
 
 ```text
-merge_records(objectType: "person", keepHandle: "I0042", duplicateHandle: "I0107")
+merge_records(objectType: "person", keep: "I0042", duplicate: "I0107")
 undo_change(transactionId: 415)
 ```
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `objectType` | `string` | yes | — | `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, or `repository` |
-| `keepHandle` | `string` | yes | — | The record that stays; handle or Gramps ID |
-| `duplicateHandle` | `string` | yes | — | The record merged into it and deleted; handle or Gramps ID |
+| `keep` | `string` | yes | — | The record that stays; handle or Gramps ID |
+| `duplicate` | `string` | yes | — | The record merged into it and deleted; handle or Gramps ID |
 | `mergeFamilies` | `bool` | no | `true` | People only: also merge a family the duplicate had with the same partner |
 | `fatherHandle` | `string?` | no | kept family's father | Families only: the father who stays when the families name different fathers |
 | `motherHandle` | `string?` | no | kept family's mother | Families only: the mother who stays when the families name different mothers |
@@ -643,8 +646,8 @@ returns the usual not-found message.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `handle1` | `string` | yes | First person handle or Gramps ID |
-| `handle2` | `string` | yes | Second person handle or Gramps ID |
+| `person1` | `string` | yes | First person: handle or Gramps ID |
+| `person2` | `string` | yes | Second person: handle or Gramps ID |
 
 ### U — `UpdatePerson`
 `linkMode: "add"` (default), `"remove"` or `"replace"` applies to supplied link lists; see [Incremental link updates](#incremental-link-updates).
@@ -654,7 +657,7 @@ Empty list `[]` clears links in `replace` mode; omit to keep unchanged.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `handle` | `string` | yes | Person handle |
+| `identifier` | `string` | yes | The person: handle or Gramps ID |
 | Fields of a [`people` record](#people) | — | no | The same fields, all optional, without `notDuplicateOf` |
 | `familyHandles` | `FlexibleHandleList?` | no | Families (as parent/spouse), by handle or Gramps ID; the family's `fatherHandle` or `motherHandle` stays unchanged |
 | `parentFamilyHandles` | `FlexibleHandleList?` | no | Parent families (as child), by handle or Gramps ID; the family's `childRefs` stay unchanged |
@@ -738,7 +741,7 @@ is not found, or found more than once, is rejected and nothing is saved.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Note handle or Gramps ID |
+| `identifier` | `string` | yes | — | The note: handle or Gramps ID |
 | `text` | `string?` | no | — | New body; changed text loses the old styling and links |
 | `appendText` | `string?` | no | — | Text added on a new line at the end (a line break is put in between unless the body ends with one; start with a line break for an empty line). Keeps the rest of the body, styling and links included. Cannot be combined with `text` |
 | `replaceText` | `string?` | no | — | Fragment of the body to replace, exactly as stored (spaces, line breaks, letter case); must occur once. Styling and links after it move with the text, those around it stretch or shrink, those wholly inside it are dropped. Cannot be combined with `text` |
@@ -774,7 +777,7 @@ an embedded blob with a text hint. Prefer thumbnails before full files.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Media handle or Gramps ID |
+| `identifier` | `string` | yes | — | The media: handle or Gramps ID |
 | `mode` | `string` | no | `thumbnail` | `thumbnail` or `file` |
 | `size` | `int?` | no | — | Thumbnail long edge in pixels, 1 to 4096; omitted means 1568, which keeps document scans legible. Images are never upscaled. Must be omitted in file mode |
 | `region` | `double[]?` | no | — | Show only this part of the image, `[left, top, right, bottom]` in percent as on a media link (see [Image regions](#image-regions)), at up to `size` pixels on its long edge; a small region is read from the full-resolution original. Thumbnail mode only |
@@ -829,7 +832,7 @@ media off a record, use that record's update tool with `mediaHandles` and
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Media handle |
+| `identifier` | `string` | yes | — | The media: handle or Gramps ID |
 | `description` | `string?` | no | — | Description |
 | `date` | `string?` | no | — | Date text; omit to keep the current date, an empty string removes it |
 | `noteHandles`, `tagHandles`, `citationHandles` | `FlexibleHandleList?` | no | — | Handles or Gramps IDs; tags by handle |
@@ -869,10 +872,9 @@ ChatGPT itself.
 Update a repository (the fields of a [`repositories` record](#repositories),
 all optional). `addresses` and `urls`
 replace every stored address or link with the ones given, and `[]` removes
-them. `address` and `url` each replace every stored address or link with one,
-as in a new record, and an empty string removes them. `address` and `addresses` are
-not given together, nor are `url` and `urls`. A change shows on every source
-that lists the repository.
+them. One plain line in `addresses` is a street, and a bare `https://…` link in
+`urls` is a Web Home link. A change shows on every source that lists the
+repository.
 
 ---
 
@@ -892,7 +894,7 @@ header reports the stored `name`, `color` and `priority`.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `handle` | `string` | yes | — | Tag handle or exact name (a name that differs only in case is accepted when one tag matches) |
+| `identifier` | `string` | yes | — | The tag: handle or exact name (a name that differs only in case is accepted when one tag matches) |
 | `name` | `string?` | no | — | New name; empty is rejected |
 | `color` | `string?` | no | — | New color, RRGGBB with or without `#` |
 | `priority` | `int?` | no | — | New sort priority |
@@ -979,10 +981,8 @@ call number.
 |-------|------|----------|---------|-------------|
 | `name` | `string` | yes | — | Name |
 | `repoType` | `string?` | no | — | Repository type, such as `Archive`, `Library`, `Church`, or `Web site`; Gramps stores `Library` when omitted |
-| `address` | `string?` | no | — | Postal address as one line, stored as the street of the repository's address |
-| `addresses` | `FlexibleAddressList?` | no | — | Addresses with separate fields (street, locality, city, county, state, postal code, country, phone), in the same forms as on people; not together with `address` |
-| `url` | `string?` | no | — | Website, stored as the repository's Web Home link |
-| `urls` | `FlexibleUrlList?` | no | — | Links, each with a type (`Web Home`, `E-mail`, …) and an optional description, in the same forms as on people; not together with `url` |
+| `addresses` | `FlexibleAddressList?` | no | — | Addresses with separate fields (street, locality, city, county, state, postal code, country, phone), in the same forms as on people; one plain line is stored as the street |
+| `urls` | `FlexibleUrlList?` | no | — | Links, each with a type (`Web Home`, `E-mail`, …) and an optional description, in the same forms as on people; a bare `https://…` link is a Web Home link |
 | `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Existing notes and tags to link: handles or Gramps IDs, tags by handle |
 | `isPrivate` | `bool` | no | `false` | Mark private |
 

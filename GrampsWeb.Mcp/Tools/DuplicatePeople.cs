@@ -333,8 +333,8 @@ internal static partial class DuplicatePeople
             }
 
             sb.AppendLine("If one of them is the new person, compare them with get_records and merge the new record into " +
-                          "theirs: merge_records(objectType: \"person\", keepHandle: \"<their handle>\", " +
-                          "duplicateHandle: \"<the new person's handle>\").");
+                          "theirs: merge_records(objectType: \"person\", keep: \"<their handle>\", " +
+                          "duplicate: \"<the new person's handle>\").");
         }
 
         var failed = checks.Where(c => c.Result.Failure != null).ToList();

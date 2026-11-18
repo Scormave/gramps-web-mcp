@@ -375,20 +375,12 @@ public sealed class RepositoryRecord : BatchRecord
                  ToolDescriptionFragments.KnownType)]
     public string? RepoType { get; init; }
 
-    [JsonPropertyName("address")]
-    [Description("Postal address as one line, stored as the street; for a city, postal code or country use addresses.")]
-    public string? Address { get; init; }
-
     [JsonPropertyName("addresses")]
-    [Description("Addresses with separate fields, not together with address. " + FlexibleAddressList.DescriptionHint)]
+    [Description("Postal addresses with separate fields. " + FlexibleAddressList.DescriptionHint)]
     public FlexibleAddressList? Addresses { get; init; }
 
-    [JsonPropertyName("url")]
-    [Description("Website, stored as a Web Home link; for other link types or a description use urls.")]
-    public string? Url { get; init; }
-
     [JsonPropertyName("urls")]
-    [Description("Links with a type and description, not together with url. " + FlexibleUrlList.DescriptionHint)]
+    [Description("Website and other links with a type and description. " + FlexibleUrlList.DescriptionHint)]
     public FlexibleUrlList? Urls { get; init; }
 
     [JsonPropertyName("noteHandles")]
@@ -407,8 +399,8 @@ public sealed class RepositoryRecord : BatchRecord
 
     internal override async Task<(object Request, string Label)> BuildAsync(GrampsApiClient client)
     {
-        var request = await RepositoryTools.BuildRepositoryRequestAsync(Name, RepoType, Address, Addresses, Url,
-            Urls, NoteHandles, TagHandles, IsPrivate, client);
+        var request = await RepositoryTools.BuildRepositoryRequestAsync(Name, RepoType, Addresses, Urls,
+            NoteHandles, TagHandles, IsPrivate, client);
         return (request, Name);
     }
 }

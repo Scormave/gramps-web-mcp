@@ -108,7 +108,7 @@ public static class PlaceTools
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdatePlace(
         [Description("The place to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("New primary name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
         [Description("New place type. " + ToolDescriptionFragments.OmitToKeepScalar + " " + ToolDescriptionFragments.KnownType)]
@@ -156,10 +156,10 @@ public static class PlaceTools
                 placeType = await KnownTypes.ResolveAsync(placeType, "place_types", client);
             await KnownTypes.CheckMediaLinksAsync(mediaHandles, client, linkMode);
 
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "places");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "places");
             var place = await GrampsObjectPatch.LoadAsync(client, $"/api/places/{Uri.EscapeDataString(resolvedHandle)}");
             if (place == null)
-                return NotFoundHelper.NotFoundMessage("Place", handle);
+                return NotFoundHelper.NotFoundMessage("Place", identifier);
 
             if (name != null || nameLang != null || nameDate != null)
             {

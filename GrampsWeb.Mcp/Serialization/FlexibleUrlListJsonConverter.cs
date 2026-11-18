@@ -9,6 +9,8 @@ public sealed class FlexibleUrlListJsonConverter : JsonConverter<FlexibleUrlList
 {
     private static readonly char[] LineDelimiters = ['|', '\n', '\r'];
 
+    private const string WebHome = "Web Home";
+
     public override FlexibleUrlList? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         switch (reader.TokenType)
@@ -72,7 +74,10 @@ public sealed class FlexibleUrlListJsonConverter : JsonConverter<FlexibleUrlList
         s.Split(LineDelimiters, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(p => !string.IsNullOrWhiteSpace(p));
 
-    /// <summary>First <c>:</c> separates type from path; path may be followed by <c> — </c> or <c> - </c> and description.</summary>
+    /// <summary>
+    /// First <c>:</c> separates type from path; path may be followed by <c> — </c> or <c> - </c> and description.
+    /// A bare link such as <c>https://example.org</c> has no type and is a Web Home link.
+    /// </summary>
     internal static GrampsUrl? ParseUrlLine(string line)
     {
         line = line.Trim();
@@ -83,8 +88,9 @@ public sealed class FlexibleUrlListJsonConverter : JsonConverter<FlexibleUrlList
         if (idx < 0)
             throw new JsonException($"URL entry must use \"Type: URL\" (colon). Got: \"{line}\"");
 
-        var type = line[..idx].Trim();
-        var rest = line[(idx + 1)..].Trim();
+        var bare = line.AsSpan(idx + 1).StartsWith("//", StringComparison.Ordinal);
+        var type = bare ? WebHome : line[..idx].Trim();
+        var rest = bare ? line : line[(idx + 1)..].Trim();
         if (string.IsNullOrEmpty(type))
             throw new JsonException($"URL type cannot be empty. Line: \"{line}\"");
 

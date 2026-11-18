@@ -2,9 +2,10 @@
 
 This guide compares the 2.11 tool catalog with the 3.0 catalog. 3.0 needs a
 newer Gramps Web, renames the tools that read, list, merge and delete
-records, replaces the nine single-record `create_*` tools with
-`create_records`, and makes `linkMode: "add"` the default of the `update_*`
-tools. The catalog shrinks from up to 35 tools to up to 26.
+records and the arguments that name the record a tool acts on, replaces the
+nine single-record `create_*` tools with `create_records`, and makes
+`linkMode: "add"` the default of the `update_*` tools. The catalog shrinks
+from up to 35 tools to up to 26.
 
 Existing Gramps Web trees and records need no migration. Update Gramps Web if
 needed, update the MCP server, reconnect the MCP client so it refreshes
@@ -27,13 +28,14 @@ until Gramps Web can be updated.
 |----------|----------|
 | `get_object(objectType, identifier, extended)` | `get_records(identifiers: [identifier], objectType, extended)` |
 | `list_objects(objectType, ...)` | `list_records(objectType, ...)` |
-| `merge_objects(objectType, keepHandle, duplicateHandle, ...)` | `merge_records(objectType, keepHandle, duplicateHandle, ...)` |
-| `read_media(handle, mode, size, region)` | `get_media_image(handle, mode, size, region)` |
+| `merge_objects(objectType, keepHandle, duplicateHandle, ...)` | `merge_records(objectType, keep, duplicate, ...)` |
+| `read_media(handle, mode, size, region)` | `get_media_image(identifier, mode, size, region)` |
 | `delete_object(objectType, handle, force)` | `delete_records(identifiers: [handle], objectType, force)` |
 | `create_media(filePath, ...)` | `upload_media(filePath, ...)` |
 
-`list_records`, `merge_records`, `get_media_image` and `upload_media` take the
-same arguments as the tools they replace. `get_media_image` and
+`list_records` and `upload_media` take the same arguments as the tools they
+replace; `merge_records` and `get_media_image` rename theirs as described in
+[Rename arguments](#rename-arguments). `get_media_image` and
 `upload_media` are published under the same media settings as `read_media`
 and `create_media` were, and `GRAMPS_REQUIRE_USER_INTERACTION` covers
 `delete_records` and `merge_records` as it covered `delete_object` and
@@ -63,6 +65,43 @@ With `force`, Gramps Web removes those links from the other records, as with
 left without father, mother and children. A place that encloses places outside the call is refused even with
 `force`. Each record type is deleted in its own transaction, and
 `undo_change` reverts each one.
+
+## Rename arguments
+
+The argument that names the record a tool acts on is `identifier` in every
+tool that takes one record, or a name that says the record's role:
+
+| Tool | 2.x argument | 3.0 argument |
+|------|--------------|--------------|
+| `update_person`, `update_family`, `update_event`, `update_place`, `update_source`, `update_citation`, `update_note`, `update_media`, `update_repository`, `update_tag` | `handle` | `identifier` |
+| `get_media_image` (2.x `read_media`) | `handle` | `identifier` |
+| `get_relations` | `handle1`, `handle2` | `person1`, `person2` |
+| `merge_records` (2.x `merge_objects`) | `keepHandle`, `duplicateHandle` | `keep`, `duplicate` |
+| `find_duplicates` | `personHandle` | `person` |
+
+They take the same values as before: a handle or a Gramps ID, and for
+`update_tag` a tag's handle or name. Link fields keep their names
+(`noteHandles`, `fatherHandle`, `placeHandle` and the others), and so do
+`fatherHandle` and `motherHandle` of `merge_records`. A call with a 2.x name
+is refused with an error that names the new one:
+
+```text
+Unknown argument: handle (did you mean identifier?).
+```
+
+`update_repository` and the `repositories` of `create_records` no longer take
+`address` and `url`. Pass the same line in `addresses` or `urls`: a plain line
+in `addresses` is stored as the street, as `address` stored it, and a bare
+link with its scheme, such as `https://archive.example.org`, is stored in
+`urls` as a Web Home link, as `url` stored it. To remove every address or
+link, pass `[]`; an empty string, which removed them in 2.x, now changes
+nothing.
+
+| 2.x call | 3.0 call |
+|----------|----------|
+| `update_repository(handle, address: "12 High Street", url: "https://archive.example.org")` | `update_repository(identifier, addresses: "12 High Street", urls: "https://archive.example.org")` |
+| `update_repository(handle, address: "", url: "")` | `update_repository(identifier, addresses: [], urls: [])` |
+| `create_repository(name, address, url)` | `create_records(repositories: [{name, addresses, urls}])` |
 
 ## Create records with create_records
 
@@ -117,12 +156,12 @@ and `replace` below.
 
 | To | 2.x call | 3.0 call |
 |----|----------|----------|
-| Add one link | `update_event(handle, citationHandles: ["C0001"], linkMode: "add")` | `update_event(handle, citationHandles: ["C0001"])` |
-| Set a whole list | `update_person(handle, noteHandles: ["N0001", "N0002"])` | `update_person(handle, noteHandles: ["N0001", "N0002"], linkMode: "replace")` |
-| Remove every link of a kind | `update_person(handle, noteHandles: [])` | `update_person(handle, noteHandles: [], linkMode: "replace")` |
-| Change one event role | Read `eventRefs`, then pass the whole edited list | `update_person(handle, eventRefs: ["E0001::Witness"])` |
-| Change a child's relations | Read `childRefs`, then pass the whole edited list | `update_family(handle, childRefs: [{ref: "I0045", frel: "Adopted"}])` |
-| Change a call number | Read `repositoryHandles`, then pass the whole edited list | `update_source(handle, repositoryHandles: [{ref: "R0001", callNumber: "F. 1, op. 2, d. 3"}])` |
+| Add one link | `update_event(handle, citationHandles: ["C0001"], linkMode: "add")` | `update_event(identifier, citationHandles: ["C0001"])` |
+| Set a whole list | `update_person(handle, noteHandles: ["N0001", "N0002"])` | `update_person(identifier, noteHandles: ["N0001", "N0002"], linkMode: "replace")` |
+| Remove every link of a kind | `update_person(handle, noteHandles: [])` | `update_person(identifier, noteHandles: [], linkMode: "replace")` |
+| Change one event role | Read `eventRefs`, then pass the whole edited list | `update_person(identifier, eventRefs: ["E0001::Witness"])` |
+| Change a child's relations | Read `childRefs`, then pass the whole edited list | `update_family(identifier, childRefs: [{ref: "I0045", frel: "Adopted"}])` |
+| Change a call number | Read `repositoryHandles`, then pass the whole edited list | `update_source(identifier, repositoryHandles: [{ref: "R0001", callNumber: "F. 1, op. 2, d. 3"}])` |
 
 `add` now updates a link that is already stored with the fields the call sends
 for it: an event's role, a child's `frel` and `mrel`, a repository's call
@@ -157,9 +196,9 @@ anything is saved. Tags have no Gramps ID, so a tag field takes handles only.
 
 1. Check that Gramps Web runs API 3.16 or newer (Gramps Web 26.6.2 or newer).
 2. Upgrade the server and reconnect the MCP client so it refreshes its tools.
-3. Replace removed and renamed names in saved prompts, scripts and tool
-   allowlists using the tables above, and approve the renamed tools again
-   where a client asks per tool.
+3. Replace removed and renamed tool and argument names in saved prompts,
+   scripts and tool allowlists using the tables above, and approve the
+   renamed tools again where a client asks per tool.
 4. Find every saved `update_*` call that passes a link list without
    `linkMode`. Add `linkMode: "replace"` where it must set the whole list.
 5. Test a read (`get_records`), a `create_records` call and an

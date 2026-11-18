@@ -67,9 +67,9 @@ internal static class ToolArgumentValidator
     }
 
     /// <summary>
-    /// An error for an update_* call that gives no field to change besides handle and linkMode;
+    /// An error for an update_* call that gives no field to change besides identifier and linkMode;
     /// null otherwise. Clients such as Claude Code drop arguments the schema does not list, so
-    /// update_event(place: …) arrives as update_event(handle) and would save the record unchanged.
+    /// update_event(place: …) arrives as update_event(identifier) and would save the record unchanged.
     /// An empty link list counts as no field unless linkMode is replace, the only mode in which [] clears it.
     /// </summary>
     public static string? CheckSomethingToUpdate(string toolName, JsonElement schema, IDictionary<string, JsonElement>? arguments)
@@ -83,7 +83,7 @@ internal static class ToolArgumentValidator
         var emptyLinkLists = new List<string>();
         foreach (var (name, value) in arguments ?? new Dictionary<string, JsonElement>())
         {
-            if (name is "handle" or "linkMode" || value.ValueKind == JsonValueKind.Null)
+            if (name is "identifier" or "linkMode" || value.ValueKind == JsonValueKind.Null)
                 continue;
             if (mode != "replace" && value.ValueKind == JsonValueKind.Array && value.GetArrayLength() == 0
                 && IsLinkList(properties.GetValueOrDefault(name)))
@@ -300,12 +300,28 @@ internal static class ToolArgumentValidator
 
     private static string Article(string noun) => noun.Length > 0 && "aeiou".Contains(noun[0]) ? "an " : "a ";
 
+    /// <summary>Arguments renamed in 3.0, so a call written for 2.x is pointed at the new name.</summary>
+    private static readonly Dictionary<string, string> Renamed = new(StringComparer.Ordinal)
+    {
+        ["handle"] = "identifier",
+        ["handle1"] = "person1",
+        ["handle2"] = "person2",
+        ["keepHandle"] = "keep",
+        ["duplicateHandle"] = "duplicate",
+        ["personHandle"] = "person",
+        ["address"] = "addresses",
+        ["url"] = "urls",
+    };
+
     /// <summary>
     /// The parameter a misspelled name most likely means: the same name ignoring case and
-    /// underscores (object_type → objectType), a close spelling, or a prefix (extend → extended).
+    /// underscores (object_type → objectType), a close spelling, or a prefix (extend → extended),
+    /// or the 3.0 name of a 2.x argument (handle → identifier).
     /// </summary>
     private static string? Suggest(string name, IEnumerable<string> candidates)
     {
+        if (Renamed.TryGetValue(name, out var renamed) && candidates.Contains(renamed))
+            return renamed;
         var key = Normalize(name);
         var scored = candidates
             .Select(candidate => (candidate, normalized: Normalize(candidate)))

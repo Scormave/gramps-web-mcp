@@ -80,7 +80,7 @@ public static class NoteTools
         "For a new note use create_records; to remove one, delete_records. " + ToolDescriptionFragments.WriteAccess)]
     public static async Task<string> UpdateNote(
         [Description("The note to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("New text, replacing the whole body; changed text loses the styling and links of the old one, the same text keeps them. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? text = null,
         [Description("Text to add at the end of the body, on a new line: a line break is put in between unless the body already ends with one, " +
@@ -128,10 +128,10 @@ public static class NoteTools
             if (noteType != null)
                 noteType = await KnownTypes.ResolveAsync(noteType, "note_types", client);
 
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "notes");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "notes");
             var note = await GrampsObjectPatch.LoadAsync(client, $"/api/notes/{Uri.EscapeDataString(resolvedHandle)}");
             if (note == null)
-                return NotFoundHelper.NotFoundMessage("Note", handle);
+                return NotFoundHelper.NotFoundMessage("Note", identifier);
 
             // The stored text carries styling and links (StyledText tags); keep it unless the text really changes.
             var styled = note.Root["text"] as JsonObject;

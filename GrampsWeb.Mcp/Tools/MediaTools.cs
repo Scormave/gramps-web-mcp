@@ -59,7 +59,7 @@ public static class MediaTools
         "For the media record itself (path, description, links) use get_records; to change it use update_media.")]
     public static async Task<CallToolResult> GetMediaImage(
         [Description("The media object to show. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("Download mode: thumbnail | file. Default thumbnail. Use file only when a preview is insufficient.")]
         string mode = "thumbnail",
         [Description("Thumbnail long edge in pixels, 1 to 4096; default 1568, which keeps handwriting and small print legible. " +
@@ -75,7 +75,7 @@ public static class MediaTools
         try
         {
             GrampsResources.EnsureMediaResourcesEnabled(config);
-            GrampsResources.EnsureMediaHandle(handle);
+            GrampsResources.EnsureMediaHandle(identifier);
             var normalizedMode = mode?.Trim().ToLowerInvariant();
             if (normalizedMode is not ("thumbnail" or "file"))
                 throw McpToolErrors.ValidationError("Invalid mode. Must be thumbnail or file.");
@@ -94,7 +94,7 @@ public static class MediaTools
                     crop = null;
             }
 
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "media");
             if (normalizedMode == "file")
             {
                 var mediaFile = await GrampsResources.DownloadMediaFileAsync(resolvedHandle, client, config);
@@ -235,7 +235,7 @@ public static class MediaTools
             {
                 throw new McpException(
                     $"{Path.GetFileName(upload.Path)} was uploaded as media {grampsId ?? handle}, but saving its description and links failed: {ex.Message} " +
-                    $"Do not upload it again: set them with update_media(handle: \"{handle}\").", ex);
+                    $"Do not upload it again: set them with update_media(identifier: \"{handle}\").", ex);
             }
 
             var attached = await AttachAsync(owners, handle, grampsId, client, CreateRetry);
@@ -263,7 +263,7 @@ public static class MediaTools
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> UpdateMedia(
         [Description("The media object to change. " + ToolDescriptionFragments.HandleDiscovery)]
-        string handle,
+        string identifier,
         [Description("New description (caption). " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? description = null,
         [Description("New date. Omit to keep the current date; pass an empty string to remove it. " + ToolDescriptionFragments.DateText)]
@@ -308,7 +308,7 @@ public static class MediaTools
                 .MediaLinks("attachTo", attachTo, refs: false)
                 .ResolveAsync(client, "Nothing was changed.");
             using var updateLease = await client.BeginUpdateAsync();
-            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(handle, client, "media");
+            var resolvedHandle = await HandleResolver.ResolveToHandleAsync(identifier, client, "media");
             var mediaPath = $"/api/media/{Uri.EscapeDataString(resolvedHandle)}";
             var owners = await ResolveOwnersAsync(attachTo, client, "Nothing was changed.");
             var metadataChanges = HasMetadataChanges(description, date, noteHandles, tagHandles, citationHandles, attributes, isPrivate);
@@ -319,7 +319,7 @@ public static class MediaTools
             {
                 current = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(mediaPath);
                 if (current == null)
-                    return NotFoundHelper.NotFoundMessage("Media", handle);
+                    return NotFoundHelper.NotFoundMessage("Media", identifier);
             }
 
             if (upload is not null && current is not null)
@@ -344,7 +344,7 @@ public static class MediaTools
                 // Loaded after the file is replaced, so the save keeps the new checksum, path and MIME type.
                 var media = await GrampsObjectPatch.LoadAsync(client, mediaPath);
                 if (media == null)
-                    return NotFoundHelper.NotFoundMessage("Media", handle);
+                    return NotFoundHelper.NotFoundMessage("Media", identifier);
 
                 media.Set("desc", description);
                 if (date != null)
@@ -362,7 +362,7 @@ public static class MediaTools
             if (owners.Count > 0)
             {
                 var attached = await AttachAsync(owners, savedHandle, savedId, client,
-                    $"Run update_media(handle: \"{savedHandle}\") again with the same attachTo: it adds only the missing links.");
+                    $"Run update_media(identifier: \"{savedHandle}\") again with the same attachTo: it adds only the missing links.");
                 stored.Add(new("attached_to", ResponseEnvelope.HeaderValue(attached)));
             }
 

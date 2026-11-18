@@ -55,28 +55,15 @@ public class RepositoryToolsTests
     }
 
     [Fact]
-    public async Task CreateRecords_Address_Line_Is_Stored_As_The_Street()
+    public async Task CreateRecords_One_Address_Line_Is_Stored_As_The_Street()
     {
         var handler = new RepositoryHandler();
 
-        await CreateRepository("""{ "name": "City Archive", "address": "12 High Street, London" }""", handler);
+        await CreateRepository("""{ "name": "City Archive", "addresses": "12 High Street, London" }""", handler);
 
         var address = Assert.Single(handler.Body!["address_list"]!.AsArray())!;
         Assert.Equal("12 High Street, London", address["street"]!.GetValue<string>());
         Assert.Null(address["city"]);
-    }
-
-    [Fact]
-    public async Task CreateRecords_Refuses_Address_And_Addresses_Together()
-    {
-        var handler = new RepositoryHandler();
-
-        var error = await Assert.ThrowsAsync<McpException>(() => CreateRepository($$"""
-            { "name": "City Archive", "address": "12 High Street", "addresses": {{JsonSerializer.Serialize(KeyedAddress)}} }
-            """, handler));
-
-        Assert.Contains("address or addresses, not both", error.Message);
-        Assert.Null(handler.Body);
     }
 
     [Fact]
@@ -107,17 +94,6 @@ public class RepositoryToolsTests
     }
 
     [Fact]
-    public async Task UpdateRepository_Refuses_Address_And_Addresses_Together()
-    {
-        var handler = new RepositoryHandler(StoredRepository);
-
-        await Assert.ThrowsAsync<McpException>(() => RepositoryTools.UpdateRepository("h-repo", address: "",
-            addresses: Addresses("[]"), client: CreateClient(handler)));
-
-        Assert.Null(handler.Body);
-    }
-
-    [Fact]
     public async Task CreateRecords_Urls_Keep_Each_Type_And_Description()
     {
         var handler = new RepositoryHandler();
@@ -134,28 +110,15 @@ public class RepositoryToolsTests
     }
 
     [Fact]
-    public async Task CreateRecords_Url_Is_Stored_As_A_Web_Home_Link()
+    public async Task CreateRecords_A_Bare_Link_Is_Stored_As_A_Web_Home_Link()
     {
         var handler = new RepositoryHandler();
 
-        await CreateRepository("""{ "name": "City Archive", "url": "https://archive.example.org" }""", handler);
+        await CreateRepository("""{ "name": "City Archive", "urls": "https://archive.example.org" }""", handler);
 
         var url = Assert.Single(handler.Body!["urls"]!.AsArray())!;
         Assert.Equal("Web Home", url["type"]!.GetValue<string>());
         Assert.Equal("https://archive.example.org", url["path"]!.GetValue<string>());
-    }
-
-    [Fact]
-    public async Task CreateRecords_Refuses_Url_And_Urls_Together()
-    {
-        var handler = new RepositoryHandler();
-
-        var error = await Assert.ThrowsAsync<McpException>(() => CreateRepository($$"""
-            { "name": "City Archive", "url": "https://archive.example.org", "urls": {{JsonSerializer.Serialize(TwoLinks)}} }
-            """, handler));
-
-        Assert.Contains("url or urls, not both", error.Message);
-        Assert.Null(handler.Body);
     }
 
     [Fact]
@@ -195,17 +158,6 @@ public class RepositoryToolsTests
         await RepositoryTools.UpdateRepository("h-repo", urls: Urls("[]"), client: CreateClient(handler));
 
         Assert.Empty(handler.Body!["urls"]!.AsArray());
-    }
-
-    [Fact]
-    public async Task UpdateRepository_Refuses_Url_And_Urls_Together()
-    {
-        var handler = new RepositoryHandler(StoredRepository);
-
-        await Assert.ThrowsAsync<McpException>(() => RepositoryTools.UpdateRepository("h-repo", url: "",
-            urls: Urls("[]"), client: CreateClient(handler)));
-
-        Assert.Null(handler.Body);
     }
 
     [Fact]

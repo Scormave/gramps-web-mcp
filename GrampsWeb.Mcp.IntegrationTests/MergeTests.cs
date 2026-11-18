@@ -31,8 +31,8 @@ public sealed class MergeTests(GrampsWebFixture gramps)
         var merged = await Session.CallAsync("merge_records", new
         {
             objectType = "person",
-            keepHandle = keep.Handle,
-            duplicateHandle = duplicate.Handle
+            keep = keep.Handle,
+            duplicate = duplicate.Handle
         });
 
         Assert.Equal("merged", McpSession.Header(merged, "action"));
@@ -83,8 +83,8 @@ public sealed class MergeTests(GrampsWebFixture gramps)
         var refused = await Session.CallAsync("merge_records", new
         {
             objectType = "person",
-            keepHandle = husband.Handle,
-            duplicateHandle = wife.Handle
+            keep = husband.Handle,
+            duplicate = wife.Handle
         });
 
         Assert.Equal("refused", McpSession.Header(refused, "action"));
@@ -128,8 +128,8 @@ public sealed class MergeTests(GrampsWebFixture gramps)
         var merged = await Session.CallAsync("merge_records", new
         {
             objectType = "family",
-            keepHandle = keep.Handle,
-            duplicateHandle = duplicate.Handle
+            keep = keep.Handle,
+            duplicate = duplicate.Handle
         });
 
         Assert.Equal("merged", McpSession.Header(merged, "action"));
@@ -162,8 +162,8 @@ public sealed class MergeTests(GrampsWebFixture gramps)
         var merged = await Session.CallAsync("merge_records", new
         {
             objectType = "note",
-            keepHandle = keep.GrampsId,
-            duplicateHandle = duplicate.GrampsId
+            keep = keep.GrampsId,
+            duplicate = duplicate.GrampsId
         });
 
         Assert.Equal("merged", McpSession.Header(merged, "action"));

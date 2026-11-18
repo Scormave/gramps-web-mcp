@@ -33,7 +33,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
         var original = TestNames.Unique("original");
         var edited = TestNames.Unique("edited");
         var note = await Session.CreateAsync("notes", new { text = original });
-        await Session.CallAsync("update_note", new { handle = note.Handle, text = edited });
+        await Session.CallAsync("update_note", new { identifier = note.Handle, text = edited });
         var transaction = await LatestTransactionAsync();
 
         var undone = await Session.CallAsync("undo_change", new { transactionId = transaction });
@@ -75,7 +75,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     {
         var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
         var transaction = await LatestTransactionAsync();
-        await Session.CallAsync("update_note", new { handle = note.Handle, appendText = " more" });
+        await Session.CallAsync("update_note", new { identifier = note.Handle, appendText = " more" });
 
         var refused = await Session.CallAsync("undo_change", new { transactionId = transaction });
 
@@ -113,7 +113,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
             primaryName = new { first = "Pyotr", surname = TestNames.Surname() },
             noteHandles = new[] { note.Handle }
         });
-        await Session.CallAsync("update_person", new { handle = person.Handle, noteHandles = Array.Empty<string>(), linkMode = "replace" });
+        await Session.CallAsync("update_person", new { identifier = person.Handle, noteHandles = Array.Empty<string>(), linkMode = "replace" });
         var transaction = await LatestTransactionAsync();
         await Session.CallAsync("delete_records", new { identifiers = new[] { note.Handle }, objectType = "note" });
 

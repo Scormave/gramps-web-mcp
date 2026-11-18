@@ -268,7 +268,7 @@ public class MergeRecordsTests
     [InlineData("tag", "n1", "n2", "Tags cannot be merged")]
     [InlineData("thing", "n1", "n2", "Invalid objectType")]
     [InlineData("note", "n1", "n1", "name the same record")]
-    [InlineData("note", "n1", " ", "keepHandle and duplicateHandle are both required")]
+    [InlineData("note", "n1", " ", "keep and duplicate are both required")]
     public async Task Merge_WithInvalidArguments_AsksNothing(string objectType, string keep, string duplicate, string error)
     {
         using var server = NoteServer();

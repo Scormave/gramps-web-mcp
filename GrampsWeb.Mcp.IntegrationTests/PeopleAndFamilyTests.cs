@@ -37,7 +37,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
 
         await Session.CallAsync("update_person", new
         {
-            handle = person.Handle,
+            identifier = person.Handle,
             eventRefs = new object[] { new { @ref = birth.Handle, role = "Primary" }, $"{baptism.Handle}::Primary" },
             linkMode = "add"
         });
@@ -47,7 +47,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
 
         await Session.CallAsync("update_person", new
         {
-            handle = person.Handle,
+            identifier = person.Handle,
             eventRefs = new[] { baptism.Handle },
             linkMode = "remove"
         });
@@ -82,7 +82,7 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
         Assert.True(before.IndexOf(family.Son.Handle, StringComparison.Ordinal)
                     < before.IndexOf(family.Daughter.Handle, StringComparison.Ordinal));
 
-        await Session.CallAsync("update_family", new { handle = family.Family.Handle, sort = new[] { "Children" } });
+        await Session.CallAsync("update_family", new { identifier = family.Family.Handle, sort = new[] { "Children" } });
 
         var after = await Session.CallAsync("get_records", new { identifiers = new[] { family.Family.GrampsId } });
         Assert.True(after.IndexOf(family.Daughter.Handle, StringComparison.Ordinal)
@@ -112,8 +112,8 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
 
         var relation = await Session.CallAsync("get_relations", new
         {
-            handle1 = family.Son.GrampsId,
-            handle2 = family.Daughter.Handle
+            person1 = family.Son.GrampsId,
+            person2 = family.Daughter.Handle
         });
 
         Assert.Contains($"({family.Daughter.GrampsId}) is the sister of", relation);
@@ -168,8 +168,8 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
         var sonBirth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1890-05-03" });
         var daughterBirth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1885" });
         var marriage = await Session.CreateAsync("events", new { eventType = "Marriage", date = "about 1884" });
-        await Session.CallAsync("update_person", new { handle = son.Handle, eventRefs = new[] { $"{sonBirth.Handle}::Primary" } });
-        await Session.CallAsync("update_person", new { handle = daughter.Handle, eventRefs = new[] { $"{daughterBirth.Handle}::Primary" } });
+        await Session.CallAsync("update_person", new { identifier = son.Handle, eventRefs = new[] { $"{sonBirth.Handle}::Primary" } });
+        await Session.CallAsync("update_person", new { identifier = daughter.Handle, eventRefs = new[] { $"{daughterBirth.Handle}::Primary" } });
 
         var family = await Session.CreateAsync("families", new
         {

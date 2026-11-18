@@ -15,9 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   saving, and the error gives the existing tag's handle. A new tag no
   record of the call links to is listed in the reply
 - A [migration guide from 2.x](GrampsWeb.Mcp/docs/MIGRATING_TO_3.md)
-  maps every renamed and removed tool to its 3.0 call, shows which
-  saved `update_*` calls need `linkMode: "replace"`, and lists the
-  Gramps Web version check and the changed replies
+  maps every renamed and removed tool and argument to its 3.0 call,
+  shows which saved `update_*` calls need `linkMode: "replace"`, and
+  lists the Gramps Web version check and the changed replies
 
 ### Changed
 
@@ -89,6 +89,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** in `replace` mode a bare event or child handle keeps the
   role or relations of its stored link; before, it reset them to
   `Primary` (`Family` for a family's events) or `Birth`
+- **Breaking:** the argument that names the record a tool acts on is
+  renamed: `handle` to `identifier` in the ten `update_*` tools and
+  `get_media_image`, `handle1` and `handle2` to `person1` and `person2`
+  in `get_relations`, `keepHandle` and `duplicateHandle` to `keep` and
+  `duplicate` in `merge_records`, and `personHandle` to `person` in
+  `find_duplicates`. They take the same values. Link fields keep their
+  `…Handle` names. A call with a 2.x name is refused with an error that
+  names the new one, such as `handle (did you mean identifier?)`
+- **Breaking:** `update_repository` and the `repositories` of
+  `create_records` no longer take `address` and `url`; `addresses` and
+  `urls` take the same line. A plain line in `addresses` is stored as
+  the street and a bare link in `urls` as a Web Home link, as before;
+  `[]` removes them, where 2.x took an empty `address` or `url`
+- `urls` takes a bare link such as `https://archive.example.org` as a
+  Web Home link, on people and repositories alike; before, its scheme
+  was read as the link type and the link was refused
 - Link fields take Gramps IDs as well as handles in `create_records`,
   the `update_*` tools and `upload_media`: the `…Handles` lists,
   `eventRefs`, `childRefs`, `personAssociations`, `enclosedBy`,

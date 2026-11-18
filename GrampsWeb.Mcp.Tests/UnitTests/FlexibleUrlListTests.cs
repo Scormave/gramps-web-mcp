@@ -41,6 +41,25 @@ public class FlexibleUrlListTests
         Assert.Equal("note here", v.Items[0].Description);
     }
 
+    [Theory]
+    [InlineData("https://archive.example.org", "https://archive.example.org", null)]
+    [InlineData("http://archive.example.org/fonds — reading room", "http://archive.example.org/fonds", "reading room")]
+    public void Bare_Link_Is_A_Web_Home_Link(string line, string path, string? description)
+    {
+        var v = Deserialize(JsonSerializer.Serialize(line));
+        Assert.Equal("Web Home", v!.Items[0].Type);
+        Assert.Equal(path, v.Items[0].Path);
+        Assert.Equal(description, v.Items[0].Description);
+    }
+
+    [Fact]
+    public void Bare_Link_Mixes_With_Typed_Lines()
+    {
+        var v = Deserialize("\"https://archive.example.org\\nE-mail: info@archive.example.org\"");
+        Assert.Equal(["Web Home", "E-mail"], v!.Items.Select(u => u.Type));
+        Assert.Equal("info@archive.example.org", v.Items[1].Path);
+    }
+
     [Fact]
     public void Json_Objects()
     {

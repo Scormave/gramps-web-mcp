@@ -48,7 +48,7 @@ public static class TagTools
     public static async Task<string> UpdateTag(
         [Description("The tag to change: its handle or exact name. Tags have no Gramps ID; " +
                      "find them with list_records(objectType: \"tags\").")]
-        string handle,
+        string identifier,
         [Description("New name. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? name = null,
         [Description("New color as six hex digits RRGGBB, with or without #, e.g. FF5733; stored as #ff5733. " +
@@ -66,9 +66,9 @@ public static class TagTools
 
             using var updateLease = await client.BeginUpdateAsync();
             var tags = (await client.GetPagedListAsync<GrampsTag>("/api/tags/")).Objects ?? [];
-            var target = FindTag(tags, handle);
+            var target = FindTag(tags, identifier);
             if (target?.Handle == null)
-                return NotFoundHelper.NotFoundMessage("Tag", handle);
+                return NotFoundHelper.NotFoundMessage("Tag", identifier);
 
             if (name != null)
             {
@@ -82,7 +82,7 @@ public static class TagTools
 
             var tag = await GrampsObjectPatch.LoadAsync(client, $"/api/tags/{Uri.EscapeDataString(target.Handle)}");
             if (tag == null)
-                return NotFoundHelper.NotFoundMessage("Tag", handle);
+                return NotFoundHelper.NotFoundMessage("Tag", identifier);
 
             tag.Set("name", name);
             tag.Set("color", storedColor);
