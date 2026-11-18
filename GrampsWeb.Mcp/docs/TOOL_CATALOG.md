@@ -1000,6 +1000,9 @@ are signed. With only upload folders set, `file` and `openai/fileParams` are
 left out of `tools/list`; with only upload hosts set, `filePath` is left out
 and `create_media` requires `file`.
 
+`file` is experimental: it is tested with direct tool calls, not yet in
+ChatGPT itself.
+
 ---
 
 ## Repository (`RepositoryTools.cs`) — 2 tools

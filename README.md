@@ -142,7 +142,7 @@ Every setting is an environment variable. The main ones:
 | `GRAMPS_READ_ONLY` | `true` publishes only read tools and blocks writes | `false` (the Claude Desktop extension: `true`) |
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Lets agents read scans and photos, and enables uploads | `false` |
 | `GRAMPS_MEDIA_UPLOAD_DIRS` | Folders that `create_media` may upload from | unset (off) |
-| `GRAMPS_MEDIA_UPLOAD_HOSTS` | Hosts that files attached in the chat (ChatGPT) may be downloaded from | unset (off) |
+| `GRAMPS_MEDIA_UPLOAD_HOSTS` | Hosts that files attached in the chat (ChatGPT) may be downloaded from; experimental | unset (off) |
 | `MCP_TRANSPORT` | `stdio`, `http` (Streamable HTTP) or `sse` | `stdio` (the Docker image: `http`) |
 | `MCP_API_KEY` | Key that HTTP clients must send; set it whenever other machines can reach the port | — |
 

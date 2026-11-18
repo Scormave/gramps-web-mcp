@@ -154,7 +154,9 @@ comes from one of two sources:
   downloads it only from the hosts in `GRAMPS_MEDIA_UPLOAD_HOSTS` and their
   subdomains, over HTTPS, redirects included, and connects only to public
   addresses. If a link is refused, the error names its host; add that host
-  when it is the chat client's file host.
+  when it is the chat client's file host. This source is experimental: it
+  is tested with direct tool calls, not yet in ChatGPT itself, so the host
+  ChatGPT serves attached files from is not named here.
 
 Uploading needs media file access (`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and
 at least one of the two settings; until then, `create_media` is hidden, and
