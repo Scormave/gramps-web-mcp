@@ -13,13 +13,15 @@ using Xunit;
 namespace GrampsWeb.Mcp.Tests.UnitTests;
 
 /// <summary>
-/// create_media and update_media's filePath against a fake Gramps Web: what is uploaded, in which order,
-/// and that a stored copy of the file is reused instead of uploaded again.
+/// create_media and update_media's filePath and file against a fake Gramps Web: what is uploaded, in which
+/// order, and that a stored copy of the file is reused instead of uploaded again.
 /// </summary>
 public class MediaUploadToolsTests : IDisposable
 {
     private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, (byte)'J', (byte)'F', (byte)'I', (byte)'F', 1, 2, 3];
     private static readonly string JpegChecksum = MediaUploadFile.ChecksumOf(Jpeg);
+
+    private const string AttachedLink = "https://files.example.com/download/file-1?sig=signature";
 
     private readonly string _uploads = Directory.CreateDirectory(
         Path.Combine(Path.GetTempPath(), "gramps-upload-tools-" + Guid.NewGuid().ToString("N"))).FullName;
@@ -321,6 +323,76 @@ public class MediaUploadToolsTests : IDisposable
         Assert.DoesNotContain("POST /api/media/", server.Requests);
     }
 
+    [Fact]
+    public async Task CreateMedia_Uploads_A_File_Attached_In_The_Chat()
+    {
+        var server = new FakeGramps();
+
+        var result = await MediaTools.CreateMedia(file: Attached("metric book 1890.jpg"), date: "1890",
+            client: server.Client(), config: Config(folders: false, hosts: true), downloader: Downloader());
+
+        Assert.Equal(Jpeg, server.UploadBytes);
+        Assert.Equal("image/jpeg", server.UploadContentType);
+        Assert.Equal("metric book 1890", server.Saved["/api/media/h-new"]["desc"]!.GetValue<string>());
+        Assert.Contains("action: created", result);
+    }
+
+    [Fact]
+    public async Task CreateMedia_Takes_One_Source_Only()
+    {
+        var server = new FakeGramps();
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia("metric book 1890.jpg",
+            file: Attached("metric book 1890.jpg"), client: server.Client(), config: Config(hosts: true), downloader: Downloader()));
+
+        Assert.Contains("Give filePath or file, not both", ex.Message);
+        Assert.Empty(server.Requests);
+    }
+
+    [Theory]
+    [InlineData(true, "Give the file to upload: filePath for a file in the server's upload folder, or file for one attached in the chat.")]
+    [InlineData(false, "Give the file to upload in file: the file object the chat client passes for a file attached in the chat.")]
+    public async Task CreateMedia_Without_A_File_Names_The_Sources_The_Server_Allows(bool folders, string message)
+    {
+        var server = new FakeGramps();
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia(" ",
+            client: server.Client(), config: Config(folders, hosts: true), downloader: Downloader()));
+
+        Assert.Equal(message, ex.Message);
+        Assert.Empty(server.Requests);
+    }
+
+    [Fact]
+    public async Task CreateMedia_Says_Attached_Files_Are_Off_When_No_Host_Is_Allowed()
+    {
+        var server = new FakeGramps();
+
+        var ex = await Assert.ThrowsAsync<McpException>(() => MediaTools.CreateMedia(file: Attached("scan.jpg"),
+            client: server.Client(), config: Config(), downloader: Downloader()));
+
+        Assert.Contains("set GRAMPS_MEDIA_UPLOAD_HOSTS", ex.Message);
+        Assert.Empty(server.Requests);
+    }
+
+    [Fact]
+    public async Task UpdateMedia_Replaces_The_File_With_One_Attached_In_The_Chat()
+    {
+        var server = new FakeGramps();
+        server.Objects["/api/media/h-media"] = """{"_class":"Media","handle":"h-media","gramps_id":"O0100","checksum":"0ld","mime":"image/png","desc":"old"}""";
+
+        var result = await MediaTools.UpdateMedia("h-media", file: Attached("metric book 1890.jpg"), client: server.Client(),
+            config: Config(hosts: true), downloader: Downloader());
+
+        Assert.Equal("PUT /api/media/h-media/file", server.Requests[^1]);
+        Assert.Equal(Jpeg, server.UploadBytes);
+        Assert.Contains("file: replaced", result);
+    }
+
+    private static FileReference Attached(string name) => new() { DownloadUrl = AttachedLink, FileId = "file-1", FileName = name };
+
+    private static MediaDownloader Downloader() => new(new AttachedFiles());
+
     private static FlexibleHandleList Handles(params string[] values) =>
         JsonSerializer.Deserialize<FlexibleHandleList>(JsonSerializer.Serialize(values))!;
 
@@ -329,8 +401,18 @@ public class MediaUploadToolsTests : IDisposable
 
     private static FlexibleMediaLinkList LinksJson(string json) => JsonSerializer.Deserialize<FlexibleMediaLinkList>(json)!;
 
-    private GrampsConfig Config() =>
-        new("https://gramps-web.test", "user", "pass", "tree", MediaResourcesEnabled: true, MediaUploadDirs: [_uploads]);
+    private GrampsConfig Config(bool folders = true, bool hosts = false) =>
+        new("https://gramps-web.test", "user", "pass", "tree", MediaResourcesEnabled: true,
+            MediaUploadDirs: folders ? [_uploads] : null, MediaUploadHosts: hosts ? ["files.example.com"] : null);
+
+    /// <summary>The chat client's file host: serves <see cref="Jpeg"/> at <see cref="AttachedLink"/>.</summary>
+    private sealed class AttachedFiles : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(request.RequestUri!.AbsoluteUri == AttachedLink
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(Jpeg) }
+                : new HttpResponseMessage(HttpStatusCode.NotFound));
+    }
 
     /// <summary>
     /// A Gramps Web stand-in: records each request as "METHOD path?query", serves <see cref="Objects"/> and

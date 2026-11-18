@@ -19,7 +19,8 @@ public record GrampsConfig(
     IReadOnlyList<string>? MediaUploadDirs = null,
     long MediaUploadMaxBytes = GrampsConfig.DefaultMediaUploadMaxBytes,
     ConfirmationMode Confirmation = ConfirmationMode.WhenSupported,
-    bool RequireUserInteraction = true)
+    bool RequireUserInteraction = true,
+    IReadOnlyList<string>? MediaUploadHosts = null)
 {
     public const long DefaultMediaMaxBytes = 5 * 1024 * 1024;
 
@@ -40,11 +41,21 @@ public record GrampsConfig(
     public bool UsesRefreshToken => !string.IsNullOrWhiteSpace(RefreshToken);
 
     /// <summary>
-    /// True when media file access is enabled and <c>GRAMPS_MEDIA_UPLOAD_DIRS</c> names at least one
-    /// folder that create_media and update_media may upload files from. Media file access is the one
-    /// switch for every file the server handles, read or uploaded.
+    /// True when media file access is enabled and create_media has somewhere to take files from:
+    /// <c>GRAMPS_MEDIA_UPLOAD_DIRS</c> names a folder, or <c>GRAMPS_MEDIA_UPLOAD_HOSTS</c> a host that
+    /// attached files may be downloaded from. Media file access is the one switch for every file the
+    /// server handles, read, uploaded or downloaded.
     /// </summary>
-    public bool MediaUploadEnabled => MediaResourcesEnabled && MediaUploadDirs is { Count: > 0 };
+    public bool MediaUploadEnabled => MediaUploadFromFoldersEnabled || MediaUploadFromLinksEnabled;
+
+    /// <summary>True when create_media and update_media take filePath, a file in an upload folder.</summary>
+    public bool MediaUploadFromFoldersEnabled => MediaResourcesEnabled && MediaUploadDirs is { Count: > 0 };
+
+    /// <summary>
+    /// True when create_media and update_media take file, a file attached in the chat that the server
+    /// downloads from a host <c>GRAMPS_MEDIA_UPLOAD_HOSTS</c> allows.
+    /// </summary>
+    public bool MediaUploadFromLinksEnabled => MediaResourcesEnabled && MediaUploadHosts is { Count: > 0 };
 
     /// <summary>
     /// Loads configuration from environment variables.
@@ -77,6 +88,8 @@ public record GrampsConfig(
         var errors = new List<string>();
         var mediaUploadDirs = ParseDirectoryList(ReadEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS"),
             "GRAMPS_MEDIA_UPLOAD_DIRS", errors);
+        var mediaUploadHosts = ParseHostList(ReadEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_HOSTS"),
+            "GRAMPS_MEDIA_UPLOAD_HOSTS", errors);
         var confirmation = ParseConfirmationMode(ReadEnvironmentVariable("GRAMPS_CONFIRMATION"), errors);
         var requireUserInteraction = ParseRequireUserInteraction(
             ReadEnvironmentVariable("GRAMPS_REQUIRE_USER_INTERACTION"), errors);
@@ -128,7 +141,8 @@ public record GrampsConfig(
             MediaUploadDirs: mediaUploadDirs,
             MediaUploadMaxBytes: mediaUploadMaxBytes,
             Confirmation: confirmation,
-            RequireUserInteraction: requireUserInteraction);
+            RequireUserInteraction: requireUserInteraction,
+            MediaUploadHosts: mediaUploadHosts);
     }
 
     /// <summary>
@@ -182,6 +196,33 @@ public record GrampsConfig(
         }
 
         return directories.Count > 0 ? directories : null;
+    }
+
+    /// <summary>
+    /// Splits a comma-separated list of host names, lowercased; a leading <c>*.</c> is dropped, since every
+    /// entry also covers its subdomains. Entries must be DNS names: no scheme, port, path or IP address.
+    /// </summary>
+    private static IReadOnlyList<string>? ParseHostList(string? value, string name, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var hosts = new List<string>();
+        foreach (var entry in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var host = entry.StartsWith("*.", StringComparison.Ordinal) ? entry[2..] : entry;
+            host = host.TrimEnd('.').ToLowerInvariant();
+            if (Uri.CheckHostName(host) != UriHostNameType.Dns || !host.Contains('.'))
+            {
+                errors.Add($"{name} entries must be host names such as files.example.com; \"{entry}\" is not");
+                continue;
+            }
+
+            if (!hosts.Contains(host))
+                hosts.Add(host);
+        }
+
+        return hosts.Count > 0 ? hosts : null;
     }
 
     /// <summary>

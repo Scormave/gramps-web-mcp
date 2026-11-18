@@ -27,6 +27,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   own permission settings decide. The default is unchanged. A value other
   than `true`, `false`, `1` or `0` stops the server at startup, and the
   server logs when the metadata is off
+- Experimental: `create_media` and `update_media` take `file`, a file
+  attached in the chat
+  ([#18](https://github.com/Scormave/gramps-web-mcp/issues/18),
+  requested by @ws-mkulas): the tools name it in `openai/fileParams`, so
+  ChatGPT passes an attached file as a temporary download link. Set
+  `GRAMPS_MEDIA_UPLOAD_HOSTS` to the hosts the chat client serves
+  attached files from. The server fetches only HTTPS links on those
+  hosts and their subdomains, redirects included, connects only to
+  public addresses, sends no credentials or cookies, and stops at
+  `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`; errors name the host, never the
+  signed link. Uploading still needs media file access. `tools/list`
+  shows only the sources the server allows: with upload hosts alone,
+  `create_media` requires `file`; with upload folders alone, `file` and
+  `openai/fileParams` are not listed. It is tested with direct tool
+  calls, not yet in ChatGPT itself, so ChatGPT's file host is not named
+  here: a refused link's error names the host to add
 
 ### Fixed
 

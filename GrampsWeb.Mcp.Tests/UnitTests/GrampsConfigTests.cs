@@ -257,6 +257,52 @@ public class GrampsConfigTests
         Assert.False(config.MediaUploadEnabled);
     }
 
+    [Fact]
+    public void FromEnvironment_Parses_Upload_Hosts()
+    {
+        var config = LoadConfig(readOnlyEnv: null, mediaResourcesEnabled: "true",
+            mediaUploadHosts: " Files.Example.com , *.cdn.example.org,, files.example.com., files.example.com");
+
+        Assert.Equal(["files.example.com", "cdn.example.org"], config.MediaUploadHosts);
+        Assert.True(config.MediaUploadEnabled);
+        Assert.True(config.MediaUploadFromLinksEnabled);
+        Assert.False(config.MediaUploadFromFoldersEnabled);
+    }
+
+    [Fact]
+    public void FromEnvironment_Leaves_Upload_From_Links_Off_Without_Media_Access()
+    {
+        var config = LoadConfig(readOnlyEnv: null, mediaUploadHosts: "files.example.com");
+
+        Assert.Equal(["files.example.com"], config.MediaUploadHosts);
+        Assert.False(config.MediaUploadFromLinksEnabled);
+        Assert.False(config.MediaUploadEnabled);
+    }
+
+    [Fact]
+    public void FromEnvironment_Leaves_Upload_Hosts_Unset_When_Empty()
+    {
+        var config = LoadConfig(readOnlyEnv: null, mediaResourcesEnabled: "true", mediaUploadHosts: " , ");
+
+        Assert.Null(config.MediaUploadHosts);
+        Assert.False(config.MediaUploadFromLinksEnabled);
+    }
+
+    [Theory]
+    [InlineData("https://files.example.com")]
+    [InlineData("files.example.com/path")]
+    [InlineData("localhost")]
+    [InlineData("192.168.1.10")]
+    [InlineData("files.example.com:443")]
+    public void FromEnvironment_Rejects_Upload_Hosts_That_Are_Not_Host_Names(string value)
+    {
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => LoadConfig(readOnlyEnv: null, mediaUploadHosts: value));
+
+        Assert.Contains("GRAMPS_MEDIA_UPLOAD_HOSTS entries must be host names", ex.Message);
+        Assert.Contains(value, ex.Message);
+    }
+
     [Theory]
     [InlineData("0", "must be a positive integer")]
     [InlineData("big", "must be a valid integer")]
@@ -338,7 +384,8 @@ public class GrampsConfigTests
         string? mediaUploadDirs = null,
         string? mediaUploadMaxBytes = null,
         string? confirmation = null,
-        string? requireUserInteraction = null) =>
+        string? requireUserInteraction = null,
+        string? mediaUploadHosts = null) =>
         WithEnvironment(
             GrampsConfig.FromEnvironment,
             readOnlyEnv,
@@ -354,7 +401,8 @@ public class GrampsConfigTests
             mediaUploadDirs,
             mediaUploadMaxBytes,
             confirmation,
-            requireUserInteraction);
+            requireUserInteraction,
+            mediaUploadHosts);
 
     private static T WithEnvironment<T>(
         Func<T> action,
@@ -371,7 +419,8 @@ public class GrampsConfigTests
         string? mediaUploadDirs = null,
         string? mediaUploadMaxBytes = null,
         string? confirmation = null,
-        string? requireUserInteraction = null)
+        string? requireUserInteraction = null,
+        string? mediaUploadHosts = null)
     {
         lock (EnvironmentLock)
         {
@@ -394,6 +443,7 @@ public class GrampsConfigTests
                 Environment.SetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES", mediaUploadMaxBytes);
                 Environment.SetEnvironmentVariable("GRAMPS_CONFIRMATION", confirmation);
                 Environment.SetEnvironmentVariable("GRAMPS_REQUIRE_USER_INTERACTION", requireUserInteraction);
+                Environment.SetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_HOSTS", mediaUploadHosts);
 
                 return action();
             }
@@ -423,7 +473,8 @@ public class GrampsConfigTests
             ["GRAMPS_MEDIA_UPLOAD_DIRS"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_DIRS"),
             ["GRAMPS_MEDIA_UPLOAD_MAX_BYTES"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_MAX_BYTES"),
             ["GRAMPS_CONFIRMATION"] = Environment.GetEnvironmentVariable("GRAMPS_CONFIRMATION"),
-            ["GRAMPS_REQUIRE_USER_INTERACTION"] = Environment.GetEnvironmentVariable("GRAMPS_REQUIRE_USER_INTERACTION")
+            ["GRAMPS_REQUIRE_USER_INTERACTION"] = Environment.GetEnvironmentVariable("GRAMPS_REQUIRE_USER_INTERACTION"),
+            ["GRAMPS_MEDIA_UPLOAD_HOSTS"] = Environment.GetEnvironmentVariable("GRAMPS_MEDIA_UPLOAD_HOSTS")
         };
     }
 

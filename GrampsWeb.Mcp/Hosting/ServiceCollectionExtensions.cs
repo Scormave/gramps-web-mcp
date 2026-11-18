@@ -1,6 +1,7 @@
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using GrampsWeb.Mcp.Health;
+using GrampsWeb.Mcp.Tools;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,6 +22,7 @@ internal static class ServiceCollectionExtensions
                 sp.GetRequiredService<ILogger<GrampsAuthTokenProvider>>()));
         services.AddHttpClient<GrampsApiClient>(GrampsUserAgent.Configure);
         services.AddHttpClient<GrampsHealthService>(GrampsUserAgent.Configure);
+        services.AddSingleton<MediaDownloader>();
         return services;
     }
 

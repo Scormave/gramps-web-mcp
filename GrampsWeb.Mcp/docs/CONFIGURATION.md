@@ -140,19 +140,34 @@ configuration; the server ignores it and logs a warning at startup if it is set.
 
 ## Media upload
 
-`create_media` uploads a photo, document scan or PDF from a folder on the
-server and shows it on the records named in `attachTo`; `update_media` takes
-`filePath` to replace a record's file. Uploading needs media file access
-(`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and at least one folder in
-`GRAMPS_MEDIA_UPLOAD_DIRS`; until both are set, `create_media` is hidden. Only
-files inside those folders can be read, symbolic links included,
-and only JPEG, PNG, GIF, WebP, TIFF, BMP and PDF files, judged by content. A
-file the tree already stores is reused, not uploaded twice. In Docker, mount
-the folder into the container and set the path as seen inside it.
+`create_media` uploads a photo, document scan or PDF and shows it on the
+records named in `attachTo`; `update_media` replaces a record's file. The file
+comes from one of two sources:
+
+- `filePath`, a file in a folder on the server listed in
+  `GRAMPS_MEDIA_UPLOAD_DIRS`. Only files inside those folders can be read,
+  symbolic links included. In Docker, mount the folder into the container and
+  set the path as seen inside it.
+- `file`, a file the user attached in the chat. Clients that support file
+  arguments, such as ChatGPT, pass it as a temporary download link because
+  the tools name `file` in their `openai/fileParams` metadata. The server
+  downloads it only from the hosts in `GRAMPS_MEDIA_UPLOAD_HOSTS` and their
+  subdomains, over HTTPS, redirects included, and connects only to public
+  addresses. If a link is refused, the error names its host; add that host
+  when it is the chat client's file host. This source is experimental: it
+  is tested with direct tool calls, not yet in ChatGPT itself, so the host
+  ChatGPT serves attached files from is not named here.
+
+Uploading needs media file access (`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and
+at least one of the two settings; until then, `create_media` is hidden, and
+`tools/list` shows only the source arguments the server allows. Only JPEG, PNG,
+GIF, WebP, TIFF, BMP and PDF files are uploaded, judged by content. A file the
+tree already stores is reused, not uploaded twice.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; a leading `~` or `${HOME}` stands for the home folder | unset (the Claude Desktop extension: `~/Downloads`) |
+| `GRAMPS_MEDIA_UPLOAD_HOSTS` | Host names, separated by commas, that files attached in the chat may be downloaded from; each also allows its subdomains, and a leading `*.` is ignored. Only host names are accepted: no scheme, path, port or IP address | unset (off) |
 | `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
 
 ## Transports

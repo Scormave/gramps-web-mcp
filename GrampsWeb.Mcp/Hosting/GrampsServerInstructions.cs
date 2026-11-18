@@ -42,11 +42,13 @@ internal static class GrampsServerInstructions
         - undo_change reverts one transaction from get_recent_changes, deletions included: only after the user confirmed it, newest first, and force past conflicts only after a separate confirmation.
         """;
 
-    private const string MediaUpload =
-        """
-
-        - create_media uploads a photo, scan or PDF from the server's upload folder and shows it on records through attachTo; a file the tree already stores is reused, not uploaded twice.
-        """;
+    /// <summary>The create_media line, naming only the upload sources <paramref name="config"/> allows.</summary>
+    private static string MediaUpload(GrampsConfig config) =>
+        "\n- create_media uploads a photo, scan or PDF "
+        + (config.MediaUploadFromFoldersEnabled && config.MediaUploadFromLinksEnabled
+            ? "from the server's upload folder (filePath) or attached in the chat (file)"
+            : config.MediaUploadFromFoldersEnabled ? "from the server's upload folder" : "attached in the chat (file)")
+        + " and shows it on records through attachTo; a file the tree already stores is reused, not uploaded twice.";
 
     private const string ReadOnlyNote =
         """
@@ -59,5 +61,5 @@ internal static class GrampsServerInstructions
     public static string For(GrampsConfig config) =>
         Reading
         + (config.MediaResourcesEnabled ? Media : "")
-        + (config.ReadOnly ? ReadOnlyNote : Writing + (config.MediaUploadEnabled ? MediaUpload : ""));
+        + (config.ReadOnly ? ReadOnlyNote : Writing + (config.MediaUploadEnabled ? MediaUpload(config) : ""));
 }

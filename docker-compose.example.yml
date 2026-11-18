@@ -80,6 +80,8 @@ services:
       GRAMPS_MEDIA_ALLOW_PRIVATE: ${GRAMPS_MEDIA_ALLOW_PRIVATE:-false}
       # Folders inside the container that create_media may upload from; mount them below.
       GRAMPS_MEDIA_UPLOAD_DIRS: ${GRAMPS_MEDIA_UPLOAD_DIRS:-}
+      # Hosts that files attached in the chat (ChatGPT) are downloaded from.
+      GRAMPS_MEDIA_UPLOAD_HOSTS: ${GRAMPS_MEDIA_UPLOAD_HOSTS:-}
       GRAMPS_MEDIA_UPLOAD_MAX_BYTES: ${GRAMPS_MEDIA_UPLOAD_MAX_BYTES:-52428800}
       GRAMPS_LOG_LEVEL: ${GRAMPS_LOG_LEVEL:-Information}
       MCP_TRANSPORT: ${MCP_TRANSPORT:-http}

@@ -119,6 +119,11 @@ public static class MediaTools
         "The object may also carry \"attributes\" of the link (not of the media), such as [\"Page: 12\"]; " +
         "a link already there gains the ones it lacks.";
 
+    private const string AttachedFileDescription =
+        "A file the user attached in the chat, as clients that support file arguments (openai/fileParams, such as ChatGPT) pass it: " +
+        "{\"download_url\": …, \"file_id\": …, \"mime_type\": …, \"file_name\": …}. The server downloads it over HTTPS " +
+        "from the hosts GRAMPS_MEDIA_UPLOAD_HOSTS allows and judges its type by content; the default description is file_name without its extension.";
+
     private const string CreateRetry =
         "Run create_media again with the same file and attachTo: it finds the stored media by checksum and adds only the missing links.";
 
@@ -134,10 +139,12 @@ public static class MediaTools
     ];
 
     [McpServerTool(Title = "Create Media", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
+    [McpMeta(FileReference.FileParamsMeta, "", JsonValue = FileReference.FileParamsJson)]
     [Description(
-        "Upload a photo, document scan or PDF from the server's upload folder as a new media record, and show it on " +
+        "Upload a photo, document scan or PDF as a new media record, from the server's upload folder (filePath) or, " +
+        "where the server allows it, attached in the chat (file), and show it on " +
         "people, families, events, places, sources or citations with attachTo, whole or as a region such as one record on a page scan. " +
-        "Only files inside GRAMPS_MEDIA_UPLOAD_DIRS can be uploaded, and a relative filePath is looked up in each of them in turn; " +
+        "Only files inside GRAMPS_MEDIA_UPLOAD_DIRS can be uploaded by path, and a relative filePath is looked up in each of them in turn; " +
         "the type (" + MediaUploadFile.SupportedTypes + ") is judged by content. " +
         "citationHandles cite where the file itself came from, while attachTo shows it on the records it documents, " +
         "such as a citation with the region of its entry. " +
@@ -149,8 +156,11 @@ public static class MediaTools
         "check what a region shows with read_media. " +
         ToolDescriptionFragments.WriteAccess + " " + ToolDescriptionFragments.InputGuide)]
     public static async Task<string> CreateMedia(
-        [Description("The file to upload: an absolute path inside an upload folder, ~/…, or a name relative to the folder, e.g. scan.jpg.")]
-        string filePath,
+        [Description("A file in the server's upload folder: an absolute path inside an upload folder, ~/…, or a name relative to the folder, " +
+                     "e.g. scan.jpg. Give filePath or file.")]
+        string? filePath = null,
+        [Description(AttachedFileDescription + " Give file or filePath.")]
+        FileReference? file = null,
         [Description("Description (caption). Default: the file name without its extension.")]
         string? description = null,
         [Description("Date of the photo or document. " + ToolDescriptionFragments.DateText)]
@@ -168,36 +178,37 @@ public static class MediaTools
         [Description("Mark the media private (default false).")]
         bool isPrivate = false,
         GrampsApiClient client = null!,
-        GrampsConfig config = null!)
+        GrampsConfig config = null!,
+        MediaDownloader downloader = null!)
     {
         try
         {
-            var file = await MediaUploadFile.ReadAsync(filePath, config);
+            var upload = (await ReadFileAsync(filePath, file, config, downloader, required: true))!;
             var mediaDate = AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             await KnownTypes.CheckAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(attachTo, client, argument: "attachTo");
             using var updateLease = await client.BeginUpdateAsync();
             var owners = await ResolveOwnersAsync(attachTo, client, "Nothing was uploaded.");
 
-            var existing = await FindByChecksumAsync(file.Checksum, client);
+            var existing = await FindByChecksumAsync(upload.Checksum, client);
             if (existing?.Handle is { Length: > 0 } existingHandle)
             {
                 var linked = await AttachAsync(owners, existingHandle, existing.GrampsId, client, CreateRetry);
                 return ResponseEnvelope.FoundExisting("Media", existingHandle, existing.GrampsId, existing.Description,
-                    $"{Path.GetFileName(file.Path)} is already stored as this media record (same MD5 checksum), so nothing was uploaded. " +
+                    $"{Path.GetFileName(upload.Path)} is already stored as this media record (same MD5 checksum), so nothing was uploaded. " +
                     "Its description, date, notes, tags, citations, attributes and privacy were left as they are; change them with update_media." +
                     (owners.Count > 0 ? " attachTo was applied." : ""),
                     [new("mime", ResponseEnvelope.HeaderValue(existing.Mime)), new("attached_to", ResponseEnvelope.HeaderValue(linked))]);
             }
 
-            var (handle, grampsId) = await UploadAsync(() => client.PostMediaFileAsync(file.Bytes, file.MimeType), file);
+            var (handle, grampsId) = await UploadAsync(() => client.PostMediaFileAsync(upload.Bytes, upload.MimeType), upload);
             if (string.IsNullOrWhiteSpace(handle))
                 throw new McpException(
-                    $"{Path.GetFileName(file.Path)} was uploaded, but Gramps Web returned no handle for the new media record. " +
+                    $"{Path.GetFileName(upload.Path)} was uploaded, but Gramps Web returned no handle for the new media record. " +
                     "Run create_media again with the same file: it finds the stored record by checksum instead of uploading it twice.");
 
             var mediaPath = $"/api/media/{Uri.EscapeDataString(handle)}";
-            var mediaDescription = string.IsNullOrWhiteSpace(description) ? file.DefaultDescription : description;
+            var mediaDescription = string.IsNullOrWhiteSpace(description) ? upload.DefaultDescription : description;
             try
             {
                 var media = await GrampsObjectPatch.LoadAsync(client, mediaPath)
@@ -216,14 +227,14 @@ public static class MediaTools
             catch (Exception ex) when (ex is not McpException)
             {
                 throw new McpException(
-                    $"{Path.GetFileName(file.Path)} was uploaded as media {grampsId ?? handle}, but saving its description and links failed: {ex.Message} " +
+                    $"{Path.GetFileName(upload.Path)} was uploaded as media {grampsId ?? handle}, but saving its description and links failed: {ex.Message} " +
                     $"Do not upload it again: set them with update_media(handle: \"{handle}\").", ex);
             }
 
             var attached = await AttachAsync(owners, handle, grampsId, client, CreateRetry);
             return ResponseEnvelope.CreateSuccess("Media", handle, grampsId, mediaDescription,
                 owners.Count == 0 ? ResponseEnvelope.MediaCreateNextSteps(handle) : null,
-                [new("mime", ResponseEnvelope.HeaderValue(file.MimeType)), new("attached_to", ResponseEnvelope.HeaderValue(attached))]);
+                [new("mime", ResponseEnvelope.HeaderValue(upload.MimeType)), new("attached_to", ResponseEnvelope.HeaderValue(attached))]);
         }
         catch (Exception ex)
         {
@@ -232,9 +243,11 @@ public static class MediaTools
     }
 
     [McpServerTool(Title = "Update Media", ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]
+    [McpMeta(FileReference.FileParamsMeta, "", JsonValue = FileReference.FileParamsJson)]
     [Description(
         "Change an existing media record's description, date, attributes or links to notes, tags and citations, " +
-        "or replace its file with filePath from the server's upload folder (GRAMPS_MEDIA_UPLOAD_DIRS). " +
+        "or replace its file with filePath from the server's upload folder (GRAMPS_MEDIA_UPLOAD_DIRS) " +
+        "or, where the server allows it, with file attached in the chat. " +
         "attachTo shows the media on people, families, events, places, sources or citations, whole or as a region; " +
         "to take it off a record, use that record's update tool with mediaHandles and linkMode remove. " +
         "For a new media record use create_media; to remove one, delete_object. " +
@@ -262,16 +275,21 @@ public static class MediaTools
         [Description(LinkUpdates.Description)]
         string linkMode = "replace",
         [Description("Replace the stored file with this one: an absolute path inside an upload folder, ~/…, or a name relative to the folder. " +
-                     "Accepts " + MediaUploadFile.SupportedTypes + ", judged by content; a file another media record already holds is rejected. Omit to keep the file.")]
+                     "Accepts " + MediaUploadFile.SupportedTypes + ", judged by content; a file another media record already holds is rejected. " +
+                     "Give filePath or file; omit both to keep the file.")]
         string? filePath = null,
         GrampsConfig config = null!,
         [Description(AttachToDescription + " Not affected by linkMode.")]
-        FlexibleMediaLinkList? attachTo = null)
+        FlexibleMediaLinkList? attachTo = null,
+        [Description("Replace the stored file with one attached in the chat. " + AttachedFileDescription +
+                     " The same checks apply as for filePath. Give file or filePath; omit both to keep the file.")]
+        FileReference? file = null,
+        MediaDownloader downloader = null!)
     {
         try
         {
             LinkUpdates.Validate(linkMode);
-            var file = filePath is null ? null : await MediaUploadFile.ReadAsync(filePath, config);
+            var upload = await ReadFileAsync(filePath, file, config, downloader, required: false);
             var mediaDate = date is null ? null : AgentDateParser.ToDateRequestOrNull(date, DateComponentOrder.Iso, DateIntervalPreference.Range);
             await KnownTypes.CheckAttributesAsync(attributes, client);
             await KnownTypes.CheckMediaLinksAsync(attachTo, client, argument: "attachTo");
@@ -283,27 +301,27 @@ public static class MediaTools
 
             List<KeyValuePair<string, string>> stored = [];
             GrampsMedia? current = null;
-            if (file is not null || !metadataChanges)
+            if (upload is not null || !metadataChanges)
             {
                 current = await client.GetOrNullIfNotFoundAsync<GrampsMedia>(mediaPath);
                 if (current == null)
                     return NotFoundHelper.NotFoundMessage("Media", handle);
             }
 
-            if (file is not null && current is not null)
+            if (upload is not null && current is not null)
             {
                 var replaced = false;
-                if (!string.Equals(current.Checksum, file.Checksum, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(current.Checksum, upload.Checksum, StringComparison.OrdinalIgnoreCase))
                 {
-                    var holder = await FindByChecksumAsync(file.Checksum, client);
+                    var holder = await FindByChecksumAsync(upload.Checksum, client);
                     if (holder is not null && holder.Handle != current.Handle)
                         throw McpToolErrors.ValidationError(
-                            $"{Path.GetFileName(file.Path)} is already stored as media {holder.GrampsId ?? holder.Handle}; " +
+                            $"{Path.GetFileName(upload.Path)} is already stored as media {holder.GrampsId ?? holder.Handle}; " +
                             "link that record instead of storing the file twice. Nothing was changed.");
-                    replaced = await UploadAsync(() => client.PutMediaFileAsync(resolvedHandle, file.Bytes, file.MimeType), file);
+                    replaced = await UploadAsync(() => client.PutMediaFileAsync(resolvedHandle, upload.Bytes, upload.MimeType), upload);
                 }
                 stored.Add(new("file", replaced ? "replaced" : "unchanged (identical)"));
-                stored.Add(new("mime", ResponseEnvelope.HeaderValue(file.MimeType)));
+                stored.Add(new("mime", ResponseEnvelope.HeaderValue(upload.MimeType)));
             }
 
             var (savedHandle, savedId) = (current?.Handle ?? resolvedHandle, current?.GrampsId);
@@ -340,6 +358,29 @@ public static class MediaTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>
+    /// The file to upload: <paramref name="filePath"/> from an upload folder or <paramref name="file"/> attached in
+    /// the chat, never both. Null when neither is given and the file is not <paramref name="required"/>.
+    /// </summary>
+    private static async Task<MediaUploadFile?> ReadFileAsync(
+        string? filePath, FileReference? file, GrampsConfig config, MediaDownloader downloader, bool required)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            filePath = null;
+        if (filePath is not null && file is not null)
+            throw McpToolErrors.ValidationError(
+                "Give filePath or file, not both: filePath is a file in the server's upload folder, file one attached in the chat.");
+        if (file is not null)
+            return await downloader.ReadAsync(file, config);
+        if (filePath is null && !required)
+            return null;
+        if (filePath is null && config.MediaUploadFromLinksEnabled)
+            throw McpToolErrors.ValidationError(config.MediaUploadFromFoldersEnabled
+                ? "Give the file to upload: filePath for a file in the server's upload folder, or file for one attached in the chat."
+                : "Give the file to upload in file: the file object the chat client passes for a file attached in the chat.");
+        return await MediaUploadFile.ReadAsync(filePath ?? "", config);
     }
 
     private static bool HasMetadataChanges(string? description, string? date, FlexibleHandleList? noteHandles,
