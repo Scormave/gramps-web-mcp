@@ -83,19 +83,21 @@ changes nothing. Dry runs and refusals do not ask.
   twice; `off` keeps only the client's prompt.
 - Claude Code asks for a tool with that metadata
   [on every call](https://code.claude.com/docs/en/mcp#require-approval-for-a-specific-tool),
-  in every permission mode, and no allow rule or hook of the user's skips the
-  prompt. `GRAMPS_REQUIRE_USER_INTERACTION=false` leaves the metadata out, for
-  an operator who wants the client's own permission settings to decide, such
-  as on a tree with one trusted user. The three tools are then asked about
-  like any other write tool. Only `true` and `false` are accepted, so a
-  mistyped value stops the server instead of removing the prompt, and the
-  server logs at startup that the metadata is off.
+  in every permission mode but `dontAsk`, which refuses the call instead, and
+  no allow rule skips the prompt. `GRAMPS_REQUIRE_USER_INTERACTION=false`
+  leaves the metadata out, for an operator who wants the client's own
+  permission settings to decide, such as on a tree with one trusted user. The
+  three tools are then asked about like any other write tool. Only `true` or
+  `false` (or `1` or `0`) is accepted, so a mistyped value stops the server
+  instead of removing the prompt, and the server logs at startup that the
+  metadata is off.
 - With the metadata off, a user can still have Claude Code ask before any one
   of the three tools. An
   [ask rule](https://code.claude.com/docs/en/permissions#manage-permissions)
   in its settings, such as `"ask": ["mcp__<server>__delete_object"]` with the
   name the server has in the client's configuration, asks on every call in
-  every permission mode, and the user can remove it again.
+  every permission mode but `dontAsk`, which refuses the call instead, and the
+  user can remove it again.
 - For no prompt at all, both settings matter. Over stdio, which keeps a
   session, Claude Code supports elicitation and shows the server's own dialog
   as well, so set `GRAMPS_CONFIRMATION=off` along with

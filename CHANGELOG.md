@@ -21,11 +21,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `GRAMPS_REQUIRE_USER_INTERACTION` (default `true`): `false` publishes
   `delete_object`, `merge_objects` and `undo_change` without the
   `anthropic/requiresUserInteraction` tool metadata. Claude Code asks for
-  a tool with that metadata on every call, in every permission mode, and
-  no allow rule or hook skips the prompt; the operator of a tree with one
-  trusted user can now let the client's own permission settings decide.
-  The default is unchanged. A value other than `true` or `false` stops
-  the server at startup, and the server logs when the metadata is off
+  a tool with that metadata on every call, in every permission mode but
+  `dontAsk` (which refuses the call), and no allow rule skips the prompt;
+  the operator of a tree with one trusted user can now let the client's
+  own permission settings decide. The default is unchanged. A value other
+  than `true`, `false`, `1` or `0` stops the server at startup, and the
+  server logs when the metadata is off
 
 ### Fixed
 
