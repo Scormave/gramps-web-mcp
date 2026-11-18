@@ -8,6 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- History of one record: `get_recent_changes` with `identifier` (a
+  Gramps ID, or a handle with `objectType`) shows that record's own
+  changes from its first save, newest first: the time, added, updated or
+  deleted, the user and the transaction, and the fields each change
+  changed as `field: before → after`, such as
+  `primary_name.first_name: "John" → "Johann"`, with linked records
+  named. It answers who changed a field and what it held before, which
+  the list of transactions shows only as an object and its handle. A
+  deleted record is found by its handle. It needs Gramps Web API 3.22 or
+  later
+- `GRAMPS_REQUIRE_USER_INTERACTION` (default `true`): `false` publishes
+  `delete_object`, `merge_objects` and `undo_change` without the
+  `anthropic/requiresUserInteraction` tool metadata. Claude Code asks for
+  a tool with that metadata on every call, in every permission mode but
+  `dontAsk` (which refuses the call), and no allow rule skips the prompt;
+  the operator of a tree with one trusted user can now let the client's
+  own permission settings decide. The default is unchanged. A value other
+  than `true`, `false`, `1` or `0` stops the server at startup, and the
+  server logs when the metadata is off
 - `create_media` and `update_media` take `file`, a file attached in the
   chat ([#18](https://github.com/Scormave/gramps-web-mcp/issues/18),
   requested by @ws-mkulas): the tools name it in `openai/fileParams`, so
@@ -24,12 +43,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `delete_object` said that `force=true` leaves links to the deleted
+  record dangling, and its confirmation dialog warned that the linking
+  records would keep a link to a missing record. Gramps Web removes
+  those links in the same transaction, and `undo_change` restores them.
+  The description, the refusal and the dialog now say what a forced
+  delete does: the links go, the citations of a deleted source and a
+  family left without father, mother and children are deleted with it,
+  and only the places inside a deleted place keep a link to it, so their
+  `enclosedBy` is better changed first
+
+## [2.10.1] - 2026-11-16
+
+### Fixed
+
 - `undo_change` named the type of a deleted event, note, place,
   repository or family wrongly, such as a birth as a christening:
   Gramps stores the type as a number, and it was looked up by its
   position in the list of types instead of by its value. The names now
   come from `/api/types/default/{type}/map`; a type that cannot be
   named stays a number, and `-1` shows as Unknown
+
+### Security
+
+- The Docker image, MCP Bundles and binary archives are built on the
+  .NET runtime 10.0.15. The 2.10.0 image carries ASP.NET Core 10.0.14,
+  which has three HIGH vulnerabilities fixed in 10.0.15:
+  CVE-2026-114146 (elevation of privilege), CVE-2026-114147 and
+  CVE-2026-114149 (denial of service). The weekly image scan found them
+  in the 2.10.0 image; `latest` was already rebuilt on 10.0.15
 
 ## [2.10.0] - 2026-11-10
 
@@ -1346,7 +1388,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...HEAD
+[2.10.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.1...v2.10.0
 [2.9.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.1...v2.9.0

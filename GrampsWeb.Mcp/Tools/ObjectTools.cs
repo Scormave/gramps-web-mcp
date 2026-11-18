@@ -50,32 +50,7 @@ public static class ObjectTools
     {
         try
         {
-            var inferredType = InferObjectType(identifier);
-            var normalizedType = objectType?.Trim().ToLowerInvariant();
-            if (string.IsNullOrEmpty(normalizedType))
-            {
-                if (inferredType is null)
-                {
-                    throw McpToolErrors.ValidationError(
-                        "objectType is required when identifier is an opaque handle. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-                }
-
-                normalizedType = inferredType;
-            }
-
-            if (normalizedType is not ("person" or "family" or "event" or "place" or "source" or
-                "citation" or "note" or "media" or "repository" or "tag"))
-            {
-                throw McpToolErrors.ValidationError(
-                    "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-            }
-
-            if (inferredType is not null && !string.Equals(normalizedType, inferredType, StringComparison.Ordinal))
-            {
-                throw McpToolErrors.ValidationError(
-                    $"objectType '{normalizedType}' does not match Gramps ID '{identifier}', which identifies a {inferredType}.");
-            }
-
+            var normalizedType = ResolveObjectType(identifier, objectType);
             if (extended && normalizedType is not ("person" or "family"))
             {
                 throw McpToolErrors.ValidationError(
@@ -103,6 +78,45 @@ public static class ObjectTools
         }
     }
 
+    /// <summary>
+    /// The record type of <paramref name="identifier"/>, such as <c>person</c>: <paramref name="objectType"/> when
+    /// given, else the type its Gramps ID prefix names. Rejects an unknown type, a handle without a type, and a
+    /// type that disagrees with the prefix.
+    /// </summary>
+    internal static string ResolveObjectType(string identifier, string? objectType)
+    {
+        var inferredType = InferObjectType(identifier);
+        var normalizedType = objectType?.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(normalizedType))
+        {
+            if (inferredType is null)
+            {
+                throw McpToolErrors.ValidationError(
+                    "objectType is required when identifier is an opaque handle. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
+            }
+
+            normalizedType = inferredType;
+        }
+
+        if (!ObjectKinds.ContainsKey(normalizedType))
+        {
+            throw McpToolErrors.ValidationError(
+                "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
+        }
+
+        if (inferredType is not null && !string.Equals(normalizedType, inferredType, StringComparison.Ordinal))
+        {
+            throw McpToolErrors.ValidationError(
+                $"objectType '{normalizedType}' does not match Gramps ID '{identifier}', which identifies a {inferredType}.");
+        }
+
+        return normalizedType;
+    }
+
+    /// <summary>The Gramps class name (<c>Person</c>) and API collection (<c>people</c>) of a resolved type.</summary>
+    internal static (string ClassName, string ApiPath) KindOf(string objectType) =>
+        ObjectKinds[objectType] is var kind ? (kind.DisplayName, kind.ApiPath) : default;
+
     private static string? InferObjectType(string identifier) =>
         HandleResolver.LooksLikeGrampsId(identifier)
             ? HandleResolver.PrefixToObjectType(identifier[0]) switch
@@ -126,7 +140,10 @@ public static class ObjectTools
     [Description(
         "Delete one record; undo_change with the deletion's transaction from get_recent_changes restores it. Call it only after the user confirmed " +
         "this exact record. If other records still point to it, nothing is deleted and the reply lists those backlinks " +
-        "by type; unlink them first with the owners' update tools, or pass force=true after a separate confirmation. " +
+        "by type; unlink them first with the owners' update tools, or pass force=true after a separate confirmation, " +
+        "and Gramps Web removes those links. Gramps Web also deletes the citations of a deleted source and a family " +
+        "left without father, mother and children; the places inside a deleted place keep a link to it, so change " +
+        "their enclosedBy with update_place first. " +
         "Clients that support it also show the user a confirmation dialog before deleting; action: declined or cancelled " +
         "means the user said no and nothing was deleted. On success returns the type, action: deleted and the handle; " +
         "a missing record returns a not-found message.")]
@@ -135,7 +152,8 @@ public static class ObjectTools
         string objectType,
         [Description("The record to delete. " + ToolDescriptionFragments.HandleDiscovery)]
         string handle,
-        [Description("true deletes even when other records still point to it, leaving those links dangling (default false).")]
+        [Description("true deletes even when other records still point to it, and Gramps Web removes those links " +
+                     "(places inside a place keep theirs); only after the user confirmed that (default false).")]
         bool force = false,
         GrampsApiClient client = null!,
         McpServer server = null!,

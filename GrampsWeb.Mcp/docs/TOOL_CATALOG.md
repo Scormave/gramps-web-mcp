@@ -30,6 +30,7 @@ tree, and a Gramps ID such as `I0012` works as well.
 | "Is anyone in the tree entered twice?" | `find_duplicates`, then `get_object` for both people of a pair | The pairs with the same name in any spelling, possible duplicates first, each person with birth, death and parents |
 | "I0042 and I0107 are the same Anna Petrova. Merge them." | `get_object` for both, then `merge_objects` once you confirm | One person with the events, families, citations and notes of both, the other name kept as an alternate name, which one `undo_change` takes back |
 | "What changed today? Undo the last edit." | `get_recent_changes`, then `undo_change` once you confirm | The edit history, then the earlier versions back, or a refusal naming the later edits the undo would overwrite |
+| "Who changed Anna Petrova's name, and what was it before?" | `search`, then `get_recent_changes` with her Gramps ID as `identifier` | Each change of her record with its time and user, and the fields it changed, before and after; a date lives on the event, so the event's own history shows who changed it |
 
 The requests that only read the tree also work in
 [read-only mode](CONFIGURATION.md#runtime-mode). Reading scans needs
@@ -380,22 +381,28 @@ other than person or family.
 ### D — `DeleteObject`
 Delete a person, family, event, place, source, citation, note, media record,
 repository, or tag. The server checks backlinks and blocks deletion unless
-`force=true`; the refusal lists the backlinks by type. Forcing may leave
-dangling references. On success the reply gives the type, `action: deleted`,
-and the handle. Deleting a media record does not necessarily delete its file on
-disk. `undo_change` with the deletion's transaction from `get_recent_changes`
-restores the record with its handle and Gramps ID.
+`force=true`; the refusal lists the backlinks by type. With `force=true`
+Gramps Web removes the links from the other records in the same transaction.
+It also deletes the citations of a deleted source and a family left without
+father, mother and children. The places inside a deleted place keep a link to
+it, so change their `enclosedBy` with `update_place` first. On success the
+reply gives the type, `action: deleted`, and the handle. Deleting a media
+record does not necessarily delete its file on disk. `undo_change` with the
+deletion's transaction from `get_recent_changes` restores the record with its
+handle and Gramps ID, and the links and records removed with it.
 
 When the client supports MCP elicitation, the user confirms the deletion in a
 [dialog](#confirmation-dialogs) that names the record and, with `force=true`,
-the records that will keep a link to it. A user who says no gets
-`action: declined` or `action: cancelled`, and nothing is deleted.
+the records whose links to it Gramps Web removes, the citations it deletes
+with a source, and the places that keep a link to a deleted place. A user who
+says no gets `action: declined` or `action: cancelled`, and nothing is
+deleted.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `objectType` | `string` | yes | — | `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
 | `handle` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
-| `force` | `bool` | no | `false` | Delete despite backlinks |
+| `force` | `bool` | no | `false` | Delete despite backlinks; Gramps Web removes them, except the links of the places inside a place |
 
 ---
 
@@ -1211,9 +1218,35 @@ per transaction followed by `(+N more changes)`. A link that an edit adds or
 removes, which Gramps records as a reference change, appears as
 `Added Reference from [handle: …] to [handle: …]`.
 
+With `identifier` it shows one record's own history instead, from its first
+save, under the header `RECORD HISTORY (2 of 2 changes, newest first)` and the
+record's type, Gramps ID, label and handle. Each change gives its UTC time,
+`Added`, `Updated` or `Deleted`, the user and `[transaction: id]`, then up to
+12 fields it changed, followed by `… (+N more fields)`:
+
+- an update shows `field: before → after`, such as
+  `primary_name.first_name: "John" → "Johann"`; a link list shows
+  `added` and `removed` links and `reordered`, a long text the number of
+  characters and an excerpt around the first difference, and a change of a
+  note's formatting alone `text formatting changed`;
+- an added or deleted record lists the fields that hold a value;
+- links name the linked record, such as
+  `event_ref_list: added Birth — 1890 [handle: …] (role: Primary)`, and the
+  path names an event or other linked record by its label, such as
+  `event_ref_list[Birth — 1890].role: Primary → Witness`;
+- types, gender and confidence show by name, dates as text.
+
+A deleted record keeps its history under its handle (with `objectType`),
+which the transaction that deleted it shows; its Gramps ID no longer finds it.
+A record without changes in the history gets a message that edits made in
+Gramps desktop are not in it. Record history needs Gramps Web API 3.22 or
+later; an older server gets a validation error that says so.
+
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `limit` | `int` | no | `20` | Number of transactions (clamped 1–100) |
+| `limit` | `int` | no | `20` | Number of transactions, or with `identifier` of the record's changes (clamped 1–100) |
+| `identifier` | `string` | no | — | Show this record's history instead: a Gramps ID or a handle |
+| `objectType` | `string` | no | — | The record's type with a handle: `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository` or `tag`; only with `identifier` |
 
 ### R — `GetBookmarks`
 The records bookmarked in the tree, under the header `BOOKMARKS (5)`, with
@@ -1340,10 +1373,12 @@ For structured write fields, request only the relevant subsection, such as
 ## Delete safety
 
 `delete_object` checks for backlinks before deleting. If the object is
-referenced by other objects, deletion is **blocked** unless `force=true`.
-Using `force=true` can leave **dangling references** in the database.
-A deletion can be reverted with `undo_change`, which restores the record with
-its handle, Gramps ID and its own links. `merge_objects` deletes the duplicate
+referenced by other objects, deletion is **blocked** unless `force=true`, and
+with it Gramps Web removes those links in the same transaction. Only the
+places inside a deleted place keep a link to the missing place, so change
+their `enclosedBy` with `update_place` before deleting it. A deletion can be
+reverted with `undo_change`, which restores the record with its handle, Gramps
+ID and its own links, and the links removed from other records. `merge_objects` deletes the duplicate
 only after moving every link to the kept record, so it leaves no dangling
 references, and `undo_change` with its transaction restores the duplicate.
 
@@ -1393,7 +1428,9 @@ each answer. Stateless Streamable HTTP (`MCP_STATELESS=true`, the default for
 `http`) cannot send requests to the client, so there the server never asks,
 and with `required` it refuses every delete, merge and undo; set
 `MCP_STATELESS=false` to confirm over HTTP. All three tools also carry the
-`anthropic/requiresUserInteraction` tool meta, whatever the setting, so
-clients that honor it ask for their own permission first and keep these tools
-out of unattended runs. The tool call lasts until the user answers; if the
-client cancels the call first, nothing changes.
+`anthropic/requiresUserInteraction` tool meta, whatever `GRAMPS_CONFIRMATION`
+says, so clients that honor it ask for their own permission first and keep
+these tools out of unattended runs;
+[`GRAMPS_REQUIRE_USER_INTERACTION=false`](CONFIGURATION.md#confirming-deletes-merges-and-undos)
+leaves it out. The tool call lasts until the user answers; if the client
+cancels the call first, nothing changes.

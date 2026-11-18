@@ -70,6 +70,9 @@ services:
       GRAMPS_MUTATION_MIN_INTERVAL_MS: ${GRAMPS_MUTATION_MIN_INTERVAL_MS:-0}
       # Confirmation dialogs for delete_object and undo_change need MCP_STATELESS=false.
       GRAMPS_CONFIRMATION: ${GRAMPS_CONFIRMATION:-when-supported}
+      # false publishes delete_object, merge_objects and undo_change without the
+      # anthropic/requiresUserInteraction metadata that makes Claude Code ask on every call.
+      GRAMPS_REQUIRE_USER_INTERACTION: ${GRAMPS_REQUIRE_USER_INTERACTION:-true}
       MCP_API_KEY: ${MCP_API_KEY:-}
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-}
       GRAMPS_MEDIA_RESOURCES_ENABLED: ${GRAMPS_MEDIA_RESOURCES_ENABLED:-false}

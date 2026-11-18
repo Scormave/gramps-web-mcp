@@ -3,7 +3,7 @@
   "name": "io.github.Scormave/gramps-web-mcp",
   "title": "Gramps Web MCP",
   "description": "MCP server for structured access to Gramps Web genealogy data",
-  "version": "2.10.0",
+  "version": "2.10.1",
   "repository": {
     "url": "https://github.com/Scormave/gramps-web-mcp",
     "source": "github"
@@ -11,7 +11,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/scormave/gramps-web-mcp:2.10.0",
+      "identifier": "ghcr.io/scormave/gramps-web-mcp:2.10.1",
       "runtimeHint": "docker",
       "transport": {
         "type": "stdio"
@@ -68,6 +68,11 @@
           "name": "GRAMPS_CONFIRMATION",
           "description": "Whether delete_object, merge_objects and undo_change ask the user to confirm through MCP elicitation: when-supported, required (refuse in clients that cannot ask), or off",
           "default": "when-supported"
+        },
+        {
+          "name": "GRAMPS_REQUIRE_USER_INTERACTION",
+          "description": "Set to false to publish delete_object, merge_objects and undo_change without the anthropic/requiresUserInteraction tool metadata, so the client's own permission settings decide whether to ask",
+          "default": "true"
         },
         {
           "name": "GRAMPS_LOG_LEVEL",

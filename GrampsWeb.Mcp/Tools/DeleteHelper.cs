@@ -35,7 +35,8 @@ internal static class DeleteHelper
         {
             return $"Cannot delete {objectType} [{handle}]: other objects reference it.\n" +
                    $"Backlinks:\n{refs}" +
-                   "Pass force=true to delete anyway (may leave dangling references).";
+                   "Unlink them first with the owners' update tools, or pass force=true once the user confirmed " +
+                   "deleting it anyway. " + ForceEffect(apiPath, LinksTo(apiPath, response.Value));
         }
 
         if (confirmation.Asks)
@@ -91,17 +92,15 @@ internal static class DeleteHelper
         (response.TryGetProperty("backlinks", out var backlinks) ? backlinks.GetRawText() : "");
 
     /// <summary>
-    /// "Delete Person I0001: Ivanov, Pyotr, b. 1880?" with the records that will keep a link to it,
+    /// "Delete Person I0001: Ivanov, Pyotr, b. 1880?" with what deleting it does to the records that link to it,
     /// in plain text: clients show the question as it is.
     /// </summary>
     private static async Task<string> FormatQuestionAsync(GrampsApiClient client, string objectType, string apiPath,
         string handle, JsonElement response, bool force)
     {
-        var backlinks = force ? BacklinkCollector.ParseGroupsFromResponseRoot(response) : [];
-        var named = backlinks
-            .SelectMany(group => group.Handles.Select(h => (Collection: group.Key, Handle: h)))
-            .ToList();
-        var labels = await LoadLabelsAsync(client, apiPath, handle, named.Take(MaxBacklinksNamed).ToList());
+        var (removed, kept) = force ? LinksTo(apiPath, response) : ([], []);
+        var labels = await LoadLabelsAsync(client, apiPath, handle,
+            removed.Take(MaxBacklinksNamed).Concat(kept.Take(MaxBacklinksNamed)).ToList());
 
         var sb = new StringBuilder($"Delete {objectType}");
         if (response.TryGetProperty("gramps_id", out var grampsId) && grampsId.ValueKind == JsonValueKind.String
@@ -111,23 +110,78 @@ internal static class DeleteHelper
             sb.Append(": ").Append(label);
         sb.AppendLine("?");
 
-        if (named.Count > 0)
+        if (removed.Count > 0)
         {
             sb.AppendLine();
-            sb.AppendLine(named.Count == 1
-                ? "1 record still links to it and will keep a link to a missing record:"
-                : $"{named.Count} records still link to it and will keep links to a missing record:");
-            foreach (var (collection, h) in named.Take(MaxBacklinksNamed))
-            {
-                sb.Append("  • ").Append(ClassOf(collection));
-                sb.AppendLine(labels.TryGetValue(h, out var linked) ? $": {linked}" : $" [handle: {h}]");
-            }
-            if (named.Count > MaxBacklinksNamed)
-                sb.AppendLine($"  • … and {named.Count - MaxBacklinksNamed} more");
+            sb.AppendLine(apiPath == "sources"
+                ? removed.Count == 1
+                    ? "Gramps Web also deletes its citation and removes the links to it:"
+                    : $"Gramps Web also deletes its {removed.Count} citations and removes the links to them:"
+                : removed.Count == 1
+                    ? "1 record links to it; Gramps Web removes that link:"
+                    : $"{removed.Count} records link to it; Gramps Web removes those links:");
+            AppendRecords(sb, removed, labels);
+            if (apiPath == "people" && removed.Any(link => link.Collection == "families"))
+                sb.AppendLine("A family left without father, mother and children is deleted with it.");
+        }
+
+        if (kept.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine(kept.Count == 1
+                ? "1 place inside it keeps a link to the missing place:"
+                : $"{kept.Count} places inside it keep links to the missing place:");
+            AppendRecords(sb, kept, labels);
         }
 
         sb.AppendLine();
-        sb.Append("The change history keeps it: undo_change can restore it later.");
+        sb.Append(removed.Count + kept.Count > 0
+            ? "The change history keeps all of this: undo_change can restore it later."
+            : "The change history keeps it: undo_change can restore it later.");
+        return sb.ToString();
+    }
+
+    private static void AppendRecords(StringBuilder sb, IReadOnlyList<(string Collection, string Handle)> links,
+        IReadOnlyDictionary<string, string> labels)
+    {
+        foreach (var (collection, h) in links.Take(MaxBacklinksNamed))
+        {
+            sb.Append("  • ").Append(ClassOf(collection));
+            sb.AppendLine(labels.TryGetValue(h, out var linked) ? $": {linked}" : $" [handle: {h}]");
+        }
+        if (links.Count > MaxBacklinksNamed)
+            sb.AppendLine($"  • … and {links.Count - MaxBacklinksNamed} more");
+    }
+
+    /// <summary>
+    /// The records that link to a record of <paramref name="apiPath"/>, split by what a forced delete does to them:
+    /// Gramps Web removes the links of most (and deletes a source's citations), but the places inside a deleted
+    /// place keep their link to it.
+    /// </summary>
+    private static (List<(string Collection, string Handle)> Removed, List<(string Collection, string Handle)> Kept)
+        LinksTo(string apiPath, JsonElement response)
+    {
+        var links = BacklinkCollector.ParseGroupsFromResponseRoot(response)
+            .SelectMany(group => group.Handles.Select(h => (Collection: group.Key, Handle: h)))
+            .ToList();
+        bool Keeps((string Collection, string Handle) link) => apiPath == "places" && link.Collection == "places";
+        return (links.Where(link => !Keeps(link)).ToList(), links.Where(Keeps).ToList());
+    }
+
+    /// <summary>What force=true does to the records that link to it, for the refusal.</summary>
+    private static string ForceEffect(string apiPath,
+        (List<(string Collection, string Handle)> Removed, List<(string Collection, string Handle)> Kept) links)
+    {
+        var sb = new StringBuilder();
+        if (apiPath == "sources")
+            sb.Append("Gramps Web then deletes its citations and removes the links to them.");
+        else if (links.Removed.Count > 0)
+            sb.Append("Gramps Web then removes their links to it.");
+        if (apiPath == "people" && links.Removed.Any(link => link.Collection == "families"))
+            sb.Append(" A family left without father, mother and children is deleted with it.");
+        if (links.Kept.Count > 0)
+            sb.Append(sb.Length > 0 ? " " : "").Append(
+                "The places inside it keep a link to the missing place, so change their enclosedBy with update_place first.");
         return sb.ToString();
     }
 

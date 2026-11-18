@@ -47,7 +47,7 @@ public class DeleteConfirmationTests
     }
 
     [Fact]
-    public async Task Delete_WithForce_NamesTheRecordsThatKeepALink()
+    public async Task Delete_WithForce_NamesTheRecordsWhoseLinkGoes()
     {
         using var server = NoteServer(backlinks: """{"person": ["p1"]}""");
         server.Get("/api/people/p1?profile=self",
@@ -57,7 +57,8 @@ public class DeleteConfirmationTests
         var result = await Delete(server, user, force: true);
 
         var question = Assert.Single(user.Questions).ReplaceLineEndings("\n");
-        Assert.Contains("1 record still links to it and will keep a link to a missing record:\n  • Person: Smith, Anna\n", question);
+        Assert.Contains("1 record links to it; Gramps Web removes that link:\n  • Person: Smith, Anna\n", question);
+        Assert.EndsWith("The change history keeps all of this: undo_change can restore it later.", question);
         Assert.Contains("action: deleted", result);
     }
 
@@ -70,7 +71,7 @@ public class DeleteConfirmationTests
         await Delete(server, user, force: true);
 
         var question = Assert.Single(user.Questions);
-        Assert.Contains("7 records still link to it and will keep links to a missing record:", question);
+        Assert.Contains("7 records link to it; Gramps Web removes those links:", question);
         Assert.Contains("  • Person [handle: p5]", question);
         Assert.DoesNotContain("p6", question);
         Assert.Contains("  • … and 2 more", question);
@@ -86,7 +87,62 @@ public class DeleteConfirmationTests
 
         Assert.Empty(user.Questions);
         Assert.StartsWith("Cannot delete Note [n1]: other objects reference it.", result);
+        Assert.EndsWith("or pass force=true once the user confirmed deleting it anyway. " +
+                        "Gramps Web then removes their links to it.", result);
         Assert.DoesNotContain(server.Requests, r => r.StartsWith("DELETE", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Delete_OfAPlace_SaysThePlacesInsideItKeepTheirLink()
+    {
+        using var server = new RouteServer();
+        server.Get("/api/places/pl1?backlinks=true",
+            """{"handle": "pl1", "gramps_id": "P0001", "change": 1, "backlinks": {"event": ["e1"], "place": ["pl2", "pl3"]}}""");
+        var user = new FakeConfirmation(ConfirmationAnswer.Declined);
+
+        var refusal = await ObjectTools.DeleteObjectAsync("place", "pl1", force: false, CreateClient(server), user);
+        await ObjectTools.DeleteObjectAsync("place", "pl1", force: true, CreateClient(server), user);
+
+        Assert.EndsWith("Gramps Web then removes their links to it. The places inside it keep a link to the missing " +
+                        "place, so change their enclosedBy with update_place first.", refusal);
+        var question = Assert.Single(user.Questions).ReplaceLineEndings("\n");
+        Assert.Contains("1 record links to it; Gramps Web removes that link:\n  • Event [handle: e1]\n", question);
+        Assert.Contains("2 places inside it keep links to the missing place:\n" +
+                        "  • Place [handle: pl2]\n  • Place [handle: pl3]\n", question);
+    }
+
+    [Fact]
+    public async Task Delete_OfASource_SaysItsCitationsGoWithIt()
+    {
+        using var server = new RouteServer();
+        server.Get("/api/sources/s1?backlinks=true",
+            """{"handle": "s1", "gramps_id": "S0001", "change": 1, "backlinks": {"citation": ["c1", "c2"]}}""");
+        var user = new FakeConfirmation(ConfirmationAnswer.Declined);
+
+        var refusal = await ObjectTools.DeleteObjectAsync("source", "s1", force: false, CreateClient(server), user);
+        await ObjectTools.DeleteObjectAsync("source", "s1", force: true, CreateClient(server), user);
+
+        Assert.EndsWith("Gramps Web then deletes its citations and removes the links to them.", refusal);
+        Assert.Contains("Gramps Web also deletes its 2 citations and removes the links to them:\n" +
+                        "  • Citation [handle: c1]\n  • Citation [handle: c2]\n",
+            Assert.Single(user.Questions).ReplaceLineEndings("\n"));
+    }
+
+    [Fact]
+    public async Task Delete_OfAPerson_SaysAnEmptyFamilyGoesWithThem()
+    {
+        using var server = new RouteServer();
+        server.Get("/api/people/p1?backlinks=true",
+            """{"handle": "p1", "gramps_id": "I0001", "change": 1, "backlinks": {"family": ["f1"]}}""");
+        var user = new FakeConfirmation(ConfirmationAnswer.Declined);
+
+        var refusal = await ObjectTools.DeleteObjectAsync("person", "p1", force: false, CreateClient(server), user);
+        await ObjectTools.DeleteObjectAsync("person", "p1", force: true, CreateClient(server), user);
+
+        Assert.EndsWith("Gramps Web then removes their links to it. A family left without father, mother and " +
+                        "children is deleted with it.", refusal);
+        Assert.Contains("  • Family [handle: f1]\nA family left without father, mother and children is deleted with it.\n",
+            Assert.Single(user.Questions).ReplaceLineEndings("\n"));
     }
 
     [Fact]

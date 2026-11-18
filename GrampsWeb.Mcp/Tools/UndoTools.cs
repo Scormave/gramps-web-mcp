@@ -401,7 +401,7 @@ public static partial class UndoTools
     /// The stored record as the model its summary line needs. A family is left out: its summary names the
     /// partners from data the stored record does not carry.
     /// </summary>
-    private static object? ReadModel(string collection, JsonElement data)
+    internal static object? ReadModel(string collection, JsonElement data)
     {
         try
         {
