@@ -70,6 +70,11 @@
           "default": "when-supported"
         },
         {
+          "name": "GRAMPS_REQUIRE_USER_INTERACTION",
+          "description": "Set to false to publish delete_object, merge_objects and undo_change without the anthropic/requiresUserInteraction tool metadata, so the client's own permission settings decide whether to ask",
+          "default": "true"
+        },
+        {
           "name": "GRAMPS_LOG_LEVEL",
           "description": "Server log level: Trace, Debug, Information, Warning, Error, Critical, or None. Debug and Trace also log request and response bodies, which contain genealogy data",
           "default": "Information"

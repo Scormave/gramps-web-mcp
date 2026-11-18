@@ -126,6 +126,11 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
   when the client cannot ask; `off` never asks. `UserConfirmation.For` reads it
   per call from the request-scoped `McpServer`, and logs once per client whether
   it asks. Stateless HTTP has no client capabilities, so it never asks there.
+- `GRAMPS_REQUIRE_USER_INTERACTION`: whether the same three tools are
+  published with the `anthropic/requiresUserInteraction` tool metadata, which
+  an attribute on each tool sets. With `false`, `WithGrampsToolProfile`
+  removes it from the registered tools once, when the server options are
+  built, so no `tools/list` reply carries it.
 
 ### Media
 

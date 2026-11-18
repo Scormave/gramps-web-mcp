@@ -15,16 +15,38 @@ namespace GrampsWeb.Mcp.Hosting;
 internal static class McpToolProfileExtensions
 {
     /// <summary>
+    /// Tool metadata that makes clients which honour it, such as Claude Code, ask the user on every call.
+    /// delete_object, merge_objects and undo_change carry it by attribute.
+    /// </summary>
+    internal const string RequiresUserInteractionMeta = "anthropic/requiresUserInteraction";
+
+    /// <summary>
     /// Registers every tool while publishing only tools enabled by the current configuration.
     /// Tools remain registered for compatibility, so direct calls to a hidden write, media-byte or
     /// upload tool still return its normal safety or configuration error. Call arguments are checked
     /// against each tool's input schema by <see cref="ToolArgumentValidator"/>.
+    /// With <c>GRAMPS_REQUIRE_USER_INTERACTION=false</c> the tools are published without
+    /// <see cref="RequiresUserInteractionMeta"/>.
     /// </summary>
     public static IMcpServerBuilder WithGrampsToolProfile(
         this IMcpServerBuilder builder,
         GrampsConfig config)
     {
         builder.WithToolsFromAssembly();
+        if (!config.RequireUserInteraction)
+        {
+            // Runs once, when the server options are built, so no tools/list reply carries the metadata.
+            builder.Services.PostConfigure<McpServerOptions>(options =>
+            {
+                if (options.ToolCollection is not { } tools)
+                    return;
+                foreach (var tool in tools)
+                {
+                    if (tool.ProtocolTool.Meta is { } meta && meta.Remove(RequiresUserInteractionMeta) && meta.Count == 0)
+                        tool.ProtocolTool.Meta = null;
+                }
+            });
+        }
         builder.WithRequestFilters(filters => filters.AddCallToolFilter(next =>
             async (request, cancellationToken) =>
             {
