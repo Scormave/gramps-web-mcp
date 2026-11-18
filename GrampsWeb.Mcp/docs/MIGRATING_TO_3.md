@@ -1,6 +1,6 @@
 # Migrating from 2.x to 3.0
 
-This guide compares the 2.10 tool catalog with the 3.0 catalog. 3.0 needs a
+This guide compares the 2.11 tool catalog with the 3.0 catalog. 3.0 needs a
 newer Gramps Web, renames the tools that read, list, merge and delete
 records, replaces the nine single-record `create_*` tools with
 `create_records`, and makes `linkMode: "add"` the default of the `update_*`
@@ -35,7 +35,9 @@ until Gramps Web can be updated.
 `list_records`, `merge_records`, `get_media_image` and `upload_media` take the
 same arguments as the tools they replace. `get_media_image` and
 `upload_media` are published under the same media settings as `read_media`
-and `create_media` were.
+and `create_media` were, and `GRAMPS_REQUIRE_USER_INTERACTION` covers
+`delete_records` and `merge_records` as it covered `delete_object` and
+`merge_objects`.
 
 `get_records` reads up to 20 records and `delete_records` deletes up to 50, of
 any types, so several 2.x calls can become one:
@@ -56,10 +58,9 @@ among them and is refused when there are none.
 
 `delete_records` checks all the records first and deletes nothing when one
 is missing or, without `force`, when records outside the call link to them.
-With `force`, Gramps Web now removes those links from the other records
-instead of leaving them pointing at a missing record. It also deletes the
-citations of a deleted source and a family left without father, mother and
-children. A place that encloses places outside the call is refused even with
+With `force`, Gramps Web removes those links from the other records, as with
+`delete_object`, and deletes the citations of a deleted source and a family
+left without father, mother and children. A place that encloses places outside the call is refused even with
 `force`. Each record type is deleted in its own transaction, and
 `undo_change` reverts each one.
 

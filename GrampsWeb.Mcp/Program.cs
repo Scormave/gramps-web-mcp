@@ -68,6 +68,7 @@ static async Task RunStdioAsync(GrampsConfig config, McpAuthConfig auth)
     }
     host.LogRetiredEnvironmentVariables();
     host.LogUploadWithoutMediaAccess(config);
+    host.LogUserInteractionNotRequired(config);
 
     await host.RunAsync();
 }
@@ -109,6 +110,7 @@ static async Task RunHttpAsync(
     app.LogAuthStartupStatus(auth);
     app.LogRetiredEnvironmentVariables();
     app.LogUploadWithoutMediaAccess(config);
+    app.LogUserInteractionNotRequired(config);
     await app.RunAsync();
 }
 

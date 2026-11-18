@@ -34,6 +34,7 @@ LABEL io.modelcontextprotocol.server.name="io.github.Scormave/gramps-web-mcp"
 # GRAMPS_MEDIA_MAX_BYTES  Max bytes returned by get_media_image or a media resource (default 5242880).
 # GRAMPS_MEDIA_ALLOW_PRIVATE  true|false — return bytes for media marked private (default false).
 # GRAMPS_MEDIA_UPLOAD_DIRS  Mounted folders upload_media may upload from, :-separated (default unset: off; needs media access).
+# GRAMPS_MEDIA_UPLOAD_HOSTS  Hosts files attached in the chat may be downloaded from, comma-separated (default unset: off; needs media access).
 # GRAMPS_MEDIA_UPLOAD_MAX_BYTES  Largest file upload_media or update_media uploads (default 52428800).
 
 # --- MCP transport (optional; these defaults suit a networked container) ---

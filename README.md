@@ -43,10 +43,11 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
 - **Duplicates** — `find_duplicates` pairs people entered twice, across
   spellings and name forms, and `create_records` refuses a person the tree
   already has
-- **Undo and confirmation** — `undo_change` reverts one transaction of the
-  edit history; it, `delete_records` and `merge_records` ask the user, not
-  the model, before they change the tree, in clients that support MCP
-  elicitation
+- **History and undo** — `get_recent_changes` shows the edit history, or
+  who changed each field of one record and what it held before;
+  `undo_change` reverts one transaction. It, `delete_records` and
+  `merge_records` ask the user, not the model, before they change the
+  tree, in clients that support MCP elicitation
 - **Scans and photos** — opt-in previews that vision-capable agents can read,
   with EXIF/GPS metadata stripped, and uploads from a folder you choose
 - **8 MCP resources and guided prompts** — type vocabularies, tree metadata,
@@ -142,7 +143,7 @@ Every setting is an environment variable. The main ones:
 | `GRAMPS_READ_ONLY` | `true` publishes only read tools and blocks writes | `false` (the Claude Desktop extension: `true`) |
 | `GRAMPS_MEDIA_RESOURCES_ENABLED` | Lets agents read scans and photos, and enables uploads | `false` |
 | `GRAMPS_MEDIA_UPLOAD_DIRS` | Folders that `upload_media` may upload from | unset (off) |
-| `GRAMPS_MEDIA_UPLOAD_HOSTS` | Hosts that files attached in the chat (ChatGPT) may be downloaded from | unset (off) |
+| `GRAMPS_MEDIA_UPLOAD_HOSTS` | Hosts that files attached in the chat (ChatGPT) may be downloaded from; experimental | unset (off) |
 | `MCP_TRANSPORT` | `stdio`, `http` (Streamable HTTP) or `sse` | `stdio` (the Docker image: `http`) |
 | `MCP_API_KEY` | Key that HTTP clients must send; set it whenever other machines can reach the port | — |
 

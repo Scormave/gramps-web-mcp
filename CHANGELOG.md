@@ -18,19 +18,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   maps every renamed and removed tool to its 3.0 call, shows which
   saved `update_*` calls need `linkMode: "replace"`, and lists the
   Gramps Web version check and the changed replies
-- `upload_media` and `update_media` take `file`, a file attached in the
-  chat ([#18](https://github.com/Scormave/gramps-web-mcp/issues/18),
-  requested by @ws-mkulas): the tools name it in `openai/fileParams`, so
-  ChatGPT passes an attached file as a temporary download link. Set
-  `GRAMPS_MEDIA_UPLOAD_HOSTS` to the hosts the chat client serves
-  attached files from. The server fetches only HTTPS links on those
-  hosts and their subdomains, redirects included, connects only to
-  public addresses, sends no credentials or cookies, and stops at
-  `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`; errors name the host, never the
-  signed link. Uploading still needs media file access. `tools/list`
-  shows only the sources the server allows: with upload hosts alone,
-  `upload_media` requires `file`; with upload folders alone, `file` and
-  `openai/fileParams` are not listed
 
 ### Changed
 
@@ -47,16 +34,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   records are checked together, and nothing is deleted when one is
   missing or, without `force`, when records outside the call link to
   them; links between the records of one call need no `force`. With
-  `force`, Gramps Web now removes the links from the other records
-  instead of leaving them pointing at a missing record, and it deletes
-  the citations of a deleted source and a family left without father,
-  mother and children; the refusal and the confirmation say so. A place
-  that encloses places outside the call is refused even with `force`,
-  since Gramps Web would leave them pointing at a missing place. Each
-  record type is deleted in its own transaction, which `undo_change`
-  reverts. The reply has `type: Transaction`, `records:` and lists the
-  records deleted along and those whose links were removed;
-  `action: partially_deleted` reports a later type that failed
+  `force`, Gramps Web removes the links from the other records and
+  deletes the citations of a deleted source and a family left without
+  father, mother and children, as with `delete_object`; the refusal and
+  the confirmation say so. A place that encloses places outside the
+  call is refused even with `force`, since Gramps Web would leave them
+  pointing at a missing place. Each record type is deleted in its own
+  transaction, which `undo_change` reverts. The reply has
+  `type: Transaction`, `records:` and lists the records deleted along
+  and those whose links were removed; `action: partially_deleted`
+  reports a later type that failed
 - **Breaking:** `create_media` is renamed `upload_media`, with the same
   arguments. It uploads the file in its own transaction, apart from
   `create_records`, which takes no media; a `"#key"` in `mediaHandles`
@@ -120,18 +107,87 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - The `format` of a note record in `create_records` was described as
   Plain or Preformatted; it is Plain or Html
-- `undo_change` named the type of a deleted event, note, place,
-  repository or family wrongly, such as a birth as a christening:
-  Gramps stores the type as a number, and it was looked up by its
-  position in the list of types instead of by its value. The names now
-  come from `/api/types/default/{type}/map`; a type that cannot be
-  named stays a number, and `-1` shows as Unknown
 - A Gramps ID in a link list was saved as if it were a handle, leaving a
   link to a record that does not exist; an unknown ID in `fatherHandle`,
   `motherHandle`, `placeHandle`, `sourceHandle` or `enclosedBy` was passed
   on to Gramps Web unchanged
 - A Gramps ID starting with `T`, such as `T0001`, was looked up as a tag
   and ended in a server error: tags have no Gramps ID
+
+## [2.11.0] - 2026-11-18
+
+### Added
+
+- History of one record: `get_recent_changes` with `identifier` (a
+  Gramps ID, or a handle with `objectType`) shows that record's own
+  changes from its first save, newest first: the time, added, updated or
+  deleted, the user and the transaction, and the fields each change
+  changed as `field: before → after`, such as
+  `primary_name.first_name: "John" → "Johann"`, with linked records
+  named. It answers who changed a field and what it held before, which
+  the list of transactions shows only as an object and its handle. A
+  deleted record is found by its handle. It needs Gramps Web API 3.22 or
+  later
+- `GRAMPS_REQUIRE_USER_INTERACTION` (default `true`;
+  [#19](https://github.com/Scormave/gramps-web-mcp/issues/19),
+  contributed by @aegershman in
+  [#20](https://github.com/Scormave/gramps-web-mcp/pull/20)): `false`
+  publishes `delete_object`, `merge_objects` and `undo_change` without
+  the `anthropic/requiresUserInteraction` tool metadata. Claude Code
+  asks for a tool with that metadata on every call, in every permission
+  mode but `dontAsk` (which refuses the call), and no allow rule skips
+  the prompt; the operator of a tree with one trusted user can now let
+  the client's own permission settings decide. The default is unchanged.
+  A value other than `true`, `false`, `1` or `0` stops the server at
+  startup, and the server logs when the metadata is off
+- Experimental: `create_media` and `update_media` take `file`, a file
+  attached in the chat
+  ([#18](https://github.com/Scormave/gramps-web-mcp/issues/18),
+  requested by @ws-mkulas): the tools name it in `openai/fileParams`, so
+  ChatGPT passes an attached file as a temporary download link. Set
+  `GRAMPS_MEDIA_UPLOAD_HOSTS` to the hosts the chat client serves
+  attached files from. The server fetches only HTTPS links on those
+  hosts and their subdomains, redirects included, connects only to
+  public addresses, sends no credentials or cookies, and stops at
+  `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`; errors name the host, never the
+  signed link. Uploading still needs media file access. `tools/list`
+  shows only the sources the server allows: with upload hosts alone,
+  `create_media` requires `file`; with upload folders alone, `file` and
+  `openai/fileParams` are not listed. It is tested with direct tool
+  calls, not yet in ChatGPT itself, so ChatGPT's file host is not named
+  here: a refused link's error names the host to add
+
+### Fixed
+
+- `delete_object` said that `force=true` leaves links to the deleted
+  record dangling, and its confirmation dialog warned that the linking
+  records would keep a link to a missing record. Gramps Web removes
+  those links in the same transaction, and `undo_change` restores them.
+  The description, the refusal and the dialog now say what a forced
+  delete does: the links go, the citations of a deleted source and a
+  family left without father, mother and children are deleted with it,
+  and only the places inside a deleted place keep a link to it, so their
+  `enclosedBy` is better changed first
+
+## [2.10.1] - 2026-11-16
+
+### Fixed
+
+- `undo_change` named the type of a deleted event, note, place,
+  repository or family wrongly, such as a birth as a christening:
+  Gramps stores the type as a number, and it was looked up by its
+  position in the list of types instead of by its value. The names now
+  come from `/api/types/default/{type}/map`; a type that cannot be
+  named stays a number, and `-1` shows as Unknown
+
+### Security
+
+- The Docker image, MCP Bundles and binary archives are built on the
+  .NET runtime 10.0.15. The 2.10.0 image carries ASP.NET Core 10.0.14,
+  which has three HIGH vulnerabilities fixed in 10.0.15:
+  CVE-2026-114146 (elevation of privilege), CVE-2026-114147 and
+  CVE-2026-114149 (denial of service). The weekly image scan found them
+  in the 2.10.0 image; `latest` was already rebuilt on 10.0.15
 
 ## [2.10.0] - 2026-11-10
 
@@ -1448,7 +1504,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.0...HEAD
+[2.11.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...v2.11.0
+[2.10.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.1...v2.10.0
 [2.9.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.8.1...v2.9.0

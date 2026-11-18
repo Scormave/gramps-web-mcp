@@ -3,7 +3,7 @@
   "name": "io.github.Scormave/gramps-web-mcp",
   "title": "Gramps Web MCP",
   "description": "MCP server for structured access to Gramps Web genealogy data",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "repository": {
     "url": "https://github.com/Scormave/gramps-web-mcp",
     "source": "github"
@@ -11,7 +11,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/scormave/gramps-web-mcp:2.10.0",
+      "identifier": "ghcr.io/scormave/gramps-web-mcp:2.11.0",
       "runtimeHint": "docker",
       "transport": {
         "type": "stdio"
@@ -70,13 +70,18 @@
           "default": "when-supported"
         },
         {
+          "name": "GRAMPS_REQUIRE_USER_INTERACTION",
+          "description": "Set to false to publish delete_records, merge_records and undo_change without the anthropic/requiresUserInteraction tool metadata, so the client's own permission settings decide whether to ask",
+          "default": "true"
+        },
+        {
           "name": "GRAMPS_LOG_LEVEL",
           "description": "Server log level: Trace, Debug, Information, Warning, Error, Critical, or None. Debug and Trace also log request and response bodies, which contain genealogy data",
           "default": "Information"
         },
         {
           "name": "GRAMPS_MEDIA_RESOURCES_ENABLED",
-          "description": "Set to true to expose get_media_image and the media resources for thumbnails and full files, and to allow uploads from GRAMPS_MEDIA_UPLOAD_DIRS",
+          "description": "Set to true to expose get_media_image and the media resources for thumbnails and full files, and to allow uploads from GRAMPS_MEDIA_UPLOAD_DIRS and GRAMPS_MEDIA_UPLOAD_HOSTS",
           "default": "false"
         },
         {
@@ -91,7 +96,11 @@
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_DIRS",
-          "description": "Absolute folders, separated by : (; on Windows), that upload_media and update_media may upload photos, scans and PDFs from while GRAMPS_MEDIA_RESOURCES_ENABLED is true. Unset turns uploading off and hides upload_media"
+          "description": "Absolute folders, separated by : (; on Windows), that upload_media and update_media may upload photos, scans and PDFs from while GRAMPS_MEDIA_RESOURCES_ENABLED is true. With this and GRAMPS_MEDIA_UPLOAD_HOSTS unset, uploading is off and upload_media is hidden"
+        },
+        {
+          "name": "GRAMPS_MEDIA_UPLOAD_HOSTS",
+          "description": "Host names, separated by commas, that files attached in the chat (ChatGPT file parameters) may be downloaded from over HTTPS by upload_media and update_media while GRAMPS_MEDIA_RESOURCES_ENABLED is true; each also allows its subdomains. Unset turns uploading attached files off"
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_MAX_BYTES",

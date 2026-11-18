@@ -22,7 +22,7 @@ public class SystemToolsTests
         var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
         var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
 
-        var result = await SystemTools.GetRecentChanges(limit: 5, client);
+        var result = await SystemTools.GetRecentChanges(limit: 5, client: client);
 
         Assert.Equal("/api/transactions/history/?page=1&pagesize=5&sort=-id", handler.HistoryPath);
         Assert.Contains("Edit Person", result);
@@ -56,7 +56,7 @@ public class SystemToolsTests
         var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
         var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
 
-        var result = (await SystemTools.GetRecentChanges(limit: 2, client)).Replace("\r\n", "\n");
+        var result = (await SystemTools.GetRecentChanges(limit: 2, client: client)).Replace("\r\n", "\n");
 
         Assert.StartsWith("RECENT CHANGES (2 of 345, newest first)\n", result);
         Assert.Contains("1. 2025-09-30 14:22:05 UTC — Edit Person — by Jane Doe [transaction: 42]\n" +

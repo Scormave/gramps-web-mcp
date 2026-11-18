@@ -147,6 +147,17 @@ public static class ObjectTools
         _ => throw new InvalidOperationException("Validated object type was not dispatched.")
     };
 
+    /// <summary>
+    /// The record type of one <paramref name="identifier"/>, such as <c>person</c>, checked as
+    /// <see cref="TypeIdentifiers"/> checks each identifier of a call.
+    /// </summary>
+    internal static string ResolveObjectType(string identifier, string? objectType) =>
+        TypeIdentifiers([identifier], objectType, 1, "reads").Single().Type;
+
+    /// <summary>The Gramps class name (<c>Person</c>) and API collection (<c>people</c>) of a resolved type.</summary>
+    internal static (string ClassName, string ApiPath) KindOf(string objectType) =>
+        ObjectKinds[objectType] is var kind ? (kind.DisplayName, kind.ApiPath) : default;
+
     private static string? InferObjectType(string identifier) =>
         HandleResolver.LooksLikeGrampsId(identifier)
             ? HandleResolver.PrefixToObjectType(identifier[0]) switch
