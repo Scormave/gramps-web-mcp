@@ -391,8 +391,11 @@ public static class MediaTools
     /// <summary>A stored media record whose file has this MD5 checksum, or null.</summary>
     private static async Task<GrampsMedia?> FindByChecksumAsync(string checksum, GrampsApiClient client)
     {
-        var gql = Uri.EscapeDataString($"checksum = \"{checksum}\"");
-        var found = await client.GetPagedListAsync<GrampsMedia>($"/api/media/?gql={gql}&page=1&pagesize=1");
+        // Gramps QL is gone from API 3.26; the MatchesQuery rule (GOQL) came in 3.23.
+        var filter = await GrampsQueryLanguage.HasMatchesQueryAsync(client)
+            ? "rules=" + Uri.EscapeDataString(GrampsQueryLanguage.MatchesQueryRules($"checksum == '{checksum}'"))
+            : "gql=" + Uri.EscapeDataString($"checksum = \"{checksum}\"");
+        var found = await client.GetPagedListAsync<GrampsMedia>($"/api/media/?{filter}&page=1&pagesize=1");
         return found.Objects?.FirstOrDefault();
     }
 

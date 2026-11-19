@@ -205,7 +205,7 @@ public class FilterRulesTests
             new GrampsApiException(HttpStatusCode.NotFound, ""), request, CreateClient(handler));
 
         Assert.StartsWith(
-            "Unknown filter rule: MatchesQuery for people needs Gramps Web API 3.23 or later; use the gql argument instead. ",
+            "Unknown filter rule: MatchesQuery for people needs Gramps Web API 3.23 or later; on this server filter by field values with the gql argument instead. ",
             message);
     }
 

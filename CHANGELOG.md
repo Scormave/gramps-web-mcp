@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Gramps Web API 3.26 (Gramps Web 26.11.3) removed Gramps QL, the `gql`
+  query argument, which the server now refuses with HTTP 422. Uploads
+  with `create_media` and `update_media` failed, because the duplicate
+  check looks for a stored file by its checksum, and so did
+  `list_objects` with `sourceHandle`, which lists the citations of a
+  source. Both now filter with the `MatchesQuery` rule and a GOQL
+  expression on API 3.23 or later, and with Gramps QL as before on older
+  servers; the server's version is read from `/api/metadata/`
+- `list_objects` with `gql` on API 3.26 or later says that the server
+  no longer has Gramps QL and shows how to filter by field values with
+  the `MatchesQuery` rule in `rules`, instead of passing on the
+  server's `Unknown field`. The tool and argument descriptions name
+  `MatchesQuery` for field values and give GOQL examples, and the
+  `audit-tree` prompt counts events without a citation with the
+  `HasSourceCount` rule instead of `gql`
+
 ## [2.11.0] - 2026-11-18
 
 ### Added
