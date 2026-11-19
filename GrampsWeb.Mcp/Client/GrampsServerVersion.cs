@@ -12,11 +12,14 @@ namespace GrampsWeb.Mcp.Client;
 /// </summary>
 public sealed class GrampsServerVersion
 {
-    /// <summary>Gramps Web API 3.16 added <c>POST /api/objects/delete-by-handle/</c>.</summary>
-    public static readonly Version Minimum = new(3, 16);
+    /// <summary>
+    /// Gramps Web API 3.23 added the MatchesQuery filter rule (GOQL), which list_records and the upload's
+    /// checksum lookup filter with since API 3.26 removed Gramps QL.
+    /// </summary>
+    public static readonly Version Minimum = new(3, 23);
 
     /// <summary>The oldest Gramps Web release known to bundle <see cref="Minimum"/>.</summary>
-    public const string MinimumGrampsWebRelease = "26.6.2";
+    public const string MinimumGrampsWebRelease = "26.10.0";
 
     internal const string MetadataPath = "/api/metadata/";
 

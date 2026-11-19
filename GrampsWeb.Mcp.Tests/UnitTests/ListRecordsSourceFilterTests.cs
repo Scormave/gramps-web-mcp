@@ -33,63 +33,26 @@ public class ListRecordsSourceFilterTests
         Assert.Equal(
             """{"rules":[{"name":"MatchesQuery","values":["source_handle == '102a49c11b31375183b9ad45a991'"]}]}""",
             query["rules"]);
-        Assert.Null(query["gql"]);
         Assert.Null(query["source_handle"]);
         Assert.Null(query["extend"]);
         Assert.Equal("self", query["profile"]);
     }
 
-    [Theory]
-    [InlineData("3.22.1")]
-    [InlineData("3.16.0")]
-    public async Task ListRecords_Citations_FiltersBySourceHandleThroughGqlBeforeApi323(string apiVersion)
-    {
-        using var handler = new CitationListHandler { ApiVersion = apiVersion };
-        var client = CreateClient(handler);
-
-        await SearchTools.ListRecords("citations", sourceHandle: "102a49c11b31375183b9ad45a991", client: client);
-
-        var query = Query(handler);
-        Assert.Equal("source_handle = \"102a49c11b31375183b9ad45a991\"", query["gql"]);
-        Assert.Null(query["rules"]);
-    }
-
     [Fact]
-    public async Task ListRecords_Citations_CombinesSourceFilterWithUserGqlBeforeApi323()
+    public async Task ListRecords_Citations_SendsTheQueryBesideTheSourceRule()
     {
-        using var handler = new CitationListHandler { ApiVersion = "3.22.1" };
+        using var handler = new CitationListHandler();
         var client = CreateClient(handler);
 
         await SearchTools.ListRecords(
             "citations",
             sourceHandle: "9d11cde4-53e4-4248-a627-ba38e55f051f",
-            gql: "confidence >= 3 or page ~ 12",
+            query: "confidence >= 3",
             client: client);
 
-        var query = Query(handler);
         Assert.Equal(
-            "source_handle = \"9d11cde4-53e4-4248-a627-ba38e55f051f\" and (confidence >= 3 or page ~ 12)",
-            query["gql"]);
-        Assert.Null(query["rules"]);
-    }
-
-    [Fact]
-    public async Task ListRecords_Citations_SendsUserGqlBesideTheSourceRule()
-    {
-        using var handler = new CitationListHandler { ApiVersion = "3.25.2" };
-        var client = CreateClient(handler);
-
-        await SearchTools.ListRecords(
-            "citations",
-            sourceHandle: "9d11cde4-53e4-4248-a627-ba38e55f051f",
-            gql: "confidence >= 3",
-            client: client);
-
-        var query = Query(handler);
-        Assert.Equal("confidence >= 3", query["gql"]);
-        Assert.Equal(
-            """{"rules":[{"name":"MatchesQuery","values":["source_handle == '9d11cde4-53e4-4248-a627-ba38e55f051f'"]}]}""",
-            query["rules"]);
+            """{"rules":[{"name":"MatchesQuery","values":["confidence >= 3"]},{"name":"MatchesQuery","values":["source_handle == '9d11cde4-53e4-4248-a627-ba38e55f051f'"]}]}""",
+            Query(handler)["rules"]);
     }
 
     [Fact]
@@ -141,13 +104,13 @@ public class ListRecordsSourceFilterTests
     }
 
     [Fact]
-    public async Task ListRecords_Citations_RejectsSourceHandleThatWouldBreakGql()
+    public async Task ListRecords_Citations_RejectsSourceHandleThatWouldBreakTheQuery()
     {
         using var handler = new CitationListHandler();
         var client = CreateClient(handler);
 
         var error = await Assert.ThrowsAsync<McpException>(() =>
-            SearchTools.ListRecords("citations", sourceHandle: "x\" or gramps_id ~ C", client: client));
+            SearchTools.ListRecords("citations", sourceHandle: "x' or gramps_id != 'C", client: client));
 
         Assert.Contains("sourceHandle", error.Message);
         Assert.Null(handler.CitationPath);
@@ -171,8 +134,6 @@ public class ListRecordsSourceFilterTests
     {
         public string SourceLookupResponse { get; init; } = "[]";
 
-        public string ApiVersion { get; init; } = "3.26.0";
-
         public string? CitationPath { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -180,9 +141,6 @@ public class ListRecordsSourceFilterTests
             var path = request.RequestUri!.PathAndQuery;
             if (path.StartsWith("/api/token/", StringComparison.Ordinal))
                 return Task.FromResult(JsonResponse("""{"access_token":"token","refresh_token":"refresh","expires_in":900}"""));
-
-            if (path == "/api/metadata/")
-                return Task.FromResult(JsonResponse($$$"""{"gramps_webapi":{"version":"{{{ApiVersion}}}"}}"""));
 
             if (path.StartsWith("/api/sources/?gramps_id=", StringComparison.Ordinal))
                 return Task.FromResult(JsonResponse(SourceLookupResponse));

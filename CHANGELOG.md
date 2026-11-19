@@ -37,8 +37,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **Breaking:** Gramps Web 26.6.2 or newer (Gramps Web API 3.16 or newer)
-  is required. Before its first request the server reads the Gramps Web
+- **Breaking:** Gramps Web 26.10.0 or newer (Gramps Web API 3.23 or
+  newer) is required. Before its first request the server reads the Gramps Web
   API version; with an older server every tool call returns an error that
   names both versions, `GET /health` reports unhealthy, and the startup
   log says so once instead of retrying. Keep Gramps Web MCP 2.x until
@@ -77,8 +77,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `cite-fact` prompt use `create_records`
 - **Breaking:** tools renamed: `get_object` to `get_records`,
   `list_objects` to `list_records`, `merge_objects` to `merge_records`
-  and `read_media` to `get_media_image`. Only `get_records` changes its
-  arguments. The server instructions, prompts and the hints in replies
+  and `read_media` to `get_media_image`. Of these, `get_records` changes
+  its arguments, and `list_records` takes `query` in place of `gql`
+  (below). The server instructions, prompts and the hints in replies
   name the new tools
 - **Breaking:** `get_records` reads up to 20 records of any types in one
   call: `identifiers`, an array, replaces `identifier`, and `objectType`
@@ -118,6 +119,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `urls` take the same line. A plain line in `addresses` is stored as
   the street and a bare link in `urls` as a Web Home link, as before;
   `[]` removes them, where 2.x took an empty `address` or `url`
+- **Breaking:** `list_records` filters field values with `query`, a
+  GOQL expression that Gramps Web runs as its `MatchesQuery` rule, in
+  place of `gql`, since Gramps Web API 3.26 removed Gramps QL. GOQL is
+  Python-like: `primary_name.first_name == 'Anna'`,
+  `type.value == EventType.BIRTH`, `len(media_list) >= 1`. `query` and
+  `rules` can be passed together, and a record must match both. A call
+  with `gql` is refused with `gql (did you mean query?)`, an invalid
+  expression with Gramps Web's reason, and the migration guide has a
+  table from Gramps QL to GOQL. The citations of a source
+  (`sourceHandle`) and the checksum lookup of `upload_media` always
+  filter with `MatchesQuery`
 - `urls` takes a bare link such as `https://archive.example.org` as a
   Web Home link, on people and repositories alike; before, its scheme
   was read as the link type and the link was refused

@@ -4,7 +4,7 @@
 instance and works on its tree through the Gramps Web API. You need:
 
 - A running Gramps Web instance with API access, and an account on it. It must
-  be Gramps Web 26.6.2 or newer (Gramps Web API 3.16 or newer); with an older
+  be Gramps Web 26.10.0 or newer (Gramps Web API 3.23 or newer); with an older
   server every tool call returns an error that names both versions. Keep Gramps
   Web MCP 2.x until you can update Gramps Web
 - Docker for the [image](#docker), [Docker Compose](#gramps-web--mcp-docker-compose)
@@ -97,7 +97,7 @@ declared in `server.json`.
 The image exposes a **`GET /health`** endpoint for Docker `HEALTHCHECK`, Unraid
 container health, and other uptime monitors. It returns HTTP 200 when the MCP
 server can authenticate against Gramps Web, or HTTP 503 otherwise, including
-for a Gramps Web server older than API 3.16. Probes reuse
+for a Gramps Web server older than API 3.23. Probes reuse
 the token the tools use, so they do not log in to Gramps Web each time. The
 public response is minimal: `{ "status": "healthy" }` or
 `{ "status": "unhealthy" }`. Startup logs include a line such as

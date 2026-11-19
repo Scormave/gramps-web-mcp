@@ -19,13 +19,13 @@ public class GrampsApiClientLoggingTests
         var logger = new CapturingLogger(LogLevel.Information);
         var client = CreateClient(logger);
 
-        await client.GetAsync<JsonElement>("/api/people/?gql=first_name%3DIvanov&page=1");
+        await client.GetAsync<JsonElement>("/api/people/?rules=" + Uri.EscapeDataString("""{"rules":[{"name":"MatchesQuery","values":["primary_name.first_name == 'Ivanov'"]}]}""") + "&page=1");
 
         Assert.NotEmpty(logger.Messages);
         Assert.Contains(logger.Messages, m => m.Contains("GET /api/people/ Status=200"));
         Assert.Contains(logger.Messages, m => m.Contains($"BodyLength={PersonBody.Length}"));
         Assert.DoesNotContain(logger.Messages, m => m.Contains("Ivanov"));
-        Assert.DoesNotContain(logger.Messages, m => m.Contains("gql"));
+        Assert.DoesNotContain(logger.Messages, m => m.Contains("rules"));
         Assert.DoesNotContain(logger.Messages, m => m.Contains("2019"));
     }
 

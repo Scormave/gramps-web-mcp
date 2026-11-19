@@ -77,12 +77,12 @@ public static class SearchTools
     [Description(
         "List the records of one type a page at a time, optionally filtered and sorted: one line per record " +
         "(Gramps ID, summary, handle) with the page and total count. Use it to browse a type, fetch one Gramps ID, " +
-        "list a source's citations (sourceHandle), or filter with Gramps filter rules (rules): by field values with the " +
-        "MatchesQuery rule, or by relationships, such as a person's ancestors or people with no family links. To find " +
-        "records by text use search; to read one record in full use get_records. gql, the older field filter, works only " +
-        "before Gramps Web API 3.26 and must match as well as rules; grampsId cannot be combined with rules. Filtering " +
-        "runs on the Gramps Web server: invalid rules are explained, invalid gql returns its error, and an ID, tag or " +
-        "saved filter the tree lacks matches nothing instead of failing.")]
+        "list a source's citations (sourceHandle), filter by field values with a GOQL expression (query), or select " +
+        "with Gramps filter rules (rules), such as a person's ancestors or people with no family links. To find records " +
+        "by text use search; to read one record in full use get_records. A record must match query, rules and " +
+        "sourceHandle together; grampsId cannot be combined with query or rules. Filtering runs on the Gramps Web " +
+        "server: an invalid query or invalid rules are explained, and an ID, tag or saved filter the tree lacks " +
+        "matches nothing instead of failing.")]
     public static async Task<string> ListRecords(
         [Description("Which records to list: people, families, events, places, sources, citations, repositories, notes, media or tags.")]
         string objectType,
@@ -92,27 +92,26 @@ public static class SearchTools
         int pagesize = 20,
         [Description("Only the record with this Gramps ID, e.g. I0001 (not a handle; optional).")]
         string? grampsId = null,
-        [Description("With objectType citations only: list just the citations of this source; combined with rules and gql by and (optional). " + ToolDescriptionFragments.HandleDiscovery)]
+        [Description("With objectType citations only: list just the citations of this source; combined with query and rules by and (optional). " + ToolDescriptionFragments.HandleDiscovery)]
         string? sourceHandle = null,
         [Description(
-            "Filter in Gramps Query Language, run on the server; only before Gramps Web API 3.26, which removed it (use the " +
-            "MatchesQuery rule in rules instead): field = value with a single = (not ==), also !=, <, <=, >, >=, " +
-            "~ (contains), !~, and, or and parentheses; text goes in double quotes. Types are numbers, not names, e.g. event " +
-            "type.value = 12 Birth, 13 Death, 1 Marriage, 15 Baptism, 19 Burial. Examples: gender = 1 (male), " +
-            "primary_name.first_name = \"Anna\", media_list.length >= 1 (optional).")]
-        string? gql = null,
+            "Filter by field values with a GOQL expression, which Gramps Web runs as its MatchesQuery rule. It is " +
+            "Python-like: == for equals, also !=, <, <=, >, >=, in, and, or, not and parentheses; text in single quotes; " +
+            "'Ann' in field for contains; like(field, 'Ann%'); len(list) for a list's length; any(list, condition) for " +
+            "a list item that matches. Types are names: type.value == EventType.BIRTH, gender == Person.FEMALE. Fields " +
+            "are those of the Gramps record, and an unknown field's error lists them. Examples: " +
+            "primary_name.first_name == 'Anna' and len(media_list) >= 1; any(primary_name.surname_list, surname == 'Smith'); " +
+            "birth.date.sortval > 0 for people with a dated birth. Not for tags (optional).")]
+        string? query = null,
         [Description(
-            "Gramps filter rules, run on the server (with gql a record must match both): " +
+            "Gramps filter rules, run on the server: " +
             "{\"function\": \"and\" (default), \"or\" or \"one\", \"invert\": true to keep the records that do not match, " +
             "\"rules\": [{\"name\": rule, \"values\": [one per label of the rule, in order]}]}, or just the array of rules. " +
             "Values are Gramps IDs (I0001), text, numbers or true/false. An item of rules can be a nested filter of the same form; " +
             "with \"namespace\" (Event, Family, Person, Place, Source or Repository) it matches the records each listed one links to, " +
             "e.g. people by their events. Examples: people with no family links {\"rules\": [{\"name\": \"Disconnected\"}]}; " +
             "people not related to I0001 {\"invert\": true, \"rules\": [{\"name\": \"IsRelatedWith\", \"values\": [\"I0001\"]}]}; " +
-            "a saved filter {\"name\": \"MatchesFilter\", \"values\": [\"its name\"]}. " +
-            "Field values (Gramps Web API 3.23+): MatchesQuery with a Python-like GOQL expression, == for equals, text in " +
-            "single quotes, len(list) for a list's length, e.g. {\"name\": \"MatchesQuery\", \"values\": " +
-            "[\"primary_name.first_name == 'Anna' and len(media_list) >= 1\"]}; events of a type: type.value == EventType.BIRTH. " +
+            "a saved filter {\"name\": \"MatchesFilter\", \"values\": [\"its name\"]}. For field values use query. " +
             "Rules of each type and their values: get_reference(topic: \"filter-rules\", section: type). Not for tags (optional).")]
         FlexibleFilterRules? rules = null,
         [Description("Field to sort by, e.g. gramps_id; a leading - sorts descending, e.g. -change for latest edits first (optional).")]
@@ -127,7 +126,8 @@ public static class SearchTools
                 "citations", "repositories", "notes", "media", "tags"
             };
 
-            if (!validTypes.Contains(objectType.ToLower()))
+            var type = objectType.ToLowerInvariant();
+            if (!validTypes.Contains(type))
                 throw McpToolErrors.ValidationError(
                     $"Invalid objectType. Must be one of: {string.Join(", ", validTypes)}");
 
@@ -141,54 +141,47 @@ public static class SearchTools
                 $"pagesize={pagesize}"
             };
 
+            if (!string.IsNullOrWhiteSpace(query) && !FilterRules.Namespaces.ContainsKey(type))
+                throw McpToolErrors.ValidationError(
+                    $"query is not available for {type}; it works with {string.Join(", ", FilterRules.Namespaces.Keys)}.");
+
             if (!string.IsNullOrEmpty(grampsId))
             {
                 // Gramps Web returns the record with this ID without applying rules.
-                if (rules != null)
+                if (rules != null || !string.IsNullOrWhiteSpace(query))
                     throw McpToolErrors.ValidationError(
-                        "Pass grampsId or rules, not both; to test one record against rules, add {\"name\": \"HasIdOf\", \"values\": [\"its ID\"]} to them.");
+                        "Pass grampsId or a filter (query, rules), not both; to test one record, add gramps_id == 'its ID' " +
+                        "to query or {\"name\": \"HasIdOf\", \"values\": [\"its ID\"]} to rules.");
                 queryParams.Add($"gramps_id={Uri.EscapeDataString(grampsId)}");
             }
 
-            var filter = rules == null ? null : FilterRules.Build(rules, objectType.ToLowerInvariant());
-            // The rules sent: the caller's, with the source filter of sourceHandle where it is a rule.
+            var filter = rules == null ? null : FilterRules.Build(rules, type);
+            // The rules sent: the caller's, with the GOQL expressions of query and sourceHandle as MatchesQuery rules.
             var sentRules = filter;
+            if (!string.IsNullOrWhiteSpace(query))
+                sentRules = FilterRules.WithMatchesQuery(sentRules, type, query.Trim());
 
-            var isCitations = objectType.Equals("citations", StringComparison.OrdinalIgnoreCase);
-            if (isCitations && !string.IsNullOrEmpty(sourceHandle))
+            if (type == "citations" && !string.IsNullOrEmpty(sourceHandle))
             {
-                // /api/citations/ has no source_handle query parameter: filter with the MatchesQuery rule (GOQL),
-                // or with Gramps QL on servers older than API 3.23.
+                // /api/citations/ has no source_handle query parameter: filter with the MatchesQuery rule.
                 var resolvedSourceHandle = await HandleResolver.ResolveToHandleAsync(sourceHandle, client, "sources");
                 if (!resolvedSourceHandle.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
                     throw McpToolErrors.ValidationError(
                         "sourceHandle must be a source handle or Gramps ID (letters, digits, '-' or '_').");
-
-                if (await GrampsQueryLanguage.HasMatchesQueryAsync(client))
-                {
-                    sentRules = FilterRules.WithMatchesQuery(filter, "citations", $"source_handle == '{resolvedSourceHandle}'");
-                }
-                else
-                {
-                    var sourceFilter = $"source_handle = \"{resolvedSourceHandle}\"";
-                    gql = string.IsNullOrEmpty(gql) ? sourceFilter : $"{sourceFilter} and ({gql})";
-                }
+                sentRules = FilterRules.WithMatchesQuery(sentRules, type, $"source_handle == '{resolvedSourceHandle}'");
             }
 
             if (sentRules != null)
                 queryParams.Add($"rules={Uri.EscapeDataString(sentRules.Json)}");
 
-            if (!string.IsNullOrEmpty(gql))
-                queryParams.Add($"gql={Uri.EscapeDataString(gql)}");
-
             if (!string.IsNullOrEmpty(sort))
                 queryParams.Add($"sort={Uri.EscapeDataString(sort)}");
 
             // Match search formatting: names, vitals, event places and citation sources come from the profile.
-            if (objectType.ToLowerInvariant() is "people" or "families" or "events" or "citations")
+            if (type is "people" or "families" or "events" or "citations")
                 queryParams.Add(SearchFormatter.ProfileQuery);
 
-            var queryString = $"/api/{objectType.ToLower()}/?{string.Join("&", queryParams)}";
+            var queryString = $"/api/{type}/?{string.Join("&", queryParams)}";
             // Rules naming an ID, tag or saved filter that does not exist match nothing, without an error.
             var emptyNote = filter == null
                 ? null
@@ -196,7 +189,7 @@ public static class SearchTools
 
             try
             {
-                return objectType.ToLower() switch
+                return type switch
                 {
                     "people" => await SearchFormatter.FetchAndFormatObjects<GrampsPerson>(queryString, client, objectType, pagesize, emptyNote),
                     "families" => await SearchFormatter.FetchAndFormatObjects<GrampsFamily>(queryString, client, objectType, pagesize, emptyNote),
@@ -210,10 +203,6 @@ public static class SearchTools
                     "tags" => await SearchFormatter.FetchAndFormatObjects<GrampsTag>(queryString, client, objectType, pagesize),
                     _ => throw new McpException("Invalid object type")
                 };
-            }
-            catch (GrampsApiException ex) when (!string.IsNullOrEmpty(gql) && GrampsQueryLanguage.IsGqlRefused(ex))
-            {
-                throw new McpException(GrampsQueryLanguage.GqlRemoved, ex);
             }
             catch (GrampsApiException ex) when (sentRules != null)
             {

@@ -1216,10 +1216,10 @@ same summary and `handle | gramps_id` suffix as `search`. An empty page returns
 | `objectType` | `string` | yes | — | `people`, `families`, `events`, `places`, `sources`, `citations`, `repositories`, `notes`, `media`, `tags` |
 | `page` | `int` | no | `1` | 1-based page |
 | `pagesize` | `int` | no | `20` | Page size (max 100) |
-| `grampsId` | `string?` | no | — | Filter by Gramps ID (I0001-style); not together with `rules` |
+| `grampsId` | `string?` | no | — | Filter by Gramps ID (I0001-style); not together with `query` or `rules` |
 | `sourceHandle` | `string?` | no | — | For citations only: filter by source |
-| `gql` | `string?` | no | — | Gramps QL expression, only before Gramps Web API 3.26: `=` for equality (`==` is a syntax error), text in double quotes, types as numbers (`type.value = 12` for Birth) |
-| `rules` | `object \| array \| string?` | no | — | Gramps filter rules, applied on the server; field values through `MatchesQuery`; not for tags |
+| `query` | `string?` | no | — | GOQL expression for field values, run by Gramps Web as its `MatchesQuery` rule: `==` for equality, text in single quotes, types as named constants (`type.value == EventType.BIRTH`); not for tags |
+| `rules` | `object \| array \| string?` | no | — | Gramps filter rules, applied on the server; not for tags |
 | `sort` | `string?` | no | — | Sort field (prefix `-` for descending) |
 
 `rules` selects records with the filter rules of Gramps itself, which can
@@ -1254,23 +1254,29 @@ empty result with rules says to check those values. Gramps Web reads `true`
 and `false` as `1` and `0`. `get_reference(topic: "filter-rules", section: "people")`
 lists the rules of a type with their values, and the tree's saved filters.
 
-Field values are filtered with the rule `MatchesQuery` (Gramps Web API 3.23
-or later), whose one value is a GOQL expression: Python-like, with `==` for
-equality, `and`, `or`, `not`, text in single quotes, `len(list)` for the
-length of a list and named constants for types.
+`query` filters by field values with a GOQL expression, which Gramps Web
+runs as its `MatchesQuery` rule: Python-like, with `==` for equality, also
+`!=`, `<`, `<=`, `>`, `>=`, `in`, `and`, `or`, `not` and parentheses, text in
+single quotes, `'Ann' in field` for contains, `like(field, 'Ann%')`,
+`len(list)` for the length of a list, `any(list, condition)` for a list item
+that matches, and named constants for types (`EventType.BIRTH`,
+`Person.FEMALE`). Fields are those of the Gramps record, and through
+`birth` and `death` those of a person's birth and death events.
 
 ```text
-list_records(objectType: "people", rules: [{"name": "MatchesQuery", "values": ["primary_name.first_name == 'Anna' and len(media_list) >= 1"]}])
-list_records(objectType: "events", rules: [{"name": "MatchesQuery", "values": ["type.value == EventType.BIRTH"]}])
+list_records(objectType: "people", query: "primary_name.first_name == 'Anna' and len(media_list) >= 1")
+list_records(objectType: "people", query: "any(primary_name.surname_list, surname == 'Smith')")
+list_records(objectType: "events", query: "type.value == EventType.BIRTH")
 ```
 
-`gql` is the older field filter, Gramps QL, which Gramps Web API 3.26 removed.
-Before 3.26 it is applied together with `rules` and a record must match both;
-from 3.26 on the server refuses it and the tool answers with the
-`MatchesQuery` form instead of the server's `Unknown field`. The citations
-of a source (`sourceHandle`) are filtered with `MatchesQuery`
-(`source_handle == '…'`, joined to the caller's rules) from API 3.23, and with
-`gql` on older servers.
+The expression is sent as a `MatchesQuery` rule beside `rules`, so a record
+must match both. An invalid expression keeps Gramps Web's reason
+(`Gramps Web could not run the GOQL query: unknown field 'X' on Person -- known fields: …`),
+and a syntax error adds a short reminder of the GOQL form. The `gql` argument
+of 2.x, Gramps QL, is gone with Gramps Web API 3.26; passing it is refused
+with `Unknown argument: gql (did you mean query?)`. The citations of a source
+(`sourceHandle`) are filtered with `MatchesQuery` as well
+(`source_handle == '…'`), joined to `query` and the caller's rules.
 
 ---
 

@@ -195,18 +195,30 @@ public class FilterRulesTests
         Assert.Equal(["/api/filters/people", "/api/filters/events"], handler.Paths);
     }
 
-    [Fact]
-    public async Task ExplainFailure_PointsMatchesQueryToGqlOnOlderServers()
+    [Theory]
+    [InlineData("""{"error": {"code": 422, "message": "Invalid MatchesQuery expression", "messages": {"query": {"rules": {"rules": {"0": {"values": {"0": ["unknown field 'nme' on Person -- known fields: gender, primary_name."]}}}}}}}}""",
+        "Gramps Web could not run the GOQL query: unknown field 'nme' on Person -- known fields: gender, primary_name.")]
+    [InlineData("""{"error": {"code": 422, "message": "Invalid MatchesQuery expression"}}""",
+        "Gramps Web could not run the GOQL query: the expression is not valid. GOQL is Python-like: == for equals, text in quotes, and, or, not; for example primary_name.first_name == 'Anna'.")]
+    [InlineData("""{"error": {"code": 422, "message": "Invalid MatchesQuery expression", "messages": {"query": {"rules": []}}}}""",
+        "Gramps Web could not run the GOQL query: the expression is not valid. GOQL is Python-like: == for equals, text in quotes, and, or, not; for example primary_name.first_name == 'Anna'.")]
+    public async Task ExplainFailure_GivesTheReasonAGoqlExpressionFailed(string body, string expected)
     {
         using var handler = new CatalogHandler();
-        var request = FilterRules.Build(Rules("""[{"name": "MatchesQuery", "values": ["gender = 1"]}]"""), "people");
+        var request = FilterRules.WithMatchesQuery(null, "people", "nme == 'Anna'");
 
-        var message = await FilterRules.ExplainFailureAsync(
-            new GrampsApiException(HttpStatusCode.NotFound, ""), request, CreateClient(handler));
+        Assert.Equal(expected, await FilterRules.ExplainFailureAsync(
+            new GrampsApiException(HttpStatusCode.UnprocessableEntity, body), request, CreateClient(handler)));
+        Assert.Empty(handler.Paths);
+    }
 
-        Assert.StartsWith(
-            "Unknown filter rule: MatchesQuery for people needs Gramps Web API 3.23 or later; on this server filter by field values with the gql argument instead. ",
-            message);
+    [Fact]
+    public void WithMatchesQuery_KeepsTheQuotesOfTheExpression()
+    {
+        var request = FilterRules.WithMatchesQuery(null, "media", "checksum == 'abc123' and desc != \"x\"");
+
+        Assert.Equal("""{"rules":[{"name":"MatchesQuery","values":["checksum == 'abc123' and desc != \"x\""]}]}""", request.Json);
+        Assert.Equal([new FilterRules.RuleName("Media", "MatchesQuery")], request.RuleNames);
     }
 
     [Fact]
@@ -236,7 +248,7 @@ public class FilterRulesTests
         "Gramps Web could not apply the rules: Unsupported namespace bridge: Person → Place")]
     [InlineData(HttpStatusCode.UnprocessableEntity, """{"error": {"code": 422, "message": "Filter does not adhere to schema"}}""",
         "Gramps Web could not apply the rules: Filter does not adhere to schema")]
-    [InlineData(HttpStatusCode.BadRequest, """{"error": {"code": 400, "message": "Invalid GQL"}}""", null)]
+    [InlineData(HttpStatusCode.BadRequest, """{"error": {"code": 400, "message": "Invalid query syntax."}}""", null)]
     [InlineData(HttpStatusCode.UnprocessableEntity, "not json", null)]
     [InlineData(HttpStatusCode.InternalServerError, """{"error": {"code": 500, "message": "Rule X"}}""", null)]
     public async Task ExplainFailure_KeepsTheServersMessageAboutRules(HttpStatusCode status, string body, string? expected)

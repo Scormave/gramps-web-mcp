@@ -23,7 +23,7 @@ public class GrampsServerVersionTests
     }
 
     [Theory]
-    [InlineData("3.16.0")]
+    [InlineData("3.23.0")]
     [InlineData("3.24.0")]
     [InlineData("4.0.0")]
     [InlineData("dev")]
@@ -36,11 +36,11 @@ public class GrampsServerVersionTests
     [Fact]
     public void UnsupportedMessage_NamesBothVersions_AndTheWayOut()
     {
-        var message = GrampsServerVersion.UnsupportedMessage("3.15.2");
+        var message = GrampsServerVersion.UnsupportedMessage("3.22.1");
 
         Assert.Equal(
-            "This Gramps Web server runs Gramps Web API 3.15.2, and Gramps Web MCP needs 3.16 or newer. " +
-            "Update Gramps Web (26.6.2 or later), or keep Gramps Web MCP 2.x until then.",
+            "This Gramps Web server runs Gramps Web API 3.22.1, and Gramps Web MCP needs 3.23 or newer. " +
+            "Update Gramps Web (26.10.0 or later), or keep Gramps Web MCP 2.x until then.",
             message);
     }
 
@@ -63,7 +63,7 @@ public class GrampsServerVersionTests
         var reads = 0;
 
         for (var i = 0; i < 3; i++)
-            await check.EnsureSupportedAsync(() => Read(ref reads, """{"gramps_webapi": {"version": "3.16.0"}}"""));
+            await check.EnsureSupportedAsync(() => Read(ref reads, """{"gramps_webapi": {"version": "3.23.0"}}"""));
 
         Assert.Equal(1, reads);
     }
@@ -89,11 +89,11 @@ public class GrampsServerVersionTests
         for (var i = 0; i < 2; i++)
         {
             var ex = await Assert.ThrowsAsync<UnsupportedGrampsServerException>(
-                () => check.EnsureSupportedAsync(() => Read(ref reads, """{"gramps_webapi": {"version": "3.15.2"}}""")));
+                () => check.EnsureSupportedAsync(() => Read(ref reads, """{"gramps_webapi": {"version": "3.22.1"}}""")));
             Assert.EndsWith("until then. Nothing was read or changed.", ex.Message);
         }
 
-        await check.EnsureSupportedAsync(() => Read(ref reads, """{"gramps_webapi": {"version": "3.16.0"}}"""));
+        await check.EnsureSupportedAsync(() => Read(ref reads, """{"gramps_webapi": {"version": "3.23.0"}}"""));
 
         Assert.Equal(3, reads);
     }
@@ -115,7 +115,7 @@ public class GrampsServerVersionTests
             throw new GrampsApiException(HttpStatusCode.ServiceUnavailable, "");
         });
         await Assert.ThrowsAsync<UnsupportedGrampsServerException>(
-            () => check.EnsureSupportedAsync(() => Read(ref reads, """{"gramps_webapi": {"version": "3.15.2"}}""")));
+            () => check.EnsureSupportedAsync(() => Read(ref reads, """{"gramps_webapi": {"version": "3.22.1"}}""")));
 
         Assert.Equal(3, reads);
     }
@@ -143,13 +143,13 @@ public class GrampsServerVersionTests
     [Fact]
     public async Task Client_OnAnOlderServer_RefusesBeforeTheRequest()
     {
-        var handler = new VersionServer("3.15.2");
+        var handler = new VersionServer("3.22.1");
         var client = CreateClient(handler, new GrampsServerVersion());
 
         var ex = await Assert.ThrowsAsync<UnsupportedGrampsServerException>(
             () => client.PutMutationAsync("/api/people/h1", new { }));
 
-        Assert.Contains("runs Gramps Web API 3.15.2", ex.Message);
+        Assert.Contains("runs Gramps Web API 3.22.1", ex.Message);
         Assert.Equal(["POST /api/token/", "GET /api/metadata/"], handler.Requests);
     }
 
@@ -184,7 +184,7 @@ public class GrampsServerVersionTests
     [Fact]
     public async Task Client_WithoutTheCheck_SendsOnlyItsOwnRequests()
     {
-        var handler = new VersionServer("3.15.2");
+        var handler = new VersionServer("3.22.1");
 
         await CreateClient(handler, serverVersion: null).GetAsync<JsonElement>("/api/people/h1");
 

@@ -298,7 +298,7 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
   retried too; Gramps Web's own HTTP 422 validation errors are not
 - a minimum server version: before its first request in the process the
   client reads `/api/metadata/` through the singleton `GrampsServerVersion`
-  and refuses a server older than Gramps Web API 3.16 with
+  and refuses a server older than Gramps Web API 3.23 with
   `UnsupportedGrampsServerException`, which the call-tool filter returns as
   the tool's error. A supported version, or a server that reports none, is
   kept. A failed read lets the request through, so the request reports the

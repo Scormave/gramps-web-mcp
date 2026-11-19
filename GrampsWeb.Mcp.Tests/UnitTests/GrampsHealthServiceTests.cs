@@ -32,15 +32,15 @@ public class GrampsHealthServiceTests
     [Fact]
     public async Task CheckAsync_ReturnsUnhealthy_WhenTheApiIsOlderThanTheMinimum()
     {
-        var handler = new RecordingHandler(apiVersion: "3.15.2");
+        var handler = new RecordingHandler(apiVersion: "3.22.1");
         var service = CreateService(handler);
 
         var status = await service.CheckAsync();
 
         Assert.False(status.IsHealthy);
         Assert.Equal("Example Tree", status.TreeName);
-        Assert.Equal("3.15.2", status.ApiVersion);
-        Assert.Equal(GrampsServerVersion.UnsupportedMessage("3.15.2"), status.Error);
+        Assert.Equal("3.22.1", status.ApiVersion);
+        Assert.Equal(GrampsServerVersion.UnsupportedMessage("3.22.1"), status.Error);
     }
 
     [Fact]

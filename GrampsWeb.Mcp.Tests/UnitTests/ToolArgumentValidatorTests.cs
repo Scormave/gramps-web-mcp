@@ -61,6 +61,17 @@ public class ToolArgumentValidatorTests
     }
 
     [Fact]
+    public void CheckNames_Points_The_2x_Gql_Argument_To_Query()
+    {
+        var schema = JsonDocument.Parse(
+            """{"type":"object","properties":{"objectType":{"type":"string"},"query":{"type":["string","null"],"default":null}},"required":["objectType"]}""").RootElement;
+
+        Assert.StartsWith(
+            "Unknown argument: gql (did you mean query?).",
+            ToolArgumentValidator.CheckNames(schema, Args("""{"objectType":"people","gql":"gender = 1"}""")));
+    }
+
+    [Fact]
     public void CheckNames_Says_When_A_Tool_Takes_No_Arguments()
     {
         var schema = JsonDocument.Parse("""{"type":"object","properties":{}}""").RootElement;

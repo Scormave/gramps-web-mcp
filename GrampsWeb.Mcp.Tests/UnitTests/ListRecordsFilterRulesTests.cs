@@ -15,34 +15,71 @@ public class ListRecordsFilterRulesTests
         JsonSerializer.Deserialize<FlexibleFilterRules>(json)!;
 
     [Fact]
-    public async Task ListRecords_SendsTheRulesWithGql()
+    public async Task ListRecords_SendsTheQueryAsAMatchesQueryRule()
     {
         using var handler = new ListHandler();
 
         await SearchTools.ListRecords(
             "people",
-            gql: "gender = 1",
-            rules: Rules("""{"invert": true, "rules": [{"name": "IsRelatedWith", "values": ["I0001"]}]}"""),
+            query: " primary_name.first_name == 'Anna' and len(media_list) >= 1 ",
             client: FilterRulesTests.CreateClient(handler));
 
         var query = HttpUtility.ParseQueryString(new Uri("https://gramps-web.test" + handler.ListPath).Query);
         Assert.StartsWith("/api/people/?", handler.ListPath);
-        Assert.Equal("""{"invert":true,"rules":[{"name":"IsRelatedWith","values":["I0001"]}]}""", query["rules"]);
-        Assert.Equal("gender = 1", query["gql"]);
+        Assert.Equal(
+            """{"rules":[{"name":"MatchesQuery","values":["primary_name.first_name == 'Anna' and len(media_list) >= 1"]}]}""",
+            query["rules"]);
+        Assert.Null(query["gql"]);
     }
 
-    [Fact]
-    public async Task ListRecords_RejectsGrampsIdWithRules()
+    [Theory]
+    [InlineData("""[{"name": "IsMale"}]""",
+        """{"rules":[{"name":"IsMale"},{"name":"MatchesQuery","values":["len(media_list) >= 1"]}]}""")]
+    [InlineData("""{"invert": true, "rules": [{"name": "IsRelatedWith", "values": ["I0001"]}]}""",
+        """{"rules":[{"invert":true,"rules":[{"name":"IsRelatedWith","values":["I0001"]}]},{"name":"MatchesQuery","values":["len(media_list) >= 1"]}]}""")]
+    public async Task ListRecords_SendsTheQueryBesideTheRules(string rules, string expected)
+    {
+        using var handler = new ListHandler();
+
+        await SearchTools.ListRecords(
+            "people",
+            query: "len(media_list) >= 1",
+            rules: Rules(rules),
+            client: FilterRulesTests.CreateClient(handler));
+
+        var query = HttpUtility.ParseQueryString(new Uri("https://gramps-web.test" + handler.ListPath).Query);
+        Assert.Equal(expected, query["rules"]);
+    }
+
+    [Theory]
+    [InlineData(null, "len(media_list) >= 1")]
+    [InlineData("""[{"name": "IsMale"}]""", null)]
+    public async Task ListRecords_RejectsGrampsIdWithAFilter(string? rules, string? query)
     {
         using var handler = new ListHandler();
 
         var error = await Assert.ThrowsAsync<McpException>(() => SearchTools.ListRecords(
             "people",
             grampsId: "I0001",
-            rules: Rules("""[{"name": "IsMale"}]"""),
+            query: query,
+            rules: rules == null ? null : Rules(rules),
             client: FilterRulesTests.CreateClient(handler)));
 
-        Assert.StartsWith("Pass grampsId or rules, not both;", error.Message);
+        Assert.StartsWith("Pass grampsId or a filter (query, rules), not both;", error.Message);
+        Assert.Null(handler.ListPath);
+    }
+
+    [Fact]
+    public async Task ListRecords_RejectsAQueryForTags()
+    {
+        using var handler = new ListHandler();
+
+        var error = await Assert.ThrowsAsync<McpException>(() => SearchTools.ListRecords(
+            "tags",
+            query: "name == 'ToDo'",
+            client: FilterRulesTests.CreateClient(handler)));
+
+        Assert.StartsWith("query is not available for tags; it works with people,", error.Message);
         Assert.Null(handler.ListPath);
     }
 
@@ -118,38 +155,80 @@ public class ListRecordsFilterRulesTests
     }
 
     [Fact]
-    public async Task ListRecords_SaysGqlIsGoneWhenTheServerRefusesIt()
+    public async Task ListRecords_WithOnlyAQueryKeepsThePlainEmptyAnswer()
+    {
+        using var handler = new ListHandler();
+
+        var result = await SearchTools.ListRecords(
+            "people", query: "gramps_id == 'I9999'", client: FilterRulesTests.CreateClient(handler));
+
+        Assert.Equal("No people found.", result);
+    }
+
+    // Gramps Web API 3.26 answers an invalid GOQL expression this way, the reason at the place of the rule.
+    [Fact]
+    public async Task ListRecords_ExplainsAQuerySyntaxError()
     {
         using var handler = new ListHandler
         {
             ListStatus = HttpStatusCode.UnprocessableEntity,
-            ListBody = """{"error": {"code": 422, "message": "query: gql: Unknown field.", "messages": {"query": {"gql": ["Unknown field."]}}}}"""
+            ListBody = """{"error": {"code": 422, "message": "Invalid MatchesQuery expression", "type": "invalid_query", "messages": {"query": {"rules": {"rules": {"0": {"values": {"0": ["invalid syntax: invalid syntax (<unknown>, line 1)"]}}}}}}}}"""
         };
 
         var error = await Assert.ThrowsAsync<McpException>(() => SearchTools.ListRecords(
             "people",
-            gql: "gender = 1",
+            query: "gender = 1",
             client: FilterRulesTests.CreateClient(handler)));
 
-        Assert.Equal(GrampsQueryLanguage.GqlRemoved, error.Message);
-        Assert.Contains("\"name\": \"MatchesQuery\"", error.Message);
+        Assert.Equal(
+            "Gramps Web could not run the GOQL query: invalid syntax: invalid syntax (<unknown>, line 1). " +
+            "GOQL is Python-like: == for equals, text in quotes, and, or, not; for example primary_name.first_name == 'Anna'.",
+            error.Message);
     }
 
-    [Fact]
-    public async Task ListRecords_KeepsTheServersAnswerToAGqlSyntaxError()
+    // Gramps Web API 3.23 to 3.25 put the reason in the message of the rule that failed.
+    [Theory]
+    [InlineData(
+        "Rule MatchesQuery could not be evaluated: invalid syntax: invalid syntax (<unknown>, line 1)",
+        "Gramps Web could not run the GOQL query: invalid syntax: invalid syntax (<unknown>, line 1). " +
+        "GOQL is Python-like: == for equals, text in quotes, and, or, not; for example primary_name.first_name == 'Anna'.")]
+    [InlineData(
+        "Rule MatchesQuery could not be evaluated: unknown field 'first_name' on Person -- known fields: gender, primary_name",
+        "Gramps Web could not run the GOQL query: unknown field 'first_name' on Person -- known fields: gender, primary_name.")]
+    public async Task ListRecords_ExplainsAQueryError_OfOlderServers(string message, string expected)
     {
         using var handler = new ListHandler
         {
             ListStatus = HttpStatusCode.UnprocessableEntity,
-            ListBody = """{"error": {"code": 422, "message": "Invalid query syntax."}}"""
+            ListBody = JsonSerializer.Serialize(new { error = new { code = 422, message } })
         };
 
-        var error = await Assert.ThrowsAnyAsync<Exception>(() => SearchTools.ListRecords(
+        var error = await Assert.ThrowsAsync<McpException>(() => SearchTools.ListRecords(
             "people",
-            gql: "gender ==",
+            query: "gender = 1",
             client: FilterRulesTests.CreateClient(handler)));
 
-        Assert.DoesNotContain("no longer has Gramps QL", error.Message);
+        Assert.Equal(expected, error.Message);
+    }
+
+    [Fact]
+    public async Task ListRecords_ExplainsAnUnknownQueryField_InANestedFilter()
+    {
+        using var handler = new ListHandler
+        {
+            ListStatus = HttpStatusCode.UnprocessableEntity,
+            ListBody = """{"error": {"code": 422, "message": "Invalid MatchesQuery expression", "type": "invalid_query", "messages": {"query": {"rules": {"rules": {"1": {"values": {"0": ["unknown field 'first_name' on Person -- known fields: gender, gramps_id, primary_name"]}}}}}}}}"""
+        };
+
+        var error = await Assert.ThrowsAsync<McpException>(() => SearchTools.ListRecords(
+            "people",
+            query: "first_name == 'Anna'",
+            rules: Rules("""{"function": "or", "rules": [{"name": "IsMale"}]}"""),
+            client: FilterRulesTests.CreateClient(handler)));
+
+        Assert.Equal(
+            "Gramps Web could not run the GOQL query: unknown field 'first_name' on Person -- known fields: gender, gramps_id, primary_name.",
+            error.Message);
     }
 
     /// <summary>Answers the people list, and the rule list of people for a 404 explanation.</summary>

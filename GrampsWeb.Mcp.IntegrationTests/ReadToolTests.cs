@@ -21,22 +21,6 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
-    public async Task ListRecords_FiltersWithGql()
-    {
-        if (!gramps.HasGql)
-            return; // API 3.26 removed gql: ListRecords_GqlIsRefusedFromApi326 covers that.
-
-        var first = TestNames.Surname();
-        var match = await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() } });
-        await Session.CreateAsync("people", new { primaryName = new { first = TestNames.Surname(), surname = TestNames.Surname() } });
-
-        var listed = await Session.CallAsync("list_records", new { objectType = "people", gql = $"primary_name.first_name = {first}" });
-
-        Assert.Contains("Total: 1", listed);
-        Assert.Contains(match.Handle, listed);
-    }
-
-    [IntegrationFact]
     public async Task ListRecords_FindsByGrampsId()
     {
         var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("note") });
@@ -47,57 +31,9 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
         Assert.Contains(note.Handle, listed);
     }
 
-    // The gql description of list_records promises this syntax; these two tests hold Gramps Web to it.
+    // The query description of list_records promises this GOQL syntax; these tests hold Gramps Web to it.
     [IntegrationFact]
-    public async Task ListRecords_GqlComparesWithOneEqualsSignAndQuotedText()
-    {
-        if (!gramps.HasGql)
-            return; // API 3.26 removed gql: ListRecords_GqlIsRefusedFromApi326 covers that.
-
-        var first = TestNames.Surname();
-        var man = await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "male" });
-        await Session.CreateAsync("people", new { primaryName = new { first, surname = TestNames.Surname() }, gender = "female" });
-
-        var listed = await Session.CallAsync("list_records", new { objectType = "people", gql = $"gender = 1 and primary_name.first_name = \"{first}\"" });
-        var error = await Session.CallErrorAsync("list_records", new { objectType = "people", gql = $"gender == 1 and primary_name.first_name = \"{first}\"" });
-
-        Assert.Contains("Total: 1", listed);
-        Assert.Contains(man.Handle, listed);
-        Assert.Contains("Gramps API error 422", error);
-    }
-
-    [IntegrationFact]
-    public async Task ListRecords_GqlMatchesEventTypesByNumber()
-    {
-        if (!gramps.HasGql)
-            return; // API 3.26 removed gql: ListRecords_GqlIsRefusedFromApi326 covers that.
-
-        var description = TestNames.Unique("birth");
-        var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1901", description });
-
-        var byNumber = await Session.CallAsync("list_records", new { objectType = "events", gql = $"type.value = 12 and description = \"{description}\"" });
-        var byName = await Session.CallAsync("list_records", new { objectType = "events", gql = $"type = \"Birth\" and description = \"{description}\"" });
-
-        Assert.Contains("Total: 1", byNumber);
-        Assert.Contains(birth.Handle, byNumber);
-        Assert.Equal("No events found.", byName);
-    }
-
-    [IntegrationFact]
-    public async Task ListRecords_GqlIsRefusedFromApi326()
-    {
-        if (gramps.HasGql)
-            return;
-
-        var error = await Session.CallErrorAsync("list_records", new { objectType = "people", gql = "gender = 1" });
-
-        Assert.Contains("no longer has Gramps QL", error);
-        Assert.Contains("MatchesQuery", error);
-    }
-
-    // The rules description of list_records promises this GOQL syntax; these two tests hold Gramps Web to it.
-    [IntegrationFact]
-    public async Task ListRecords_MatchesQueryComparesWithTwoEqualsSignsQuotedTextAndLen()
+    public async Task ListRecords_QueryComparesWithTwoEqualsSignsQuotedTextAndLen()
     {
         var first = TestNames.Surname();
         var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1901" });
@@ -111,15 +47,22 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
         var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
-            rules = new[] { new { name = "MatchesQuery", values = new[] { $"primary_name.first_name == '{first}' and len(event_ref_list) >= 1" } } }
+            query = $"primary_name.first_name == '{first}' and len(event_ref_list) >= 1"
+        });
+        var dated = await Session.CallAsync("list_records", new
+        {
+            objectType = "people",
+            query = $"primary_name.first_name == '{first}' and birth.date.sortval > 0"
         });
 
         Assert.Contains("Total: 1", listed);
         Assert.Contains(born.Handle, listed);
+        Assert.Contains("Total: 1", dated);
+        Assert.Contains(born.Handle, dated);
     }
 
     [IntegrationFact]
-    public async Task ListRecords_MatchesQueryMatchesEventTypesByConstant()
+    public async Task ListRecords_QueryMatchesEventTypesByConstant()
     {
         var description = TestNames.Unique("birth");
         var birth = await Session.CreateAsync("events", new { eventType = "Birth", date = "1901", description });
@@ -128,7 +71,7 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
         var listed = await Session.CallAsync("list_records", new
         {
             objectType = "events",
-            rules = new[] { new { name = "MatchesQuery", values = new[] { $"type.value == EventType.BIRTH and description == '{description}'" } } }
+            query = $"type.value == EventType.BIRTH and description == '{description}'"
         });
 
         Assert.Contains("Total: 1", listed);
@@ -136,11 +79,54 @@ public sealed class ReadToolTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
-    public async Task ListRecords_InvalidGql_ReportsGrampsWebError()
+    public async Task ListRecords_QueryMatchesListItemsWithAny_AndMustMatchTheRulesToo()
     {
-        var error = await Session.CallErrorAsync("list_records", new { objectType = "people", gql = "((" });
+        var surname = TestNames.Surname();
+        var woman = await Session.CreateAsync("people", new { primaryName = new { first = "Anna", surname }, gender = "female" });
+        await Session.CreateAsync("people", new { primaryName = new { first = "Ivan", surname }, gender = "male" });
 
-        Assert.NotEmpty(error);
+        var both = await Session.CallAsync("list_records", new
+        {
+            objectType = "people",
+            query = $"any(primary_name.surname_list, surname == '{surname}')"
+        });
+        var women = await Session.CallAsync("list_records", new
+        {
+            objectType = "people",
+            query = $"any(primary_name.surname_list, surname == '{surname}') and gender == Person.FEMALE"
+        });
+        var withRules = await Session.CallAsync("list_records", new
+        {
+            objectType = "people",
+            query = $"any(primary_name.surname_list, surname == '{surname}')",
+            rules = new[] { new { name = "IsFemale" } }
+        });
+
+        Assert.Contains("Total: 2", both);
+        Assert.Contains("Total: 1", women);
+        Assert.Contains(woman.Handle, women);
+        Assert.Contains("Total: 1", withRules);
+        Assert.Contains(woman.Handle, withRules);
+    }
+
+    [IntegrationFact]
+    public async Task ListRecords_InvalidQuery_GivesGrampsWebsReason()
+    {
+        var syntax = await Session.CallErrorAsync("list_records", new { objectType = "people", query = "gender = 1" });
+        var field = await Session.CallErrorAsync("list_records", new { objectType = "people", query = "first_name == 'Anna'" });
+
+        Assert.Contains("Gramps Web could not run the GOQL query: invalid syntax", syntax);
+        Assert.Contains("== for equals", syntax);
+        Assert.Contains("Gramps Web could not run the GOQL query: unknown field 'first_name' on Person", field);
+        Assert.Contains("primary_name", field);
+    }
+
+    [IntegrationFact]
+    public async Task ListRecords_TheOldGqlArgument_PointsToQuery()
+    {
+        var error = await Session.CallErrorAsync("list_records", new { objectType = "people", gql = "gender = 1" });
+
+        Assert.Contains("gql (did you mean query?)", error);
     }
 
     [IntegrationFact]

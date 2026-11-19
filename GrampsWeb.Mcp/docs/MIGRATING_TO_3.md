@@ -15,8 +15,9 @@ client stored for a 2.x tool name do not carry over to the new name.
 
 ## Check the Gramps Web version
 
-3.0 requires Gramps Web API 3.16 or newer, which ships with Gramps Web 26.6.2
-and later. Before its first request the server reads the API version. With an
+3.0 requires Gramps Web API 3.23 or newer, which ships with Gramps Web 26.10.0
+and later: `list_records` filters field values with the `MatchesQuery` rule
+that API 3.23 added (see [Filter field values with GOQL](#filter-field-values-with-goql)). Before its first request the server reads the API version. With an
 older Gramps Web every tool call returns an error naming both versions,
 `GET /health` reports unhealthy, and the startup log says so once. The startup
 log also shows the API version of a supported server. Keep Gramps Web MCP 2.x
@@ -33,8 +34,10 @@ until Gramps Web can be updated.
 | `delete_object(objectType, handle, force)` | `delete_records(identifiers: [handle], objectType, force)` |
 | `create_media(filePath, ...)` | `upload_media(filePath, ...)` |
 
-`list_records` and `upload_media` take the same arguments as the tools they
-replace; `merge_records` and `get_media_image` rename theirs as described in
+`upload_media` takes the same arguments as `create_media`, and
+`list_records` those of `list_objects` with `query` in place of `gql`
+([Filter field values with GOQL](#filter-field-values-with-goql));
+`merge_records` and `get_media_image` rename theirs as described in
 [Rename arguments](#rename-arguments). `get_media_image` and
 `upload_media` are published under the same media settings as `read_media`
 and `create_media` were, and `GRAMPS_REQUIRE_USER_INTERACTION` covers
@@ -105,6 +108,43 @@ nothing.
 | `update_repository(handle, address: "12 High Street", url: "https://archive.example.org")` | `update_repository(identifier, addresses: "12 High Street", urls: "https://archive.example.org")` |
 | `update_repository(handle, address: "", url: "")` | `update_repository(identifier, addresses: [], urls: [])` |
 | `create_repository(name, address, url)` | `create_records(repositories: [{name, addresses, urls}])` |
+
+## Filter field values with GOQL
+
+Gramps Web API 3.26 (Gramps Web 26.11.3) removed Gramps QL, so
+`list_records` has no `gql` argument. It takes `query` instead, a GOQL
+expression that Gramps Web runs as its `MatchesQuery` rule. A call with
+`gql` is refused:
+
+```text
+Unknown argument: gql (did you mean query?).
+```
+
+GOQL is Python-like: `==` for equality, text in single quotes, named
+constants for types, and functions for lists. Rewrite a Gramps QL
+expression as follows:
+
+| Gramps QL (`gql`) | GOQL (`query`) |
+|-------------------|----------------|
+| `primary_name.first_name = Anna` | `primary_name.first_name == 'Anna'` |
+| `primary_name.first_name ~ Ann` | `'Ann' in primary_name.first_name` |
+| `gramps_id !~ F00` | `not ('F00' in gramps_id)` |
+| `gender = 0` | `gender == Person.FEMALE` |
+| `type.value = 12` (Birth) | `type.value == EventType.BIRTH` |
+| `media_list.length >= 10` | `len(media_list) >= 10` |
+| `primary_name.surname_list.any.surname = Smith` | `any(primary_name.surname_list, surname == 'Smith')` |
+| `confidence >= 3 and (page ~ 12 or page ~ 13)` | `confidence >= 3 and ('12' in page or '13' in page)` |
+
+`and`, `or`, `not` and parentheses combine conditions. An expression Gramps
+Web cannot run is refused with its reason; for an unknown field the reason
+lists the fields of the record:
+
+```text
+Gramps Web could not run the GOQL query: unknown field 'firstname' on Person -- known fields: …
+```
+
+`query` and `rules` can be passed together, and a record must match both.
+The citations of a source (`sourceHandle`) are filtered as before.
 
 ## Create records with create_records
 
@@ -203,11 +243,12 @@ anything is saved. Tags have no Gramps ID, so a tag field takes handles only.
 
 ## Migration checklist
 
-1. Check that Gramps Web runs API 3.16 or newer (Gramps Web 26.6.2 or newer).
+1. Check that Gramps Web runs API 3.23 or newer (Gramps Web 26.10.0 or newer).
 2. Upgrade the server and reconnect the MCP client so it refreshes its tools.
 3. Replace removed and renamed tool and argument names in saved prompts,
    scripts and tool allowlists using the tables above, and approve the
-   renamed tools again where a client asks per tool.
+   renamed tools again where a client asks per tool. Rewrite saved `gql`
+   filters as GOQL in `query`.
 4. Find every saved `update_*` call that passes a link list without
    `linkMode`. Add `linkMode: "replace"` where it must set the whole list.
 5. Test a read (`get_records`), a `create_records` call and an

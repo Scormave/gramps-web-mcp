@@ -28,6 +28,9 @@ internal static class FilterRulesFormatter
         sb.AppendLine("from citations Source, from sources Repository. People with a Residence event:");
         sb.AppendLine("  {\"rules\": [{\"namespace\": \"Event\", \"rules\": [{\"name\": \"HasType\", \"values\": [\"Residence\"]}]}]}");
         sb.AppendLine("A saved filter of the tree is the rule MatchesFilter with the filter's name.");
+        sb.AppendLine("To filter by field values, pass a GOQL expression in the query argument instead, such as");
+        sb.AppendLine("  primary_name.first_name == 'Anna' and len(media_list) >= 1");
+        sb.AppendLine("A record must match query and rules together.");
         sb.AppendLine();
         sb.AppendLine("Rules by type (get_reference topic filter-rules with the type as section lists them and their values):");
         foreach (var objectType in FilterRules.Namespaces.Keys)

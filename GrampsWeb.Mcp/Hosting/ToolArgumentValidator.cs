@@ -300,7 +300,10 @@ internal static class ToolArgumentValidator
 
     private static string Article(string noun) => noun.Length > 0 && "aeiou".Contains(noun[0]) ? "an " : "a ";
 
-    /// <summary>Arguments renamed in 3.0, so a call written for 2.x is pointed at the new name.</summary>
+    /// <summary>
+    /// Arguments renamed or replaced in 3.0, so a call written for 2.x is pointed at the new one; query takes
+    /// a GOQL expression where gql took Gramps QL, which Gramps Web API 3.26 removed.
+    /// </summary>
     private static readonly Dictionary<string, string> Renamed = new(StringComparer.Ordinal)
     {
         ["handle"] = "identifier",
@@ -311,6 +314,7 @@ internal static class ToolArgumentValidator
         ["personHandle"] = "person",
         ["address"] = "addresses",
         ["url"] = "urls",
+        ["gql"] = "query",
     };
 
     /// <summary>

@@ -83,8 +83,8 @@ requests and the tools each one uses.
 
 ## Install
 
-You need a running Gramps Web instance, version 26.6.2 or newer (Gramps Web API
-3.16 or newer), and an account on it. Choose the setup by client:
+You need a running Gramps Web instance, version 26.10.0 or newer (Gramps Web
+API 3.23 or newer), and an account on it. Choose the setup by client:
 
 | Client | Setup |
 |--------|-------|

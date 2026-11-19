@@ -129,8 +129,14 @@ internal static class FilterRules
     /// <summary>
     /// A clearer error for a failed list request with rules, or null to keep the original. Gramps Web answers an
     /// unknown rule name with a bare 404, so the names are checked against its rule list; for the rules it could
-    /// not apply (400 or 422) its own message is kept without the JSON around it.
+    /// not apply (400 or 422) its own message is kept without the JSON around it, and for a GOQL expression of a
+    /// MatchesQuery rule the reason it gives.
     /// </summary>
+    /// <remarks>
+    /// Gramps Web API 3.26 answers an invalid GOQL expression with the message <c>Invalid MatchesQuery
+    /// expression</c> and the reason under <c>error.messages</c>; API 3.23 to 3.25 with the reason in the message,
+    /// after <c>Rule MatchesQuery could not be evaluated:</c>.
+    /// </remarks>
     public static async Task<string?> ExplainFailureAsync(GrampsApiException error, Request request, GrampsApiClient client)
     {
         if (error.StatusCode == HttpStatusCode.NotFound)
@@ -146,15 +152,62 @@ internal static class FilterRules
             }
         }
 
-        if (error.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.UnprocessableEntity
-            && ServerMessage(error.ResponseBody) is { } message
-            && (message.StartsWith("Rule ", StringComparison.Ordinal)
-                || message.StartsWith("Filter ", StringComparison.Ordinal)
-                || message.StartsWith("Unsupported namespace", StringComparison.Ordinal)))
+        if (error.StatusCode is not (HttpStatusCode.BadRequest or HttpStatusCode.UnprocessableEntity)
+            || ServerMessage(error.ResponseBody) is not { } message)
+            return null;
+
+        if (message.StartsWith("Invalid MatchesQuery", StringComparison.Ordinal))
+            return ExplainQuery(NestedReason(error.ResponseBody));
+        if (message.StartsWith(MatchesQueryFailed, StringComparison.Ordinal))
+            return ExplainQuery(message[MatchesQueryFailed.Length..].Trim());
+
+        if (message.StartsWith("Rule ", StringComparison.Ordinal)
+            || message.StartsWith("Filter ", StringComparison.Ordinal)
+            || message.StartsWith("Unsupported namespace", StringComparison.Ordinal))
             return $"Gramps Web could not apply the rules: {message}";
 
         return null;
     }
+
+    private const string MatchesQueryFailed = "Rule MatchesQuery could not be evaluated:";
+
+    /// <summary>
+    /// The reason under <c>error.messages</c> of a 422 for a GOQL expression, nested at the place of the rule, such
+    /// as <c>query.rules.rules.0.values.0</c>, so the first text there is taken.
+    /// </summary>
+    private static string? NestedReason(string body)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            return document.RootElement.GetProperty("error").TryGetProperty("messages", out var messages)
+                ? FirstText(messages)
+                : null;
+        }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Why Gramps Web could not run a GOQL expression, with a reminder of the form for a syntax error.</summary>
+    private static string ExplainQuery(string? reason)
+    {
+        reason = string.IsNullOrWhiteSpace(reason) ? null : reason.TrimEnd('.');
+        var explanation = $"Gramps Web could not run the GOQL query: {reason ?? "the expression is not valid"}.";
+        return reason == null || reason.StartsWith("invalid syntax", StringComparison.OrdinalIgnoreCase)
+            ? explanation + " GOQL is Python-like: == for equals, text in quotes, and, or, not; for example " +
+              "primary_name.first_name == 'Anna'."
+            : explanation;
+    }
+
+    private static string? FirstText(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.String => element.GetString(),
+        JsonValueKind.Array => element.EnumerateArray().Select(FirstText).FirstOrDefault(text => text != null),
+        JsonValueKind.Object => element.EnumerateObject().Select(property => FirstText(property.Value)).FirstOrDefault(text => text != null),
+        _ => null
+    };
 
     private static async Task<string?> ExplainUnknownRulesAsync(Request request, GrampsApiClient client)
     {
@@ -179,9 +232,6 @@ internal static class FilterRules
 
     private static string DescribeUnknown(string name, string objectType, HashSet<string> known)
     {
-        if (name == "MatchesQuery")
-            return $"MatchesQuery for {objectType} needs Gramps Web API 3.23 or later; on this server filter by field values with the gql argument instead";
-
         var lower = name.ToLowerInvariant();
         var similar = known
             .Select(candidate => (candidate, lowerCandidate: candidate.ToLowerInvariant()))
