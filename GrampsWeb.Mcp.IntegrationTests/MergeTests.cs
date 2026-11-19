@@ -50,12 +50,6 @@ public sealed class MergeTests(GrampsWebFixture gramps)
         Assert.Contains($"Person not found: {duplicate.Handle}", await GetPersonAsync(duplicate.Handle));
 
         var undone = await Session.CallAsync("undo_change", new { transactionId = transaction });
-        if (UndoTests.ImageBeforeDeletionFix())
-        {
-            Assert.Equal("refused", McpSession.Header(undone, "action"));
-            undone = await Session.CallAsync("undo_change", new { transactionId = transaction, force = true });
-        }
-
         Assert.Equal("undone", McpSession.Header(undone, "action"));
         Assert.Contains($"Restored the deleted Person {duplicate.GrampsId}: ", undone);
         var restored = await GetPersonAsync(duplicate.Handle);

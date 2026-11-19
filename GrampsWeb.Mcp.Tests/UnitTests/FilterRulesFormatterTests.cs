@@ -36,14 +36,14 @@ public class FilterRulesFormatterTests
             "types": [{"namespace": "Person", "type": "filter"}]}]}
         """;
 
-    // Gramps Web API 3.22 gives the labels without types.
-    private const string OldEventsCatalog = """
+    private const string EventsCatalog = """
         {"filters": [],
          "rules": [
            {"category": "General filters", "description": "Matches events with the particular type",
-            "labels": ["Event type:"], "name": "Events with the particular type", "rule": "HasType"},
+            "labels": ["Event type:"], "name": "Events with the particular type", "rule": "HasType",
+            "types": [{"custom_types": "event_types", "default_types": "event_types", "type": "gramps_type"}]},
            {"category": "General filters", "description": "Matches events with the particular tag",
-            "labels": ["Tag:"], "name": "Events with the <tag>", "rule": "HasTag"}]}
+            "labels": ["Tag:"], "name": "Events with the <tag>", "rule": "HasTag", "types": [{"type": "tag"}]}]}
         """;
 
     private static JsonElement Parse(string json) => JsonDocument.Parse(json).RootElement;
@@ -90,20 +90,19 @@ public class FilterRulesFormatterTests
     }
 
     [Fact]
-    public void FormatType_ExplainsTheLabelsWhenTheServerGivesNoTypes()
+    public void FormatType_SaysWhenATypeHasNoSavedFilters()
     {
-        var text = FilterRulesFormatter.FormatType("events", Parse(OldEventsCatalog));
+        var text = FilterRulesFormatter.FormatType("events", Parse(EventsCatalog));
 
-        Assert.Contains("This Gramps Web version does not describe them: ID labels take a Gramps ID", text);
-        Assert.Contains("- HasType (Event type) — Matches events with the particular type", text);
-        Assert.Contains("- HasTag (Tag) — Matches events with the particular tag", text);
+        Assert.Contains("- HasType (Event type: event type) — Matches events with the particular type", text);
+        Assert.Contains("- HasTag (Tag: tag name) — Matches events with the particular tag", text);
         Assert.EndsWith("No saved events filters.", text);
     }
 
     [Fact]
     public void FormatOverview_CountsTheRulesAndNamesTheSavedFiltersOfEachType()
     {
-        var catalogs = Parse($$"""{"people": {{PeopleCatalog}}, "events": {{OldEventsCatalog}}}""");
+        var catalogs = Parse($$"""{"people": {{PeopleCatalog}}, "events": {{EventsCatalog}}}""");
 
         var text = FilterRulesFormatter.FormatOverview(catalogs);
 

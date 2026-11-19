@@ -1313,8 +1313,7 @@ record's type, Gramps ID, label and handle. Each change gives its UTC time,
 A deleted record keeps its history under its handle (with `objectType`),
 which the transaction that deleted it shows; its Gramps ID no longer finds it.
 A record without changes in the history gets a message that edits made in
-Gramps desktop are not in it. Record history needs Gramps Web API 3.22 or
-later; an older server gets a validation error that says so.
+Gramps desktop are not in it.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|

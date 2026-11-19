@@ -6,7 +6,7 @@ namespace GrampsWeb.Mcp.Formatters;
 
 /// <summary>
 /// Text of the Gramps filter rules that Gramps Web offers (<c>/api/filters/</c>), for the rules argument of
-/// list_records. Gramps Web API 3.23 describes each value of a rule; older versions give only the labels.
+/// list_records, with the kind of each value of a rule.
 /// </summary>
 internal static class FilterRulesFormatter
 {
@@ -54,13 +54,8 @@ internal static class FilterRulesFormatter
         sb.AppendLine($"FILTER RULES: {objectType} ({rules.Count})");
         sb.AppendLine(new string('=', SeparatorWidth));
         sb.AppendLine();
-        sb.AppendLine(rules.Any(rule => rule.TryGetProperty("types", out _))
-            ? "Values follow the labels, one per label, in order; a label without a kind takes text. " +
-              "Type names (event type and others) as get_reference topic types lists them."
-            : "Values follow the labels, one per label, in order. This Gramps Web version does not describe them: " +
-              "ID labels take a Gramps ID such as I0001, Inclusive and Case sensitive take true or false, Number of … labels " +
-              "take a number, Number must be is less than, equal to or greater than, Confidence level is 0 (very low) to " +
-              "4 (very high), Date takes a date and Filter name a saved filter name; the others take text.");
+        sb.AppendLine("Values follow the labels, one per label, in order; a label without a kind takes text. " +
+                      "Type names (event type and others) as get_reference topic types lists them.");
 
         foreach (var category in rules
                      .GroupBy(Text("category"))
@@ -131,7 +126,7 @@ internal static class FilterRulesFormatter
         }).ToList();
     }
 
-    /// <summary>The kind of value a Gramps Web 3.23 type describes; null for plain text.</summary>
+    /// <summary>The kind of value a rule's type describes; null for plain text.</summary>
     private static string? DescribeKind(JsonElement type)
     {
         var kind = Text("type")(type);

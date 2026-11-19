@@ -46,7 +46,7 @@ public sealed class UndoTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
-    public async Task Undo_OfADeletion_RestoresTheRecord_WithForceBeforeGrampsWeb323()
+    public async Task Undo_OfADeletion_RestoresTheRecord()
     {
         var text = TestNames.Unique("note");
         var note = await Session.CreateAsync("notes", new { text });
@@ -56,14 +56,6 @@ public sealed class UndoTests(GrampsWebFixture gramps)
         var result = await Session.CallAsync("undo_change", new { transactionId = transaction });
 
         Assert.Contains($"the deleted Note {note.GrampsId}: ", result);
-        if (ImageBeforeDeletionFix())
-        {
-            Assert.Equal("refused", McpSession.Header(result, "action"));
-            Assert.Contains("restores deleted records only with force=true", result);
-            Assert.Contains($"Note not found: {note.Handle}", await GetNoteAsync(note.Handle));
-            result = await Session.CallAsync("undo_change", new { transactionId = transaction, force = true });
-        }
-
         Assert.Equal("undone", McpSession.Header(result, "action"));
         var restored = await Session.CallAsync("get_records", new { identifiers = new[] { note.GrampsId } });
         Assert.Contains(note.Handle, restored);
@@ -133,12 +125,5 @@ public sealed class UndoTests(GrampsWebFixture gramps)
         var match = Regex.Match(changes, @"\[transaction: (\d+)\]");
         Assert.True(match.Success, $"No transaction number in:\n{changes}");
         return int.Parse(match.Groups[1].Value);
-    }
-
-    /// <summary>Gramps Web images before 26.10 (API 3.23) undo a deletion only with force.</summary>
-    internal static bool ImageBeforeDeletionFix()
-    {
-        var tag = GrampsWebImage.Name.Split(':').LastOrDefault() ?? "";
-        return Version.TryParse(tag, out var version) && version < new Version(26, 10);
     }
 }

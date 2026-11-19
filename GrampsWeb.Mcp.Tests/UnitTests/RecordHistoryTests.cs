@@ -316,20 +316,6 @@ public class RecordHistoryTests
     }
 
     [Fact]
-    public async Task GetRecentChanges_Explains_A_Server_Without_Record_History()
-    {
-        using var handler = new ServerHandler(new()
-        {
-            ["/api/people/?gramps_id=I0004&pagesize=1"] = """[{"handle": "p1", "gramps_id": "I0004"}]""",
-        });
-
-        var ex = await Assert.ThrowsAsync<McpException>(() =>
-            SystemTools.GetRecentChanges(identifier: "I0004", client: CreateClient(handler)));
-
-        Assert.Contains("Gramps Web API 3.22 or later", ex.Message);
-    }
-
-    [Fact]
     public async Task GetRecentChanges_Reports_A_Gramps_Id_No_Record_Has()
     {
         using var handler = new ServerHandler(new() { ["/api/people/?gramps_id=I0999&pagesize=1"] = "[]" });

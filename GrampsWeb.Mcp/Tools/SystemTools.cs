@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Net;
 using System.Text.Json;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Exceptions;
@@ -24,7 +23,7 @@ public static class SystemTools
         "the latest 100, so older history is out of reach here; list_records with sort -change lists records by last edit " +
         "instead. With identifier it shows one record's own history instead, from its first save, newest first: per change " +
         "the time, added/updated/deleted, the user and the transaction, and the fields it changed as field: before → after " +
-        "(up to 12 per change), with linked records named; this needs Gramps Web API 3.22 or later. Use it to see what " +
+        "(up to 12 per change), with linked records named. Use it to see what " +
         "was changed last and by whom, who changed a field of a record and what it held before, to check that your own " +
         "writes landed, or to find the number undo_change takes to revert a transaction; " +
         "for the dated events of one person use get_timeline, and read a changed record with get_records.")]
@@ -75,20 +74,10 @@ public static class SystemTools
                    "get_recent_changes without identifier shows the transaction that deleted it, with the handle.";
         }
 
-        GrampsPagedResult<GrampsObjectChange> history;
-        try
-        {
-            // sort=-id orders by change time; old/new add the record as stored before and after each change.
-            history = await client.GetPagedListAsync<GrampsObjectChange>(
-                $"/api/transactions/history/objects/{className}/{Uri.EscapeDataString(handle)}" +
-                $"?page=1&pagesize={limit}&sort=-id&old=true&new=true");
-        }
-        catch (GrampsApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-        {
-            throw McpToolErrors.ValidationError(
-                "The history of one record needs Gramps Web API 3.22 or later, and this server does not have it. " +
-                "get_recent_changes without identifier lists the tree's latest transactions with the records they changed.");
-        }
+        // sort=-id orders by change time; old/new add the record as stored before and after each change.
+        var history = await client.GetPagedListAsync<GrampsObjectChange>(
+            $"/api/transactions/history/objects/{className}/{Uri.EscapeDataString(handle)}" +
+            $"?page=1&pagesize={limit}&sort=-id&old=true&new=true");
 
         var changes = history.Objects ?? [];
         var diffs = changes

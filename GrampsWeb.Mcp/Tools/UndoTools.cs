@@ -33,9 +33,6 @@ public static partial class UndoTools
 
     private const int MaxDescriptionInMessage = 80;
 
-    /// <summary>Gramps Web 3.23 restores deleted records without force (gramps-web-api #1006).</summary>
-    private static readonly Version DeletionUndoFixed = new(3, 23);
-
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
 
     /// <summary>Stays under the usual 60-second tool-call timeout of MCP clients.</summary>
@@ -157,13 +154,11 @@ public static partial class UndoTools
         IReadOnlyList<Change> Changes,
         IReadOnlyList<string> Conflicts,
         Names Names,
-        bool LinksChecked,
-        bool DeletionNeedsForce,
-        string? ServerVersion);
+        bool LinksChecked);
 
     /// <summary>
     /// Reads the transaction and plans its undo. Returns the reply instead when there is nothing to undo,
-    /// for a dry run, and when a conflict or an older server stops the undo without force.
+    /// for a dry run, and when a conflict stops the undo without force.
     /// </summary>
     private static async Task<(string? Reply, Plan? Plan)> CheckAsync(
         GrampsApiClient client, int transactionId, bool dryRun, bool force)
@@ -175,7 +170,7 @@ public static partial class UndoTools
         if (string.IsNullOrWhiteSpace(transaction.Description))
             transaction.Description = await ReadDescriptionAsync(client, transactionId);
 
-        var plan = await PlanAsync(client, transaction, needVersion: !force);
+        var plan = await PlanAsync(client, transaction);
         if (plan.Changes.Count == 0)
             return (Header(transactionId, "unchanged") +
                     $"Transaction {transactionId} ({SystemFormatter.FormatTransactionSummary(transaction)}) " +
@@ -184,50 +179,37 @@ public static partial class UndoTools
             return (FormatChecked(plan, force), null);
         if (!force && plan.Conflicts.Count > 0)
             return (FormatRefused(plan), null);
-        if (!force && plan.DeletionNeedsForce)
-            return (FormatOldServerRefusal(plan), null);
         return (null, plan);
     }
 
     /// <summary>
-    /// The transaction's description from the history list: the single transaction leaves it out, as its
-    /// response schema has no description. Gramps Web 3.21 and later select the transaction by its number;
-    /// earlier versions refuse those arguments, and only the newest page is read then. Null when neither has it.
+    /// The transaction's description from the history list, selected by its number: the single transaction
+    /// leaves it out, as its response schema has no description. Null when the list does not have it.
     /// </summary>
     private static async Task<string?> ReadDescriptionAsync(GrampsApiClient client, int transactionId)
     {
-        string[] paths =
-        [
-            $"/api/transactions/history/?page=1&pagesize=1&after_id={transactionId - 1}&before_id={transactionId + 1}",
-            "/api/transactions/history/?page=1&pagesize=10&sort=-id"
-        ];
-        foreach (var path in paths)
+        try
         {
-            try
-            {
-                var page = await client.GetPagedListAsync<GrampsTransaction>(path);
-                return (page.Objects ?? []).FirstOrDefault(t => t.Id == transactionId)?.Description;
-            }
-            catch (GrampsApiException)
-            {
-                // Try the newest page, or leave the description out.
-            }
+            var page = await client.GetPagedListAsync<GrampsTransaction>(
+                $"/api/transactions/history/?page=1&pagesize=1&after_id={transactionId - 1}&before_id={transactionId + 1}");
+            return (page.Objects ?? []).FirstOrDefault(t => t.Id == transactionId)?.Description;
         }
-
-        return null;
+        catch (GrampsApiException)
+        {
+            return null; // Leave the description out.
+        }
     }
 
     /// <summary>What the user confirmed: the records, what undoing does to each, and the conflicts forced past.</summary>
     private static string Digest(Plan plan) =>
         string.Join("\n", plan.Changes.Select(c => $"{c.Class}|{c.Handle}|{c.Kind}")
-            .Concat(plan.Conflicts)
-            .Append(plan.DeletionNeedsForce.ToString()));
+            .Concat(plan.Conflicts));
 
     /// <summary>
     /// Reads Gramps Web's own conflict check and adds the link checks it lacks: Gramps writes a deleted or
     /// earlier version back as stored, so links into or out of it are not repaired.
     /// </summary>
-    private static async Task<Plan> PlanAsync(GrampsApiClient client, GrampsTransaction transaction, bool needVersion)
+    private static async Task<Plan> PlanAsync(GrampsApiClient client, GrampsTransaction transaction)
     {
         var all = (transaction.Changes ?? [])
             .Where(c => c.ObjClass?.Trim() is { Length: > 0 } cls && cls != ReferenceClass
@@ -246,16 +228,12 @@ public static partial class UndoTools
                 : group.First() with { Kind = group.First().Kind == Added ? Added : group.Last().Kind })
             .ToList();
         if (changes.Count == 0)
-            return new Plan(transaction, changes, [], Names.None, false, false, null);
+            return new Plan(transaction, changes, [], Names.None, false);
 
         var check = await client.GetAsync<GrampsUndoCheck>($"/api/transactions/history/{transaction.Id}/undo");
         var linksChecked = changes.Count <= MaxCheckedRecords;
         var danglingIn = linksChecked ? await FindLinksIntoRemovedAsync(client, changes) : [];
         var danglingOut = linksChecked ? await FindMissingTargetsAsync(client, changes) : [];
-
-        var hasDeletions = changes.Any(c => c.Kind == Deleted);
-        var version = needVersion && hasDeletions ? await ReadServerVersionAsync(client) : null;
-        var deletionNeedsForce = version is { } v && GrampsServerVersion.Parse(v) is { } parsed && parsed < DeletionUndoFixed;
 
         var labelHandles = changes.Take(SystemFormatter.MaxChangesShownPerTransaction)
             .Where(c => c.Kind != Deleted)
@@ -289,7 +267,7 @@ public static partial class UndoTools
                           "exist; restoring it would leave those links dangling.");
         }
 
-        return new Plan(transaction, changes, conflicts, names, linksChecked, deletionNeedsForce, version);
+        return new Plan(transaction, changes, conflicts, names, linksChecked);
     }
 
     /// <summary>
@@ -392,19 +370,6 @@ public static partial class UndoTools
             if (data.TryGetProperty("gramps_id", out var id) && id.ValueKind == JsonValueKind.String
                 && id.GetString()?.Trim() is { Length: > 0 } grampsId)
                 grampsIds[change.Handle] = grampsId;
-        }
-    }
-
-    private static async Task<string?> ReadServerVersionAsync(GrampsApiClient client)
-    {
-        try
-        {
-            return GrampsServerVersion.ReadApiVersion(
-                await client.GetAsync<JsonElement>(GrampsServerVersion.MetadataPath));
-        }
-        catch (GrampsApiException)
-        {
-            return null; // Unknown: the undo itself tells whether it needs force.
         }
     }
 
@@ -628,8 +593,6 @@ public static partial class UndoTools
             sb.AppendLine(force
                 ? "With force=true the undo would overwrite those later changes and leave such links dangling."
                 : ConflictAdvice);
-        else if (plan.DeletionNeedsForce)
-            sb.AppendLine(OldServerExplanation(plan));
         else
             sb.AppendLine("No conflicts: after the user confirms, undo_change without dryRun applies it.");
         return sb.ToString();
@@ -650,30 +613,12 @@ public static partial class UndoTools
         return sb.ToString();
     }
 
-    private static string OldServerExplanation(Plan plan) =>
-        $"Gramps Web {plan.ServerVersion} restores deleted records only with force=true (fixed in 3.23). No later " +
-        "change conflicts with this undo, so force=true would apply exactly the changes above; pass it only after " +
-        "the user confirms, or update Gramps Web first.";
-
-    private static string FormatOldServerRefusal(Plan plan)
-    {
-        var sb = new StringBuilder(Header(plan.Transaction.Id, "refused", 0));
-        sb.AppendLine($"Nothing was changed. Undoing {Summary(plan)} would:");
-        AppendChanges(sb, plan, done: false);
-        sb.AppendLine();
-        sb.AppendLine(OldServerExplanation(plan));
-        return sb.ToString();
-    }
-
     private static string FormatChangedMeanwhile(Plan plan)
     {
         var sb = new StringBuilder(Header(plan.Transaction.Id, "refused"));
         sb.AppendLine($"Nothing was changed: Gramps Web refused to undo {Summary(plan)} because a record it would " +
                       "write no longer matches this transaction.");
-        if (plan.Changes.Any(c => c.Kind == Deleted))
-            sb.AppendLine("Gramps Web before 3.23 refuses this for every transaction that deleted records; with an " +
-                          "older server, pass force=true only after the user confirms.");
-        sb.AppendLine("Otherwise a record changed after the check: run undo_change with dryRun to see the conflicts.");
+        sb.AppendLine("A record changed after the check: run undo_change with dryRun to see the conflicts.");
         return sb.ToString();
     }
 

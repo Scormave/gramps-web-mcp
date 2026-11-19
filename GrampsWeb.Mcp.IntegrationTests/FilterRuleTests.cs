@@ -190,10 +190,9 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
         Assert.Contains("Gramps Web could not apply the rules: Rule MatchesFilter could not be evaluated", error);
     }
 
-    // Gramps Web API 3.22 names the labels only, 3.23 adds the kind of each value ("ID: person ID").
     [IntegrationTheory]
     [InlineData(null, "- people: ")]
-    [InlineData("people", "- IsRelatedWith (ID")]
+    [InlineData("people", "- IsRelatedWith (ID: person ID")]
     [InlineData("people", "- Disconnected — ")]
     [InlineData("events", "- HasType (Event type")]
     public async Task Reference_FilterRulesListTheRulesOfGrampsWeb(string? section, string expected)

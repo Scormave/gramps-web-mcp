@@ -85,19 +85,6 @@ public class UndoToolsTests
     }
 
     [Fact]
-    public async Task DryRun_ReadsTheDescriptionFromTheNewestPage_BeforeGrampsWeb321()
-    {
-        using var handler = AddNoteEditPersonServer(withDescription: false);
-        handler.Get(HistoryRowPath, HttpStatusCode.UnprocessableEntity,
-            """{"error": {"code": 422, "message": "query: after_id: Unknown field."}}""");
-        handler.Get(NewestPagePath, """[{"id": 6, "description": "Edit Event"}, {"id": 5, "description": "Add Note"}]""");
-
-        var result = await Undo(handler, dryRun: true);
-
-        Assert.Contains("Undoing transaction 5 (2025-09-30 14:22:05 UTC — Add Note — by Jane Doe) would:", result);
-    }
-
-    [Fact]
     public async Task Undo_LeavesTheDescriptionOut_WhenTheHistoryListFails()
     {
         using var handler = AddNoteEditPersonServer(withDescription: false);
@@ -261,7 +248,7 @@ public class UndoToolsTests
 
         Assert.Contains("action: refused", result);
         Assert.Contains("Gramps Web refused to undo transaction 5", result);
-        Assert.DoesNotContain("before 3.23", result);
+        Assert.Contains("A record changed after the check: run undo_change with dryRun to see the conflicts.", result);
     }
 
     [Fact]
@@ -321,24 +308,9 @@ public class UndoToolsTests
     }
 
     [Fact]
-    public async Task Undo_OfADeletion_NeedsForceBeforeGrampsWeb323()
+    public async Task Undo_OfADeletion_RestoresTheRecord()
     {
-        using var handler = DeleteNoteServer("3.22.1");
-
-        var result = await Undo(handler);
-
-        Assert.Contains("action: refused", result);
-        Assert.Contains("conflicts: 0", result);
-        Assert.Contains("   Restore the deleted Note N0001: [", result);
-        Assert.Contains("] Born in Tver [handle: n1]", result);
-        Assert.Contains("Gramps Web 3.22.1 restores deleted records only with force=true", result);
-        Assert.DoesNotContain(handler.Requests, r => r.StartsWith("POST", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task Undo_OfADeletion_RestoresTheRecordOnGrampsWeb323()
-    {
-        using var handler = DeleteNoteServer("3.23.0");
+        using var handler = DeleteNoteServer();
         handler.Post(CheckPath, HttpStatusCode.OK, "[]");
         handler.Get("/api/transactions/history/?page=1&pagesize=10&sort=-id",
             """[{"id": 6, "description": "Undo transaction 5: Delete Note"}]""");
@@ -348,6 +320,7 @@ public class UndoToolsTests
         Assert.Contains("action: undone", result);
         Assert.Contains("   Restored the deleted Note N0001: [", result);
         Assert.Contains("] Born in Tver [handle: n1]", result);
+        Assert.DoesNotContain(handler.Requests, r => r.StartsWith("GET /api/metadata/", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -374,23 +347,10 @@ public class UndoToolsTests
             }
             """);
         handler.Get(CheckPath, NoConflicts);
-        handler.Get("/api/metadata/", """{"gramps_webapi": {"version": "3.23.0"}}""");
 
         var result = await Undo(handler, dryRun: true);
 
         Assert.Contains("   Restore the deleted Person I0007: Maria Petrova [handle: p1]", result);
-    }
-
-    [Fact]
-    public async Task Undo_OfADeletion_ExplainsAnOldServerRefusal()
-    {
-        using var handler = DeleteNoteServer(version: null);
-        handler.Post(CheckPath, HttpStatusCode.InternalServerError, """{"error": {"code": 500, "message": "Object has changed"}}""");
-
-        var result = await Undo(handler);
-
-        Assert.Contains("action: refused", result);
-        Assert.Contains("Gramps Web before 3.23 refuses this", result);
     }
 
     [Fact]
@@ -571,13 +531,11 @@ public class UndoToolsTests
         return handler;
     }
 
-    private static UndoServer DeleteNoteServer(string? version)
+    private static UndoServer DeleteNoteServer()
     {
         var handler = new UndoServer();
         handler.Get($"{HistoryPath}?old=true", DeleteNote);
         handler.Get(CheckPath, NoConflicts);
-        if (version is not null)
-            handler.Get("/api/metadata/", $$$"""{"gramps_webapi": {"version": "{{{version}}}"}}""");
         return handler;
     }
 

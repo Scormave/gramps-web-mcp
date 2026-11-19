@@ -146,6 +146,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   a tag field rejects one
 - `merge_records` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
+- The replies no longer carry text for servers older than API 3.23,
+  which are refused before the first request: `undo_change` no longer
+  offers `force` to restore deleted records on Gramps Web before 26.10,
+  `get_recent_changes` no longer explains a missing record history
+  (API 3.22), and the filter rules of `get_reference` always give the
+  kind of each value
 - `update_person` keeps the citations and notes of a person's names. A
   new `primaryName` keeps those of the stored primary name, and an
   alternate name with the type, given name and surnames of a stored
