@@ -189,8 +189,9 @@ public static class ObjectTools
         "Each record type is deleted in its own transaction, families first, then people, events, places, media, " +
         "citations, sources, repositories, notes and tags; undo_change on each transaction from get_recent_changes, " +
         "newest first, restores the records. Returns action: deleted with one line per record (type, label, handle, " +
-        "Gramps ID) and the records Gramps Web deleted along or removed links from; if a later type fails, action: " +
-        "partially_deleted lists what was and was not deleted.")]
+        "Gramps ID), the records Gramps Web deleted along or removed links from, and the events, citations, notes " +
+        "and media that only the deleted records linked to: Gramps Web keeps them, so ask the user whether to delete " +
+        "them too. If a later type fails, action: partially_deleted lists what was and was not deleted.")]
     public static async Task<string> DeleteRecords(
         [Description("Up to 50 Gramps IDs (e.g. I0001, F0002; the prefix gives the type) or handles, of any types; " +
                      "find them with search or list_records.")]

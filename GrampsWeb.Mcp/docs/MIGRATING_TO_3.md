@@ -64,7 +64,10 @@ With `force`, Gramps Web removes those links from the other records, as with
 `delete_object`, and deletes the citations of a deleted source and a family
 left without father, mother and children. A place that encloses places outside the call is refused even with
 `force`. Each record type is deleted in its own transaction, and
-`undo_change` reverts each one.
+`undo_change` reverts each one. The reply also lists the events, citations,
+notes and media that only the deleted records linked to: Gramps Web keeps
+them, as it did with `delete_object`, and the agent can ask the user whether
+to delete them too.
 
 ## Rename arguments
 

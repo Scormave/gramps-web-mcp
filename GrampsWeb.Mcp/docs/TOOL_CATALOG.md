@@ -441,6 +441,15 @@ restores the records with their handles and Gramps IDs and the removed links.
 If a later type fails, `action: partially_deleted` lists what was and was not
 deleted.
 
+Gramps Web keeps the events, citations, notes and media that the deleted
+records linked to. After the delete, the reply lists those that no record
+links to any more, such as the scan and transcription note of a deleted
+citation or the events of a deleted person, under `Kept, but no record links
+to them now`, so the agent can ask the user whether to delete them too. Places,
+sources and repositories are not listed. The list covers one level: a citation
+still linked from an event left without links is not listed until that event
+is deleted.
+
 When the client supports MCP elicitation, the user confirms the deletion in a
 [dialog](#confirmation-dialogs) that names the records and, with `force=true`,
 the records whose links to them go. A user who says no gets `action: declined`

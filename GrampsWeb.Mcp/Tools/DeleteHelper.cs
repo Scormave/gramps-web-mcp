@@ -388,7 +388,115 @@ internal static class DeleteHelper
 
         AppendChanges(sb, $"Also deleted by Gramps Web ({alsoDeleted.Count}):", alsoDeleted, stored);
         AppendChanges(sb, $"Links to them removed from ({unlinked.Count}):", unlinked, stored);
+
+        var left = await LeftUnlinkedAsync(client, changes);
+        if (left.Count > 0)
+        {
+            var leftLabels = await LoadLabelsAsync(client, left.Select(r => (r.Collection, r.Handle)));
+            sb.AppendLine();
+            var them = left.Count == 1 ? "it" : "them";
+            sb.AppendLine($"Kept, but no record links to {them} now ({left.Count}); ask the user whether to delete " +
+                          $"{them} too:");
+            foreach (var (collection, handle, grampsId) in left)
+                sb.AppendLine(Line(collection, leftLabels.GetValueOrDefault(handle), handle, grampsId));
+        }
+
         return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>
+    /// The link lists of a record whose records a delete can leave unlinked, with the collection they link to:
+    /// events, citations, notes and media that a deleted record owned. Places, sources and repositories are
+    /// shared by many records and are not looked at.
+    /// </summary>
+    private static readonly IReadOnlyList<(string Field, string Collection)> OwnedLinks =
+    [
+        ("event_ref_list", "events"),
+        ("citation_list", "citations"),
+        ("note_list", "notes"),
+        ("media_list", "media")
+    ];
+
+    /// <summary>
+    /// The events, citations, notes and media that the deleted records linked to and that no record links to
+    /// now, read after the delete: Gramps Web keeps them. When the read fails the reply leaves them out.
+    /// </summary>
+    private static async Task<IReadOnlyList<(string Collection, string Handle, string? GrampsId)>> LeftUnlinkedAsync(
+        GrampsApiClient client, IReadOnlyList<Change> changes)
+    {
+        var deleted = changes.Where(c => c.Type == "delete").ToList();
+        var gone = deleted.Select(c => (c.Collection, c.Handle)).ToHashSet();
+        var linked = new List<(string Collection, string Handle)>();
+        foreach (var change in deleted)
+        {
+            if (change.Old is { } old)
+                CollectOwnedLinks(old, linked);
+        }
+
+        var groups = OwnedLinks
+            .Select(o => (o.Collection, Handles: linked
+                .Where(l => l.Collection == o.Collection && !gone.Contains(l))
+                .Select(l => l.Handle)
+                .Distinct(StringComparer.Ordinal)
+                .ToList()))
+            .Where(g => g.Handles.Count > 0)
+            .ToList();
+        if (groups.Count == 0)
+            return [];
+
+        try
+        {
+            var found = await Task.WhenAll(groups.Select(async g => (g.Collection, g.Handles,
+                Records: await client.GetByHandlesAsync<Probe>(g.Collection, g.Handles, p => p.Handle, ProbeQuery))));
+            return found
+                .SelectMany(g => g.Handles
+                    .Select(h => (Handle: h, Stored: g.Records.TryGetValue(h, out var probe) ? Stored.From(probe) : null))
+                    .Where(r => r.Stored is { Links.Count: 0 })
+                    .Select(r => (g.Collection, r.Handle, r.Stored!.GrampsId)))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Adds the handles in every <see cref="OwnedLinks"/> list of <paramref name="element"/> and of the objects
+    /// inside it, such as the citations of a person's event reference or the notes of a name.
+    /// </summary>
+    private static void CollectOwnedLinks(JsonElement element, List<(string Collection, string Handle)> linked)
+    {
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+                CollectOwnedLinks(item, linked);
+            return;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+            return;
+        foreach (var property in element.EnumerateObject())
+        {
+            var collection = OwnedLinks.FirstOrDefault(o => o.Field == property.Name).Collection;
+            if (collection != null && property.Value.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in property.Value.EnumerateArray())
+                {
+                    var handle = item.ValueKind switch
+                    {
+                        JsonValueKind.String => item.GetString(),
+                        JsonValueKind.Object when item.TryGetProperty("ref", out var reference)
+                                                  && reference.ValueKind == JsonValueKind.String => reference.GetString(),
+                        _ => null
+                    };
+                    if (!string.IsNullOrWhiteSpace(handle))
+                        linked.Add((collection, handle.Trim()));
+                }
+            }
+
+            CollectOwnedLinks(property.Value, linked);
+        }
     }
 
     private static void AppendChanges(StringBuilder sb, string title, IReadOnlyList<Change> changes,

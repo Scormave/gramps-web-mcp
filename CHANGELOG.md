@@ -14,6 +14,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   tree or the call already has, ignoring case, stops the call before
   saving, and the error gives the existing tag's handle. A new tag no
   record of the call links to is listed in the reply
+- `delete_records` lists the events, citations, notes and media that
+  only the deleted records linked to, such as the scan and
+  transcription note of a deleted citation or the events of a deleted
+  person. Gramps Web keeps them; the reply names them under
+  `Kept, but no record links to them now` with their handles and
+  Gramps IDs, so the agent can ask the user whether to delete them too
 - A [migration guide from 2.x](GrampsWeb.Mcp/docs/MIGRATING_TO_3.md)
   maps every renamed and removed tool and argument to its 3.0 call,
   shows which saved `update_*` calls need `linkMode: "replace"`, and

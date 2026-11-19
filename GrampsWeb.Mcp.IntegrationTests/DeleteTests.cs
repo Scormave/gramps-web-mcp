@@ -47,4 +47,34 @@ public sealed class DeleteTests(GrampsWebFixture gramps)
         Assert.Contains(person.Handle, stored);
         Assert.DoesNotContain(birth.Handle, stored);
     }
+
+    [IntegrationFact]
+    public async Task Delete_ListsTheRecordsLeftWithoutLinks()
+    {
+        var source = await Session.CreateAsync("sources", new { title = TestNames.Unique("source") });
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("transcription") });
+        var citation = await Session.CreateAsync("citations", new
+        {
+            sourceHandle = source.Handle,
+            page = "f. 12",
+            noteHandles = new[] { note.Handle }
+        });
+        var birth = await Session.CreateAsync("events", new
+        {
+            eventType = "Birth",
+            date = "1901",
+            citationHandles = new[] { citation.Handle }
+        });
+
+        var eventDeleted = await Session.CallAsync("delete_records", new { identifiers = new[] { birth.GrampsId } });
+        Assert.Equal("deleted", McpSession.Header(eventDeleted, "action"));
+        Assert.Contains("Kept, but no record links to it now (1)", eventDeleted);
+        Assert.Contains($"handle: {citation.Handle} | gramps_id: {citation.GrampsId}", eventDeleted);
+        Assert.DoesNotContain(note.Handle, eventDeleted);
+        Assert.DoesNotContain(source.Handle, eventDeleted);
+
+        var citationDeleted = await Session.CallAsync("delete_records", new { identifiers = new[] { citation.GrampsId } });
+        Assert.Contains("Kept, but no record links to it now (1)", citationDeleted);
+        Assert.Contains($"handle: {note.Handle} | gramps_id: {note.GrampsId}", citationDeleted);
+    }
 }

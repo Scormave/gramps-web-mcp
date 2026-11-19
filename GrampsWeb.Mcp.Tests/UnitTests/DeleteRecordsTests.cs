@@ -192,6 +192,84 @@ public class DeleteRecordsTests
     }
 
     [Fact]
+    public async Task Delete_ListsTheEventsCitationsNotesAndMediaLeftWithoutLinks()
+    {
+        using var server = new RouteServer();
+        server.Get($"/api/people/p1?{Probe}", ProbeJson("p1", "I0001"));
+        server.DeleteReply = _ => (HttpStatusCode.OK, """
+            [{"_class": "Person", "handle": "p1", "type": "delete", "new": null,
+              "old": {"handle": "p1", "gramps_id": "I0001",
+                      "primary_name": {"first_name": "John", "citation_list": ["c1"], "note_list": []},
+                      "event_ref_list": [{"ref": "e1", "role": "Primary", "citation_list": ["c2"]}],
+                      "note_list": ["n1"],
+                      "media_list": [{"ref": "m1", "rect": null, "note_list": ["n2"]}],
+                      "place": "pl1", "child_ref_list": [{"ref": "p9"}]}}]
+            """);
+        server.Get($"/api/events/e1?{Probe}", ProbeJson("e1", "E0001"));
+        server.Get($"/api/citations/?handles=c1,c2&{Probe}&page=1&pagesize=2",
+            $"""[{ProbeJson("c1", "C0001")}, {ProbeJson("c2", "C0002", """{"event": ["e1"]}""")}]""");
+        server.Get($"/api/notes/?handles=n1,n2&{Probe}&page=1&pagesize=2",
+            $"""[{ProbeJson("n1", "N0001", """{"person": []}""")}, {ProbeJson("n2", "N0002", """{"media": ["m1"]}""")}]""");
+        server.Get($"/api/media/m1?{Probe}", ProbeJson("m1", "O0001"));
+
+        var result = await ObjectTools.DeleteRecordsAsync(["p1"], "person", false, CreateClient(server),
+            new FakeConfirmation(ConfirmationAnswer.Confirmed));
+
+        Assert.EndsWith(
+            "\n\nKept, but no record links to them now (4); ask the user whether to delete them too:\n" +
+            "Event — handle: e1 | gramps_id: E0001\n" +
+            "Citation — handle: c1 | gramps_id: C0001\n" +
+            "Note — handle: n1 | gramps_id: N0001\n" +
+            "Media — handle: m1 | gramps_id: O0001",
+            result.ReplaceLineEndings("\n"));
+        Assert.DoesNotContain(server.Requests, r => r.Contains("pl1") || r.Contains("p9"));
+    }
+
+    [Fact]
+    public async Task Delete_LooksAtTheRecordsDeletedAlong_ButNotAtTheRecordsOfTheCall()
+    {
+        using var server = NoteServer();
+        server.Get($"/api/sources/s1?{Probe}", ProbeJson("s1", "S0001", """{"citation": ["c1"]}"""));
+        server.Get("/api/sources/?gramps_id=S0001&pagesize=1", """[{"handle": "s1"}]""");
+        server.DeleteReply = body => (HttpStatusCode.OK, body.Contains("\"sources\"")
+            ? """
+              [{"_class": "Citation", "handle": "c1", "type": "delete", "new": null,
+                "old": {"handle": "c1", "gramps_id": "C0001", "note_list": ["n5"]}},
+               {"_class": "Source", "handle": "s1", "type": "delete", "new": null,
+                "old": {"handle": "s1", "gramps_id": "S0001", "note_list": ["n1"]}}]
+              """
+            : """[{"_class": "Note", "handle": "n1", "type": "delete", "old": {"handle": "n1"}, "new": null}]""");
+        server.Get($"/api/notes/n5?{Probe}", ProbeJson("n5", "N0005"));
+
+        var result = await ObjectTools.DeleteRecordsAsync(["S0001", "N0001"], null, true, CreateClient(server),
+            new FakeConfirmation(ConfirmationAnswer.Confirmed));
+
+        Assert.EndsWith(
+            "\n\nKept, but no record links to it now (1); ask the user whether to delete it too:\n" +
+            "Note — handle: n5 | gramps_id: N0005",
+            result.ReplaceLineEndings("\n"));
+        Assert.Equal(2, result.Split("handle: n1 ").Length);
+    }
+
+    [Fact]
+    public async Task Delete_ListsNothingWhenTheLinkedRecordsCannotBeRead()
+    {
+        using var server = new RouteServer();
+        server.Get($"/api/people/p1?{Probe}", ProbeJson("p1", "I0001"));
+        server.DeleteReply = _ => (HttpStatusCode.OK, """
+            [{"_class": "Person", "handle": "p1", "type": "delete", "new": null,
+              "old": {"handle": "p1", "note_list": ["n1", "n2"]}}]
+            """);
+
+        var result = await ObjectTools.DeleteRecordsAsync(["p1"], "person", false, CreateClient(server),
+            new FakeConfirmation(ConfirmationAnswer.Confirmed));
+
+        Assert.Contains("action: deleted", result);
+        Assert.Contains(server.Requests, r => r.StartsWith("GET /api/notes/?handles=n1,n2"));
+        Assert.DoesNotContain("Kept", result);
+    }
+
+    [Fact]
     public async Task Delete_OfAPlaceThatEnclosesOthers_IsRefusedEvenWithForce()
     {
         using var server = new RouteServer();
