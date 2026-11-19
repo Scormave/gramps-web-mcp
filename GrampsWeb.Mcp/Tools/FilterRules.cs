@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Input;
@@ -9,7 +10,7 @@ using GrampsWeb.Mcp.Input;
 namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
-/// The rules argument of list_objects: Gramps filter rules, which Gramps Web applies before gql. The shape is
+/// The rules argument of list_objects: Gramps filter rules, which Gramps Web applies on the server. The shape is
 /// checked here, so a mistake is named by its place in the JSON instead of the server's "Filter does not adhere
 /// to schema", and the bare 404 the server returns for an unknown rule name is explained from its rule list.
 /// </summary>
@@ -99,6 +100,33 @@ internal static class FilterRules
     }
 
     /// <summary>
+    /// <paramref name="request"/> with a MatchesQuery rule (GOQL) that a record must match as well, or a filter of
+    /// that rule alone. The rule joins the rules of a plain and filter; any other filter is nested beside it.
+    /// </summary>
+    public static Request WithMatchesQuery(Request? request, string objectType, string expression)
+    {
+        var rule = new JsonObject { ["name"] = "MatchesQuery", ["values"] = new JsonArray(expression) };
+        JsonObject root;
+        if (request == null)
+        {
+            root = new JsonObject { ["rules"] = new JsonArray(rule) };
+        }
+        else
+        {
+            root = JsonNode.Parse(request.Json)!.AsObject();
+            var plainAnd = (root["function"]?.GetValue<string>() ?? "and") == "and"
+                           && root["invert"]?.GetValue<bool>() != true;
+            if (plainAnd)
+                root["rules"]!.AsArray().Add(rule);
+            else
+                root = new JsonObject { ["rules"] = new JsonArray(root, rule) };
+        }
+
+        var json = root.ToJsonString(new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+        return new Request(json, [.. request?.RuleNames ?? [], new RuleName(Namespaces[objectType], "MatchesQuery")]);
+    }
+
+    /// <summary>
     /// A clearer error for a failed list request with rules, or null to keep the original. Gramps Web answers an
     /// unknown rule name with a bare 404, so the names are checked against its rule list; for the rules it could
     /// not apply (400 or 422) its own message is kept without the JSON around it.
@@ -152,7 +180,7 @@ internal static class FilterRules
     private static string DescribeUnknown(string name, string objectType, HashSet<string> known)
     {
         if (name == "MatchesQuery")
-            return $"MatchesQuery for {objectType} needs Gramps Web API 3.23 or later; use the gql argument instead";
+            return $"MatchesQuery for {objectType} needs Gramps Web API 3.23 or later; on this server filter by field values with the gql argument instead";
 
         var lower = name.ToLowerInvariant();
         var similar = known

@@ -23,6 +23,14 @@ public class MediaUploadToolsTests : IDisposable
 
     private const string AttachedLink = "https://files.example.com/download/file-1?sig=signature";
 
+    // The duplicate check on API 3.23 or later: the server's version, then the MatchesQuery rule (GOQL).
+    private static readonly string[] ChecksumLookup =
+    [
+        "GET /api/metadata/",
+        "GET /api/media/?rules=" + Uri.EscapeDataString(
+            $$"""{"rules":[{"name":"MatchesQuery","values":["checksum == '{{JpegChecksum}}'"]}]}""") + "&page=1&pagesize=1",
+    ];
+
     private readonly string _uploads = Directory.CreateDirectory(
         Path.Combine(Path.GetTempPath(), "gramps-upload-tools-" + Guid.NewGuid().ToString("N"))).FullName;
 
@@ -44,7 +52,7 @@ public class MediaUploadToolsTests : IDisposable
         [
             "GET /api/people/?gramps_id=I0001&pagesize=1",
             "GET /api/people/h-person",
-            $"GET /api/media/?gql={Uri.EscapeDataString($"checksum = \"{JpegChecksum}\"")}&page=1&pagesize=1",
+            .. ChecksumLookup,
             "POST /api/media/",
             "GET /api/media/h-new",
             "PUT /api/media/h-new",
@@ -88,6 +96,38 @@ public class MediaUploadToolsTests : IDisposable
         Assert.Contains("gramps_id: O0007", result);
         Assert.Contains("""attached_to: ["E0003","I0002"]""", result);
         Assert.Contains("nothing was uploaded", result);
+    }
+
+    [Theory]
+    [InlineData("3.22.1")]
+    [InlineData("3.16.0")]
+    public async Task CreateMedia_Looks_Up_The_Checksum_With_Gramps_QL_Before_API_3_23(string version)
+    {
+        var server = new FakeGramps
+        {
+            ApiVersion = version,
+            StoredByChecksum = """[{"handle":"h-old","gramps_id":"O0007","checksum":"x","mime":"image/jpeg","desc":"Old scan"}]""",
+        };
+
+        var result = await MediaTools.CreateMedia("metric book 1890.jpg", client: server.Client(), config: Config());
+
+        Assert.Equal(
+        [
+            "GET /api/metadata/",
+            $"GET /api/media/?gql={Uri.EscapeDataString($"checksum = \"{JpegChecksum}\"")}&page=1&pagesize=1",
+        ], server.Requests);
+        Assert.Contains("action: existing", result);
+    }
+
+    [Fact]
+    public async Task CreateMedia_Looks_Up_The_Checksum_With_MatchesQuery_When_The_Version_Is_Unknown()
+    {
+        var server = new FakeGramps { ApiVersion = "unknown" };
+
+        await MediaTools.CreateMedia("metric book 1890.jpg", client: server.Client(), config: Config());
+
+        Assert.Equal(ChecksumLookup, server.Requests.Take(2));
+        Assert.Contains("POST /api/media/", server.Requests);
     }
 
     [Theory]
@@ -154,7 +194,7 @@ public class MediaUploadToolsTests : IDisposable
         Assert.Equal(
         [
             "GET /api/media/h-media",
-            $"GET /api/media/?gql={Uri.EscapeDataString($"checksum = \"{JpegChecksum}\"")}&page=1&pagesize=1",
+            .. ChecksumLookup,
             "PUT /api/media/h-media/file",
             "GET /api/media/h-media",
             "PUT /api/media/h-media",
@@ -430,6 +470,8 @@ public class MediaUploadToolsTests : IDisposable
 
         public string StoredByChecksum { get; init; } = "[]";
 
+        public string ApiVersion { get; init; } = "3.26.0";
+
         public bool UploadTimesOut { get; init; }
 
         public byte[]? UploadBytes { get; private set; }
@@ -454,7 +496,10 @@ public class MediaUploadToolsTests : IDisposable
 
             if (request.Method == HttpMethod.Get)
             {
-                if (path.StartsWith("/api/media/?gql=", StringComparison.Ordinal))
+                if (path == "/api/metadata/")
+                    return Json($$$"""{"gramps_webapi":{"version":"{{{ApiVersion}}}"}}""");
+                if (path.StartsWith("/api/media/?rules=", StringComparison.Ordinal)
+                    || path.StartsWith("/api/media/?gql=", StringComparison.Ordinal))
                     return Json(StoredByChecksum);
                 if (Lists.TryGetValue(path, out var list))
                     return Json(list);

@@ -117,6 +117,41 @@ public class ListObjectsFilterRulesTests
             error.Message);
     }
 
+    [Fact]
+    public async Task ListObjects_SaysGqlIsGoneWhenTheServerRefusesIt()
+    {
+        using var handler = new ListHandler
+        {
+            ListStatus = HttpStatusCode.UnprocessableEntity,
+            ListBody = """{"error": {"code": 422, "message": "query: gql: Unknown field.", "messages": {"query": {"gql": ["Unknown field."]}}}}"""
+        };
+
+        var error = await Assert.ThrowsAsync<McpException>(() => SearchTools.ListObjects(
+            "people",
+            gql: "gender = 1",
+            client: FilterRulesTests.CreateClient(handler)));
+
+        Assert.Equal(GrampsQueryLanguage.GqlRemoved, error.Message);
+        Assert.Contains("\"name\": \"MatchesQuery\"", error.Message);
+    }
+
+    [Fact]
+    public async Task ListObjects_KeepsTheServersAnswerToAGqlSyntaxError()
+    {
+        using var handler = new ListHandler
+        {
+            ListStatus = HttpStatusCode.UnprocessableEntity,
+            ListBody = """{"error": {"code": 422, "message": "Invalid query syntax."}}"""
+        };
+
+        var error = await Assert.ThrowsAnyAsync<Exception>(() => SearchTools.ListObjects(
+            "people",
+            gql: "gender ==",
+            client: FilterRulesTests.CreateClient(handler)));
+
+        Assert.DoesNotContain("no longer has Gramps QL", error.Message);
+    }
+
     /// <summary>Answers the people list, and the rule list of people for a 404 explanation.</summary>
     private sealed class ListHandler : HttpMessageHandler
     {

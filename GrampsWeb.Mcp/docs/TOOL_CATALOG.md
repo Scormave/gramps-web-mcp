@@ -1170,12 +1170,12 @@ same summary and `handle | gramps_id` suffix as `search`. An empty page returns
 | `pagesize` | `int` | no | `20` | Page size (max 100) |
 | `grampsId` | `string?` | no | — | Filter by Gramps ID (I0001-style); not together with `rules` |
 | `sourceHandle` | `string?` | no | — | For citations only: filter by source |
-| `gql` | `string?` | no | — | Gramps QL expression: `=` for equality (`==` is a syntax error), text in double quotes, types as numbers (`type.value = 12` for Birth) |
-| `rules` | `object \| array \| string?` | no | — | Gramps filter rules, applied on the server before `gql`; not for tags |
+| `gql` | `string?` | no | — | Gramps QL expression, only before Gramps Web API 3.26: `=` for equality (`==` is a syntax error), text in double quotes, types as numbers (`type.value = 12` for Birth) |
+| `rules` | `object \| array \| string?` | no | — | Gramps filter rules, applied on the server; field values through `MatchesQuery`; not for tags |
 | `sort` | `string?` | no | — | Sort field (prefix `-` for descending) |
 
 `rules` selects records with the filter rules of Gramps itself, which can
-follow kinship where Gramps QL cannot: ancestors or descendants of a person,
+follow kinship where a field filter cannot: ancestors or descendants of a person,
 everyone related to someone, people with no family links. A filter is
 `{"function": "and", "invert": false, "rules": [...]}`, where `function` is
 `and` (the default), `or` or `one`, `invert: true` keeps the records that do
@@ -1203,9 +1203,26 @@ and a rule Gramps cannot evaluate keeps the server's reason
 (`Gramps Web could not apply the rules: …`). Values are not checked: a Gramps
 ID, tag or saved filter name the tree does not have matches nothing, so an
 empty result with rules says to check those values. Gramps Web reads `true`
-and `false` as `1` and `0`. `MatchesQuery` needs Gramps
-Web API 3.23 or later. `get_reference(topic: "filter-rules", section: "people")`
+and `false` as `1` and `0`. `get_reference(topic: "filter-rules", section: "people")`
 lists the rules of a type with their values, and the tree's saved filters.
+
+Field values are filtered with the rule `MatchesQuery` (Gramps Web API 3.23
+or later), whose one value is a GOQL expression: Python-like, with `==` for
+equality, `and`, `or`, `not`, text in single quotes, `len(list)` for the
+length of a list and named constants for types.
+
+```text
+list_objects(objectType: "people", rules: [{"name": "MatchesQuery", "values": ["primary_name.first_name == 'Anna' and len(media_list) >= 1"]}])
+list_objects(objectType: "events", rules: [{"name": "MatchesQuery", "values": ["type.value == EventType.BIRTH"]}])
+```
+
+`gql` is the older field filter, Gramps QL, which Gramps Web API 3.26 removed.
+Before 3.26 it is applied together with `rules` and a record must match both;
+from 3.26 on the server refuses it and the tool answers with the
+`MatchesQuery` form instead of the server's `Unknown field`. The citations
+of a source (`sourceHandle`) are filtered with `MatchesQuery`
+(`source_handle == '…'`, joined to the caller's rules) from API 3.23, and with
+`gql` on older servers.
 
 ---
 

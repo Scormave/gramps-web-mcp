@@ -35,8 +35,8 @@ Docker image, so Docker must be installed. For Claude Desktop, install the
 - **Up to 35 MCP tools** — read, create, update, merge, and delete people,
   families, events, places, sources, citations, notes, media, repositories,
   and tags
-- **Search and kinship** — full-text search, listings filtered by Gramps QL or
-  Gramps filter rules, ancestors, descendants, relationships, and timelines
+- **Search and kinship** — full-text search, listings filtered by field values
+  or Gramps filter rules, ancestors, descendants, relationships, and timelines
 - **Careful edits** — add or remove one link with `linkMode` and keep the
   rest; save a whole register entry in one transaction with `create_records`;
   dates in every Gramps form and calendar
