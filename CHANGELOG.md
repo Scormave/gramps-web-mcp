@@ -152,6 +152,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A Gramps ID starting with `T`, such as `T0001`, was looked up as a tag
   and ended in a server error: tags have no Gramps ID
 
+## [2.11.1] - 2026-11-19
+
+### Fixed
+
+- Gramps Web API 3.26 (Gramps Web 26.11.3) removed Gramps QL, the `gql`
+  query argument, which the server now refuses with HTTP 422. Uploads
+  with `create_media` and `update_media` failed, because the duplicate
+  check looks for a stored file by its checksum, and so did
+  `list_objects` with `sourceHandle`, which lists the citations of a
+  source. Both now filter with the `MatchesQuery` rule and a GOQL
+  expression on API 3.23 or later, and with Gramps QL as before on older
+  servers; the server's version is read from `/api/metadata/`
+- `list_objects` with `gql` on API 3.26 or later says that the server
+  no longer has Gramps QL and shows how to filter by field values with
+  the `MatchesQuery` rule in `rules`, instead of passing on the
+  server's `Unknown field`. The tool and argument descriptions name
+  `MatchesQuery` for field values and give GOQL examples, and the
+  `audit-tree` prompt counts events without a citation with the
+  `HasSourceCount` rule instead of `gql`
+
 ## [2.11.0] - 2026-11-18
 
 ### Added
@@ -1542,7 +1562,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.0...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.1...HEAD
+[2.11.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...v2.11.0
 [2.10.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.9.1...v2.10.0

@@ -12,13 +12,17 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
     private McpSession Session => gramps.Session;
 
     /// <summary>
-    /// Two families and a loner who share a first name, so gql on that name keeps other tests' people out:
-    /// a father with his son, a second father with his son, and someone with no family.
+    /// Two families and a loner who share a first name, so a MatchesQuery rule on that name keeps other tests'
+    /// people out: a father with his son, a second father with his son, and someone with no family.
     /// </summary>
     private sealed record Kin(string First, CreatedRecord Father, CreatedRecord Son, CreatedRecord Loner, CreatedRecord OtherFather, CreatedRecord OtherSon)
     {
-        public string Gql => $"primary_name.first_name = {First}";
+        public object NamedAlike => FirstNameIs(First);
     }
+
+    /// <summary>A MatchesQuery rule (GOQL) for people with the first name <paramref name="first"/>.</summary>
+    private static object FirstNameIs(string first) =>
+        new { name = "MatchesQuery", values = new[] { $"primary_name.first_name == '{first}'" } };
 
     private async Task<Kin> CreateKinAsync()
     {
@@ -44,8 +48,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
         var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
-            gql = kin.Gql,
-            rules = new { rules = new[] { new { name = "Disconnected" } } }
+            rules = new { rules = new object[] { new { name = "Disconnected" }, kin.NamedAlike } }
         });
 
         Assert.Contains("Total: 1", listed);
@@ -60,8 +63,14 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
         var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
-            gql = kin.Gql,
-            rules = new { invert = true, rules = new[] { new { name = "IsRelatedWith", values = new[] { kin.Father.GrampsId } } } }
+            rules = new
+            {
+                rules = new[]
+                {
+                    new { invert = true, rules = new[] { new { name = "IsRelatedWith", values = new[] { kin.Father.GrampsId } } } },
+                    kin.NamedAlike
+                }
+            }
         });
 
         Assert.Contains("Total: 3", listed);
@@ -81,8 +90,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
         var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
-            gql = kin.Gql,
-            rules = new[] { new { name = "IsAncestorOf", values = new object[] { kin.Son.GrampsId, inclusive } } }
+            rules = new[] { new { name = "IsAncestorOf", values = new object[] { kin.Son.GrampsId, inclusive } }, kin.NamedAlike }
         });
 
         Assert.Contains($"Total: {total}", listed);
@@ -110,8 +118,14 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
         var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
-            gql = $"primary_name.first_name = {first}",
-            rules = new { rules = new[] { new { @namespace = "Event", rules = new[] { new { name = "HasType", values = new[] { "Residence" } } } } } }
+            rules = new
+            {
+                rules = new[]
+                {
+                    new { @namespace = "Event", rules = new[] { new { name = "HasType", values = new[] { "Residence" } } } },
+                    FirstNameIs(first)
+                }
+            }
         });
 
         Assert.Contains("Total: 1", listed);
@@ -129,8 +143,7 @@ public sealed class FilterRuleTests(GrampsWebFixture gramps)
         var listed = await Session.CallAsync("list_records", new
         {
             objectType = "people",
-            gql = kin.Gql,
-            rules = JsonSerializer.Serialize(new { name = "MatchesFilter", values = new[] { filterName } })
+            rules = JsonSerializer.Serialize(new[] { new { name = "MatchesFilter", values = new[] { filterName } }, kin.NamedAlike })
         });
         var reference = await Session.CallAsync("get_reference", new { topic = "filter-rules", section = "people" });
 

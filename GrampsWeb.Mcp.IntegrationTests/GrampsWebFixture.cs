@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Config;
 using Xunit;
 
@@ -44,6 +45,11 @@ public sealed class GrampsWebFixture : IAsyncLifetime
 
     public string TreeId { get; private set; } = "";
 
+    /// <summary>
+    /// Whether the container's Gramps Web takes the gql argument of the list endpoints, which API 3.26 removed.
+    /// </summary>
+    public bool HasGql { get; private set; }
+
     /// <summary>The folder the shared server may upload media files from.</summary>
     public string UploadDir => _uploadDir?.FullName ?? throw NotStarted();
 
@@ -80,7 +86,7 @@ public sealed class GrampsWebFixture : IAsyncLifetime
         };
         await CreateOwnerAsync(http);
         var accessToken = await SignInAsync(http);
-        TreeId = await ReadTreeIdAsync(http, accessToken);
+        (TreeId, HasGql) = await ReadMetadataAsync(http, accessToken);
 
         _uploadDir = Directory.CreateTempSubdirectory("gramps-mcp-it-");
         Config = new GrampsConfig(
@@ -142,12 +148,13 @@ public sealed class GrampsWebFixture : IAsyncLifetime
         return tokens.GetProperty("access_token").GetString()!;
     }
 
-    private static async Task<string> ReadTreeIdAsync(HttpClient http, string accessToken)
+    private static async Task<(string TreeId, bool HasGql)> ReadMetadataAsync(HttpClient http, string accessToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/metadata/");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         var metadata = await ReadJsonAsync(await http.SendAsync(request));
-        return metadata.GetProperty("database").GetProperty("id").GetString()!;
+        var apiVersion = GrampsServerVersion.Parse(metadata.GetProperty("gramps_webapi").GetProperty("version").GetString()!);
+        return (metadata.GetProperty("database").GetProperty("id").GetString()!, apiVersion < new Version(3, 26));
     }
 
     private static async Task<JsonElement> ReadJsonAsync(HttpResponseMessage response)

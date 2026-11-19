@@ -258,7 +258,7 @@ public sealed class GrampsPrompts
         sb.AppendLine("3. sources: people with an event that has no citation, rules [BRANCH, {\"namespace\": \"Event\", \"rules\": [{\"name\": \"HasSourceCount\", \"values\": [\"0\", \"equal to\"]}]}]; " +
                       "people with no citation at all, on themselves or any event, rules [BRANCH, {\"name\": \"HasSourceCount\", \"values\": [\"0\", \"equal to\"]}, " +
                       "{\"invert\": true, \"rules\": [{\"namespace\": \"Event\", \"rules\": [{\"name\": \"HasSourceCount\", \"values\": [\"0\", \"greater than\"]}]}]}]. " +
-                      "Whole tree: the number of events without a citation, list_records(objectType: \"events\", gql: \"citation_list.length = 0\").");
+                      "Whole tree: the number of events without a citation, list_records(objectType: \"events\", rules: [{\"name\": \"HasSourceCount\", \"values\": [\"0\", \"equal to\"]}]).");
         sb.AppendLine("4. links: people with no family links, rules [BRANCH, {\"name\": \"Disconnected\"}]. Whole tree: records that nothing links to, " +
                       "rules [{\"name\": \"HasReferenceCountOf\", \"values\": [\"equal to\", \"0\"]}] for events, families, places, citations, sources, notes and media. " +
                       "An unlinked event, family or citation is usually left over from an edit; a source, note or media file can stand alone on purpose, so list those as information.");
