@@ -48,10 +48,10 @@ polymorphic wire shapes.
 
 | Model | File | Notes |
 |-------|------|-------|
-| `GrampsName` | `GrampsName.cs` | Person names; `SurnameList` → `GrampsSurname[]`, `Type` via wire-type converter, `Date` via date converter |
+| `GrampsName` | `GrampsName.cs` | Person names; `SurnameList` → `GrampsSurname[]`, `Type` via wire-type converter, `Date` via date converter, `CitationList`, `NoteList` |
 | `GrampsSurname` | `GrampsSurname.cs` | `Surname`, `Prefix`, `Connector`, `OriginType`, `Primary` |
 | `GrampsEventRef` | in `GrampsPerson.cs` | `Ref` (handle), `Role` (wire-type), `NoteList`, `AttributeList` |
-| `GrampsChildRef` | in `GrampsFamily.cs` | `Ref`, `FatherRelType` (frel), `MotherRelType` (mrel); whole-type converter |
+| `GrampsChildRef` | in `GrampsFamily.cs` | `Ref`, `FatherRelType` (frel), `MotherRelType` (mrel), `Private`, `CitationList`, `NoteList`; whole-type converter, which writes an empty citation or note list so a replaced link can drop them |
 | `GrampsFamilyRef` | in `GrampsPerson.cs` | `Ref`, `Relationship`, `FatherRelationship`, `MotherRelationship`; whole-type converter |
 | `GrampsRepositoryRef` | `GrampsRepositoryRef.cs` | `Ref`, `CallNumber`, `MediaType`, `NoteList`; whole-type converter |
 | `GrampsPersonRef` | `GrampsPersonRef.cs` | `Ref`, `Relationship`, `CitationList`, `NoteList`, `Private` |

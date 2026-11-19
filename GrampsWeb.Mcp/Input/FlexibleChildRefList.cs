@@ -8,11 +8,13 @@ namespace GrampsWeb.Mcp.Input;
 public sealed class FlexibleChildRefList
 {
     public const string DescriptionHint =
-        "Child references (handles or Gramps IDs): JSON array of {ref, frel, mrel}, strings \"HANDLE::RelType\" " +
-        "(sets both frel and mrel; default: Birth), comma/pipe/newline-separated, or a single handle or ID. " +
+        "Child references (handles or Gramps IDs): JSON array of {ref, frel, mrel, citation_list, note_list}, strings " +
+        "\"HANDLE::RelType\" (sets both frel and mrel; default: Birth), comma/pipe/newline-separated, or a single handle or ID. " +
         "A relation must be a standard Gramps one (Birth, Adopted, Stepchild, Sponsored, Foster, Unknown, None) " +
-        "or a custom one the tree already uses. " +
-        "JSON objects accept snake_case (frel, mrel, tag_list) or camelCase (fatherRel, tagList, etc.).";
+        "or a custom one the tree already uses. citation_list and note_list (handles or Gramps IDs) cite and explain " +
+        "the child's link to this family, such as an adoption record. " +
+        "JSON objects accept snake_case (frel, mrel, citation_list, note_list, tag_list) or camelCase (fatherRel, " +
+        "citationList, tagList, etc.).";
 
     public required GrampsChildRef[] Items { get; init; }
 

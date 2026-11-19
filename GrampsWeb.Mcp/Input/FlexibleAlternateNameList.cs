@@ -20,7 +20,8 @@ public sealed class FlexibleAlternateNameList
         "Feudal, Pseudonym, Patrilineal, Matrilineal, Occupation, Location, Unknown), " +
         "patronymic and matronymic (each a surname entry of its own), " +
         "title, suffix (Jr./Sr./III), call, nick, famnick, type (name type), " +
-        "name (the whole name as one string), and native surname_list for several surnames. " +
+        "name (the whole name as one string), citation_list and note_list (handles or Gramps IDs) citing and " +
+        "explaining the name, and native surname_list for several surnames. " +
         "Name types and origins must be standard Gramps ones or custom ones the tree already uses. " +
         "camelCase forms work too; any other field is an error, not ignored. " +
         "Multiple names in one string: separate with newlines (not |).";

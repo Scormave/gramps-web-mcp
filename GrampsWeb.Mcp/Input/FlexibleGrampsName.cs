@@ -26,6 +26,8 @@ public sealed class FlexibleGrampsName
         "call (preferred call name), nick, famnick, " +
         "type (name type: Birth Name/Married Name/Also Known As/…), " +
         "name (the whole name as one string, instead of given and surname), " +
+        "citation_list and note_list (handles or Gramps IDs) citing and explaining the name, such as the record " +
+        "that gives this spelling, " +
         "and native Gramps fields such as surname_list for several surnames " +
         "([{surname, prefix, connector, origintype, primary}], see gramps://input-guide). " +
         "Name types and origins must be standard Gramps ones or custom ones the tree already uses. " +

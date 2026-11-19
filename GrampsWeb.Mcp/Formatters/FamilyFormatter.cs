@@ -22,6 +22,8 @@ public static class FamilyFormatter
             ("media", GrampsMediaRef.ToHandleStrings(family.MediaList)),
             ("notes", family.NoteList),
             ("citations", family.CitationList),
+            ("citations", family.ChildRefList?.SelectMany(child => child.CitationList ?? [])),
+            ("notes", family.ChildRefList?.SelectMany(child => child.NoteList ?? [])),
         ]);
         var relLabel = string.IsNullOrWhiteSpace(family.Relationship)
             ? "Unknown"
@@ -54,16 +56,7 @@ public static class FamilyFormatter
                 var who = FindProfile(profile?.Children, i, child.Ref) is { } childProfile
                     ? PersonFormatter.FormatProfilePerson(childProfile, child.Ref!)
                     : $"[handle: {child.Ref}]";
-                var line = $"  • {who} | frel: {frel}, mrel: {mrel}";
-                if (child.Private)
-                    line += " ⚠ private (child link)";
-                if (child.TagList is { Length: > 0 } ctags)
-                {
-                    var th = string.Join(", ", ctags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
-                    if (!string.IsNullOrEmpty(th))
-                        line += $" | tags on link: {th}";
-                }
-                sb.AppendLine(line);
+                AppendChildLine(sb, $"  • {who} | frel: {frel}, mrel: {mrel}", child, labels);
             }
         }
         else
@@ -113,6 +106,25 @@ public static class FamilyFormatter
             ? PersonFormatter.FormatProfilePerson(profile, handle)
             : $"[handle: {handle.Trim()}]";
         sb.AppendLine($"{label}: {who}");
+    }
+
+    /// <summary>
+    /// A child's line with the privacy and tags of its link, then the citations and notes on the link, each list on
+    /// its own indented line and named by <paramref name="labels"/> where it has them.
+    /// </summary>
+    private static void AppendChildLine(StringBuilder sb, string line, GrampsChildRef? childRef,
+        IReadOnlyDictionary<string, string>? labels = null)
+    {
+        if (childRef?.Private == true)
+            line += " ⚠ private (child link)";
+        var tags = childRef?.TagList?.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList();
+        if (tags is { Count: > 0 })
+            line += $" | tags on link: {string.Join(", ", tags)}";
+        sb.AppendLine(line);
+        if (HandleListFormatter.FormatInline(childRef?.CitationList, labels) is { } citations)
+            sb.AppendLine($"    Citations on link: {citations}");
+        if (HandleListFormatter.FormatInline(childRef?.NoteList, labels) is { } notes)
+            sb.AppendLine($"    Notes on link: {notes}");
     }
 
     /// <summary>Profile children line up with child_ref_list; the handle confirms the match.</summary>
@@ -189,16 +201,7 @@ public static class FamilyFormatter
                 var childRef = family.ChildRefList?.FirstOrDefault(cr => cr.Ref == child.Handle);
                 var frel = childRef?.FatherRelType ?? "Birth";
                 var mrel = childRef?.MotherRelType ?? "Birth";
-                var line = $"  • {summary} [handle: {child.Handle}] (frel: {frel}, mrel: {mrel})";
-                if (childRef?.Private == true)
-                    line += " ⚠ private (child link)";
-                if (childRef?.TagList is { Length: > 0 } xtags)
-                {
-                    var th = string.Join(", ", xtags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
-                    if (!string.IsNullOrEmpty(th))
-                        line += $" | tags on link: {th}";
-                }
-                sb.AppendLine(line);
+                AppendChildLine(sb, $"  • {summary} [handle: {child.Handle}] (frel: {frel}, mrel: {mrel})", childRef);
             }
         }
         else if (family.ChildRefList?.Length > 0)
@@ -209,16 +212,7 @@ public static class FamilyFormatter
             {
                 var frel = child.FatherRelType ?? "Birth";
                 var mrel = child.MotherRelType ?? "Birth";
-                var line = $"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}";
-                if (child.Private)
-                    line += " ⚠ private (child link)";
-                if (child.TagList is { Length: > 0 } ctags)
-                {
-                    var th = string.Join(", ", ctags.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()));
-                    if (!string.IsNullOrEmpty(th))
-                        line += $" | tags on link: {th}";
-                }
-                sb.AppendLine(line);
+                AppendChildLine(sb, $"  • [handle: {child.Ref}] frel: {frel}, mrel: {mrel}", child);
             }
         }
         else

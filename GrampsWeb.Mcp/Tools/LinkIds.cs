@@ -89,6 +89,7 @@ internal sealed class LinkIds
         {
             var childRef = refs![i];
             One(field, childRef.Ref, "people", handle => childRef.Ref = handle);
+            CitationsAndNotes($"{field}[{i}]", childRef.CitationList, childRef.NoteList);
             Handles($"{field}[{i}].tag_list", childRef.TagList, "tags");
         }
 

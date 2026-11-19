@@ -270,11 +270,15 @@ public static class PersonTools
     public static async Task<string> UpdatePerson(
         [Description("The person to change. " + ToolDescriptionFragments.HandleDiscovery)]
         string identifier,
-        [Description("New primary name; replaces the whole current one. " + ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleGrampsName.DescriptionHint)]
+        [Description("New primary name; replaces the whole current one, except that its citations and notes stay " +
+                     "unless the new name sends citation_list or note_list ([] removes them). " +
+                     ToolDescriptionFragments.OmitToKeepScalar + " " + FlexibleGrampsName.DescriptionHint)]
         FlexibleGrampsName? primaryName = null,
         [Description("Gender: Female, Male, or Unknown. " + ToolDescriptionFragments.OmitToKeepScalar)]
         string? gender = null,
-        [Description("Alternate names. " + ToolDescriptionFragments.ReplacedListOnUpdate + " " + FlexibleAlternateNameList.DescriptionHint)]
+        [Description("Alternate names. " + ToolDescriptionFragments.ReplacedListOnUpdate + " A name with the type, " +
+                     "given name and surnames of a current one keeps that one's citations and notes unless it sends " +
+                     "citation_list or note_list. " + FlexibleAlternateNameList.DescriptionHint)]
         FlexibleAlternateNameList? alternateNames = null,
         [Description("Events this person takes part in, with roles. In replace mode the list must hold every event the person keeps. " + ToolDescriptionFragments.LinkListOnUpdate + " " + FlexibleEventRefList.DescriptionHint + " " + FlexibleEventRefList.UpdateHint)]
         FlexibleEventRefList? eventRefs = null,
@@ -337,9 +341,9 @@ public static class PersonTools
                 return NotFoundHelper.NotFoundMessage("Person", identifier);
 
             if (primaryName?.Name != null)
-                person.Set("primary_name", ConvertNameToRequest(primaryName.Name));
+                person.SetPrimaryName(ConvertNameToRequest(primaryName.Name));
             person.Set("gender", GrampsGenderParser.ParseOptional(gender));
-            person.Set("alternate_names", ((GrampsName[]?)alternateNames)?.Select(ConvertNameToRequest).ToArray());
+            person.ReplaceAlternateNames(((GrampsName[]?)alternateNames)?.Select(ConvertNameToRequest).ToArray());
             person.ApplyRefs("event_ref_list", (EventRefRequest[]?)eventRefs, linkMode, r => r.BareHandle);
             person.ApplyHandles("family_list", familyHandles, linkMode);
             person.ApplyHandles("parent_family_list", parentFamilyHandles, linkMode);

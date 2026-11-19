@@ -23,6 +23,12 @@ public class GrampsChildRef
     [JsonPropertyName("private")]
     public bool Private { get; set; }
 
+    [JsonPropertyName("citation_list")]
+    public string[]? CitationList { get; set; }
+
+    [JsonPropertyName("note_list")]
+    public string[]? NoteList { get; set; }
+
     [JsonPropertyName("tag_list")]
     [JsonConverter(typeof(GrampsHandleStringArrayConverter))]
     public string[]? TagList { get; set; }

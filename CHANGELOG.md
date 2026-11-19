@@ -20,6 +20,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   person. Gramps Web keeps them; the reply names them under
   `Kept, but no record links to them now` with their handles and
   Gramps IDs, so the agent can ask the user whether to delete them too
+- A child's link to a family takes citations and notes: `childRefs` in
+  `create_records` and `update_family` accept `citation_list` and
+  `note_list` with handles, Gramps IDs or `"#key"`, such as the
+  adoption record behind `frel: "Adopted"`. `get_records` lists them
+  under the child as `Citations on link` and `Notes on link`. In `add`
+  mode a stored child link gains the ones it lacks; in `replace` mode
+  it keeps its own unless the link sends a list, and `[]` removes them
+- `get_records` shows the citations and notes of each name of a person
+  under that name, and the name hints of `create_records` and
+  `update_person` describe `citation_list` and `note_list`
 - A [migration guide from 2.x](GrampsWeb.Mcp/docs/MIGRATING_TO_3.md)
   maps every renamed and removed tool and argument to its 3.0 call,
   shows which saved `update_*` calls need `linkMode: "replace"`, and
@@ -124,6 +134,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   a tag field rejects one
 - `merge_records` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
+- `update_person` keeps the citations and notes of a person's names. A
+  new `primaryName` keeps those of the stored primary name, and an
+  alternate name with the type, given name and surnames of a stored
+  one keeps that one's, unless the name sends `citation_list` or
+  `note_list`; `[]` removes them. Before, the new name replaced the
+  stored one whole, and its citations and notes were lost
 
 ### Fixed
 

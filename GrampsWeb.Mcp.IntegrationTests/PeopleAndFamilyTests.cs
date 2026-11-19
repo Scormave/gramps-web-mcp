@@ -74,6 +74,72 @@ public sealed class PeopleAndFamilyTests(GrampsWebFixture gramps)
     }
 
     [IntegrationFact]
+    public async Task ChildLink_CarriesCitationsAndNotes()
+    {
+        var child = await CreatePersonAsync("Petr", TestNames.Surname(), "male");
+        var citation = await CreateCitationAsync("No. 7");
+        var note = await Session.CreateAsync("notes", new { text = TestNames.Unique("adoption") });
+
+        var family = await Session.CreateAsync("families", new
+        {
+            relationshipType = "Married",
+            childRefs = new object[]
+            {
+                new { @ref = child.Handle, frel = "Adopted", mrel = "Adopted", citation_list = new[] { citation.GrampsId }, note_list = new[] { note.GrampsId } }
+            }
+        });
+
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { family.GrampsId } });
+        Assert.Matches($@"Citations on link: .*\[handle: {citation.Handle}\]", stored);
+        Assert.Matches($@"Notes on link: .*\[handle: {note.Handle}\]", stored);
+
+        // Replacing the child list keeps the link's citations and notes unless the link sends its own.
+        await Session.CallAsync("update_family", new
+        {
+            identifier = family.Handle,
+            childRefs = new object[] { new { @ref = child.Handle, frel = "Adopted", mrel = "Birth", note_list = Array.Empty<string>() } },
+            linkMode = "replace"
+        });
+        var replaced = await Session.CallAsync("get_records", new { identifiers = new[] { family.GrampsId } });
+        Assert.Contains("frel: Adopted, mrel: Birth", replaced);
+        Assert.Matches($@"Citations on link: .*\[handle: {citation.Handle}\]", replaced);
+        Assert.DoesNotContain("Notes on link:", replaced);
+    }
+
+    [IntegrationFact]
+    public async Task Names_CarryCitationsThroughUpdates()
+    {
+        var surname = TestNames.Surname();
+        var primary = await CreateCitationAsync("f. 12");
+        var alias = await CreateCitationAsync("f. 13");
+        var person = await Session.CreateAsync("people", new
+        {
+            primaryName = new { first = "Ivan", surname, citation_list = new[] { primary.GrampsId } },
+            alternateNames = new object[] { new { type = "Also Known As", first = "John", surname, citation_list = new[] { alias.Handle } } },
+            gender = "male"
+        });
+
+        await Session.CallAsync("update_person", new
+        {
+            identifier = person.Handle,
+            primaryName = new { first = "Ivan", surname, title = "Dr." },
+            alternateNames = new object[] { new { type = "Also Known As", first = "John", surname, nick = "Jack" } }
+        });
+
+        var stored = await Session.CallAsync("get_records", new { identifiers = new[] { person.GrampsId } });
+        Assert.Contains("title:   Dr.", stored);
+        Assert.Contains("nick:    Jack", stored);
+        Assert.Matches($@"citations: .*\[handle: {primary.Handle}\]", stored);
+        Assert.Matches($@"citations: .*\[handle: {alias.Handle}\]", stored);
+    }
+
+    private async Task<CreatedRecord> CreateCitationAsync(string page)
+    {
+        var source = await Session.CreateAsync("sources", new { title = TestNames.Unique("register") });
+        return await Session.CreateAsync("citations", new { sourceHandle = source.Handle, page });
+    }
+
+    [IntegrationFact]
     public async Task UpdateFamily_SortsChildrenByBirth()
     {
         // The son was born in 1890 and added first, the daughter in 1885.

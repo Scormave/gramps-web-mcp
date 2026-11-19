@@ -30,6 +30,18 @@ public static class HandleListFormatter
             sb.AppendLine(FormatBullet(h, labels));
     }
 
+    /// <summary>
+    /// The handles on one line, <c>label [handle: …]; [handle: …]</c>, each named where <paramref name="labels"/> has
+    /// it; null when there are none.
+    /// </summary>
+    internal static string? FormatInline(string[]? handles, IReadOnlyDictionary<string, string>? labels = null)
+    {
+        var items = handles?.Where(h => !string.IsNullOrWhiteSpace(h)).Select(h => h.Trim()).ToList() ?? [];
+        return items.Count == 0
+            ? null
+            : string.Join("; ", items.Select(h => labels?.GetValueOrDefault(h) is { } label ? $"{label} [handle: {h}]" : $"[handle: {h}]"));
+    }
+
     /// <summary><c>  • label [handle: …]</c>, or <c>  • [handle: …]</c> when <paramref name="labels"/> does not name it.</summary>
     internal static string FormatBullet(string handle, IReadOnlyDictionary<string, string>? labels) =>
         labels?.GetValueOrDefault(handle) is { } label

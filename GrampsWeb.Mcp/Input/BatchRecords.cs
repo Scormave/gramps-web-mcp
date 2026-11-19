@@ -184,7 +184,8 @@ public sealed class FamilyRecord : BatchRecord
     [Description("Children in birth order, kept as given: handles, Gramps IDs or #keys, each optionally with its relation to the " +
                  "father and the mother as \"#key::Adopted\" (both) or {ref, frel, mrel} (default Birth). A relation must " +
                  "be a standard Gramps one (Birth, Adopted, Stepchild, Sponsored, Foster, Unknown, None) or a custom one " +
-                 "the tree already uses.")]
+                 "the tree already uses. An object's citation_list and note_list (handles, Gramps IDs or #keys) cite and " +
+                 "explain the child's link to the family, such as an adoption record.")]
     public FlexibleChildRefList? ChildRefs { get; init; }
 
     [JsonPropertyName("eventRefs")]

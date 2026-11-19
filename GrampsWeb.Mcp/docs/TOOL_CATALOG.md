@@ -97,7 +97,11 @@ notes, citations, tags, media, events, children, families, parent families,
 person associations, repository references and enclosing places where supported.
 Names, attributes, addresses and URLs still use replacement semantics; the
 attributes of event and media links follow `linkMode` with their link (see
-[Link attributes](#link-attributes)).
+[Link attributes](#link-attributes)). A new primary name keeps the citations
+and notes of the stored one, and an alternate name keeps those of the stored
+alternate name with the same type, given name and surnames (several alike are
+matched in order), unless it sends its own `citation_list` or `note_list`;
+`[]` removes them.
 
 ```text
 update_person(identifier: "PERSON_HANDLE", noteHandles: ["NOTE_HANDLE"])
@@ -108,7 +112,8 @@ update_family(identifier: "FAMILY_HANDLE", childRefs: ["CHILD_HANDLE"], linkMode
 `add` appends the links whose handles are not linked yet, once each, in input
 order. A link that is already stored takes the fields the call sends for it
 (role, `frel` and `mrel`, call number, media type, date, region) and gains the
-citations, notes and attributes it lacks; everything else on it stays. So the
+citations, notes and attributes it lacks, such as a citation on a child's link
+to the family; everything else on it stays. So the
 second example above makes the person a witness of an event they are already
 linked to, and keeps that link's citations and notes. A bare handle changes
 nothing on a stored link: the default role of an event (`Primary`, `Family` for
@@ -305,8 +310,9 @@ Name objects in `primaryName` and `alternateNames` (of the people of
 `create_records` and of `update_person`) take the shortcut fields
 `given`, `surname`, `prefix`, `connector`, `origin_type`, `patronymic`,
 `matronymic` and `name` (the whole name as one string) together with the
-native Gramps name fields (`first_name`, `surname_list`, `title`, `type` and
-the rest), in snake_case or camelCase: `firstName`, `surnameList` and
+native Gramps name fields (`first_name`, `surname_list`, `title`, `type`,
+`citation_list` and `note_list` for the records that give the name, and the
+rest), in snake_case or camelCase: `firstName`, `surnameList` and
 `originType` work too. Any other field is refused with an error that names it
 and lists the accepted fields, instead of being dropped, and so are two fields
 for the same thing (`given` and `first_name`), `name` with `given`, `surname`
@@ -1124,7 +1130,7 @@ does not exist, so nothing is saved. Children keep the order given in
 | `fatherHandle` | `string?` | no | — | Father: handle or Gramps ID, or `"#key"` of a person of the call |
 | `motherHandle` | `string?` | no | — | Mother: handle or Gramps ID, or `"#key"` of a person of the call |
 | `relationshipType` | `string?` | no | `"Unknown"` | Married, Unmarried, Civil Union, Unknown; Unknown by default, as in Gramps, so pass Married when a source records the marriage |
-| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs by handle or Gramps ID (`{ref, frel, mrel}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types` |
+| `childRefs` | `FlexibleChildRefList?` | no | — | Child refs by handle or Gramps ID (`{ref, frel, mrel, citation_list, note_list}` or `"HANDLE::RelType"`; default: `Birth`, sets both `frel`/`mrel`); relations are checked against `child_reference_types`; `citation_list` and `note_list` (handles, Gramps IDs or `"#key"`) cite and explain the child's link to the family, such as an adoption record |
 | `eventRefs` | `FlexibleEventRefList?` | no | — | Event refs by handle or Gramps ID, with role metadata (`{ref, role}` or `"HANDLE::Role"`, default role: `Family`); an object may carry the link's own `attributes`; see [Link attributes](#link-attributes) |
 | `mediaHandles` | `FlexibleMediaLinkList?` | no | — | Media handles or Gramps IDs, or `{ref, region, attributes}` objects; see [Image regions](#image-regions) and [Link attributes](#link-attributes) |
 | `citationHandles`, `noteHandles`, `tagHandles` | `FlexibleHandleList?` | no | — | Handles or Gramps IDs; tags by handle |

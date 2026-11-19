@@ -182,7 +182,13 @@ relations of its stored link. 2.x reset it to `Primary` (`Family` for a
 family's events) or `Birth`.
 
 Names, attributes, addresses and URLs still replace their whole lists,
-whatever `linkMode` says.
+whatever `linkMode` says. A name now keeps its citations and notes, though:
+a new `primaryName` keeps those of the stored primary name, and an
+alternate name with the type, given name and surnames of a stored one keeps
+that one's, unless the name sends `citation_list` or `note_list`, where `[]`
+removes them. 2.x lost them whenever `update_person` replaced a name. A
+child's link in `childRefs` keeps its citations and notes the same way in
+`replace` mode.
 
 ## Use Gramps IDs in link fields
 

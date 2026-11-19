@@ -42,7 +42,14 @@ public static class JsonElementPropertyReader
         return false;
     }
 
-    public static string[]? GetStringArray(JsonElement element, params string[] aliases)
+    public static string[]? GetStringArray(JsonElement element, params string[] aliases) =>
+        GetStringArrayOrEmpty(element, aliases) is { Length: > 0 } list ? list : null;
+
+    /// <summary>
+    /// Like <see cref="GetStringArray"/>, but an empty array gives an empty array, so a caller can tell a list sent
+    /// as <c>[]</c> from a missing one.
+    /// </summary>
+    public static string[]? GetStringArrayOrEmpty(JsonElement element, params string[] aliases)
     {
         foreach (var prop in element.EnumerateObject())
         {
@@ -61,7 +68,7 @@ public static class JsonElementPropertyReader
                         list.Add(el.GetString() ?? string.Empty);
                 }
 
-                return list.Count > 0 ? list.ToArray() : null;
+                return list.ToArray();
             }
         }
 

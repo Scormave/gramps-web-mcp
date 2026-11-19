@@ -29,6 +29,8 @@ public sealed class GrampsChildRefJsonConverter : JsonConverter<GrampsChildRef?>
                 MotherRelType = JsonElementPropertyReader.GetString(
                     root, "mrel", "motherRel", "mother_rel", "motherRelationship"),
                 Private = JsonElementPropertyReader.GetBool(root, "private"),
+                CitationList = JsonElementPropertyReader.GetStringArrayOrEmpty(root, "citation_list", "citationList"),
+                NoteList = JsonElementPropertyReader.GetStringArrayOrEmpty(root, "note_list", "noteList"),
                 TagList = JsonElementPropertyReader.GetStringArray(root, "tag_list", "tagList")
             };
         }
@@ -53,15 +55,22 @@ public sealed class GrampsChildRefJsonConverter : JsonConverter<GrampsChildRef?>
             writer.WriteString("mrel", value.MotherRelType);
         if (value.Private)
             writer.WriteBoolean("private", true);
-        if (value.TagList is { Length: > 0 })
-        {
-            writer.WritePropertyName("tag_list");
-            writer.WriteStartArray();
-            foreach (var t in value.TagList)
-                writer.WriteStringValue(t);
-            writer.WriteEndArray();
-        }
+        // An empty citation or note list is written, so replacing a stored child link with one removes them.
+        WriteHandles(writer, "citation_list", value.CitationList, writeEmpty: true);
+        WriteHandles(writer, "note_list", value.NoteList, writeEmpty: true);
+        WriteHandles(writer, "tag_list", value.TagList, writeEmpty: false);
 
         writer.WriteEndObject();
+    }
+
+    private static void WriteHandles(Utf8JsonWriter writer, string name, string[]? handles, bool writeEmpty)
+    {
+        if (handles is null || (handles.Length == 0 && !writeEmpty))
+            return;
+        writer.WritePropertyName(name);
+        writer.WriteStartArray();
+        foreach (var handle in handles)
+            writer.WriteStringValue(handle);
+        writer.WriteEndArray();
     }
 }

@@ -181,13 +181,15 @@ public static class GrampsValueFormatter
     }
 
     /// <summary>
-    /// Returns a multi-line indented breakdown of a name showing each component with its label.
+    /// Returns a multi-line indented breakdown of a name showing each component with its label, then the name's
+    /// citations and notes, named by <paramref name="labels"/> where it has them.
     /// Each line starts with <paramref name="indent"/>.
     /// </summary>
     public static string FormatNameDetailed(
         GrampsName? name,
         string indent = "    ",
-        IReadOnlyList<string>? originTypeLabels = null)
+        IReadOnlyList<string>? originTypeLabels = null,
+        IReadOnlyDictionary<string, string>? labels = null)
     {
         if (name == null)
             return $"{indent}(no name data)";
@@ -245,9 +247,15 @@ public static class GrampsValueFormatter
         if (!string.IsNullOrEmpty(name.Suffix))
             lines.Add($"{indent}suffix:  {name.Suffix}");
 
-        return lines.Count > 0
-            ? string.Join(Environment.NewLine, lines)
-            : $"{indent}(empty name)";
+        var nameLines = lines.Count;
+        if (HandleListFormatter.FormatInline(name.CitationList, labels) is { } citations)
+            lines.Add($"{indent}citations: {citations}");
+        if (HandleListFormatter.FormatInline(name.NoteList, labels) is { } notes)
+            lines.Add($"{indent}notes:   {notes}");
+        if (nameLines == 0)
+            lines.Insert(0, $"{indent}(empty name)");
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     public static string FormatPlace(GrampsPlace place)

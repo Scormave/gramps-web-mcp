@@ -5,6 +5,7 @@ using GrampsWeb.Mcp.Client;
 using GrampsWeb.Mcp.Exceptions;
 using GrampsWeb.Mcp.Input;
 using GrampsWeb.Mcp.Models;
+using GrampsWeb.Mcp.Requests;
 using GrampsWeb.Mcp.Serialization;
 
 namespace GrampsWeb.Mcp.Tools;
@@ -381,6 +382,74 @@ internal sealed class GrampsObjectPatch
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Sets <c>primary_name</c> to the supplied name. The stored name keeps its citations and notes unless the
+    /// supplied one sends its own; an empty list removes them.
+    /// </summary>
+    public void SetPrimaryName(GrampsNameRequest? supplied)
+    {
+        if (supplied is null)
+            return;
+        var name = (JsonObject)ToNode(supplied)!;
+        Root["primary_name"] = Root["primary_name"] is JsonObject stored ? KeepCitationsAndNotes(stored, name) : name;
+    }
+
+    /// <summary>
+    /// Replaces <c>alternate_names</c> with the supplied names. A name with the type, given name and surnames of a
+    /// stored one keeps that one's citations and notes unless it sends its own; an empty list removes them. Several
+    /// stored names alike are matched in order.
+    /// </summary>
+    public void ReplaceAlternateNames(GrampsNameRequest[]? supplied)
+    {
+        if (supplied is null)
+            return;
+        var stored = (Root["alternate_names"] as JsonArray)?.ToArray() ?? [];
+        var used = new bool[stored.Length];
+        var result = new JsonArray();
+        foreach (var name in supplied.Select(n => (JsonObject)ToNode(n)!))
+        {
+            var index = FindUnused(stored, used, NameKey(name)!, NameKey);
+            if (index >= 0 && stored[index] is JsonObject match)
+            {
+                used[index] = true;
+                result.Add(KeepCitationsAndNotes(match, name));
+            }
+            else
+            {
+                result.Add(name);
+            }
+        }
+
+        Root["alternate_names"] = result;
+    }
+
+    private static JsonObject KeepCitationsAndNotes(JsonObject stored, JsonObject supplied)
+    {
+        foreach (var list in (string[])["citation_list", "note_list"])
+        {
+            if (!supplied.ContainsKey(list) && stored[list] is JsonArray kept)
+                supplied[list] = kept.DeepClone();
+        }
+
+        return supplied;
+    }
+
+    /// <summary>
+    /// A name's type (Birth Name when unset, as Gramps stores it), given name and surnames with their prefixes and
+    /// connectors; title, call name, nicknames, suffix and date may change without breaking the match.
+    /// </summary>
+    private static string? NameKey(JsonNode? node)
+    {
+        if (node is not JsonObject name)
+            return null;
+        var type = TypeString(name["type"])?.Trim() is { Length: > 0 } t ? t : "Birth Name";
+        var surnames = (name["surname_list"] as JsonArray ?? []).OfType<JsonObject>()
+            .Select(s => $"{Text(s["prefix"])}\u0001{Text(s["surname"])}\u0001{Text(s["connector"])}");
+        return string.Join('\0', [type, Text(name["first_name"]), .. surnames]);
+
+        static string Text(JsonNode? value) => StringValue(value)?.Trim() ?? "";
     }
 
     /// <summary>The nested object at <paramref name="key"/>, created when missing or not an object.</summary>

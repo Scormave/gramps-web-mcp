@@ -509,7 +509,7 @@ public sealed class GrampsResources
 
     private static object BuildLinkUpdatesGuidePayload() => new
     {
-        applies_to = "Link-list parameters on update_person, update_family, update_event, update_place, update_source, update_citation, update_note, update_media, and update_repository. Names, attributes, addresses, and URLs always use replacement semantics; an attribute with the same type and value as a stored one keeps its citations, notes, and privacy. The attributes of event and media links follow linkMode with their link.",
+        applies_to = "Link-list parameters on update_person, update_family, update_event, update_place, update_source, update_citation, update_note, update_media, and update_repository. Names, attributes, addresses, and URLs always use replacement semantics; an attribute with the same type and value as a stored one keeps its citations, notes, and privacy. A new primary name keeps the stored one's citations and notes, and an alternate name keeps those of the stored alternate name with the same type, given name, and surnames, unless it sends citation_list or note_list ([] removes them). The attributes of event and media links follow linkMode with their link.",
         link_mode = new
         {
             add = "Default. Appends each reference whose handle is not linked yet, once. A reference already stored takes the fields the call sends for it (role, frel and mrel, call number, media type, date, region) and gains the citations, notes, and attributes it lacks; everything else stays. A bare handle changes nothing on a stored reference: its default role or Birth relations apply only to a new one. When a handle is linked more than once, a reference with a role updates the stored one with that role first, otherwise the first one the call has not updated. [] changes nothing.",
@@ -532,6 +532,7 @@ public sealed class GrampsResources
             "update_family(identifier: \"FAMILY_HANDLE\", childRefs: [\"CHILD_HANDLE\"], linkMode: \"remove\")",
             "update_event(identifier: \"EVENT_HANDLE\", citationHandles: [\"CITATION_HANDLE\"], linkMode: \"add\")",
             "update_family(identifier: \"F0023\", childRefs: [\"I0045\"])",
+            "update_family(identifier: \"F0023\", childRefs: [{ref: \"I0045\", frel: \"Adopted\", citation_list: [\"C0012\"]}])",
             "update_person(identifier: \"PERSON_HANDLE\", eventRefs: [\"EVENT_HANDLE::Witness\"])"
         }
     };
@@ -573,7 +574,8 @@ public sealed class GrampsResources
                     "(1) Simple string — optional 'NameType:: given|surname' or 'given surname' (last word is surname). " +
                     "Plain strings only split into given + surname and cannot create structured name parts like patronymic, prefix, connector, origin_type, title, suffix, call, nick, or famnick. " +
                     "(2) Object with the fields below, freely mixed with the native Gramps name fields " +
-                    "(first_name, surname_list, date, citation_list, note_list, group_as, sort_as, display_as; see name_schema). " +
+                    "(first_name, surname_list, date, citation_list, note_list, group_as, sort_as, display_as; see name_schema); " +
+                    "citation_list and note_list (handles or Gramps IDs) cite and explain the name itself, such as the record that gives this spelling. " +
                     "Field names may be snake_case or camelCase (firstName, surnameList, originType). " +
                     "Any other field is rejected with an error that names it, so a misspelt field is never dropped silently; " +
                     "so are two fields for the same thing (given and first_name) and an object with no name in it. " +
@@ -615,7 +617,7 @@ public sealed class GrampsResources
                     "{\"first_name\":\"John\",\"surname_list\":[{\"surname\":\"Doe\",\"primary\":true}]}",
                     "{\"firstName\":\"Fyodor\",\"surnameList\":[{\"surname\":\"Probnyakin\"},{\"surname\":\"Ivanovich\",\"originType\":\"Patronymic\"}]}"
                 },
-                tools = "create_records (people[].primaryName, required), update_person (primaryName optional)"
+                tools = "create_records (people[].primaryName, required), update_person (primaryName optional; the stored name's citations and notes stay unless the new name sends citation_list or note_list)"
             },
             alternate_names = new
             {

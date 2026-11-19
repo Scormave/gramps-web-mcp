@@ -72,12 +72,15 @@ public static class PersonFormatter
             ("notes", person.NoteList),
             ("citations", person.CitationList),
             ("people", person.PersonRefList?.Select(pr => pr.Ref!)),
+            ("citations", AllNames(person).SelectMany(n => n.CitationList ?? [])),
+            ("notes", AllNames(person).SelectMany(n => n.NoteList ?? [])),
         ]);
         var nameTypeLabelsTask = GrampsDefaultTypeLabels.LoadNameTypeLabelsAsync(client);
         var nameOriginTypeLabelsTask = GrampsDefaultTypeLabels.LoadNameOriginTypeLabelsAsync(client);
-        await Task.WhenAll(nameTypeLabelsTask, nameOriginTypeLabelsTask).ConfigureAwait(false);
+        await Task.WhenAll(nameTypeLabelsTask, nameOriginTypeLabelsTask, labelsTask).ConfigureAwait(false);
         var nameTypeLabels = await nameTypeLabelsTask.ConfigureAwait(false);
         var nameOriginTypeLabels = await nameOriginTypeLabelsTask.ConfigureAwait(false);
+        var labels = await labelsTask.ConfigureAwait(false);
 
         var sb = new StringBuilder();
         var name = person.PrimaryName;
@@ -91,12 +94,11 @@ public static class PersonFormatter
         {
             var nameTypeLabel = GrampsDefaultTypeLabels.ResolveStored(name.Type, nameTypeLabels);
             sb.AppendLine($"Primary name [{nameTypeLabel}]: {displayName}");
-            sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(name, originTypeLabels: nameOriginTypeLabels));
+            sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(name, originTypeLabels: nameOriginTypeLabels, labels: labels));
         }
 
         await AppendBirthDeathHeaderLinesAsync(sb, person, client, preloadedExtendedEvents: null).ConfigureAwait(false);
 
-        var labels = await labelsTask.ConfigureAwait(false);
         HandleListFormatter.AppendHandleBulletSection(sb, "Tags", person.TagList, labels);
         AppendPersonRelationshipsHandleSections(sb, person, labels);
 
@@ -124,7 +126,7 @@ public static class PersonFormatter
             {
                 var typeLabel = GrampsDefaultTypeLabels.ResolveStored(n.Type, nameTypeLabels);
                 sb.AppendLine($"  • [{typeLabel}] {GrampsValueFormatter.FormatName(n)}");
-                sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(n, originTypeLabels: nameOriginTypeLabels));
+                sb.AppendLine(GrampsValueFormatter.FormatNameDetailed(n, originTypeLabels: nameOriginTypeLabels, labels: labels));
             }
         }
 
@@ -585,6 +587,9 @@ public static class PersonFormatter
         AttributeListFormatter.AppendSection(sb, list);
 
     /// <param name="labels">Names of the related people by handle; others are shown as "related person".</param>
+    private static IEnumerable<GrampsName> AllNames(GrampsPerson person) =>
+        (person.PrimaryName is { } primary ? [primary] : Enumerable.Empty<GrampsName>()).Concat(person.AlternateNames ?? []);
+
     private static void AppendPersonAssociationsSection(
         StringBuilder sb, GrampsPersonRef[]? list, IReadOnlyDictionary<string, string>? labels = null)
     {
