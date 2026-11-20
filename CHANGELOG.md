@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.11.2] - 2026-11-20
+
 ### Fixed
 
 - Gramps IDs in a custom format, set in the tree's preferences, such as
@@ -1437,7 +1439,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.2...HEAD
+[2.11.2]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.1...v2.11.2
 [2.11.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...v2.11.0
 [2.10.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...v2.10.1
