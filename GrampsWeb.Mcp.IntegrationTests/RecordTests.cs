@@ -1,3 +1,7 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace GrampsWeb.Mcp.IntegrationTests;
@@ -70,6 +74,54 @@ public sealed class RecordTests(GrampsWebFixture gramps)
         var citations = await Session.CallAsync("list_records", new { objectType = "citations", sourceHandle = source.Handle });
         Assert.Contains("Total: 1", citations);
         Assert.Contains(citation.Handle, citations);
+    }
+
+    [IntegrationFact]
+    public async Task GrampsIdInACustomFormat_ResolvesInArgumentsOfItsType()
+    {
+        var title = TestNames.Surname() + " census";
+        var source = await Session.CreateAsync("sources", new { title });
+        // A tree can set its own ID format in the Gramps preferences; the MCP tools cannot, so set it as Gramps does.
+        var customId = "S_" + TestNames.Surname().ToUpperInvariant();
+        await SetGrampsIdAsync("sources", source.Handle, customId);
+
+        var citation = await Session.CreateAsync("citations", new { sourceHandle = customId, page = "f. 3" });
+
+        var citations = await Session.CallAsync("list_records", new { objectType = "citations", sourceHandle = customId });
+        Assert.Contains("Total: 1", citations);
+        Assert.Contains(citation.Handle, citations);
+        var read = await Session.CallAsync("get_records", new { identifiers = new[] { customId }, objectType = "source" });
+        Assert.Contains(title, read);
+        Assert.Contains(source.Handle, read);
+        var missing = await Session.CallAsync("list_records", new { objectType = "citations", sourceHandle = "S_" + TestNames.Surname() });
+        Assert.StartsWith("Source not found: S_", missing);
+    }
+
+    /// <summary>Gives a record another Gramps ID through the Gramps Web API, as the Gramps Web front end saves it.</summary>
+    private async Task SetGrampsIdAsync(string collection, string handle, string grampsId)
+    {
+        using var http = new HttpClient(new TokenRoutePacer(new TokenRequestLog(), new HttpClientHandler()))
+        {
+            BaseAddress = new Uri(gramps.ApiUrl)
+        };
+        using var signIn = await http.PostAsJsonAsync(
+            "/api/token/",
+            new { username = GrampsWebFixture.OwnerName, password = gramps.OwnerPassword });
+        signIn.EnsureSuccessStatusCode();
+        var tokens = await signIn.Content.ReadFromJsonAsync<JsonElement>();
+        var bearer = new AuthenticationHeaderValue("Bearer", tokens.GetProperty("access_token").GetString());
+
+        using var get = new HttpRequestMessage(HttpMethod.Get, $"/api/{collection}/{handle}");
+        get.Headers.Authorization = bearer;
+        using var stored = await http.SendAsync(get);
+        stored.EnsureSuccessStatusCode();
+        var record = (await stored.Content.ReadFromJsonAsync<JsonObject>())!;
+        record["gramps_id"] = grampsId;
+
+        using var put = new HttpRequestMessage(HttpMethod.Put, $"/api/{collection}/{handle}") { Content = JsonContent.Create(record) };
+        put.Headers.Authorization = bearer;
+        using var saved = await http.SendAsync(put);
+        saved.EnsureSuccessStatusCode();
     }
 
     [IntegrationFact]

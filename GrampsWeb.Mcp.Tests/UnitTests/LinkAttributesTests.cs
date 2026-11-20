@@ -75,7 +75,7 @@ public class LinkAttributesTests
     {
         var handler = new TreeHandler();
 
-        await CreatePerson("""[{"ref":"h-event","role":"primary","attributes":["age: 65"]}]""", handler);
+        await CreatePerson("""[{"ref":"h-event-00000001","role":"primary","attributes":["age: 65"]}]""", handler);
 
         var link = CreateRecordsCall.Saved(handler.Body, "Person")["event_ref_list"]![0]!;
         Assert.Equal("Primary", link["role"]!.GetValue<string>());
@@ -88,7 +88,7 @@ public class LinkAttributesTests
         var handler = new TreeHandler();
 
         var error = await Assert.ThrowsAsync<McpException>(() =>
-            CreatePerson("""[{"ref":"h-event","attributes":["Agee: 65"]}]""", handler));
+            CreatePerson("""[{"ref":"h-event-00000001","attributes":["Agee: 65"]}]""", handler));
 
         Assert.StartsWith("Error: people[0]: eventRefs: Invalid attribute types 'Agee'.", error.Message);
         Assert.Contains("Age", error.Message);

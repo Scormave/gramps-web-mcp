@@ -47,7 +47,7 @@ public static async Task<string> ToolName(
     try
     {
         // 1. Resolve Gramps ID → handle (if applicable)
-        var resolved = await HandleResolver.ResolveToHandleAsync(handle, client);
+        var resolved = await HandleResolver.ResolveToHandleAsync(handle, client, "people");
         // 2. Validate input (use KnownTypes.ResolveAsync for type strings)
         // 3. Call client
         // 4. Format and return (use NotFoundHelper for 404s)
@@ -81,7 +81,8 @@ Key rules:
   values, and the default.
 - Use constants from `ToolDescriptionFragments` for consistent documentation.
 - Handle parameters should accept both handles and Gramps IDs — use
-  `HandleResolver.ResolveToHandleAsync` to normalize.
+  `HandleResolver.ResolveToHandleAsync` with the collection the parameter
+  links (`"people"`), so IDs in custom formats resolve too.
 - For not-found responses, use `NotFoundHelper.NotFoundMessage` to provide
   contextual hints.
 
@@ -160,8 +161,9 @@ objects and return formatted strings.
    which also returns the type in its known spelling. Check names, attributes,
    URLs, child links and repository links with the `KnownTypes.Check…Async`
    methods, before `client.BeginUpdateAsync()` on update tools.
-7. For handle parameters, use `HandleResolver.ResolveToHandleAsync` so
-   agents can pass either handles or Gramps IDs.
+7. For handle parameters, use `HandleResolver.ResolveToHandleAsync` with the
+   collection the parameter links, so agents can pass either handles or
+   Gramps IDs in any format.
 8. For not-found cases, return `NotFoundHelper.NotFoundMessage(type, id)`.
 9. If the tool changes how an agent should work through the tree, update
    `Hosting/GrampsServerInstructions.cs`; name a write tool only in its

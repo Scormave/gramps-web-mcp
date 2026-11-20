@@ -520,7 +520,7 @@ public class DuplicatePeopleTests
     private static Task<string> CreateIvan(TreeHandler handler, string? notDuplicateOf = null) =>
         CreateRecordsCall.RunAsync($$"""
             { "people": [{ "primaryName": { "given": "Иван", "surname": "Образцов", "patronymic": "Петрович" },
-                           "gender": "Male", "eventRefs": ["e-birth"], "notDuplicateOf": {{notDuplicateOf ?? "null"}} }] }
+                           "gender": "Male", "eventRefs": ["e-birth-00000001"], "notDuplicateOf": {{notDuplicateOf ?? "null"}} }] }
             """, CreateClient(handler));
 
     private static bool Matches(string pythonPattern, string text) =>
@@ -584,7 +584,7 @@ public class DuplicatePeopleTests
     }
 
     /// <summary>
-    /// Serves the vocabularies, a Birth event of 1880 as e-birth and <paramref name="people"/> to the people search;
+    /// Serves the vocabularies, a Birth event of 1880 as e-birth-00000001 and <paramref name="people"/> to the people search;
     /// records the requests and answers a POST as Gramps Web does.
     /// </summary>
     private sealed class TreeHandler(string people, HttpStatusCode searchStatus = HttpStatusCode.OK, int? total = null)
@@ -625,7 +625,7 @@ public class DuplicatePeopleTests
                     { "event_role_types": ["Primary", "Witness"], "name_origin_types": ["Unknown", "Inherited", "Patronymic"] }
                     """),
                 "/api/types/custom/" => Json("{}"),
-                "/api/events/e-birth" => Json("""{ "handle": "e-birth", "type": "Birth", "date": { "dateval": [0, 0, 1880, false] } }"""),
+                "/api/events/e-birth-00000001" => Json("""{ "handle": "e-birth-00000001", "type": "Birth", "date": { "dateval": [0, 0, 1880, false] } }"""),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound)
             };
         }

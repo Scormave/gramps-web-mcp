@@ -14,7 +14,7 @@ internal static class GrampsServerInstructions
 
         Finding and reading:
         - With a name or other text, start with search; to browse or filter one type, use list_records. Read records with get_records, all the ones you need in one call.
-        - Gramps IDs show the type by prefix: I person, F family, E event, P place, S source, C citation, R repository, N note, O media; tags have none. Arguments that take one record and link lists (…Handles, …Refs) accept a Gramps ID or a handle; tags are given by handle.
+        - Gramps IDs in the default format show the type by prefix: I person, F family, E event, P place, S source, C citation, R repository, N note, O media; tags have no Gramps ID. Arguments that take one record and link lists (…Handles, …Refs) accept a Gramps ID, also in a custom format such as S_ABC, or a handle; tags are given by handle.
         - Kinship: get_person_tree for ancestors or descendants, get_relations for how two people are related, get_timeline for the dated events around a person, family or place; list_records with rules selects by kinship across the tree, such as everyone related to a person or people with no family links.
         - find_duplicates lists people who may be entered twice, across spellings, Cyrillic and Latin letters, and the male and female forms of their names.
         - Report what the tree records, and say so when something is not recorded instead of guessing.

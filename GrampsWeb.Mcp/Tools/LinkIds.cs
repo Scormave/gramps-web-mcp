@@ -7,9 +7,11 @@ namespace GrampsWeb.Mcp.Tools;
 
 /// <summary>
 /// Replaces the Gramps IDs in a tool's link fields by handles before anything is saved. Each field links one type,
-/// so an ID is looked up in that type's collection, whatever its prefix; a field that links tags rejects IDs, since
-/// tags have none. Handles and <c>#key</c> values stay as they are. Collect the fields, then call
-/// <see cref="ResolveAsync"/>, which reports every ID it could not resolve in one error.
+/// so every value that is not shaped like a handle is looked up by Gramps ID in that type's collection, whatever its
+/// format or prefix, such as I0001 or S_ABC; a value no record has as its ID stays if a record has it as its handle.
+/// A field that links tags takes only handles, since tags have no Gramps ID. Handle-shaped values and <c>#key</c>
+/// values stay as they are. Collect the fields, then call <see cref="ResolveAsync"/>, which reports every value it
+/// could not resolve in one error.
 /// </summary>
 internal sealed class LinkIds
 {
@@ -21,7 +23,7 @@ internal sealed class LinkIds
     public LinkIds One(string field, string? value, string collection, Action<string> setHandle)
     {
         var id = value?.Trim();
-        if (id is not null && HandleResolver.LooksLikeGrampsId(id))
+        if (id is not null && !id.StartsWith('#') && HandleResolver.MayBeGrampsId(id))
             _pending.Add(new Pending(field, collection, id, setHandle));
         return this;
     }
@@ -151,8 +153,9 @@ internal sealed class LinkIds
         Handles($"{field}.citation_list", citations, "citations").Handles($"{field}.note_list", notes, "notes");
 
     /// <summary>
-    /// Looks up every collected ID in the collection of its field and puts the handles in place. Throws one
-    /// validation error naming each field and ID that has no record, ending with <paramref name="nothingDone"/>.
+    /// Looks up every collected value in the collection of its field and puts the handles in place. A value in the
+    /// default ID format must be a Gramps ID; any other value may also be the handle of a record of that type. Throws
+    /// one validation error naming each field and value that has no record, ending with <paramref name="nothingDone"/>.
     /// </summary>
     public async Task ResolveAsync(GrampsApiClient client, string nothingDone = "Nothing was saved.")
     {
@@ -163,10 +166,10 @@ internal sealed class LinkIds
         var problems = new List<string>();
         foreach (var pending in _pending)
         {
-            var key = (pending.Collection, pending.Id.ToUpperInvariant());
+            var key = (pending.Collection, pending.Id);
             if (!found.TryGetValue(key, out var handle))
             {
-                handle = await HandleResolver.FindHandleAsync(pending.Id, pending.Collection, client);
+                handle = await FindAsync(pending.Id, pending.Collection, client);
                 found[key] = handle;
                 if (handle is null)
                     problems.Add(Problem(pending));
@@ -180,6 +183,22 @@ internal sealed class LinkIds
             throw McpToolErrors.ValidationError($"Error: {string.Join(" ", problems)} {nothingDone}");
     }
 
+    /// <summary>
+    /// The handle of the record of <paramref name="collection"/> with this Gramps ID, or, for a value outside the
+    /// default ID format, the value itself when it is the handle of such a record; null when neither.
+    /// </summary>
+    private static async Task<string?> FindAsync(string id, string collection, GrampsApiClient client)
+    {
+        if (await HandleResolver.FindHandleAsync(id, collection, client) is { } handle)
+            return handle;
+        if (HandleResolver.LooksLikeGrampsId(id))
+            return null;
+
+        var record = await client.GetJsonOrNullIfNotFoundAsync(
+            $"/api/{collection}/{Uri.EscapeDataString(id)}?keys=handle");
+        return record is null ? null : id;
+    }
+
     private static string Problem(Pending pending)
     {
         if (pending.Collection == "tags")
@@ -187,7 +206,9 @@ internal sealed class LinkIds
                    "from list_records(objectType: \"tags\").";
 
         var noun = Noun(pending.Collection);
-        var prefixType = HandleResolver.PrefixToObjectType(pending.Id[0]);
+        var prefixType = HandleResolver.LooksLikeGrampsId(pending.Id)
+            ? HandleResolver.PrefixToObjectType(pending.Id[0])
+            : null;
         var hint = prefixType is not null && prefixType != pending.Collection
             ? $" {pending.Id[0]} is the prefix of {prefixType}, and {pending.Field} links {pending.Collection}."
             : "";

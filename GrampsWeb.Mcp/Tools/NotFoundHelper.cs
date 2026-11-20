@@ -27,29 +27,43 @@ internal static class NotFoundHelper
     /// <summary>
     /// Builds a not-found message. For an identifier that looks like a Gramps ID, the hint says
     /// whether its prefix belongs to another object type, or else that no object of this type has
-    /// the ID and how to find one.
+    /// the ID and how to find one. For another identifier that does not look like a handle, such as
+    /// an ID in a custom format, it says that no object of this type has it as Gramps ID or handle.
     /// </summary>
     public static string NotFoundMessage(string objectType, string identifier)
     {
         var msg = $"{objectType} not found: {identifier}";
 
-        if (HandleResolver.LooksLikeGrampsId(identifier))
+        if (string.Equals(objectType, "Tag", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!HandleResolver.LooksLikeHandle(identifier))
+                msg += "\n\nHint: Tags have no Gramps ID; find the tag's handle with list_records(objectType: \"tags\").";
+        }
+        else if (HandleResolver.LooksLikeGrampsId(identifier))
         {
             msg += "\n\nHint: " + GrampsIdHint(objectType, identifier);
         }
-        else if (identifier.Length < 5)
+        else if (!HandleResolver.LooksLikeHandle(identifier))
         {
-            msg += $"\n\nHint: This identifier is very short. Handles are typically 20+ character strings. " +
-                   $"If you meant a Gramps ID (like I0001), include the type prefix letter.";
+            msg += "\n\nHint: " + OtherIdentifierHint(objectType, identifier);
         }
 
         return msg;
     }
 
+    private static string OtherIdentifierHint(string objectType, string identifier)
+    {
+        var noun = Kinds.TryGetValue(objectType, out var kind) ? kind.Noun : objectType.ToLowerInvariant();
+        var hint = $"No {noun} has the Gramps ID or handle {identifier}.";
+        if (identifier.All(char.IsAsciiDigit))
+            hint += " Gramps IDs in the default format start with the type letter, such as I0001.";
+        return kind is null
+            ? hint
+            : $"{hint} Find the {noun} with search, or browse list_records(objectType: \"{kind.Collection}\").";
+    }
+
     private static string GrampsIdHint(string objectType, string id)
     {
-        if (string.Equals(objectType, "Tag", StringComparison.OrdinalIgnoreCase))
-            return "Tags have no Gramps ID; find the tag's handle with list_records(objectType: \"tags\").";
         if (!Kinds.TryGetValue(objectType, out var wanted))
             return $"No {objectType.ToLowerInvariant()} has Gramps ID {id}.";
 

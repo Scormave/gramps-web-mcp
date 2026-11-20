@@ -19,17 +19,17 @@ public class CreatePersonVitalIndexTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/events/?handles=e-baptism,e-birth,e-death,e-birth-2&page=1&pagesize=4"] = """
+            ["/api/events/?handles=e-baptism-000001,e-birth-00000001,e-death-00000001,e-birth-2-000001&page=1&pagesize=4"] = """
                 [
-                  { "handle": "e-baptism", "type": "Baptism" },
-                  { "handle": "e-birth", "type": "Birth" },
-                  { "handle": "e-death", "type": "Death" },
-                  { "handle": "e-birth-2", "type": "Birth" }
+                  { "handle": "e-baptism-000001", "type": "Baptism" },
+                  { "handle": "e-birth-00000001", "type": "Birth" },
+                  { "handle": "e-death-00000001", "type": "Death" },
+                  { "handle": "e-birth-2-000001", "type": "Birth" }
                 ]
                 """
         });
 
-        await CreatePerson("""["e-baptism", "e-birth", "e-son-death::Witness", "e-death", "e-birth-2"]""", handler);
+        await CreatePerson("""["e-baptism-000001", "e-birth-00000001", "e-son-death-0001::Witness", "e-death-00000001", "e-birth-2-000001"]""", handler);
 
         Assert.Equal(1, Person(handler)["birth_ref_index"]!.GetValue<int>());
         Assert.Equal(3, Person(handler)["death_ref_index"]!.GetValue<int>());
@@ -40,12 +40,12 @@ public class CreatePersonVitalIndexTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/events/e-birth"] = """{ "handle": "e-birth", "type": "Birth" }"""
+            ["/api/events/e-birth-00000001"] = """{ "handle": "e-birth-00000001", "type": "Birth" }"""
         });
 
-        await CreatePerson("""["e-child-birth::Father", "e-birth"]""", handler);
+        await CreatePerson("""["e-child-birth-01::Father", "e-birth-00000001"]""", handler);
 
-        Assert.Equal(["/api/events/e-birth"], handler.Requests.Where(p => p.StartsWith("/api/events/", StringComparison.Ordinal)));
+        Assert.Equal(["/api/events/e-birth-00000001"], handler.Requests.Where(p => p.StartsWith("/api/events/", StringComparison.Ordinal)));
         Assert.Equal(1, Person(handler)["birth_ref_index"]!.GetValue<int>());
         Assert.Equal(-1, Person(handler)["death_ref_index"]!.GetValue<int>());
     }
@@ -55,7 +55,7 @@ public class CreatePersonVitalIndexTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await CreatePerson("""["e-child-birth::Father"]""", handler);
+        await CreatePerson("""["e-child-birth-01::Father"]""", handler);
 
         Assert.DoesNotContain(handler.Requests, p => p.StartsWith("/api/events/", StringComparison.Ordinal));
         Assert.Equal(-1, Person(handler)["birth_ref_index"]!.GetValue<int>());

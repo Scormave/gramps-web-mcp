@@ -79,21 +79,21 @@ public class EventRefOrderTests
                 }
                 """,
             ["/api/types/default/"] = """{ "event_role_types": ["Primary", "Family"] }""",
-            ["/api/events/?handles=e-marriage,e-divorce,e-banns&page=1&pagesize=3"] = """
+            ["/api/events/?handles=e-marriage,e-divorce,e-banns-00000001&page=1&pagesize=3"] = """
                 [
                   { "handle": "e-marriage", "type": "Marriage", "date": { "dateval": [11, 11, 1866, false] } },
                   { "handle": "e-divorce", "type": "Divorce", "date": { "dateval": [0, 0, 1900, false] } },
-                  { "handle": "e-banns", "type": "Marriage Banns", "date": { "dateval": [20, 10, 1866, false] } }
+                  { "handle": "e-banns-00000001", "type": "Marriage Banns", "date": { "dateval": [20, 10, 1866, false] } }
                 ]
                 """
         });
 
         await FamilyTools.UpdateFamily("h-family",
-            eventRefs: JsonSerializer.Deserialize<FlexibleEventRefList>("""["e-banns::Family"]"""),
+            eventRefs: JsonSerializer.Deserialize<FlexibleEventRefList>("""["e-banns-00000001::Family"]"""),
             client: CreateClient(handler), linkMode: "add", sort: Sort("Events"));
 
         Assert.Equal(
-            ["e-banns", "e-marriage", "e-divorce"],
+            ["e-banns-00000001", "e-marriage", "e-divorce"],
             handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["ref"]!.GetValue<string>()));
     }
 

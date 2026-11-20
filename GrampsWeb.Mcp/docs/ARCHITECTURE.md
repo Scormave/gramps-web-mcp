@@ -328,11 +328,12 @@ The MCP SDK discovers prompts at startup via `WithPrompts<GrampsPrompts>()`.
 `ExtendedEntityEnrichment` refetches nested objects for `?extend=all` responses
 where the API doesn't deeply populate references, one batch per object type.
 
-`HandleResolver` detects Gramps ID patterns (e.g. `I0001`, `F0023`) and
-resolves them to opaque API handles via a list-endpoint query. This lets
+`HandleResolver` resolves Gramps IDs (e.g. `I0001`, `F0023`, or a custom
+format such as `S_ABC`) to opaque API handles via a list-endpoint query of the
+type the parameter links; handle-shaped values skip the lookup. This lets
 agents pass either handles or Gramps IDs to any tool parameter. Successful
 resolutions are kept in the static `HandleCache` for 10 minutes, keyed by API
-URL, tree ID, and Gramps ID; concurrent lookups of the same ID share one
+URL, tree ID, type, and Gramps ID; concurrent lookups of the same ID share one
 request.
 
 `GrampsTypeVocabularies` keeps Gramps type vocabularies between tool calls.

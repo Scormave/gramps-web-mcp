@@ -16,19 +16,19 @@ public class PlaceTimelineToolTests
     {
         var handler = new PlaceHandler(new Dictionary<string, string>
         {
-            ["/api/places/place-h?backlinks=true"] = """
-                { "handle": "place-h", "gramps_id": "P0001", "name": { "value": "Tver" },
+            ["/api/places/place-handle-0001?backlinks=true"] = """
+                { "handle": "place-handle-0001", "gramps_id": "P0001", "name": { "value": "Tver" },
                   "backlinks": { "event": ["e1", "e2", "e3", "gone"] } }
                 """,
             // "gone" was deleted; e3 now points to another place.
             ["/api/events/?handles=e1,e2,e3,gone&profile=participants&page=1&pagesize=4"] = """
                 [
-                  { "handle": "e2", "gramps_id": "E0002", "type": "Death", "place": "place-h",
+                  { "handle": "e2", "gramps_id": "E0002", "type": "Death", "place": "place-handle-0001",
                     "date": { "dateval": [0, 0, 1950, false] },
                     "profile": { "participants": { "people": [
                       { "role": "Primary", "person": { "name_display": "Ivanov, Pyotr", "gramps_id": "I0002" } }
                     ] } } },
-                  { "handle": "e1", "gramps_id": "E0001", "type": "Birth", "place": "place-h",
+                  { "handle": "e1", "gramps_id": "E0001", "type": "Birth", "place": "place-handle-0001",
                     "date": { "dateval": [0, 0, 1900, false] },
                     "profile": { "participants": { "people": [
                       { "role": "Primary", "person": { "name_display": "Ivanov, Pyotr", "gramps_id": "I0002" } },
@@ -41,7 +41,7 @@ public class PlaceTimelineToolTests
 
         string result;
         using (GrampsReadScope.Begin())
-            result = await TimelineTools.GetTimeline("place", "place-h", client: CreateClient(handler));
+            result = await TimelineTools.GetTimeline("place", "place-handle-0001", client: CreateClient(handler));
 
         Assert.StartsWith("Place: Tver (P0001)\nTimeline (2 events):", result.Replace("\r\n", "\n"));
         Assert.Contains("Ivanov, Pyotr (I0002), Petrov, Ivan (I0003) [Witness]", result);
@@ -52,7 +52,7 @@ public class PlaceTimelineToolTests
             result);
         Assert.Equal(
             [
-                "/api/places/place-h?backlinks=true",
+                "/api/places/place-handle-0001?backlinks=true",
                 "/api/events/?handles=e1,e2,e3,gone&profile=participants&page=1&pagesize=4",
             ],
             handler.Requests);
@@ -63,15 +63,15 @@ public class PlaceTimelineToolTests
     {
         var handler = new PlaceHandler(new Dictionary<string, string>
         {
-            ["/api/places/place-h?backlinks=true"] = """
-                { "handle": "place-h", "gramps_id": "P0001", "name": { "value": "Orkney" },
+            ["/api/places/place-handle-0001?backlinks=true"] = """
+                { "handle": "place-handle-0001", "gramps_id": "P0001", "name": { "value": "Orkney" },
                   "backlinks": { "event": ["e-dec", "e-jan"] } }
                 """,
             ["/api/events/?handles=e-dec,e-jan&profile=participants&page=1&pagesize=2"] = """
                 [
-                  { "handle": "e-dec", "type": "Death", "place": "place-h",
+                  { "handle": "e-dec", "type": "Death", "place": "place-handle-0001",
                     "date": { "dateval": [5, 12, 960, false], "sortval": 2071999 } },
-                  { "handle": "e-jan", "type": "Birth", "place": "place-h",
+                  { "handle": "e-jan", "type": "Birth", "place": "place-handle-0001",
                     "date": { "dateval": [3, 1, 960, false], "sortval": 2071667 } }
                 ]
                 """,
@@ -79,7 +79,7 @@ public class PlaceTimelineToolTests
 
         string result;
         using (GrampsReadScope.Begin())
-            result = await TimelineTools.GetTimeline("place", "place-h", client: CreateClient(handler));
+            result = await TimelineTools.GetTimeline("place", "place-handle-0001", client: CreateClient(handler));
 
         Assert.Contains("Timeline (2 events):", result);
         Assert.True(

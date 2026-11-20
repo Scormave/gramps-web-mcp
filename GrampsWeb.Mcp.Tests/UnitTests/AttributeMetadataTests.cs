@@ -25,12 +25,12 @@ public class AttributeMetadataTests
 
         await CreateRecordsCall.RunAsync("""
             { "people": [{ "primaryName": { "given": "Ivan", "surname": "Petrov" },
-                           "attributes": [{ "type": "Occupation", "value": "Smith", "citation_list": ["c1"], "note_list": ["n1"], "private": true },
+                           "attributes": [{ "type": "Occupation", "value": "Smith", "citation_list": ["c1-0000000000001"], "note_list": ["n1-0000000000001"], "private": true },
                                           "Nickname: Vanya"] }] }
             """, CreateClient(handler));
 
         AssertJsonEqual(JsonNode.Parse("""
-            [{ "type": "Occupation", "value": "Smith", "citation_list": ["c1"], "note_list": ["n1"], "private": true },
+            [{ "type": "Occupation", "value": "Smith", "citation_list": ["c1-0000000000001"], "note_list": ["n1-0000000000001"], "private": true },
              { "type": "Nickname", "value": "Vanya", "private": false }]
             """), CreateRecordsCall.Saved(handler.PostBody, "Person")["attribute_list"]);
     }
@@ -58,7 +58,7 @@ public class AttributeMetadataTests
     {
         var handler = new RecordingHandler();
         var client = CreateClient(handler);
-        const string attributesJson = """[{ "type": "Pages", "value": "120", "note_list": ["n1"] }]""";
+        const string attributesJson = """[{ "type": "Pages", "value": "120", "note_list": ["n1-0000000000001"] }]""";
         var attributes = Deserialize<FlexibleAttributeList>(attributesJson);
 
         var error = await Assert.ThrowsAsync<McpException>(() => tool switch

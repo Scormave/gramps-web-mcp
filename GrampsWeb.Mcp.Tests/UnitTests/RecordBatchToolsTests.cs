@@ -41,7 +41,7 @@ public class RecordBatchToolsTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/people/?gramps_id=I0007&pagesize=1"] = """[{ "handle": "h-mother", "gramps_id": "I0007" }]"""
+            ["/api/people/?gramps_id=I0007&pagesize=1"] = """[{ "handle": "h-mother-0000001", "gramps_id": "I0007" }]"""
         });
 
         await CreateRecords(Family, handler);
@@ -64,7 +64,7 @@ public class RecordBatchToolsTests
         Assert.Equal(handles[3], petr["event_ref_list"]![0]!["ref"]!.GetValue<string>());
         Assert.Equal(handles[5], ivan["person_ref_list"]![0]!["ref"]!.GetValue<string>());
         Assert.Equal(handles[6], family["father_handle"]!.GetValue<string>());
-        Assert.Equal("h-mother", family["mother_handle"]!.GetValue<string>());
+        Assert.Equal("h-mother-0000001", family["mother_handle"]!.GetValue<string>());
         Assert.Equal(handles[4], family["event_ref_list"]![0]!["ref"]!.GetValue<string>());
         Assert.Equal(handles[5], family["child_ref_list"]![0]!["ref"]!.GetValue<string>());
         Assert.DoesNotContain("\"#", handler.Body.ToJsonString().Replace("\"#1 in the book\"", ""));
@@ -188,8 +188,8 @@ public class RecordBatchToolsTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/events/?handles=e-baptism,e-death&page=1&pagesize=2"] = """
-                [{ "handle": "e-baptism", "type": "Baptism" }, { "handle": "e-death", "type": "Death" }]
+            ["/api/events/?handles=e-baptism-000001,e-death-00000001&page=1&pagesize=2"] = """
+                [{ "handle": "e-baptism-000001", "type": "Baptism" }, { "handle": "e-death-00000001", "type": "Death" }]
                 """
         });
 
@@ -197,7 +197,7 @@ public class RecordBatchToolsTests
             {
               "events": [{ "key": "birth", "eventType": "Birth" }, { "key": "burial", "eventType": "Burial" }],
               "people": [
-                { "primaryName": "Ivan Petrov", "eventRefs": ["e-baptism", "#burial", "#birth", "e-death"] },
+                { "primaryName": "Ivan Petrov", "eventRefs": ["e-baptism-000001", "#burial", "#birth", "e-death-00000001"] },
                 { "primaryName": "Anna Petrova", "eventRefs": ["#birth::Witness"] }
               ]
             }
@@ -208,7 +208,7 @@ public class RecordBatchToolsTests
         Assert.Equal(3, people[0]!["death_ref_index"]!.GetValue<int>());
         Assert.Equal(-1, people[1]!["birth_ref_index"]!.GetValue<int>());
         Assert.Equal(-1, people[1]!["death_ref_index"]!.GetValue<int>());
-        Assert.Equal(["/api/events/?handles=e-baptism,e-death&page=1&pagesize=2"],
+        Assert.Equal(["/api/events/?handles=e-baptism-000001,e-death-00000001&page=1&pagesize=2"],
             handler.Requests.Where(p => p.StartsWith("/api/events/", StringComparison.Ordinal)));
     }
 
@@ -243,8 +243,8 @@ public class RecordBatchToolsTests
         var handler = new TreeHandler
         {
             ExtraChanges = """
-                [{ "_class": "Person", "handle": "h-mother", "type": "update", "old": {},
-                   "new": { "_class": "Person", "handle": "h-mother", "gramps_id": "I0007",
+                [{ "_class": "Person", "handle": "h-mother-0000001", "type": "update", "old": {},
+                   "new": { "_class": "Person", "handle": "h-mother-0000001", "gramps_id": "I0007",
                             "primary_name": { "_class": "Name", "first_name": "Maria",
                                               "type": { "_class": "NameType", "value": 2, "string": "" },
                                               "surname_list": [{ "_class": "Surname", "surname": "Petrova",
@@ -265,7 +265,7 @@ public class RecordBatchToolsTests
                 { "key": "ivan", "primaryName": "Ivan Petrov", "eventRefs": ["#birth"] },
                 { "key": "anna", "primaryName": "Anna Petrova" }
               ],
-              "families": [{ "fatherHandle": "#ivan", "motherHandle": "h-mother" }]
+              "families": [{ "fatherHandle": "#ivan", "motherHandle": "h-mother-0000001" }]
             }
             """, handler);
 
@@ -277,7 +277,7 @@ public class RecordBatchToolsTests
         Assert.Contains($"Family: Unknown — handle: {handles[5]} | gramps_id: F0006", result);
         Assert.Equal("Unknown", handler.Body!.AsArray()[5]!["type"]!.GetValue<string>());
         Assert.Contains("Existing records that now link back to a new family (1):", result);
-        Assert.Contains("Person: Maria Petrova — handle: h-mother | gramps_id: I0007", result);
+        Assert.Contains("Person: Maria Petrova — handle: h-mother-0000001 | gramps_id: I0007", result);
         Assert.Contains("Not linked from any record of this call (2): notes[0], events[1] (key death).", result);
         Assert.Contains("people[1] (key anna) is in no new family", result);
         Assert.DoesNotContain("people[0]", result);
@@ -286,11 +286,11 @@ public class RecordBatchToolsTests
     [Fact]
     public async Task CreateRecords_Saves_New_Tags_First_And_Links_Them_By_Key()
     {
-        var handler = new TreeHandler { Tags = """[{ "handle": "h-old", "name": "Checked", "color": "#00ff00", "priority": 0 }]""" };
+        var handler = new TreeHandler { Tags = """[{ "handle": "h-old-0000000001", "name": "Checked", "color": "#00ff00", "priority": 0 }]""" };
 
         var result = (await CreateRecords("""
             {
-              "notes": [{ "text": "Read in 2026", "tagHandles": ["#todo", "h-old"] }],
+              "notes": [{ "text": "Read in 2026", "tagHandles": ["#todo", "h-old-0000000001"] }],
               "people": [{ "key": "ivan", "primaryName": "Ivan Petrov", "tagHandles": ["#todo"] }],
               "tags": [{ "key": "todo", "name": " To check ", "color": "FF5733", "priority": 2 }, { "name": "Spare" }]
             }
@@ -305,7 +305,7 @@ public class RecordBatchToolsTests
         Assert.Null(todo["gramps_id"]);
         Assert.Equal("#000000", spare["color"]!.GetValue<string>());
         var todoHandle = todo["handle"]!.GetValue<string>();
-        Assert.Equal([todoHandle, "h-old"], note["tag_list"]!.AsArray().Select(t => t!.GetValue<string>()));
+        Assert.Equal([todoHandle, "h-old-0000000001"], note["tag_list"]!.AsArray().Select(t => t!.GetValue<string>()));
         Assert.Equal([todoHandle], person["tag_list"]!.AsArray().Select(t => t!.GetValue<string>()));
 
         Assert.Contains($"Tag: To check — handle: {todoHandle} | key: todo\n", result);
@@ -332,7 +332,7 @@ public class RecordBatchToolsTests
     {
         var handler = new TreeHandler();
 
-        await CreateRecords("""{ "notes": [{ "text": "x", "tagHandles": ["h-old"] }] }""", handler);
+        await CreateRecords("""{ "notes": [{ "text": "x", "tagHandles": ["h-old-0000000001"] }] }""", handler);
 
         Assert.DoesNotContain("/api/tags/", handler.Requests);
     }
@@ -393,15 +393,15 @@ public class RecordBatchToolsTests
         var handler = new TreeHandler
         {
             Refusal = (HttpStatusCode.UnprocessableEntity,
-                """{"error": {"code": 422, "message": "Family references a person that does not exist: h-missing"}}""")
+                """{"error": {"code": 422, "message": "Family references a person that does not exist: h-missing-000001"}}""")
         };
 
         var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords("""
-            { "families": [{ "fatherHandle": "h-missing" }] }
+            { "families": [{ "fatherHandle": "h-missing-000001" }] }
             """, handler));
 
         Assert.StartsWith("Gramps Web refused the call and saved none of the records. Gramps API error 422", error.Message);
-        Assert.Contains("Family references a person that does not exist: h-missing", error.Message);
+        Assert.Contains("Family references a person that does not exist: h-missing-000001", error.Message);
     }
 
     [Fact]
@@ -436,10 +436,10 @@ public class RecordBatchToolsTests
     {
         var handler = new TreeHandler
         {
-            People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Образцов", 1, fatherHandle: "h-petr")}]"
+            People = $"[{DuplicatePeopleTests.Person("h-ivan", "I0012", "Иван", "Образцов", 1, fatherHandle: "h-petr-000000001")}]"
         };
 
-        var result = await CreateRecords(Ivan(families: """[{ "fatherHandle": "h-petr", "childRefs": ["#ivan"] }]"""), handler);
+        var result = await CreateRecords(Ivan(families: """[{ "fatherHandle": "h-petr-000000001", "childRefs": ["#ivan"] }]"""), handler);
 
         Assert.Empty(handler.Posts);
         Assert.Contains("same name and parents, no birth years to compare", result);

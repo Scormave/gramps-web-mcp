@@ -46,7 +46,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   API version
 - **Breaking:** `delete_object` is replaced by `delete_records`, which
   deletes up to 50 records of any types in one call. `identifiers` takes
-  Gramps IDs or handles; `objectType` is needed only for handles. The
+  Gramps IDs or handles; `objectType` is needed only for handles and IDs
+  in a custom format, and then names the type of all of them. The
   records are checked together, and nothing is deleted when one is
   missing or, without `force`, when records outside the call link to
   them; links between the records of one call need no `force`. With
@@ -83,7 +84,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   name the new tools
 - **Breaking:** `get_records` reads up to 20 records of any types in one
   call: `identifiers`, an array, replaces `identifier`, and `objectType`
-  is needed only for handles. The records come back in the order given,
+  is needed only for handles and IDs in a custom format, and then names
+  the type of all of them. The records come back in the order given,
   separated by a line `---`; a repeated identifier is read once, and a
   record the tree lacks gets its not-found message in its place while
   the others are still read. `extended` applies to the people and
@@ -138,12 +140,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `eventRefs`, `childRefs`, `personAssociations`, `enclosedBy`,
   `fatherHandle`, `motherHandle`, `placeHandle`, `sourceHandle`, and the
   citations and notes of names, attributes, addresses and links. Each
-  field links one type, so an ID is looked up among those records,
-  whatever its prefix. An ID that no such record has stops the call
-  before anything is saved, with an error that names the field and the
-  ID, and the type the prefix belongs to when that is another one, such
-  as `noteHandles: there is no note I0012`. Tags have no Gramps ID, so
-  a tag field rejects one
+  field links one type, so a value that is not shaped like a handle is
+  looked up among those records by its Gramps ID, whatever its format
+  or prefix, such as `I0001` or `S_ABC`, and kept if a record of that
+  type has it as its handle. A value that no such record has stops the
+  call before anything is saved, with an error that names the field and
+  the value, and the type the prefix belongs to when that is another
+  one, such as `noteHandles: there is no note I0012`. Tags have no
+  Gramps ID, so a tag field takes only tag handles.
+  `attachTo` of `upload_media` and `update_media` also takes such a
+  value as a handle when no record has it as its Gramps ID
 - `merge_records` no longer explains a bare HTTP 404 as a server older
   than API 3.15; such a server is refused before the merge
 - The replies no longer carry text for servers older than API 3.23,
@@ -169,6 +175,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   on to Gramps Web unchanged
 - A Gramps ID starting with `T`, such as `T0001`, was looked up as a tag
   and ended in a server error: tags have no Gramps ID
+
+## [2.11.2] - 2026-11-20
+
+### Fixed
+
+- Gramps IDs in a custom format, set in the tree's preferences, such as
+  `S_ABC` or `P-0001`, were taken for handles: `list_objects` with
+  `sourceHandle` listed no citations of the source, and other tools did
+  not find the record (#27). Every argument that names one type of
+  record now looks a value that is not shaped like a handle up among the
+  records of that type, whatever its format or prefix; `get_object` and
+  `get_recent_changes` take such an ID with `objectType`, and `attachTo`
+  of `create_media` and `update_media` looks it up in each type it can
+  link. An `objectType` that disagrees with the prefix of an ID in the
+  default format is no longer rejected, since a tree may give its
+  records other prefixes. Handles skip the lookup as before, and a
+  lookup takes only the record with exactly this ID
+- `list_objects` with a `sourceHandle` that names no source returns
+  `Source not found` with a hint instead of an empty list of citations
+- Tags have no Gramps ID, but a tag argument shaped like one, such as
+  `T0001`, was looked up by `gramps_id`, which Gramps Web API 3.26
+  answers with HTTP 500. Tag arguments are now always handles, and a
+  missing tag's hint says that tags have no Gramps ID
 
 ## [2.11.1] - 2026-11-19
 
@@ -1580,7 +1609,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.1...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.2...HEAD
+[2.11.2]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.1...v2.11.2
 [2.11.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...v2.11.0
 [2.10.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.0...v2.10.1

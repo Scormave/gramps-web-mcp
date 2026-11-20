@@ -6,19 +6,19 @@ namespace GrampsWeb.Mcp.Client;
 
 /// <summary>
 /// Static utility to detect Gramps ID patterns and resolve them to opaque API handles.
-/// Gramps IDs follow patterns like I0001 (person), F0023 (family), E0005 (event), etc.
-/// Handles are opaque strings (hex-like, typically 20+ chars).
+/// Gramps IDs follow patterns like I0001 (person), F0023 (family), E0005 (event), etc. by default, and trees
+/// may use other formats, such as S_ABC. Handles are opaque strings (hex-like, typically 20+ chars).
 /// </summary>
 public static class HandleResolver
 {
     /// <summary>
-    /// Returns <c>true</c> if the value looks like a Gramps ID
-    /// (exactly 1 uppercase letter followed by 1+ digits, e.g. I0001, F23, P0005).
-    /// Returns <c>false</c> for handles (longer hex strings), empty strings, etc.
+    /// Returns <c>true</c> if the value looks like a Gramps ID in the default format
+    /// (exactly 1 uppercase letter followed by 1 to 14 digits, e.g. I0001, F23, I00000001).
+    /// Returns <c>false</c> for handles (longer hex strings), empty strings, IDs in other formats, etc.
     /// </summary>
     public static bool LooksLikeGrampsId(string value)
     {
-        if (string.IsNullOrEmpty(value) || value.Length < 2 || value.Length > 8)
+        if (string.IsNullOrEmpty(value) || value.Length < 2 || value.Length > 15)
             return false;
 
         if (value[0] < 'A' || value[0] > 'Z')
@@ -44,6 +44,13 @@ public static class HandleResolver
         && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
 
     /// <summary>
+    /// Returns <c>true</c> if the value may be a Gramps ID of a record of a known type: an ID in the default
+    /// format, or any value that does not look like a handle, such as an ID in a custom format (S_ABC).
+    /// </summary>
+    public static bool MayBeGrampsId(string value) =>
+        !string.IsNullOrWhiteSpace(value) && (LooksLikeGrampsId(value) || !LooksLikeHandle(value));
+
+    /// <summary>
     /// Maps a single-letter Gramps ID prefix to the API object type used in list endpoints.
     /// Prefixes follow the Gramps defaults; media objects use <c>'O'</c>, not <c>'M'</c>, and tags have no Gramps ID.
     /// </summary>
@@ -67,7 +74,10 @@ public static class HandleResolver
 
     /// <summary>
     /// Tries to resolve a possible Gramps ID to an opaque handle by querying the API.
-    /// If the value doesn't look like a Gramps ID, returns it as-is (it's probably already a handle).
+    /// With <paramref name="expectedObjectType"/> (an API collection such as <c>sources</c>), any value that
+    /// <see cref="MayBeGrampsId"/> is looked up among the records of that type, whatever its format or prefix, so
+    /// IDs in custom formats (S_ABC) resolve too. Without it, only an ID in the default format is looked up, in the
+    /// type its prefix names. A value that looks like a handle is returned as-is.
     /// If no object has that Gramps ID, or the API rejects the lookup as a bad request (400, 404, 422),
     /// returns the original value so the caller gets a meaningful 404 from its own request.
     /// Other failures (server errors, network errors, timeouts) propagate, so they are not
@@ -78,15 +88,23 @@ public static class HandleResolver
         GrampsApiClient client,
         string? expectedObjectType = null)
     {
-        if (!LooksLikeGrampsId(handleOrGrampsId))
-            return handleOrGrampsId;
-
-        var objectType = PrefixToObjectType(handleOrGrampsId[0]);
-        if (objectType is null)
-            return handleOrGrampsId;
-        if (expectedObjectType is not null &&
-            !string.Equals(objectType, expectedObjectType, StringComparison.OrdinalIgnoreCase))
-            return handleOrGrampsId;
+        string? objectType;
+        if (expectedObjectType is not null)
+        {
+            // Tags have no Gramps ID.
+            if (!MayBeGrampsId(handleOrGrampsId)
+                || string.Equals(expectedObjectType, "tags", StringComparison.OrdinalIgnoreCase))
+                return handleOrGrampsId;
+            objectType = expectedObjectType.ToLowerInvariant();
+        }
+        else
+        {
+            if (!LooksLikeGrampsId(handleOrGrampsId))
+                return handleOrGrampsId;
+            objectType = PrefixToObjectType(handleOrGrampsId[0]);
+            if (objectType is null or "tags")
+                return handleOrGrampsId;
+        }
 
         return await FindHandleAsync(handleOrGrampsId, objectType, client) ?? handleOrGrampsId;
     }
@@ -103,6 +121,7 @@ public static class HandleResolver
             return null;
 
         var scopeKey = client.CacheScopeKey;
+        // The same ID can name records of two types in a tree with custom ID formats.
         var cacheId = $"{objectType}/{grampsId}";
 
         var cached = HandleCache.TryGet(scopeKey, cacheId);
@@ -130,7 +149,12 @@ public static class HandleResolver
                 if (items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0)
                 {
                     var first = items[0];
-                    if (first.TryGetProperty("handle", out var handleProp) &&
+                    // Only the record with this exact ID, not the first record of a list the filter did not narrow.
+                    var otherId = first.TryGetProperty("gramps_id", out var idProp)
+                                  && idProp.ValueKind == JsonValueKind.String
+                                  && !string.Equals(idProp.GetString(), grampsId, StringComparison.Ordinal);
+                    if (!otherId &&
+                        first.TryGetProperty("handle", out var handleProp) &&
                         handleProp.ValueKind == JsonValueKind.String)
                     {
                         var handle = handleProp.GetString();

@@ -37,9 +37,10 @@ public static class ObjectTools
         "Read up to 20 records of any types in full: each one's fields, its links to other records, and the records " +
         "that point to it (backlinks, read-only here). Use it once you know the Gramps IDs or handles, and pass all the " +
         "records you need in one call; to find records by text use search, to browse a type use list_records, and for " +
-        "a person's relatives or dated events get_person_tree and get_timeline are shorter. A Gramps ID names its type " +
-        "by prefix, so objectType is needed only for handles, and an objectType that disagrees with a prefix is " +
-        "rejected rather than guessed. extended (people and families) puts each event's date and place on its line, " +
+        "a person's relatives or dated events get_person_tree and get_timeline are shorter. A Gramps ID in the default " +
+        "format, such as I0001, names its type by prefix, so objectType is needed only for handles and IDs in another " +
+        "format, such as S_ABC; with objectType every identifier is looked up among the records of that type, whatever " +
+        "its prefix. extended (people and families) puts each event's date and place on its line, " +
         "names the others in an event where the person is not Primary, such as a child's birth, and adds note text, " +
         "tag names, citations and media in the same call. Returns plain text without paging, the records in the order " +
         "given and separated by a line \"---\": for each a header with its type, label, handle and Gramps ID, then its " +
@@ -47,13 +48,14 @@ public static class ObjectTools
         "for the backlinks. A record the tree lacks gets a not-found message with a hint in its place, and the others " +
         "are still read.")]
     public static async Task<string> GetRecords(
-        [Description("Up to 20 Gramps IDs or handles, one record as a one-element array. ID prefixes give the type: " +
-                     "I person, F family, E event, P place, S source, C citation, N note, O media, R repository; " +
-                     "tags have no Gramps ID.")]
+        [Description("Up to 20 Gramps IDs or handles, one record as a one-element array. The prefixes of the default " +
+                     "ID format give the type: I person, F family, E event, P place, S source, C citation, N note, " +
+                     "O media, R repository; tags have no Gramps ID.")]
         string[] identifiers,
-        [Description("Record type of the handles: person, family, event, place, source, citation, note, media, " +
-                     "repository or tag. Omit when every identifier is a Gramps ID; required for handles, which are " +
-                     "then all of this type, and a Gramps ID of another type is rejected.")]
+        [Description("Record type of all the identifiers: person, family, event, place, source, citation, note, " +
+                     "media, repository or tag. Omit when every identifier is a Gramps ID in the default format; " +
+                     "required for handles and IDs in another format, such as S_ABC, and then every identifier is " +
+                     "looked up among the records of this type.")]
         string? objectType = null,
         [Description("People and families: also resolve the linked records (event dates and places, note text, tag " +
                      "names, citations, media) in the same call; default false is faster. Other records are read as " +
@@ -93,8 +95,9 @@ public static class ObjectTools
 
     /// <summary>
     /// The records named by <paramref name="identifiers"/>, in the order given and each identifier once, with the type
-    /// from the Gramps ID prefix or <paramref name="objectType"/>; at most <paramref name="max"/> of them, which one
-    /// call <paramref name="verb"/>.
+    /// <paramref name="objectType"/> when given, else the type the prefix of a Gramps ID in the default format names;
+    /// at most <paramref name="max"/> of them, which one call <paramref name="verb"/>. A given type wins over the
+    /// prefix, since trees may use other prefixes: every identifier is then looked up among the records of that type.
     /// </summary>
     private static IReadOnlyList<(string Identifier, string Type)> TypeIdentifiers(
         IReadOnlyList<string>? identifiers, string? objectType, int max, string verb)
@@ -116,18 +119,14 @@ public static class ObjectTools
 
         return distinct.Select(identifier =>
         {
-            var inferred = InferObjectType(identifier);
-            if (inferred is null && given is null)
+            var type = given ?? InferObjectType(identifier);
+            if (type is null)
             {
                 throw McpToolErrors.ValidationError(
-                    $"objectType is required for the handle '{identifier}'. Must be one of: {ObjectTypeList}.");
+                    $"objectType is required for '{identifier}', a handle or a Gramps ID in a custom format (the default " +
+                    $"format is one type letter and digits, such as I0001). Must be one of: {ObjectTypeList}.");
             }
-            if (inferred is not null && given is not null && inferred != given)
-            {
-                throw McpToolErrors.ValidationError(
-                    $"objectType '{given}' does not match Gramps ID '{identifier}', which identifies a {inferred}.");
-            }
-            return (identifier, inferred ?? given!);
+            return (identifier, type);
         }).ToList();
     }
 
@@ -193,12 +192,13 @@ public static class ObjectTools
         "and media that only the deleted records linked to: Gramps Web keeps them, so ask the user whether to delete " +
         "them too. If a later type fails, action: partially_deleted lists what was and was not deleted.")]
     public static async Task<string> DeleteRecords(
-        [Description("Up to 50 Gramps IDs (e.g. I0001, F0002; the prefix gives the type) or handles, of any types; " +
-                     "find them with search or list_records.")]
+        [Description("Up to 50 Gramps IDs (e.g. I0001, F0002; the prefix of the default format gives the type) or " +
+                     "handles, of any types; find them with search or list_records.")]
         string[] identifiers,
-        [Description("Record type of the handles: person, family, event, place, source, citation, note, media, " +
-                     "repository or tag. Omit when every identifier is a Gramps ID; required for handles, which are " +
-                     "then all of this type, and a Gramps ID of another type is rejected.")]
+        [Description("Record type of all the identifiers: person, family, event, place, source, citation, note, " +
+                     "media, repository or tag. Omit when every identifier is a Gramps ID in the default format; " +
+                     "required for handles and IDs in another format, such as S_ABC, and then every identifier is " +
+                     "looked up among the records of this type.")]
         string? objectType = null,
         [Description("true deletes even when records outside the call link to them, and Gramps Web removes those " +
                      "links; only after the user confirmed that (default false).")]
@@ -233,6 +233,8 @@ public static class ObjectTools
         var typed = TypeIdentifiers(identifiers, objectType, DeleteHelper.MaxRecords, "deletes")
             .Select(t => (t.Identifier, Collection: ObjectKinds[t.Type].ApiPath))
             .ToList();
+        // A read-only server refuses before looking anything up.
+        client.EnsureWritable();
 
         using var gate = new SemaphoreSlim(4);
         var resolved = await Task.WhenAll(typed.Select(async t =>

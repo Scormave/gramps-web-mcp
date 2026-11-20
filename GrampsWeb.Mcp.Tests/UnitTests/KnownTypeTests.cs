@@ -106,7 +106,7 @@ public class KnownTypeTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await CreateRecords("""{ "families": [{ "childRefs": ["h-child::adopted"] }] }""", handler);
+        await CreateRecords("""{ "families": [{ "childRefs": ["h-child-00000001::adopted"] }] }""", handler);
 
         var childRef = CreateRecordsCall.Saved(handler.Body, "Family")["child_ref_list"]![0]!;
         Assert.Equal("Adopted", childRef["frel"]!.GetValue<string>());
@@ -118,7 +118,7 @@ public class KnownTypeTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await CreateRecords("""{ "families": [{ "fatherHandle": "h-father" }] }""", handler);
+        await CreateRecords("""{ "families": [{ "fatherHandle": "h-father-0000001" }] }""", handler);
 
         Assert.Equal("Unknown", CreateRecordsCall.Saved(handler.Body, "Family")["type"]!.GetValue<string>());
     }
@@ -129,7 +129,7 @@ public class KnownTypeTests
         var handler = new TreeHandler(new Dictionary<string, string>());
 
         var error = await Assert.ThrowsAsync<McpException>(() => CreateRecords(
-            """{ "families": [{ "childRefs": ["h-child::Adoptd"] }] }""", handler));
+            """{ "families": [{ "childRefs": ["h-child-00000001::Adoptd"] }] }""", handler));
 
         Assert.StartsWith("Error: families[0]: childRefs: Invalid child reference types 'Adoptd'. Did you mean: Adopted?", error.Message);
         Assert.Null(handler.Body);
@@ -143,17 +143,17 @@ public class KnownTypeTests
             ["/api/families/h-family"] = """
                 {
                   "handle": "h-family", "gramps_id": "F0100",
-                  "child_ref_list": [{ "ref": "h-child", "frel": "Birth", "mrel": "Birth" }, { "ref": "h-old", "frel": "Birth", "mrel": "Birth" }]
+                  "child_ref_list": [{ "ref": "h-child-00000001", "frel": "Birth", "mrel": "Birth" }, { "ref": "h-old-0000000001", "frel": "Birth", "mrel": "Birth" }]
                 }
                 """
         });
 
         await FamilyTools.UpdateFamily(
-            "h-family", childRefs: Deserialize<FlexibleChildRefList>("""["h-old::Anything"]"""),
+            "h-family", childRefs: Deserialize<FlexibleChildRefList>("""["h-old-0000000001::Anything"]"""),
             client: CreateClient(handler), linkMode: "remove");
 
         Assert.DoesNotContain(handler.Requests, path => path.StartsWith("/api/types/", StringComparison.Ordinal));
-        Assert.Equal(["h-child"], handler.Body!["child_ref_list"]!.AsArray().Select(r => r!["ref"]!.GetValue<string>()));
+        Assert.Equal(["h-child-00000001"], handler.Body!["child_ref_list"]!.AsArray().Select(r => r!["ref"]!.GetValue<string>()));
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public class KnownTypeTests
         var handler = new TreeHandler(new Dictionary<string, string>());
 
         await CreateRecords("""
-            { "sources": [{ "title": "Metrical book", "repositoryHandles": [{ "ref": "h-repo", "media_type": "book" }],
+            { "sources": [{ "title": "Metrical book", "repositoryHandles": [{ "ref": "h-repo-000000001", "media_type": "book" }],
                             "attributes": ["status: draft"] }] }
             """, handler);
 

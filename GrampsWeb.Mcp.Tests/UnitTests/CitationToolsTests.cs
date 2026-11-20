@@ -24,7 +24,7 @@ public class CitationToolsTests
         var client = CreateClient(handler);
 
         var result = await CreateRecordsCall.RunAsync(
-            $$"""{ "citations": [{ "sourceHandle": "source1", "page": {{pageJson}} }] }""", client);
+            $$"""{ "citations": [{ "sourceHandle": "source1-00000001", "page": {{pageJson}} }] }""", client);
 
         var post = Assert.Single(handler.Requests, r => r.Method == HttpMethod.Post && r.Path == "/api/objects/");
         using var body = JsonDocument.Parse(post.Body!);

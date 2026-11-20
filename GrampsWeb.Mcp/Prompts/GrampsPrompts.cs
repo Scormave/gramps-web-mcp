@@ -68,7 +68,7 @@ public sealed class GrampsPrompts
     {
         var text =
             $"Research person \"{person}\" in the Gramps database.\n" +
-            "1. If the input is a Gramps ID, call get_records(identifiers: [ID]). If it is an opaque handle, call get_records(objectType: \"person\", identifiers: [HANDLE]). Otherwise search by name, confirm the match, then get_records.\n" +
+            "1. If the input is a Gramps ID such as I0001, call get_records(identifiers: [ID]). If it is a handle or an ID in another format, call get_records(objectType: \"person\", identifiers: [it]). Otherwise search by name, confirm the match, then get_records.\n" +
             "2. Start with the person's record. Set extended=true only when linked family or event details are needed.\n" +
             "3. Call get_timeline(objectType: \"person\", ...) only for chronological questions. Call get_person_tree(direction: \"ancestors\" or \"descendants\", ...) only for the requested branch; use a small generation count first.\n" +
             "4. Report only facts supported by the retrieved records, distinguish uncertainty, and mention missing citations when relevant.";

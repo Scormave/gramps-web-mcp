@@ -106,16 +106,20 @@ links and repository links.  The person and family tools check event link roles
 
 ### HandleResolver (`Client/HandleResolver.cs`)
 
-`HandleResolver` detects Gramps ID patterns (one uppercase letter followed by
-digits, 2–8 characters, e.g. `I0001`, `F0023`) and resolves them to opaque API
-handles with `GET /api/{type}/?gramps_id={id}&pagesize=1`.  The prefix picks
-the type: `I` person, `F` family, `E` event, `P` place, `S` source, `C`
-citation, `R` repository, `N` note, `O` media, `T` tag.  A value that doesn't
-match the pattern, has an unknown prefix, or has another type's prefix than
-the caller expects is returned as-is (assumed to already be a handle), as is
-an ID no object has.  Successful resolutions are cached in `HandleCache` for
-10 minutes per API URL and tree.  This allows agents to use either identifier
-format in any tool parameter.
+`HandleResolver` resolves Gramps IDs to opaque API handles with
+`GET /api/{type}/?gramps_id={id}&pagesize=1`.  When the caller names the
+type (every tool parameter does), any value that is not shaped like a handle
+(16 or more letters, digits, `-` and `_`, with at least one digit) is looked
+up among the records of that type, so IDs in custom formats (`S_ABC`) resolve
+as well as the default format (one uppercase letter followed by 1 to 14
+digits, e.g. `I0001`).  Without a type only the default format is looked up,
+in the type its prefix names: `I` person, `F` family, `E` event, `P` place,
+`S` source, `C` citation, `R` repository, `N` note, `O` media.  Tags have no
+Gramps ID and are never looked up.  Only a record whose `gramps_id` equals
+the value counts.  A handle-shaped value is returned as-is, as is an ID no
+record has.  Successful resolutions are cached in `HandleCache` for
+10 minutes per API URL, tree and type.  This allows agents to use either
+identifier format in any tool parameter.
 
 ### Shared options: `GrampsJson`
 

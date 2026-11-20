@@ -458,29 +458,36 @@ public static class MediaTools
 
     private static async Task<MediaOwner> ResolveOwnerAsync(string value, GrampsApiClient client, string nothingDone)
     {
-        if (HandleResolver.LooksLikeGrampsId(value))
+        if (HandleResolver.MayBeGrampsId(value))
         {
-            var type = OwnerTypes.FirstOrDefault(t => t.Prefix == value[0])
-                ?? throw McpToolErrors.ValidationError(
-                    $"attachTo: {value} is not a person, family, event, place, source or citation; media can be shown only on those. {nothingDone}");
-            var resolved = await HandleResolver.ResolveToHandleAsync(value, client, type.Endpoint);
-            return await LoadOwnerAsync(type, resolved, client)
-                ?? throw McpToolErrors.ValidationError($"attachTo: there is no {type.Kind} {value}. {nothingDone}");
-        }
-
-        if (HandleResolver.LooksLikeHandle(value))
-        {
-            foreach (var type in OwnerTypes)
+            // The type of the default prefix first; in a tree with custom ID formats the ID can name any owner type.
+            var prefixType = HandleResolver.LooksLikeGrampsId(value)
+                ? OwnerTypes.FirstOrDefault(t => t.Prefix == value[0])
+                : null;
+            foreach (var type in OwnerTypes.OrderBy(t => t == prefixType ? 0 : 1))
             {
-                if (await LoadOwnerAsync(type, value, client) is { } owner)
+                var resolved = await HandleResolver.ResolveToHandleAsync(value, client, type.Endpoint);
+                if (resolved != value && await LoadOwnerAsync(type, resolved, client) is { } owner)
                     return owner;
             }
 
-            throw McpToolErrors.ValidationError(
-                $"attachTo: no person, family, event, place, source or citation has handle {value}. {nothingDone}");
+            if (prefixType is not null)
+                throw McpToolErrors.ValidationError($"attachTo: there is no {prefixType.Kind} {value}. {nothingDone}");
+            if (HandleResolver.LooksLikeGrampsId(value))
+                throw McpToolErrors.ValidationError(
+                    $"attachTo: {value} is not a person, family, event, place, source or citation; media can be shown only on those. {nothingDone}");
         }
 
-        throw McpToolErrors.ValidationError($"attachTo: \"{value}\" is neither a Gramps ID such as I0001 nor a handle. {nothingDone}");
+        // A handle, or a value outside the default ID format that no owner has as its Gramps ID.
+        foreach (var type in OwnerTypes)
+        {
+            if (await LoadOwnerAsync(type, value, client) is { } owner)
+                return owner;
+        }
+
+        var what = HandleResolver.LooksLikeHandle(value) ? "handle" : "the Gramps ID or handle";
+        throw McpToolErrors.ValidationError(
+            $"attachTo: no person, family, event, place, source or citation has {what} {value}. {nothingDone}");
     }
 
     private static async Task<MediaOwner?> LoadOwnerAsync(MediaOwnerType type, string handle, GrampsApiClient client)

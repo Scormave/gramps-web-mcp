@@ -21,7 +21,7 @@ public class EventRoleTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        var error = await Assert.ThrowsAsync<McpException>(() => CreatePerson("""["e-birth", "e-baptism::Witnes"]""", handler));
+        var error = await Assert.ThrowsAsync<McpException>(() => CreatePerson("""["e-birth-00000001", "e-baptism-000001::Witnes"]""", handler));
 
         Assert.StartsWith("Error: people[0]: eventRefs: Invalid event role types 'Witnes'. Did you mean: Witness?", error.Message);
         Assert.Null(handler.Body);
@@ -32,7 +32,7 @@ public class EventRoleTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await CreatePerson("""["e-baptism:: witness", { "ref": "e-baptism-2", "role": "восприемник" }]""", handler);
+        await CreatePerson("""["e-baptism-000001:: witness", { "ref": "e-baptism-2-0001", "role": "восприемник" }]""", handler);
 
         Assert.Equal(
             ["Witness", "Восприемник"],
@@ -44,7 +44,7 @@ public class EventRoleTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>());
 
-        await CreatePerson("""["e-birth", "e-baptism::Witness"]""", handler);
+        await CreatePerson("""["e-birth-00000001", "e-baptism-000001::Witness"]""", handler);
 
         Assert.Equal(
             ["Primary", "Witness"],
@@ -57,7 +57,7 @@ public class EventRoleTests
         var handler = new TreeHandler(new Dictionary<string, string>());
 
         await CreateRecordsCall.RunAsync(
-            """{ "families": [{ "eventRefs": ["e-marriage", { "ref": "e-banns" }, "e-engagement::primary"] }] }""",
+            """{ "families": [{ "eventRefs": ["e-marriage-00001", { "ref": "e-banns-00000001" }, "e-engagement-001::primary"] }] }""",
             CreateClient(handler));
 
         Assert.Equal(
@@ -73,13 +73,13 @@ public class EventRoleTests
             ["/api/families/h-family"] = """
                 {
                   "handle": "h-family", "gramps_id": "F0100",
-                  "event_ref_list": [{ "ref": "e-marriage", "role": "Primary" }, { "ref": "e-banns", "role": "Восприемник" }]
+                  "event_ref_list": [{ "ref": "e-marriage-00001", "role": "Primary" }, { "ref": "e-banns-00000001", "role": "Восприемник" }]
                 }
                 """
         });
 
         await FamilyTools.UpdateFamily(
-            "h-family", eventRefs: Refs("""["e-marriage", { "ref": "e-banns" }, { "ref": "e-divorce" }]"""),
+            "h-family", eventRefs: Refs("""["e-marriage-00001", { "ref": "e-banns-00000001" }, { "ref": "e-divorce-000001" }]"""),
             client: CreateClient(handler), linkMode: "replace");
 
         Assert.Equal(
@@ -95,13 +95,13 @@ public class EventRoleTests
             ["/api/families/h-family"] = """
                 {
                   "handle": "h-family", "gramps_id": "F0100",
-                  "event_ref_list": [{ "ref": "e-marriage", "role": "Primary" }]
+                  "event_ref_list": [{ "ref": "e-marriage-00001", "role": "Primary" }]
                 }
                 """
         });
 
         await FamilyTools.UpdateFamily(
-            "h-family", eventRefs: Refs("""["e-marriage", { "ref": "e-divorce" }]"""), client: CreateClient(handler),
+            "h-family", eventRefs: Refs("""["e-marriage-00001", { "ref": "e-divorce-000001" }]"""), client: CreateClient(handler),
             linkMode: "add");
 
         Assert.Equal(
@@ -115,7 +115,7 @@ public class EventRoleTests
         var handler = new TreeHandler(new Dictionary<string, string>());
 
         var error = await Assert.ThrowsAsync<McpException>(() => FamilyTools.UpdateFamily(
-            "h-family", eventRefs: Refs("""["e-marriage::Brides father"]"""), client: CreateClient(handler), linkMode: "add"));
+            "h-family", eventRefs: Refs("""["e-marriage-00001::Brides father"]"""), client: CreateClient(handler), linkMode: "add"));
 
         Assert.Contains("Invalid event role types 'Brides father'", error.Message);
         Assert.DoesNotContain(handler.Requests, path => path.StartsWith("/api/families/", StringComparison.Ordinal));
@@ -129,16 +129,16 @@ public class EventRoleTests
             ["/api/people/h-person"] = """
                 {
                   "handle": "h-person", "gramps_id": "I0100",
-                  "event_ref_list": [{ "ref": "e-birth", "role": "Primary" }, { "ref": "e-old", "role": "Witness" }]
+                  "event_ref_list": [{ "ref": "e-birth-00000001", "role": "Primary" }, { "ref": "e-old-0000000001", "role": "Witness" }]
                 }
                 """
         });
 
         await PersonTools.UpdatePerson(
-            "h-person", eventRefs: Refs("""["e-old::Anything"]"""), client: CreateClient(handler), linkMode: "remove");
+            "h-person", eventRefs: Refs("""["e-old-0000000001::Anything"]"""), client: CreateClient(handler), linkMode: "remove");
 
         Assert.DoesNotContain(handler.Requests, path => path.StartsWith("/api/types/", StringComparison.Ordinal));
-        Assert.Equal(["e-birth"], handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["ref"]!.GetValue<string>()));
+        Assert.Equal(["e-birth-00000001"], handler.Body!["event_ref_list"]!.AsArray().Select(r => r!["ref"]!.GetValue<string>()));
     }
 
     /// <summary>Creates Ivan Petrov with <paramref name="eventRefs"/> through create_records.</summary>

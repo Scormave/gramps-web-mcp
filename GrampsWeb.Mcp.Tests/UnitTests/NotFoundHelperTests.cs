@@ -52,12 +52,33 @@ public class NotFoundHelperTests
     }
 
     [Fact]
-    public void NotFoundMessage_Says_Tags_Have_No_Gramps_Id()
+    public void NotFoundMessage_Says_No_Object_Has_A_Custom_Format_Id_Or_Handle()
     {
-        Assert.Null(HandleResolver.PrefixToObjectType('T'));
-        Assert.EndsWith(
-            "Tags have no Gramps ID; find the tag's handle with list_records(objectType: \"tags\").",
-            NotFoundHelper.NotFoundMessage("Tag", "T0001"));
+        Assert.Equal(
+            "Source not found: S_ABC\n\nHint: No source has the Gramps ID or handle S_ABC. " +
+            "Find the source with search, or browse list_records(objectType: \"sources\").",
+            NotFoundHelper.NotFoundMessage("Source", "S_ABC"));
+    }
+
+    [Fact]
+    public void NotFoundMessage_Asks_For_The_Type_Letter_Of_Bare_Digits()
+    {
+        Assert.Equal(
+            "Person not found: 0044\n\nHint: No person has the Gramps ID or handle 0044. " +
+            "Gramps IDs in the default format start with the type letter, such as I0001. " +
+            "Find the person with search, or browse list_records(objectType: \"people\").",
+            NotFoundHelper.NotFoundMessage("Person", "0044"));
+    }
+
+    [Theory]
+    [InlineData("T0001")]
+    [InlineData("family-photos")]
+    public void NotFoundMessage_Says_Tags_Have_No_Gramps_Id(string identifier)
+    {
+        Assert.Equal(
+            $"Tag not found: {identifier}\n\nHint: Tags have no Gramps ID; " +
+            "find the tag's handle with list_records(objectType: \"tags\").",
+            NotFoundHelper.NotFoundMessage("Tag", identifier));
     }
 
     [Fact]

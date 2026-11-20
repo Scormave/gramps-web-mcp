@@ -38,15 +38,25 @@ public class ObjectToolsTests
     {
         var ex = await Assert.ThrowsAsync<McpException>(() => ObjectTools.GetRecords(["I0001", "opaque-handle"]));
 
-        Assert.StartsWith("objectType is required for the handle 'opaque-handle'.", ex.Message);
+        Assert.StartsWith("objectType is required for 'opaque-handle', a handle or a Gramps ID in a custom format", ex.Message);
     }
 
     [Fact]
-    public async Task GetRecords_RejectsTypeThatConflictsWithGrampsIdPrefix()
+    public async Task GetRecords_RequiresTypeForCustomFormatGrampsId()
     {
-        var ex = await Assert.ThrowsAsync<McpException>(() => ObjectTools.GetRecords(["I0001"], "event"));
+        var ex = await Assert.ThrowsAsync<McpException>(() => ObjectTools.GetRecords(["S_ABC"]));
 
-        Assert.Equal("objectType 'event' does not match Gramps ID 'I0001', which identifies a person.", ex.Message);
+        Assert.StartsWith("objectType is required for 'S_ABC', a handle or a Gramps ID in a custom format", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("I0001", "event", "event")]
+    [InlineData("P0001", "person", "person")]
+    [InlineData("S_ABC", "source", "source")]
+    [InlineData("I00000001", null, "person")]
+    public void ResolveObjectType_GivenTypeWinsOverThePrefix(string identifier, string? objectType, string expected)
+    {
+        Assert.Equal(expected, ObjectTools.ResolveObjectType(identifier, objectType));
     }
 
     [Theory]
@@ -121,6 +131,34 @@ public class ObjectToolsTests
     }
 
     [Fact]
+    public async Task DeleteRecords_UsesATagHandleWithoutLookingUpAGrampsId()
+    {
+        // Tags have no Gramps ID, so the value is used as the handle without a lookup.
+        HandleCache.Invalidate();
+        using var handler = new DeletionHandler("tags", "never-looked-up");
+        using var http = new HttpClient(handler);
+
+        var result = await ObjectTools.DeleteRecords(["resolved-handle"], "tag", client: Client(http));
+
+        Assert.Contains("action: deleted", result);
+        Assert.Equal("""{"namespace":"tags","handles":["resolved-handle"]}""", handler.DeleteBody);
+        Assert.False(handler.LookedUp);
+    }
+
+    [Fact]
+    public async Task DeleteRecords_ResolvesAGrampsIdInACustomFormatAmongTheGivenType()
+    {
+        HandleCache.Invalidate();
+        using var handler = new DeletionHandler("sources", "S_ABC");
+        using var http = new HttpClient(handler);
+
+        var result = await ObjectTools.DeleteRecords(["S_ABC"], "source", client: Client(http));
+
+        Assert.Contains("action: deleted", result);
+        Assert.Equal("""{"namespace":"sources","handles":["resolved-handle"]}""", handler.DeleteBody);
+    }
+
+    [Fact]
     public async Task DeleteRecords_RejectsUnknownObjectType()
     {
         var error = await Assert.ThrowsAsync<McpException>(
@@ -135,16 +173,21 @@ public class ObjectToolsTests
         var error = await Assert.ThrowsAsync<McpException>(
             () => ObjectTools.DeleteRecords(["I0001", "opaque-handle"], client: null!));
 
-        Assert.StartsWith("objectType is required for the handle 'opaque-handle'.", error.Message);
+        Assert.StartsWith("objectType is required for 'opaque-handle', a handle or a Gramps ID in a custom format", error.Message);
     }
 
     [Fact]
-    public async Task DeleteRecords_RejectsTypeThatConflictsWithAGrampsIdPrefix()
+    public async Task GetRecords_LooksAnIdUpAmongTheGivenTypeWhateverItsPrefix()
     {
-        var error = await Assert.ThrowsAsync<McpException>(
-            () => ObjectTools.DeleteRecords(["N0001", "I0001"], "note", client: null!));
+        HandleCache.Invalidate();
+        using var http = new HttpClient(new EmptyTreeHandler());
 
-        Assert.Equal("objectType 'note' does not match Gramps ID 'I0001', which identifies a person.", error.Message);
+        var text = await ObjectTools.GetRecords(["I0001"], "note", client: Client(http));
+
+        Assert.Equal(
+            "Note not found: I0001\n\nHint: I0001 has the person prefix I; note IDs start with N. " +
+            "To read the person with this ID, call get_records(identifiers: [\"I0001\"]).",
+            text);
     }
 
     [Theory]
@@ -195,11 +238,15 @@ public class ObjectToolsTests
     {
         public string? DeleteBody { get; private set; }
 
+        /// <summary>Whether a Gramps ID was looked up.</summary>
+        public bool LookedUp { get; private set; }
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var path = request.RequestUri!.PathAndQuery;
             if (path.StartsWith("/api/token/", StringComparison.Ordinal))
                 return JsonResponse(HttpStatusCode.OK, """{"access_token":"token","refresh_token":"refresh","expires_in":900}""");
+            LookedUp |= path.Contains("gramps_id=", StringComparison.Ordinal);
             if (path == $"/api/{collection}/?gramps_id={grampsId}&pagesize=1")
                 return JsonResponse(HttpStatusCode.OK, """[{"handle":"resolved-handle"}]""");
             if (path == $"/api/{collection}/resolved-handle?keys=handle,gramps_id,change,backlinks&backlinks=true")

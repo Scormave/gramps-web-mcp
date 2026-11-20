@@ -32,7 +32,7 @@ public static class SystemTools
         int limit = 20,
         [Description("Show this record's history instead: a Gramps ID (e.g. I0001) or handle. A deleted record is found by its handle, which the transaction that deleted it shows.")]
         string? identifier = null,
-        [Description("The record's type with a handle: person, family, event, place, source, citation, note, media, repository or tag. Omit for a Gramps ID; used only with identifier.")]
+        [Description("The record's type, needed with a handle or a Gramps ID in a custom format: person, family, event, place, source, citation, note, media, repository or tag. Omit for a Gramps ID such as I0001; used only with identifier.")]
         string? objectType = null,
         GrampsApiClient client = null!)
     {
@@ -67,7 +67,8 @@ public static class SystemTools
         var type = ObjectTools.ResolveObjectType(identifier, objectType);
         var (className, collection) = ObjectTools.KindOf(type);
         var handle = await HandleResolver.ResolveToHandleAsync(identifier, client, collection);
-        if (HandleResolver.LooksLikeGrampsId(identifier) && handle == identifier)
+        // A value that may be a Gramps ID and did not resolve; a handle-shaped one may be a deleted record's.
+        if (type != "tag" && HandleResolver.MayBeGrampsId(identifier) && handle == identifier)
         {
             return NotFoundHelper.NotFoundMessage(className, identifier) +
                    "\n\nA deleted record no longer has its Gramps ID but keeps its history under its handle: " +
@@ -113,7 +114,7 @@ public static class SystemTools
         var grampsId = latest is { } stored && stored.TryGetProperty("gramps_id", out var id)
                                             && id.ValueKind == JsonValueKind.String
             ? id.GetString()?.Trim()
-            : HandleResolver.LooksLikeGrampsId(identifier) ? identifier : null;
+            : handle != identifier ? identifier : null;
 
         var label = labels.GetValueOrDefault(handle);
         if (label is null && latest is { } data && StoredRecordLabels.ReadModel(collection, data) is { } model)

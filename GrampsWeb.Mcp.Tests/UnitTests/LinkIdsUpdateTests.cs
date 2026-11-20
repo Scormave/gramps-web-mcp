@@ -99,6 +99,91 @@ public class LinkIdsUpdateTests
         Assert.Null(handler.Body);
     }
 
+    [Fact]
+    public async Task UpdateCitation_Moves_The_Citation_To_A_Source_Given_By_A_Gramps_Id_In_A_Custom_Format()
+    {
+        var handler = new TreeHandler(
+            """{ "_class": "Citation", "handle": "h-citation", "gramps_id": "C0300", "source_handle": "h-old-source" }""",
+            new Dictionary<string, string>
+            {
+                ["/api/sources/?gramps_id=S_ABC&pagesize=1"] = """[{ "handle": "h-source", "gramps_id": "S_ABC" }]"""
+            });
+
+        await CitationTools.UpdateCitation("h-citation", sourceHandle: "S_ABC", client: CreateClient(handler));
+
+        Assert.Equal("h-source", handler.Body!["source_handle"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task UpdateCitation_Takes_A_Value_No_Source_Has_As_Gramps_Id_As_The_Handle_Of_A_Source_In_The_Tree()
+    {
+        var handler = new TreeHandler(
+            """{ "_class": "Citation", "handle": "h-citation", "gramps_id": "C0300" }""",
+            new Dictionary<string, string> { ["/api/sources/h-source?keys=handle"] = """{ "handle": "h-source" }""" });
+
+        await CitationTools.UpdateCitation("h-citation", sourceHandle: "h-source", client: CreateClient(handler));
+
+        Assert.Equal("h-source", handler.Body!["source_handle"]!.GetValue<string>());
+        Assert.Contains("/api/sources/?gramps_id=h-source&pagesize=1", handler.Requests);
+    }
+
+    [Fact]
+    public async Task UpdateCitation_Refuses_A_Value_That_Is_Neither_The_Gramps_Id_Nor_The_Handle_Of_A_Source()
+    {
+        var handler = new TreeHandler("""{ "_class": "Citation", "handle": "h-citation", "gramps_id": "C0300" }""");
+
+        var error = await Assert.ThrowsAsync<McpException>(() =>
+            CitationTools.UpdateCitation("h-citation", sourceHandle: "S_XYZ", client: CreateClient(handler)));
+
+        Assert.Equal("Error: sourceHandle: there is no source S_XYZ. Nothing was changed.", error.Message);
+        Assert.Null(handler.Body);
+        Assert.Contains("/api/sources/S_XYZ?keys=handle", handler.Requests);
+    }
+
+    [Fact]
+    public async Task UpdateCitation_Sends_A_Value_Shaped_Like_A_Handle_Without_Looking_It_Up()
+    {
+        var handler = new TreeHandler("""{ "_class": "Citation", "handle": "h-citation", "gramps_id": "C0300" }""");
+
+        await CitationTools.UpdateCitation("h-citation", sourceHandle: "102a49c11b31375183b9ad45a991",
+            client: CreateClient(handler));
+
+        Assert.Equal("102a49c11b31375183b9ad45a991", handler.Body!["source_handle"]!.GetValue<string>());
+        Assert.DoesNotContain(handler.Requests, r => r.StartsWith("/api/sources/", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("T0001")]
+    [InlineData("h-missing-tag")]
+    public async Task UpdateNote_Refuses_A_Tag_Value_That_Is_Not_The_Handle_Of_A_Tag(string tag)
+    {
+        var handler = new TreeHandler("""{ "_class": "Note", "handle": "h-note", "gramps_id": "N0300", "text": { "string": "x" } }""");
+
+        var error = await Assert.ThrowsAsync<McpException>(() => NoteTools.UpdateNote("h-note",
+            tagHandles: new FlexibleHandleList { Handles = [tag] }, client: CreateClient(handler)));
+
+        Assert.Equal(
+            $"Error: tagHandles: {tag} is not a tag handle; tags have no Gramps ID, so give the tag's handle from " +
+            "list_records(objectType: \"tags\"). Nothing was changed.",
+            error.Message);
+        Assert.Null(handler.Body);
+        Assert.DoesNotContain(handler.Requests, r => r.StartsWith("/api/tags/?", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task UpdateNote_Takes_The_Short_Handle_Of_A_Tag_In_The_Tree()
+    {
+        var handler = new TreeHandler(
+            """{ "_class": "Note", "handle": "h-note", "gramps_id": "N0300", "text": { "string": "x" } }""",
+            new Dictionary<string, string> { ["/api/tags/h-tag?keys=handle"] = """{ "handle": "h-tag" }""" });
+
+        await NoteTools.UpdateNote("h-note", tagHandles: new FlexibleHandleList { Handles = ["h-tag"] },
+            client: CreateClient(handler));
+
+        Assert.Equal(["h-tag"], handler.Body!["tag_list"]!.AsArray().Select(t => t!.GetValue<string>()));
+        Assert.DoesNotContain(handler.Requests, r => r.StartsWith("/api/tags/?", StringComparison.Ordinal));
+    }
+
     private static GrampsApiClient CreateClient(HttpMessageHandler handler)
     {
         var config = new GrampsConfig("https://link-ids-update.test", "user", "pass", "tree");
@@ -108,8 +193,8 @@ public class LinkIdsUpdateTests
     }
 
     /// <summary>
-    /// Answers Gramps ID lookups from <paramref name="lookups"/> (404 otherwise, as Gramps Web does), every other GET
-    /// with the stored record, and records the PUT body.
+    /// Answers Gramps ID lookups and handle checks (<c>?keys=handle</c>) from <paramref name="lookups"/> (404 otherwise,
+    /// as Gramps Web does), every other GET with the stored record, and records the PUT body.
     /// </summary>
     private sealed class TreeHandler(string stored, IReadOnlyDictionary<string, string>? lookups = null) : HttpMessageHandler
     {
@@ -132,7 +217,7 @@ public class LinkIdsUpdateTests
                 return Json("{}");
             }
 
-            if (path.Contains("gramps_id=", StringComparison.Ordinal))
+            if (path.Contains("gramps_id=", StringComparison.Ordinal) || path.EndsWith("?keys=handle", StringComparison.Ordinal))
                 return lookups?.TryGetValue(path, out var found) == true ? Json(found) : new HttpResponseMessage(HttpStatusCode.NotFound);
 
             return Json(stored);
