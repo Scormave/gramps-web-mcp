@@ -32,17 +32,18 @@ public static class ObjectTools
         "Read one record in full: its fields, its links to other records, and the records that point to it (backlinks, " +
         "read-only here). Use it once you know the Gramps ID or handle; to find a record by text use search, to browse " +
         "a type use list_objects, and for a person's relatives or dated events get_person_tree and get_timeline are shorter. " +
-        "A Gramps ID names its type by prefix, so objectType is needed only with a handle, and an objectType that " +
-        "disagrees with the prefix is rejected rather than guessed. extended (people and families only) puts each " +
+        "A Gramps ID in the default format, such as I0001, names its type by prefix, so objectType is needed only with " +
+        "a handle or an ID in another format; with objectType the identifier is looked up among the records of that " +
+        "type, whatever its prefix. extended (people and families only) puts each " +
         "event's date and place on its line, names the others in an event where the person is not Primary, such as a " +
         "child's birth, and adds note text, tag names, citations and media in the same call. Returns plain text for one " +
         "record, without paging: a header with its type, label, handle and Gramps ID, then its fields, its links one per " +
         "line with label, handle and, for events, the role, and \"Referenced by\" sections for the backlinks. A missing record returns a " +
         "not-found message with a hint.")]
     public static async Task<string> GetObject(
-        [Description("Gramps ID (e.g. I0001) or handle. ID prefixes give the type: I person, F family, E event, P place, S source, C citation, N note, O media, R repository, T tag.")]
+        [Description("Gramps ID (e.g. I0001) or handle. The prefixes of the default ID format give the type: I person, F family, E event, P place, S source, C citation, N note, O media, R repository; tags have no Gramps ID.")]
         string identifier,
-        [Description("Record type: person, family, event, place, source, citation, note, media, repository or tag. Omit for a Gramps ID; required for a handle.")]
+        [Description("Record type: person, family, event, place, source, citation, note, media, repository or tag. Omit for a Gramps ID in the default format; required for a handle or an ID in another format, such as S_ABC.")]
         string? objectType = null,
         [Description("People and families only: also resolve the linked records (event dates and places, note text, tag names, citations, media) in the same call; default false is faster. Rejected for other types.")]
         bool extended = false,
@@ -80,8 +81,9 @@ public static class ObjectTools
 
     /// <summary>
     /// The record type of <paramref name="identifier"/>, such as <c>person</c>: <paramref name="objectType"/> when
-    /// given, else the type its Gramps ID prefix names. Rejects an unknown type, a handle without a type, and a
-    /// type that disagrees with the prefix.
+    /// given, else the type the prefix of a Gramps ID in the default format names. Rejects an unknown type and an
+    /// identifier without a type that is not such an ID. A given type wins over the prefix, since trees may use other
+    /// prefixes; the identifier is then looked up among the records of that type.
     /// </summary>
     internal static string ResolveObjectType(string identifier, string? objectType)
     {
@@ -92,7 +94,8 @@ public static class ObjectTools
             if (inferredType is null)
             {
                 throw McpToolErrors.ValidationError(
-                    "objectType is required when identifier is an opaque handle. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
+                    "objectType is required when identifier is a handle or a Gramps ID in a custom format (the default format is " +
+                    "one type letter and digits, such as I0001). Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
             }
 
             normalizedType = inferredType;
@@ -102,12 +105,6 @@ public static class ObjectTools
         {
             throw McpToolErrors.ValidationError(
                 "Invalid objectType. Must be one of: person, family, event, place, source, citation, note, media, repository, tag.");
-        }
-
-        if (inferredType is not null && !string.Equals(normalizedType, inferredType, StringComparison.Ordinal))
-        {
-            throw McpToolErrors.ValidationError(
-                $"objectType '{normalizedType}' does not match Gramps ID '{identifier}', which identifies a {inferredType}.");
         }
 
         return normalizedType;

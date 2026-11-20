@@ -154,6 +154,8 @@ public static class SearchTools
             // The rules sent: the caller's, with the source filter of sourceHandle where it is a rule.
             var sentRules = filter;
 
+            // An empty page of a source's citations: whether the source itself is missing.
+            Func<Task<string?>>? whenEmpty = null;
             var isCitations = objectType.Equals("citations", StringComparison.OrdinalIgnoreCase);
             if (isCitations && !string.IsNullOrEmpty(sourceHandle))
             {
@@ -163,6 +165,7 @@ public static class SearchTools
                 if (!resolvedSourceHandle.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
                     throw McpToolErrors.ValidationError(
                         "sourceHandle must be a source handle or Gramps ID (letters, digits, '-' or '_').");
+                whenEmpty = () => MissingSourceAsync(sourceHandle, resolvedSourceHandle, client);
 
                 if (await GrampsQueryLanguage.HasMatchesQueryAsync(client))
                 {
@@ -203,7 +206,7 @@ public static class SearchTools
                     "events" => await SearchFormatter.FetchAndFormatObjects<GrampsEvent>(queryString, client, objectType, pagesize, emptyNote),
                     "places" => await SearchFormatter.FetchAndFormatObjects<GrampsPlace>(queryString, client, objectType, pagesize, emptyNote),
                     "sources" => await SearchFormatter.FetchAndFormatObjects<GrampsSource>(queryString, client, objectType, pagesize, emptyNote),
-                    "citations" => await SearchFormatter.FetchAndFormatObjects<GrampsCitation>(queryString, client, objectType, pagesize, emptyNote),
+                    "citations" => await SearchFormatter.FetchAndFormatObjects<GrampsCitation>(queryString, client, objectType, pagesize, emptyNote, whenEmpty),
                     "repositories" => await SearchFormatter.FetchAndFormatObjects<GrampsRepository>(queryString, client, objectType, pagesize, emptyNote),
                     "notes" => await SearchFormatter.FetchAndFormatObjects<GrampsNote>(queryString, client, objectType, pagesize, emptyNote),
                     "media" => await SearchFormatter.FetchAndFormatObjects<GrampsMedia>(queryString, client, objectType, pagesize, emptyNote),
@@ -227,5 +230,17 @@ public static class SearchTools
         {
             throw McpToolErrors.ToMcpException(ex);
         }
+    }
+
+    /// <summary>
+    /// The not-found message for <paramref name="sourceHandle"/> when the tree has no source with the handle it
+    /// resolved to, such as a Gramps ID no source has; null when the source exists and just has no citations.
+    /// </summary>
+    private static async Task<string?> MissingSourceAsync(string sourceHandle, string resolvedHandle,
+        GrampsApiClient client)
+    {
+        var source = await client.GetJsonOrNullIfNotFoundAsync(
+            $"/api/sources/{Uri.EscapeDataString(resolvedHandle)}?keys=handle");
+        return source is null ? NotFoundHelper.NotFoundMessage("Source", sourceHandle) : null;
     }
 }

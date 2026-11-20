@@ -294,22 +294,22 @@ public class RecordHistoryTests
     public async Task GetRecentChanges_Names_A_Deleted_Record_From_Its_Stored_Data()
     {
         const string eventPath =
-            "/api/transactions/history/objects/Event/e9?page=1&pagesize=20&sort=-id&old=true&new=true";
+            "/api/transactions/history/objects/Event/e9-handle-0000001?page=1&pagesize=20&sort=-id&old=true&new=true";
         using var handler = new ServerHandler(new()
         {
             [eventPath] = """
-                [{"id": 1, "obj_class": "Event", "trans_type": 2, "obj_handle": "e9", "timestamp": 1759242125.5,
-                  "old_data": {"_class": "Event", "handle": "e9", "gramps_id": "E0009", "description": "Moved to town",
+                [{"id": 1, "obj_class": "Event", "trans_type": 2, "obj_handle": "e9-handle-0000001", "timestamp": 1759242125.5,
+                  "old_data": {"_class": "Event", "handle": "e9-handle-0000001", "gramps_id": "E0009", "description": "Moved to town",
                                "type": {"_class": "EventType", "value": 0, "string": "Residence change"}},
                   "new_data": {}, "transaction_id": 5}]
                 """,
         });
 
-        var result = (await SystemTools.GetRecentChanges(identifier: "e9", objectType: "event", client: CreateClient(handler)))
+        var result = (await SystemTools.GetRecentChanges(identifier: "e9-handle-0000001", objectType: "event", client: CreateClient(handler)))
             .Replace("\r\n", "\n");
 
         Assert.Contains("Event E0009: ", result);
-        Assert.Contains("[handle: e9]\n", result);
+        Assert.Contains("[handle: e9-handle-0000001]\n", result);
         Assert.Contains("1. 2025-09-30 14:22:05 UTC — Deleted [transaction: 5]\n", result);
         Assert.Contains("   type: Residence change\n", result);
         Assert.Contains("   description: \"Moved to town\"\n", result);

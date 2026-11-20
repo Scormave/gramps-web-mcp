@@ -42,11 +42,21 @@ public class ObjectToolsTests
     }
 
     [Fact]
-    public async Task GetObject_RejectsTypeThatConflictsWithGrampsIdPrefix()
+    public async Task GetObject_RequiresTypeForCustomFormatGrampsId()
     {
-        var ex = await Assert.ThrowsAsync<McpException>(() => ObjectTools.GetObject("I0001", "event"));
+        var ex = await Assert.ThrowsAsync<McpException>(() => ObjectTools.GetObject("S_ABC"));
 
-        Assert.Equal("objectType 'event' does not match Gramps ID 'I0001', which identifies a person.", ex.Message);
+        Assert.Contains("objectType is required when identifier is a handle or a Gramps ID in a custom format", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("I0001", "event", "event")]
+    [InlineData("P0001", "person", "person")]
+    [InlineData("S_ABC", "source", "source")]
+    [InlineData("I00000001", null, "person")]
+    public void ResolveObjectType_GivenTypeWinsOverThePrefix(string identifier, string? objectType, string expected)
+    {
+        Assert.Equal(expected, ObjectTools.ResolveObjectType(identifier, objectType));
     }
 
     [Theory]
@@ -59,7 +69,6 @@ public class ObjectToolsTests
     [InlineData("note", "N0001", "notes")]
     [InlineData("media", "O0001", "media")]
     [InlineData("repository", "R0001", "repositories")]
-    [InlineData("tag", "T0001", "tags")]
     public async Task DeleteObject_ResolvesGrampsIdAndUsesCorrectCollection(
         string objectType, string grampsId, string collection)
     {
@@ -73,6 +82,22 @@ public class ObjectToolsTests
 
         Assert.Contains("action: deleted", result);
         Assert.Equal($"/api/{collection}/resolved-handle", handler.DeletePath);
+    }
+
+    [Fact]
+    public async Task DeleteObject_UsesATagHandleWithoutLookingUpAGrampsId()
+    {
+        // Tags have no Gramps ID: a lookup would fail the handler, which accepts only the delete.
+        using var handler = new DeletionHandler("tags", "never-looked-up");
+        using var http = new HttpClient(handler);
+        var config = new GrampsConfig("https://gramps-web.test", "user", "pass", "tree");
+        var tokens = new GrampsAuthTokenProvider(http, config, NullLogger<GrampsAuthTokenProvider>.Instance);
+        var client = new GrampsApiClient(http, config, NullLogger<GrampsApiClient>.Instance, tokens);
+
+        var result = await ObjectTools.DeleteObject("tag", "resolved-handle", client: client);
+
+        Assert.Contains("action: deleted", result);
+        Assert.Equal("/api/tags/resolved-handle", handler.DeletePath);
     }
 
     [Fact]

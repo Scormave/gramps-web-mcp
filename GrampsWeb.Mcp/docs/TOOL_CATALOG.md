@@ -209,23 +209,32 @@ other server processes, creates, or deletes.
 
 ## Identifiers and errors
 
-Parameters that take a handle also accept a Gramps ID: an uppercase prefix
-letter followed by digits, 2–8 characters in total. The server resolves it by
-the Gramps default prefixes: `I` person, `F` family, `E` event, `P` place,
-`S` source, `C` citation, `R` repository, `N` note, `O` media, `T` tag. An ID
-with another type's prefix, or one that no object has, is passed on unchanged
-and ends in a not-found result.
+Parameters that take a handle also accept a Gramps ID. Each such parameter
+names one type of record, and a value that is not shaped like a handle is
+looked up among the records of that type by its Gramps ID, whatever its
+format: the Gramps default, an uppercase prefix letter followed by 1 to 14
+digits (`I0001`), or a custom one set in the tree's preferences, such as
+`S_ABC`. A handle-shaped value (16 or more letters, digits, `-` and `_`, with
+at least one digit) is used as it is. Tags have no Gramps ID. Where the type
+is not given, as in `get_object` without `objectType`, only the default format
+resolves, by its prefix: `I` person, `F` family, `E` event, `P` place, `S`
+source, `C` citation, `R` repository, `N` note, `O` media; `attachTo` of the
+media tools looks a custom ID up in each type it can link. An ID that no
+record of the type has is passed on unchanged and ends in a not-found result.
 
 A missing object returns `<Type> not found: <identifier>` as normal tool
-output, with a hint when the identifier looks like a Gramps ID:
+output, with a hint when the identifier is not shaped like a handle:
 
 - An ID with another type's prefix names that type and suggests
   `get_object(identifier: "…")` to read it.
 - An ID with an unknown prefix gets the prefix the tool expects.
 - An ID with the right prefix that no object has points to `search` and
   `list_objects(objectType: "…")`.
-- An identifier shorter than five characters that is not a Gramps ID gets a
-  reminder that handles are long strings and Gramps IDs need their prefix.
+- Another identifier, such as an ID in a custom format, gets the same
+  pointers after saying that no object of the type has it as Gramps ID or
+  handle; bare digits also get a reminder that IDs in the default format start
+  with the type letter.
+- A tag identifier gets a reminder that tags have no Gramps ID.
 
 ### Argument validation
 
@@ -349,8 +358,11 @@ Workflow templates exposed as MCP prompts (`Prompts/GrampsPrompts.cs`).  Each pr
 ## Object tools (`ObjectTools.cs`) — 2 tools
 
 ### R — `GetObject`
-Fetch one record by handle or Gramps ID. A Gramps ID determines its type from
-its prefix; an opaque handle requires `objectType`. `extended=true` resolves
+Fetch one record by handle or Gramps ID. A Gramps ID in the default format
+determines its type from its prefix; a handle or an ID in a custom format,
+such as `S_ABC`, requires `objectType`. With `objectType` the identifier is
+looked up among the records of that type, whatever its prefix, since a tree
+may give its records other prefixes. `extended=true` resolves
 linked details for people and families only; an extended person names the
 parents, spouse, and children in each family, with the marriage and divorce,
 from the person request, and names the others in each event the person takes
@@ -367,15 +379,14 @@ and for objects that cannot be read, the handle stays bare. A person card is
 headed by the name in the tree's display format, as lists and `search` show it
 (`Petrova, Anna Ivanovna`), and spells out the primary name as stored below.
 
-Validation errors name the problem: an opaque handle without `objectType`, an
-unknown `objectType`, an `objectType` that disagrees with the Gramps ID prefix
-(such as `objectType: "family"` with `I0001`), or `extended=true` for a type
+Validation errors name the problem: a handle or an ID in a custom format
+without `objectType`, an unknown `objectType`, or `extended=true` for a type
 other than person or family.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `identifier` | `string` | yes | — | Object handle or Gramps ID, such as `I0001` |
-| `objectType` | `string?` | no | — | Required for an opaque handle; inferred from a Gramps ID. `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
+| `objectType` | `string?` | no | — | Required for a handle or a Gramps ID in a custom format; inferred from a Gramps ID in the default format. `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository`, or `tag` |
 | `extended` | `bool` | no | `false` | For people and families only, resolve linked details inline |
 
 ### D — `DeleteObject`
@@ -1169,7 +1180,7 @@ same summary and `handle | gramps_id` suffix as `search`. An empty page returns
 | `page` | `int` | no | `1` | 1-based page |
 | `pagesize` | `int` | no | `20` | Page size (max 100) |
 | `grampsId` | `string?` | no | — | Filter by Gramps ID (I0001-style); not together with `rules` |
-| `sourceHandle` | `string?` | no | — | For citations only: filter by source |
+| `sourceHandle` | `string?` | no | — | For citations only: filter by source (handle or Gramps ID); a source the tree lacks returns `Source not found` with a hint instead of an empty list |
 | `gql` | `string?` | no | — | Gramps QL expression, only before Gramps Web API 3.26: `=` for equality (`==` is a syntax error), text in double quotes, types as numbers (`type.value = 12` for Birth) |
 | `rules` | `object \| array \| string?` | no | — | Gramps filter rules, applied on the server; field values through `MatchesQuery`; not for tags |
 | `sort` | `string?` | no | — | Sort field (prefix `-` for descending) |
@@ -1266,7 +1277,7 @@ later; an older server gets a validation error that says so.
 |-----------|------|----------|---------|-------------|
 | `limit` | `int` | no | `20` | Number of transactions, or with `identifier` of the record's changes (clamped 1–100) |
 | `identifier` | `string` | no | — | Show this record's history instead: a Gramps ID or a handle |
-| `objectType` | `string` | no | — | The record's type with a handle: `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository` or `tag`; only with `identifier` |
+| `objectType` | `string` | no | — | The record's type, needed with a handle or a Gramps ID in a custom format: `person`, `family`, `event`, `place`, `source`, `citation`, `note`, `media`, `repository` or `tag`; only with `identifier` |
 
 ### R — `GetBookmarks`
 The records bookmarked in the tree, under the header `BOOKMARKS (5)`, with

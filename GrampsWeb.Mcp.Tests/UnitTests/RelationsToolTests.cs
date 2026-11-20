@@ -13,26 +13,26 @@ namespace GrampsWeb.Mcp.Tests.UnitTests;
 public class RelationsToolTests
 {
     private const string Anna = """
-        { "handle": "anna-h", "gramps_id": "I0001", "profile": {
-            "handle": "anna-h", "gramps_id": "I0001", "name_display": "Ivanova, Anna",
+        { "handle": "anna-handle-00001", "gramps_id": "I0001", "profile": {
+            "handle": "anna-handle-00001", "gramps_id": "I0001", "name_display": "Ivanova, Anna",
             "birth": { "type": "Birth", "date": "1950", "place_name": "Tver" }, "death": {} } }
         """;
 
     private const string Boris = """
-        { "handle": "boris-h", "gramps_id": "I0002", "profile": {
-            "handle": "boris-h", "gramps_id": "I0002", "name_display": "Petrov, Boris",
+        { "handle": "boris-handle-0001", "gramps_id": "I0002", "profile": {
+            "handle": "boris-handle-0001", "gramps_id": "I0002", "name_display": "Petrov, Boris",
             "birth": { "type": "Birth", "date": "1952", "place_name": "" }, "death": {} } }
         """;
 
-    private const string RelationsPath = "/api/relations/anna-h/boris-h";
+    private const string RelationsPath = "/api/relations/anna-handle-00001/boris-handle-0001";
 
     [Fact]
     public async Task GetRelations_Names_People_And_Common_Ancestors_Of_Every_Relationship()
     {
         var handler = new RelationsHandler(new Dictionary<string, string>
         {
-            [Person("anna-h")] = Anna,
-            [Person("boris-h")] = Boris,
+            [Person("anna-handle-00001")] = Anna,
+            [Person("boris-handle-0001")] = Boris,
             [RelationsPath] = """{ "relationship_string": "first cousin", "distance_common_origin": 2, "distance_common_other": 2 }""",
             [RelationsPath + "/all"] = """
                 [
@@ -50,14 +50,14 @@ public class RelationsToolTests
                 """,
         });
 
-        var result = (await PersonTools.GetRelations("anna-h", "boris-h", CreateClient(handler))).Replace("\r\n", "\n");
+        var result = (await PersonTools.GetRelations("anna-handle-00001", "boris-handle-0001", CreateClient(handler))).Replace("\r\n", "\n");
 
         Assert.Equal(
             """
             RELATIONSHIP
             ============================================================
-            Person 1: Ivanova, Anna (I0001) [handle: anna-h], b. 1950 in Tver
-            Person 2: Petrov, Boris (I0002) [handle: boris-h], b. 1952
+            Person 1: Ivanova, Anna (I0001) [handle: anna-handle-00001], b. 1950 in Tver
+            Person 2: Petrov, Boris (I0002) [handle: boris-handle-0001], b. 1952
 
             Petrov, Boris (I0002) is the first cousin of Ivanova, Anna (I0001).
             Generations to the common ancestor: 2 from person 1, 2 from person 2.
@@ -82,20 +82,20 @@ public class RelationsToolTests
     {
         var handler = new RelationsHandler(new Dictionary<string, string>
         {
-            [Person("anna-h")] = Anna,
-            [Person("boris-h")] = Boris,
+            [Person("anna-handle-00001")] = Anna,
+            [Person("boris-handle-0001")] = Boris,
             [RelationsPath] = """{ "relationship_string": "son", "distance_common_origin": 0, "distance_common_other": 1 }""",
-            [RelationsPath + "/all"] = """[{ "relationship_string": "son", "common_ancestors": ["anna-h"] }]""",
+            [RelationsPath + "/all"] = """[{ "relationship_string": "son", "common_ancestors": ["anna-handle-00001"] }]""",
         });
 
-        var result = (await PersonTools.GetRelations("anna-h", "boris-h", CreateClient(handler))).Replace("\r\n", "\n");
+        var result = (await PersonTools.GetRelations("anna-handle-00001", "boris-handle-0001", CreateClient(handler))).Replace("\r\n", "\n");
 
         Assert.Contains(
             "Petrov, Boris (I0002) is the son of Ivanova, Anna (I0001).\n" +
             "Generations to the common ancestor: 0 from person 1, 1 from person 2.\n" +
             "\n" +
             "Common ancestors:\n" +
-            "  - Ivanova, Anna (I0001) [handle: anna-h], b. 1950 in Tver\n",
+            "  - Ivanova, Anna (I0001) [handle: anna-handle-00001], b. 1950 in Tver\n",
             result);
         Assert.DoesNotContain("All relationships", result);
         Assert.Equal(4, handler.Requests.Count);
@@ -106,13 +106,13 @@ public class RelationsToolTests
     {
         var handler = new RelationsHandler(new Dictionary<string, string>
         {
-            [Person("anna-h")] = Anna,
-            [Person("boris-h")] = Boris,
+            [Person("anna-handle-00001")] = Anna,
+            [Person("boris-handle-0001")] = Boris,
             [RelationsPath] = """{ "relationship_string": "husband", "distance_common_origin": -1, "distance_common_other": -1 }""",
             [RelationsPath + "/all"] = """[{ "relationship_string": "husband", "common_ancestors": [] }]""",
         });
 
-        var result = await PersonTools.GetRelations("anna-h", "boris-h", CreateClient(handler));
+        var result = await PersonTools.GetRelations("anna-handle-00001", "boris-handle-0001", CreateClient(handler));
 
         Assert.Contains("Petrov, Boris (I0002) is the husband of Ivanova, Anna (I0001).", result);
         Assert.DoesNotContain("Generations", result);
@@ -125,15 +125,15 @@ public class RelationsToolTests
     {
         var handler = new RelationsHandler(new Dictionary<string, string>
         {
-            [Person("anna-h")] = Anna,
-            [Person("boris-h")] = Boris,
+            [Person("anna-handle-00001")] = Anna,
+            [Person("boris-handle-0001")] = Boris,
             [RelationsPath] = """{ "relationship_string": "", "distance_common_origin": -1, "distance_common_other": -1 }""",
             [RelationsPath + "/all"] = "[{}]",
         });
 
-        var result = await PersonTools.GetRelations("anna-h", "boris-h", CreateClient(handler));
+        var result = await PersonTools.GetRelations("anna-handle-00001", "boris-handle-0001", CreateClient(handler));
 
-        Assert.Contains("Person 2: Petrov, Boris (I0002) [handle: boris-h], b. 1952", result);
+        Assert.Contains("Person 2: Petrov, Boris (I0002) [handle: boris-handle-0001], b. 1952", result);
         Assert.Contains("Not related: they are not spouses and share no ancestor within 15 generations.", result);
         Assert.DoesNotContain(" is the ", result);
     }
@@ -141,22 +141,22 @@ public class RelationsToolTests
     [Fact]
     public async Task GetRelations_Same_Person_Skips_The_Calculation()
     {
-        var handler = new RelationsHandler(new Dictionary<string, string> { [Person("anna-h")] = Anna });
+        var handler = new RelationsHandler(new Dictionary<string, string> { [Person("anna-handle-00001")] = Anna });
 
-        var result = await PersonTools.GetRelations("anna-h", "anna-h", CreateClient(handler));
+        var result = await PersonTools.GetRelations("anna-handle-00001", "anna-handle-00001", CreateClient(handler));
 
-        Assert.Equal("Ivanova, Anna (I0001) [handle: anna-h], b. 1950 in Tver: both handles refer to the same person.", result);
-        Assert.Equal([Person("anna-h")], handler.Requests);
+        Assert.Equal("Ivanova, Anna (I0001) [handle: anna-handle-00001], b. 1950 in Tver: both handles refer to the same person.", result);
+        Assert.Equal([Person("anna-handle-00001")], handler.Requests);
     }
 
     [Fact]
     public async Task GetRelations_Reports_The_Missing_Person()
     {
-        var handler = new RelationsHandler(new Dictionary<string, string> { [Person("anna-h")] = Anna });
+        var handler = new RelationsHandler(new Dictionary<string, string> { [Person("anna-handle-00001")] = Anna });
 
-        var result = await PersonTools.GetRelations("anna-h", "boris-h", CreateClient(handler));
+        var result = await PersonTools.GetRelations("anna-handle-00001", "boris-handle-0001", CreateClient(handler));
 
-        Assert.StartsWith("Person not found: boris-h", result);
+        Assert.StartsWith("Person not found: boris-handle-0001", result);
     }
 
     private static string Person(string handle) => $"/api/people/{handle}?profile=self";

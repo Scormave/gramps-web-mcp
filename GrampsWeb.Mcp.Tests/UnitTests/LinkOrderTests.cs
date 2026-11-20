@@ -23,9 +23,9 @@ public class LinkOrderTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/families/h-family"] = """
+            ["/api/families/h-family-00000001"] = """
                 {
-                  "handle": "h-family", "gramps_id": "F0100",
+                  "handle": "h-family-00000001", "gramps_id": "F0100",
                   "child_ref_list": [
                     { "_class": "ChildRef", "ref": "c-godchild", "frel": "Birth", "mrel": "Birth" },
                     { "_class": "ChildRef", "ref": "c-late", "frel": "Adopted", "mrel": "Birth", "private": true },
@@ -63,15 +63,15 @@ public class LinkOrderTests
                 ]
                 """
         });
-        var stored = JsonNode.Parse(handler.Bodies["/api/families/h-family"])!["child_ref_list"]!;
+        var stored = JsonNode.Parse(handler.Bodies["/api/families/h-family-00000001"])!["child_ref_list"]!;
 
-        await FamilyTools.UpdateFamily("h-family", client: CreateClient(handler), sort: SortOf("\"Children\""));
+        await FamilyTools.UpdateFamily("h-family-00000001", client: CreateClient(handler), sort: SortOf("\"Children\""));
 
         var refs = handler.Body!["child_ref_list"]!.AsArray();
         Assert.Equal(["c-early", "c-baptized", "c-late", "c-godchild", "c-missing"], RefsOf(refs));
         AssertJsonEqual(stored[3], refs[0]);
         AssertJsonEqual(stored[1], refs[2]);
-        Assert.Equal("/api/families/h-family", handler.PutPath);
+        Assert.Equal("/api/families/h-family-00000001", handler.PutPath);
     }
 
     [Fact]
@@ -182,14 +182,14 @@ public class LinkOrderTests
     {
         var handler = new TreeHandler(new Dictionary<string, string>
         {
-            ["/api/families/h-family"] = """
-                { "handle": "h-family", "gramps_id": "F0100", "child_ref_list": [{ "ref": "c-only" }], "citation_list": ["c1"] }
+            ["/api/families/h-family-00000001"] = """
+                { "handle": "h-family-00000001", "gramps_id": "F0100", "child_ref_list": [{ "ref": "c-only" }], "citation_list": ["c1"] }
                 """
         });
 
-        await FamilyTools.UpdateFamily("h-family", client: CreateClient(handler), sort: SortOf("\"Children|Citations|Media\""));
+        await FamilyTools.UpdateFamily("h-family-00000001", client: CreateClient(handler), sort: SortOf("\"Children|Citations|Media\""));
 
-        Assert.Equal(["/api/families/h-family", "/api/families/h-family"], handler.Requests);
+        Assert.Equal(["/api/families/h-family-00000001", "/api/families/h-family-00000001"], handler.Requests);
     }
 
     [Theory]

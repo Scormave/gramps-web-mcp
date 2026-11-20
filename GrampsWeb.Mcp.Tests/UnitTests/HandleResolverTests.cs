@@ -35,7 +35,9 @@ public class HandleResolverTests
     [InlineData("i0001", false)]
     [InlineData("A", false)]
     [InlineData("I", false)]
-    [InlineData("I000000001", false)] // 10 chars, exceeds typical Gramps ID length
+    [InlineData("I000000001", true)] // a custom number of digits, such as I%09d
+    [InlineData("I000000000000001", false)] // 16 chars
+    [InlineData("S_ABC", false)] // a custom format
     public void LooksLikeGrampsId_DetectsCorrectly(string value, bool expected)
     {
         Assert.Equal(expected, HandleResolver.LooksLikeGrampsId(value));
@@ -54,6 +56,21 @@ public class HandleResolverTests
     public void LooksLikeHandle_DetectsCorrectly(string value, bool expected)
     {
         Assert.Equal(expected, HandleResolver.LooksLikeHandle(value));
+    }
+
+    [Theory]
+    [InlineData("I0001", true)]
+    [InlineData("S_ABC", true)]
+    [InlineData("SRC-12", true)]
+    [InlineData("0044", true)]
+    [InlineData("I000000001", true)]
+    [InlineData("102a49c11b31375183b9ad45a991", false)]
+    [InlineData("GNUJQCL9MD64AM56OH", false)]
+    [InlineData("", false)]
+    [InlineData("  ", false)]
+    public void MayBeGrampsId_DetectsCorrectly(string value, bool expected)
+    {
+        Assert.Equal(expected, HandleResolver.MayBeGrampsId(value));
     }
 
     [Theory]
@@ -96,6 +113,26 @@ public class HandleResolverTests
         Assert.Equal("person-handle-abc", first);
         Assert.Equal("person-handle-abc", second);
         Assert.Equal(1, handler.ListRequestCount("/api/people/"));
+    }
+
+    [Fact]
+    public async Task ResolveToHandleAsync_IgnoresARecordWithAnotherGrampsId()
+    {
+        // A server that does not narrow the list by gramps_id returns other records first.
+        var handler = new ResolverRecordingHandler
+        {
+            ListResponses =
+            {
+                ["/api/sources/"] = """
+                    [{"handle": "source-handle-abc", "gramps_id": "S0001"}]
+                    """
+            }
+        };
+        var client = CreateClient(handler);
+
+        var result = await HandleResolver.ResolveToHandleAsync("S_ABC", client, "sources");
+
+        Assert.Equal("S_ABC", result);
     }
 
     [Fact]
@@ -294,7 +331,7 @@ public class HandleResolverTests
     }
 
     [Fact]
-    public async Task ResolveToHandleAsync_DoesNotResolve_WhenExpectedObjectTypeDiffers()
+    public async Task ResolveToHandleAsync_LooksUpInExpectedType_WhateverThePrefix()
     {
         var handler = new ResolverRecordingHandler
         {
@@ -302,7 +339,8 @@ public class HandleResolverTests
             {
                 ["/api/people/"] = """
                     [{"handle": "person-handle-abc", "gramps_id": "I0001"}]
-                    """
+                    """,
+                ["/api/families/"] = "[]"
             }
         };
         var client = CreateClient(handler);
@@ -310,6 +348,83 @@ public class HandleResolverTests
         var result = await HandleResolver.ResolveToHandleAsync("I0001", client, "families");
 
         Assert.Equal("I0001", result);
+        Assert.Equal(1, handler.ListRequestCount("/api/families/"));
+        Assert.Equal(0, handler.ListRequestCount("/api/people/"));
+    }
+
+    [Fact]
+    public async Task ResolveToHandleAsync_ResolvesCustomFormatId_InExpectedType()
+    {
+        var handler = new ResolverRecordingHandler
+        {
+            ListResponses =
+            {
+                ["/api/sources/"] = """
+                    [{"handle": "source-handle-abc", "gramps_id": "S_ABC"}]
+                    """
+            }
+        };
+        var client = CreateClient(handler);
+
+        var result = await HandleResolver.ResolveToHandleAsync("S_ABC", client, "sources");
+
+        Assert.Equal("source-handle-abc", result);
+        var request = Assert.Single(handler.ListRequests);
+        Assert.Contains("gramps_id=S_ABC", request.Path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResolveToHandleAsync_DoesNotLookUpCustomFormatId_WithoutExpectedType()
+    {
+        var handler = new ResolverRecordingHandler();
+        var client = CreateClient(handler);
+
+        var result = await HandleResolver.ResolveToHandleAsync("S_ABC", client);
+
+        Assert.Equal("S_ABC", result);
+        Assert.Empty(handler.ListRequests);
+    }
+
+    [Fact]
+    public async Task ResolveToHandleAsync_CachesEachTypeSeparately()
+    {
+        var handler = new ResolverRecordingHandler
+        {
+            ListResponses =
+            {
+                ["/api/people/"] = """
+                    [{"handle": "person-handle-abc", "gramps_id": "X1"}]
+                    """,
+                ["/api/families/"] = """
+                    [{"handle": "family-handle-xyz", "gramps_id": "X1"}]
+                    """
+            }
+        };
+        var client = CreateClient(handler);
+
+        for (var round = 0; round < 2; round++)
+        {
+            Assert.Equal("person-handle-abc", await HandleResolver.ResolveToHandleAsync("X1", client, "people"));
+            Assert.Equal("family-handle-xyz", await HandleResolver.ResolveToHandleAsync("X1", client, "families"));
+        }
+
+        Assert.Equal(1, handler.ListRequestCount("/api/people/"));
+        Assert.Equal(1, handler.ListRequestCount("/api/families/"));
+    }
+
+    [Theory]
+    [InlineData("102a49c11b31375183b9ad45a991", "sources")]
+    [InlineData("T0001", "tags")]
+    [InlineData("my-tag", "tags")]
+    [InlineData("T0001", null)]
+    public async Task ResolveToHandleAsync_DoesNotLookUpHandlesOrTags(string value, string? expectedObjectType)
+    {
+        var handler = new ResolverRecordingHandler();
+        var client = CreateClient(handler);
+
+        var result = await HandleResolver.ResolveToHandleAsync(value, client, expectedObjectType);
+
+        Assert.Equal(value, result);
         Assert.Empty(handler.ListRequests);
     }
 
