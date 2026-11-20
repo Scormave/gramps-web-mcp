@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Gramps IDs in a custom format, set in the tree's preferences, such as
+  `S_ABC` or `P-0001`, were taken for handles: `list_objects` with
+  `sourceHandle` listed no citations of the source, and other tools did
+  not find the record (#27). Every argument that names one type of
+  record now looks a value that is not shaped like a handle up among the
+  records of that type, whatever its format or prefix; `get_object` and
+  `get_recent_changes` take such an ID with `objectType`, and `attachTo`
+  of `create_media` and `update_media` looks it up in each type it can
+  link. An `objectType` that disagrees with the prefix of an ID in the
+  default format is no longer rejected, since a tree may give its
+  records other prefixes. Handles skip the lookup as before, and a
+  lookup takes only the record with exactly this ID
+- `list_objects` with a `sourceHandle` that names no source returns
+  `Source not found` with a hint instead of an empty list of citations
+- Tags have no Gramps ID, but a tag argument shaped like one, such as
+  `T0001`, was looked up by `gramps_id`, which Gramps Web API 3.26
+  answers with HTTP 500. Tag arguments are now always handles, and a
+  missing tag's hint says that tags have no Gramps ID
+
 ## [2.11.1] - 2026-11-19
 
 ### Fixed

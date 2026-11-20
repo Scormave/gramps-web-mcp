@@ -50,18 +50,18 @@ public class TimelineQueryStringTests
     }
 
     [Theory]
-    [InlineData("person", null, "/api/people/anchor-h/timeline?first=false&last=false&discard_empty=false")]
-    [InlineData("person", "1850/01/01-1900/12/31", "/api/people/anchor-h/timeline?dates=1850%2F1%2F1-1900%2F12%2F31&discard_empty=false")]
-    [InlineData("person", "1850-1900", "/api/people/anchor-h/timeline?dates=1850%2F1%2F1-1900%2F12%2F31&discard_empty=false")]
-    [InlineData("family", "before 1900 (Julian)", "/api/families/anchor-h/timeline?dates=-1900%2F1%2F12&discard_empty=false")]
-    [InlineData("family", null, "/api/families/anchor-h/timeline?discard_empty=false")]
+    [InlineData("person", null, "/api/people/anchor-handle-0001/timeline?first=false&last=false&discard_empty=false")]
+    [InlineData("person", "1850/01/01-1900/12/31", "/api/people/anchor-handle-0001/timeline?dates=1850%2F1%2F1-1900%2F12%2F31&discard_empty=false")]
+    [InlineData("person", "1850-1900", "/api/people/anchor-handle-0001/timeline?dates=1850%2F1%2F1-1900%2F12%2F31&discard_empty=false")]
+    [InlineData("family", "before 1900 (Julian)", "/api/families/anchor-handle-0001/timeline?dates=-1900%2F1%2F12&discard_empty=false")]
+    [InlineData("family", null, "/api/families/anchor-handle-0001/timeline?discard_empty=false")]
     public async Task GetTimeline_Cuts_A_Person_Timeline_Only_To_The_Given_Dates(string objectType, string? dates, string request)
     {
         // Gramps Web cuts a person timeline to the person's first and last event, matching an "about 1876"
         // birth as 1826 to 1926, which dropped relatives' events; family timelines are not cut.
         var handler = new RecordingHandler();
 
-        await TimelineTools.GetTimeline(objectType, "anchor-h", dates: dates, client: CreateClient(handler));
+        await TimelineTools.GetTimeline(objectType, "anchor-handle-0001", dates: dates, client: CreateClient(handler));
 
         Assert.Equal([request], handler.Requests);
     }
@@ -88,7 +88,7 @@ public class TimelineQueryStringTests
         var handler = new RecordingHandler();
 
         var error = await Assert.ThrowsAsync<McpException>(
-            () => TimelineTools.GetTimeline("person", "anchor-h", dates: "about 1850", client: CreateClient(handler)));
+            () => TimelineTools.GetTimeline("person", "anchor-handle-0001", dates: "about 1850", client: CreateClient(handler)));
 
         Assert.Contains("approximate", error.Message);
         Assert.Empty(handler.Requests);

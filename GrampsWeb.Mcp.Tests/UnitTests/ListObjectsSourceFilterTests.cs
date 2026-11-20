@@ -141,6 +141,37 @@ public class ListObjectsSourceFilterTests
     }
 
     [Fact]
+    public async Task ListObjects_Citations_ResolvesSourceGrampsIdInACustomFormat()
+    {
+        using var handler = new CitationListHandler
+        {
+            SourceLookupResponse = """[{"handle": "source-handle-1", "gramps_id": "S_ABC"}]"""
+        };
+        var client = CreateClient(handler);
+
+        var result = await SearchTools.ListObjects("citations", sourceHandle: "S_ABC", client: client);
+
+        Assert.Equal(
+            """{"rules":[{"name":"MatchesQuery","values":["source_handle == 'source-handle-1'"]}]}""",
+            Query(handler)["rules"]);
+        Assert.Equal("No citations found.", result);
+    }
+
+    [Theory]
+    [InlineData("S_ABC")]
+    [InlineData("S0099")]
+    [InlineData("102a49c11b31375183b9ad45a991")]
+    public async Task ListObjects_Citations_SaysWhenTheSourceDoesNotExist(string sourceHandle)
+    {
+        using var handler = new CitationListHandler { SourceExists = false };
+        var client = CreateClient(handler);
+
+        var result = await SearchTools.ListObjects("citations", sourceHandle: sourceHandle, client: client);
+
+        Assert.StartsWith($"Source not found: {sourceHandle}", result);
+    }
+
+    [Fact]
     public async Task ListObjects_Citations_RejectsSourceHandleThatWouldBreakGql()
     {
         using var handler = new CitationListHandler();
@@ -173,6 +204,9 @@ public class ListObjectsSourceFilterTests
 
         public string ApiVersion { get; init; } = "3.26.0";
 
+        /// <summary>Whether the source a filter names exists, read when its page of citations is empty.</summary>
+        public bool SourceExists { get; init; } = true;
+
         public string? CitationPath { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -186,6 +220,13 @@ public class ListObjectsSourceFilterTests
 
             if (path.StartsWith("/api/sources/?gramps_id=", StringComparison.Ordinal))
                 return Task.FromResult(JsonResponse(SourceLookupResponse));
+
+            if (path.StartsWith("/api/sources/", StringComparison.Ordinal) && path.EndsWith("?keys=handle", StringComparison.Ordinal))
+            {
+                return Task.FromResult(SourceExists
+                    ? JsonResponse("""{"handle": "found"}""")
+                    : new HttpResponseMessage(HttpStatusCode.NotFound));
+            }
 
             Assert.StartsWith("/api/citations/?", path);
             CitationPath = path;

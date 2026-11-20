@@ -18,7 +18,7 @@ public class EventParticipantsTests
     private const string KidBirthParticipants = """
         { "participants": { "people": [
           { "role": "Primary", "person": { "handle": "kid", "name_display": "Ivanova, Evdokia", "gramps_id": "I0203" } },
-          { "role": "Father", "person": { "handle": "anchor", "name_display": "Ivanov, Egor", "gramps_id": "I0113" } },
+          { "role": "Father", "person": { "handle": "anchor-handle-0001", "name_display": "Ivanov, Egor", "gramps_id": "I0113" } },
           { "role": "Mother", "person": { "handle": "wife", "name_display": "Ivanova, Anastasia", "gramps_id": "I0202" } }
         ] } }
         """;
@@ -28,7 +28,7 @@ public class EventParticipantsTests
     {
         var handler = new PathHandler(new Dictionary<string, string>
         {
-            ["/api/people/anchor/timeline?first=false&last=false&discard_empty=false"] = """
+            ["/api/people/anchor-handle-0001/timeline?first=false&last=false&discard_empty=false"] = """
                 [
                   { "handle": "own-birth", "type": "Birth", "date": "1820", "role": "Primary", "person": { "relationship": "self" } },
                   { "handle": "kid-birth", "type": "Birth", "date": "1856-08-01", "role": "Father", "age": "36 years",
@@ -48,20 +48,20 @@ public class EventParticipantsTests
                     "people": [
                       { "role": "Groom", "person": { "handle": "groom", "name_display": "Petrov, Ivan", "gramps_id": "I0301" } },
                       { "role": "Bride", "person": { "handle": "bride", "name_display": "Petrova, Maria", "gramps_id": "I0302" } },
-                      { "role": "Witness", "person": { "handle": "anchor", "name_display": "Ivanov, Egor", "gramps_id": "I0113" } }
+                      { "role": "Witness", "person": { "handle": "anchor-handle-0001", "name_display": "Ivanov, Egor", "gramps_id": "I0113" } }
                     ],
                     "families": [
                       { "role": "Family", "family": { "gramps_id": "F0060",
                         "father": { "name_display": "Petrov, Ivan" }, "mother": { "name_display": "Petrova, Maria" } } }
                     ] } } },
                   { "handle": "census", "type": "Census", "profile": { "participants": { "people": [
-                    { "role": "Informant", "person": { "handle": "anchor", "name_display": "Ivanov, Egor", "gramps_id": "I0113" } }
+                    { "role": "Informant", "person": { "handle": "anchor-handle-0001", "name_display": "Ivanov, Egor", "gramps_id": "I0113" } }
                   ] } } }
                 ]
                 """,
         });
 
-        var result = (await TimelineTools.GetTimeline("person", "anchor", client: CreateClient(handler)))
+        var result = (await TimelineTools.GetTimeline("person", "anchor-handle-0001", client: CreateClient(handler)))
             .Replace("\r\n", "\n");
 
         Assert.Contains(
@@ -76,7 +76,7 @@ public class EventParticipantsTests
             result);
         Assert.Equal(
             [
-                "/api/people/anchor/timeline?first=false&last=false&discard_empty=false",
+                "/api/people/anchor-handle-0001/timeline?first=false&last=false&discard_empty=false",
                 "/api/events/?handles=kid-birth,wedding,census&profile=participants&page=1&pagesize=3",
             ],
             handler.Requests);
@@ -91,7 +91,7 @@ public class EventParticipantsTests
                 $$"""{ "handle": "kid-birth", "type": "Birth", "profile": {{KidBirthParticipants}} }""",
         });
         var person = JsonSerializer.Deserialize<GrampsPersonExtended>("""
-            {"handle":"anchor","gramps_id":"I0113","birth_ref_index":0,
+            {"handle":"anchor-handle-0001","gramps_id":"I0113","birth_ref_index":0,
              "event_ref_list":[{"ref":"own-birth","role":"Primary"},{"ref":"kid-birth","role":"Father"}],
              "extended":{"events":[
                {"handle":"own-birth","type":"Birth","date":{"modifier":0,"dateval":[0,0,1820,false]}},
