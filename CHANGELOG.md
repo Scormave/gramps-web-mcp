@@ -176,6 +176,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A Gramps ID starting with `T`, such as `T0001`, was looked up as a tag
   and ended in a server error: tags have no Gramps ID
 
+## [2.11.3] - 2026-11-22
+
+### Fixed
+
+- `delete_object`, `merge_objects` and `undo_change` always returned
+  `action: declined` in the Code tab of the Claude desktop app. It
+  declares MCP elicitation but declines every dialog at once without
+  showing it, so the default `GRAMPS_CONFIRMATION=when-supported` could
+  never go ahead. A decline with no answer that comes back within
+  250 ms is now taken as a dialog the user never saw: `when-supported`
+  makes the change as in clients without elicitation, which rely on the
+  client's own permission prompt and the confirmation in chat, and
+  `required` refuses it with `action: not_confirmed` and says why. A
+  slower decline, an accept without the box and a closed dialog still
+  change nothing, and the server logs a warning the first time a client
+  declines this way
+
 ## [2.11.2] - 2026-11-20
 
 ### Fixed
@@ -1609,7 +1626,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.2...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.3...HEAD
+[2.11.3]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.2...v2.11.3
 [2.11.2]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.1...v2.11.2
 [2.11.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...v2.11.0

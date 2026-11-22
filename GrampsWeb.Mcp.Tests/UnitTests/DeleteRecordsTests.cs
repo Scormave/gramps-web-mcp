@@ -46,6 +46,7 @@ public class DeleteRecordsTests
     [InlineData("Cancelled", "cancelled", "Ask the user in chat before calling again")]
     [InlineData("Unavailable", "not_confirmed", "GRAMPS_CONFIRMATION=required")]
     [InlineData("Failed", "not_confirmed", "could not show the confirmation dialog")]
+    [InlineData("NotShown", "not_confirmed", "without showing it to the user")]
     public async Task Delete_WithoutConfirmation_DeletesNothing(string answer, string action, string reason)
     {
         using var server = NoteServer();

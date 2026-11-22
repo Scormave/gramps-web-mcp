@@ -70,13 +70,22 @@ changes nothing. Dry runs and refusals do not ask.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GRAMPS_CONFIRMATION` | `when-supported` asks clients that support elicitation and runs as before in the others; `required` refuses deletes, merges and undos in clients that cannot ask; `off` never asks | `when-supported` |
+| `GRAMPS_CONFIRMATION` | `when-supported` asks clients that support elicitation and runs as before in the others; `required` refuses deletes, merges and undos in clients that cannot ask or do not show the dialog; `off` never asks | `when-supported` |
 | `GRAMPS_REQUIRE_USER_INTERACTION` | `true` publishes the three tools with the `anthropic/requiresUserInteraction` tool metadata, so clients that honour it ask their own permission on every call; `false` leaves the metadata out, and the client's permission settings decide | `true` |
 
 - Stateless Streamable HTTP (`MCP_STATELESS=true`, the default) cannot send
   requests to the client, so it never asks, and `required` refuses every
   delete, merge and undo there. Set `MCP_STATELESS=false` to confirm over
   HTTP; stdio and legacy SSE keep a session and can ask.
+- Some clients declare elicitation but decline every dialog at once without
+  showing it, such as the Code tab of the Claude desktop app. The server
+  takes a decline with no answer that comes back within 250 ms as a dialog
+  the user never saw: `when-supported` then makes the change as in clients
+  without elicitation, where the client's own permission prompt and the
+  confirmation in chat are the checks, and `required` refuses it
+  (`action: not_confirmed`). A slower decline, an accept without the box and
+  a closed dialog change nothing as before. The server logs a warning the
+  first time a client declines this way.
 - All three tools also carry the `anthropic/requiresUserInteraction` tool
   metadata, whatever `GRAMPS_CONFIRMATION` says. Clients that honour it, such
   as Claude Code, ask their own permission first, so the user may confirm
@@ -102,7 +111,8 @@ changes nothing. Dry runs and refusals do not ask.
   session, Claude Code supports elicitation and shows the server's own dialog
   as well, so set `GRAMPS_CONFIRMATION=off` along with
   `GRAMPS_REQUIRE_USER_INTERACTION=false`. Over stateless Streamable HTTP
-  that dialog never runs.
+  that dialog never runs, and the Code tab of the Claude desktop app
+  declines it without showing it.
 - The tool call lasts until the user answers. If the client cancels the call
   first, nothing changes.
 - The server logs once per client whether it asks.

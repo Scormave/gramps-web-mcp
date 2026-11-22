@@ -125,7 +125,11 @@ it). Read-only mode is set only through `GRAMPS_READ_ONLY`.
   as before elsewhere; `required` refuses the change (`action: not_confirmed`)
   when the client cannot ask; `off` never asks. `UserConfirmation.For` reads it
   per call from the request-scoped `McpServer`, and logs once per client whether
-  it asks. Stateless HTTP has no client capabilities, so it never asks there.
+  it asks. A decline without content that comes back within
+  `UserConfirmation.NotShownWithin` (250 ms) is `ConfirmationAnswer.NotShown`,
+  a dialog the client never showed: `when-supported` then goes ahead as without
+  elicitation, and `required` refuses. Stateless HTTP has no client
+  capabilities, so it never asks there.
 - `GRAMPS_REQUIRE_USER_INTERACTION`: whether the same three tools are
   published with the `anthropic/requiresUserInteraction` tool metadata, which
   an attribute on each tool sets. With `false`, `WithGrampsToolProfile`

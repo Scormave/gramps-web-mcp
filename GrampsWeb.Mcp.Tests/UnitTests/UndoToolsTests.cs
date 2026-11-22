@@ -424,6 +424,7 @@ public class UndoToolsTests
     [InlineData("Cancelled", "cancelled")]
     [InlineData("Unavailable", "not_confirmed")]
     [InlineData("Failed", "not_confirmed")]
+    [InlineData("NotShown", "not_confirmed")]
     public async Task Undo_WithoutConfirmation_ChangesNothing(string answer, string action)
     {
         using var handler = AddNoteEditPersonServer();

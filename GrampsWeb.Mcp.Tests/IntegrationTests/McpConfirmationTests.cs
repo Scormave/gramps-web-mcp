@@ -14,10 +14,14 @@ namespace GrampsWeb.Mcp.Tests.IntegrationTests;
 
 /// <summary>
 /// delete_records over a stdio-like session with the SDK's own client: the confirmation reaches the
-/// client's elicitation handler, and only a ticked accept deletes.
+/// client's elicitation handler, and only a ticked accept deletes. A decline without content that comes
+/// back at once was never shown to the user, so the client is treated like one without elicitation.
 /// </summary>
 public class McpConfirmationTests
 {
+    /// <summary>Longer than <c>UserConfirmation.NotShownWithin</c>, as a person takes to answer.</summary>
+    private static readonly TimeSpan PersonAnswers = TimeSpan.FromMilliseconds(400);
+
     [Fact]
     public async Task DeleteRecords_AsksTheClient_AndDeletesOnATickedAccept()
     {
@@ -34,15 +38,48 @@ public class McpConfirmationTests
     }
 
     [Theory]
-    [InlineData("accept", false, "declined")]
-    [InlineData("decline", null, "declined")]
-    [InlineData("cancel", null, "cancelled")]
-    public async Task DeleteRecords_DeletesNothing_WithoutATickedAccept(string action, bool? ticked, string reply)
+    [InlineData("accept", false, false, "declined")]
+    [InlineData("accept", false, true, "declined")]
+    [InlineData("decline", null, true, "declined")]
+    [InlineData("decline", false, false, "declined")]
+    [InlineData("cancel", null, false, "cancelled")]
+    [InlineData("cancel", null, true, "cancelled")]
+    public async Task DeleteRecords_DeletesNothing_WithoutATickedAccept(string action, bool? ticked, bool slow, string reply)
     {
-        var call = await DeleteNoteAsync(ConfirmationMode.WhenSupported, Answer(action, ticked));
+        var call = await DeleteNoteAsync(ConfirmationMode.WhenSupported, Answer(action, ticked, slow));
 
         Assert.Single(call.Questions);
         Assert.Contains($"action: {reply}", call.Text);
+        Assert.False(call.Deleted);
+    }
+
+    [Fact]
+    public async Task DeleteRecords_WhenTheClientDeclinesAtOnce_DeletesAsWithoutElicitation()
+    {
+        var call = await DeleteNoteAsync(ConfirmationMode.WhenSupported, Answer("decline", ticked: null));
+
+        Assert.Single(call.Questions);
+        Assert.Contains("action: deleted", call.Text);
+        Assert.True(call.Deleted);
+    }
+
+    [Fact]
+    public async Task DeleteRecords_WhenConfirmationIsRequired_RefusesAClientThatDeclinesAtOnce()
+    {
+        var call = await DeleteNoteAsync(ConfirmationMode.Required, Answer("decline", ticked: null));
+
+        Assert.Single(call.Questions);
+        Assert.Contains("action: not_confirmed", call.Text);
+        Assert.Contains("without showing it to the user", call.Text);
+        Assert.False(call.Deleted);
+    }
+
+    [Fact]
+    public async Task DeleteRecords_WhenConfirmationIsRequired_DeletesNothingOnADecline()
+    {
+        var call = await DeleteNoteAsync(ConfirmationMode.Required, Answer("decline", ticked: null, slow: true));
+
+        Assert.Contains("action: declined", call.Text);
         Assert.False(call.Deleted);
     }
 
@@ -77,19 +114,31 @@ public class McpConfirmationTests
 
     private sealed record DeleteCall(string Text, List<ElicitRequestParams> Questions, bool Deleted);
 
-    private static Func<ElicitRequestParams, ElicitResult> Answer(string action, bool? ticked) => _ => new ElicitResult
+    /// <summary>
+    /// A client answer: <paramref name="action"/>, with the box set to <paramref name="ticked"/> or no content
+    /// when it is null, at once or after <see cref="PersonAnswers"/> when <paramref name="slow"/>.
+    /// </summary>
+    private static Func<ElicitRequestParams, CancellationToken, Task<ElicitResult>> Answer(
+        string action, bool? ticked, bool slow = false) => async (_, cancellationToken) =>
     {
-        Action = action,
-        Content = ticked is { } value
-            ? new Dictionary<string, JsonElement> { ["confirm"] = JsonSerializer.SerializeToElement(value) }
-            : null
+        if (slow)
+            await Task.Delay(PersonAnswers, cancellationToken);
+
+        return new ElicitResult
+        {
+            Action = action,
+            Content = ticked is { } value
+                ? new Dictionary<string, JsonElement> { ["confirm"] = JsonSerializer.SerializeToElement(value) }
+                : null
+        };
     };
 
     /// <summary>
     /// Deletes note N0001 through a client that answers confirmations with <paramref name="answer"/>,
     /// or that does not support them when it is null.
     /// </summary>
-    private static async Task<DeleteCall> DeleteNoteAsync(ConfirmationMode mode, Func<ElicitRequestParams, ElicitResult>? answer)
+    private static async Task<DeleteCall> DeleteNoteAsync(
+        ConfirmationMode mode, Func<ElicitRequestParams, CancellationToken, Task<ElicitResult>>? answer)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         using var gramps = new NoteServer();
@@ -110,10 +159,10 @@ public class McpConfirmationTests
         var options = new McpClientOptions();
         if (answer is not null)
         {
-            options.Handlers.ElicitationHandler = (request, _) =>
+            options.Handlers.ElicitationHandler = async (request, cancellationToken) =>
             {
                 questions.Add(request!);
-                return ValueTask.FromResult(answer(request!));
+                return await answer(request!, cancellationToken);
             };
         }
 

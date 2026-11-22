@@ -1496,7 +1496,12 @@ The change history keeps the duplicate: undo_change can undo the merge later.
 Only an accepted dialog with the box ticked goes ahead. Accepting without the
 box or declining returns `action: declined`; closing the dialog returns
 `action: cancelled`. Both replies say that nothing was changed and tell the
-model to wait for the user before calling again. The tool reads the record
+model to wait for the user before calling again. A decline with no answer
+that comes back within 250 ms was never shown to the user: some clients
+declare elicitation but decline every dialog at once, such as the Code tab of
+the Claude desktop app. The server treats such a client as one without
+elicitation, so `when-supported` goes ahead and `required` returns
+`action: not_confirmed`. The tool reads the record
 (both records for a merge, or the transaction's conflicts) again after the
 answer, and refuses with `action: refused` if it changed while the user was
 deciding. The tools ask only before writing: invalid arguments, a backlink
@@ -1507,8 +1512,8 @@ refusal return without a dialog.
 
 | Value | Behavior |
 |-------|----------|
-| `when-supported` (default) | Asks when the client declares form elicitation; otherwise the tools work as before and rely on the confirmation in chat. |
-| `required` | Asks as above; a client without elicitation gets `action: not_confirmed` and nothing changes. |
+| `when-supported` (default) | Asks when the client declares form elicitation; otherwise, or when the client declines at once without showing the dialog, the tools work as before and rely on the confirmation in chat. |
+| `required` | Asks as above; a client without elicitation, or one that declines at once without showing the dialog, gets `action: not_confirmed` and nothing changes. |
 | `off` | Never asks. |
 
 The server logs once per client, at Information, whether it asks, and logs

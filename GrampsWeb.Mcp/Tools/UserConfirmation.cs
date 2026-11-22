@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using GrampsWeb.Mcp.Config;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +27,12 @@ internal enum ConfirmationAnswer
     Unavailable,
 
     /// <summary>The client answered the question with an error.</summary>
-    Failed
+    Failed,
+
+    /// <summary>
+    /// <c>GRAMPS_CONFIRMATION=required</c>, but the client declined at once without showing the question.
+    /// </summary>
+    NotShown
 }
 
 /// <summary>
@@ -52,6 +58,13 @@ internal static class UserConfirmation
 
     /// <summary>Never asks: the tool changes the tree as before.</summary>
     public static IUserConfirmation None { get; } = new NotAsking();
+
+    /// <summary>
+    /// A decline without content that comes back sooner than this is not a person's answer. Some clients declare
+    /// elicitation but decline every question at once without showing it, such as the Code tab of the Claude
+    /// desktop app; the server treats them like clients without elicitation.
+    /// </summary>
+    internal static readonly TimeSpan NotShownWithin = TimeSpan.FromMilliseconds(250);
 
     /// <summary>Clients whose elicitation support was already logged, so each is logged once.</summary>
     private static readonly ConcurrentDictionary<string, byte> LoggedClients = new();
@@ -81,7 +94,7 @@ internal static class UserConfirmation
                 ModeName(mode));
         }
 
-        return asks ? new ElicitationConfirmation(server, supported, toolName, client, logger) : None;
+        return asks ? new ElicitationConfirmation(server, mode, supported, toolName, client, logger) : None;
     }
 
     /// <summary>
@@ -99,6 +112,10 @@ internal static class UserConfirmation
             "can set GRAMPS_CONFIRMATION=when-supported to rely on the confirmation in chat.",
         ConfirmationAnswer.Failed =>
             "The client could not show the confirmation dialog, so nothing was changed. Call again only if the user asks.",
+        ConfirmationAnswer.NotShown =>
+            "The server requires the user to confirm this change (GRAMPS_CONFIRMATION=required), but this client " +
+            "declined the confirmation dialog at once without showing it to the user, so nothing was changed. Tell the " +
+            "user; the server administrator can set GRAMPS_CONFIRMATION=when-supported to rely on the confirmation in chat.",
         _ => throw new ArgumentOutOfRangeException(nameof(answer), answer, "Confirmed needs no explanation.")
     };
 
@@ -126,7 +143,8 @@ internal static class UserConfirmation
     }
 
     private sealed class ElicitationConfirmation(
-        McpServer server, bool supported, string toolName, string client, ILogger logger) : IUserConfirmation
+        McpServer server, ConfirmationMode mode, bool supported, string toolName, string client, ILogger logger)
+        : IUserConfirmation
     {
         public bool Asks => true;
 
@@ -134,12 +152,17 @@ internal static class UserConfirmation
         {
             var answer = supported ? await RequestAsync(message, cancellationToken) : ConfirmationAnswer.Unavailable;
             logger.LogInformation("Confirmation for {Tool} from {Client}: {Answer}", toolName, client, answer);
-            return answer;
+
+            // when-supported runs as for a client without elicitation when the question was never shown.
+            return answer == ConfirmationAnswer.NotShown && mode == ConfirmationMode.WhenSupported
+                ? ConfirmationAnswer.Confirmed
+                : answer;
         }
 
         private async Task<ConfirmationAnswer> RequestAsync(string message, CancellationToken cancellationToken)
         {
             ElicitResult result;
+            var asked = Stopwatch.GetTimestamp();
             try
             {
                 result = await server.ElicitAsync(new ElicitRequestParams
@@ -170,6 +193,26 @@ internal static class UserConfirmation
             {
                 logger.LogWarning(ex, "Confirmation for {Tool} failed in {Client}", toolName, client);
                 return ConfirmationAnswer.Failed;
+            }
+
+            var elapsed = Stopwatch.GetElapsedTime(asked);
+            if (result.Action == "decline" && (result.Content is null || result.Content.Count == 0)
+                && elapsed < NotShownWithin)
+            {
+                if (LoggedClients.TryAdd($"{client}|{mode}|not shown", 0))
+                {
+                    logger.LogWarning(
+                        "Client {Client} declined the confirmation for {Tool} in {Elapsed} ms without an answer, too fast " +
+                        "for a person, so it did not show the dialog; delete_records, merge_records and undo_change " +
+                        "{Behaviour} (GRAMPS_CONFIRMATION={Mode})",
+                        client, toolName, (int)elapsed.TotalMilliseconds,
+                        mode == ConfirmationMode.WhenSupported
+                            ? "go ahead, as in clients without elicitation"
+                            : "refuse to change the tree",
+                        ModeName(mode));
+                }
+
+                return ConfirmationAnswer.NotShown;
             }
 
             return result.Action switch
