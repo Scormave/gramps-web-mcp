@@ -6,10 +6,16 @@ namespace GrampsWeb.Mcp.Config;
 /// </summary>
 public enum ConfirmationMode
 {
-    /// <summary>Ask when the client supports elicitation; other clients work as before.</summary>
+    /// <summary>
+    /// Ask when the client supports elicitation; other clients, and clients that decline the question at once
+    /// without showing it, work as before.
+    /// </summary>
     WhenSupported,
 
-    /// <summary>Always ask; refuse the change when the client cannot show the question.</summary>
+    /// <summary>
+    /// Always ask; refuse the change when the client cannot show the question or declines it at once without
+    /// showing it.
+    /// </summary>
     Required,
 
     /// <summary>Never ask; the assistant's own confirmation in chat is the only check.</summary>
