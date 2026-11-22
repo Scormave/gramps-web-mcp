@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- `delete_object`, `merge_objects` and `undo_change` always returned
+  `action: declined` in the Code tab of the Claude desktop app. It
+  declares MCP elicitation but declines every dialog at once without
+  showing it, so the default `GRAMPS_CONFIRMATION=when-supported` could
+  never go ahead. A decline with no answer that comes back within
+  250 ms is now taken as a dialog the user never saw: `when-supported`
+  makes the change as in clients without elicitation, which rely on the
+  client's own permission prompt and the confirmation in chat, and
+  `required` refuses it with `action: not_confirmed` and says why. A
+  slower decline, an accept without the box and a closed dialog still
+  change nothing, and the server logs a warning the first time a client
+  declines this way
+
 ## [2.11.2] - 2026-11-20
 
 ### Fixed
