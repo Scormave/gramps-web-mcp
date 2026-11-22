@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.11.3] - 2026-11-22
+
 ### Fixed
 
 - `delete_object`, `merge_objects` and `undo_change` always returned
@@ -1454,7 +1456,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker image published to `ghcr.io/scormave/gramps-web-mcp`
 - Contract tests against vendored Gramps Web OpenAPI spec
 
-[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.2...HEAD
+[Unreleased]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.3...HEAD
+[2.11.3]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.2...v2.11.3
 [2.11.2]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.1...v2.11.2
 [2.11.1]: https://github.com/Scormave/gramps-web-mcp/compare/v2.11.0...v2.11.1
 [2.11.0]: https://github.com/Scormave/gramps-web-mcp/compare/v2.10.1...v2.11.0
