@@ -162,7 +162,8 @@ it.
 `file` is `Input/FileReference`, the shape ChatGPT passes for an attached file
 when a tool names the argument in its `openai/fileParams` metadata (set with
 `McpMeta` on both tools). `Tools/MediaDownloader`, a singleton, downloads it:
-HTTPS only, hosts and their subdomains from `GRAMPS_MEDIA_UPLOAD_HOSTS`,
+HTTPS only, hosts and their subdomains from `GRAMPS_MEDIA_UPLOAD_HOSTS` (an
+entry may hold one `*` in its first label, matched within that label only),
 redirects followed by hand (at most 3) and checked like the first link, a
 `ConnectCallback` that resolves the host and connects only to public addresses,
 no proxy, cookies or decompression, a 60-second limit, and the upload size limit

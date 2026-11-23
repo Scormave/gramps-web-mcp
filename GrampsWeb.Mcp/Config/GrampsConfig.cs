@@ -200,7 +200,9 @@ public record GrampsConfig(
 
     /// <summary>
     /// Splits a comma-separated list of host names, lowercased; a leading <c>*.</c> is dropped, since every
-    /// entry also covers its subdomains. Entries must be DNS names: no scheme, port, path or IP address.
+    /// entry also covers its subdomains. Entries must be DNS names: no scheme, port, path or IP address. The
+    /// first label may hold one <c>*</c> beside other characters, such as <c>files-*.example.com</c>, for hosts
+    /// that differ only there; the rest must still name a domain with a dot, so <c>files-*.com</c> is refused.
     /// </summary>
     private static IReadOnlyList<string>? ParseHostList(string? value, string name, List<string> errors)
     {
@@ -212,9 +214,10 @@ public record GrampsConfig(
         {
             var host = entry.StartsWith("*.", StringComparison.Ordinal) ? entry[2..] : entry;
             host = host.TrimEnd('.').ToLowerInvariant();
-            if (Uri.CheckHostName(host) != UriHostNameType.Dns || !host.Contains('.'))
+            if (!IsHostNameOrPattern(host))
             {
-                errors.Add($"{name} entries must be host names such as files.example.com; \"{entry}\" is not");
+                errors.Add($"{name} entries must be host names such as files.example.com, or names with one * in " +
+                           $"the first label such as files-*.example.com; \"{entry}\" is not");
                 continue;
             }
 
@@ -223,6 +226,24 @@ public record GrampsConfig(
         }
 
         return hosts.Count > 0 ? hosts : null;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="host"/> is a DNS name with a dot, or one whose first label holds a single
+    /// <c>*</c> beside other characters, followed by a DNS name with a dot.
+    /// </summary>
+    private static bool IsHostNameOrPattern(string host)
+    {
+        var star = host.IndexOf('*');
+        if (star < 0)
+            return Uri.CheckHostName(host) == UriHostNameType.Dns && host.Contains('.');
+
+        var dot = host.IndexOf('.');
+        if (dot < 0 || star > dot || host.IndexOf('*', star + 1) >= 0 || dot == 1)
+            return false;
+        var rest = host[(dot + 1)..];
+        return Uri.CheckHostName(host.Replace('*', 'x')) == UriHostNameType.Dns
+               && Uri.CheckHostName(rest) == UriHostNameType.Dns && rest.Contains('.');
     }
 
     /// <summary>

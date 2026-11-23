@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `file` in `create_media` and `update_media` is no longer experimental:
+  attaching a file in ChatGPT on the web is confirmed to work
+  ([#30](https://github.com/Scormave/gramps-web-mcp/issues/30)).
+
+### Fixed
+
+- Files attached in ChatGPT were refused whenever ChatGPT served them
+  from a storage host not yet listed
+  ([#30](https://github.com/Scormave/gramps-web-mcp/issues/30),
+  reported by @ws-mkulas): it uses regional Azure storage hosts, such as
+  `oaisdmntprnortheu.blob.core.windows.net` and
+  `oaisdmntprdenmarkeast.blob.core.windows.net`, that change from one
+  file to the next, and `GRAMPS_MEDIA_UPLOAD_HOSTS` took only whole host
+  names. An entry may now hold one `*` in its first label, such as
+  `oaisdmntpr*.blob.core.windows.net`: the `*` stands for any characters
+  within that label, never a dot, and the rest of the entry must still
+  name a domain with a dot, so `oaisdmntpr*.net` is refused. For
+  ChatGPT, set it to
+  `oaiusercontent.com,oaisdmntpr*.blob.core.windows.net`.
+
 ## [2.11.3] - 2026-11-22
 
 ### Fixed

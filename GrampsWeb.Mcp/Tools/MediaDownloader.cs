@@ -145,12 +145,40 @@ public sealed class MediaDownloader : IDisposable
         return link;
     }
 
-    /// <summary>Whether <paramref name="host"/> is one of <paramref name="hosts"/> or a subdomain of one.</summary>
+    /// <summary>
+    /// Whether <paramref name="host"/> is one of <paramref name="hosts"/> or a subdomain of one. A <c>*</c> in
+    /// an entry's first label stands for any letters, digits or hyphens in that label, never a dot: an entry
+    /// <c>files-*.example.com</c> allows files-eu.example.com and its subdomains, not files.example.com.evil.test.
+    /// </summary>
     internal static bool IsAllowedHost(string host, IEnumerable<string> hosts) =>
-        hosts.Any(allowed => host == allowed
-                             || (host.Length > allowed.Length + 1
-                                 && host.EndsWith(allowed, StringComparison.Ordinal)
-                                 && host[^(allowed.Length + 1)] == '.'));
+        hosts.Any(allowed => allowed.Contains('*') ? MatchesPattern(host, allowed) : IsSameOrSubdomain(host, allowed));
+
+    private static bool IsSameOrSubdomain(string host, string allowed) =>
+        host == allowed
+        || (host.Length > allowed.Length + 1
+            && host.EndsWith(allowed, StringComparison.Ordinal)
+            && host[^(allowed.Length + 1)] == '.');
+
+    /// <summary>
+    /// Whether <paramref name="host"/> matches <paramref name="pattern"/>, such as <c>files-*.example.com</c>,
+    /// or is a subdomain of a match.
+    /// </summary>
+    private static bool MatchesPattern(string host, string pattern)
+    {
+        var dot = pattern.IndexOf('.');
+        var rest = pattern[dot..];
+        if (!host.EndsWith(rest, StringComparison.Ordinal))
+            return false;
+        var head = host[..^rest.Length];
+        var label = head[(head.LastIndexOf('.') + 1)..];
+        var star = pattern.IndexOf('*');
+        var prefix = pattern[..star];
+        var suffix = pattern[(star + 1)..dot];
+        return label.Length > 0
+               && label.Length >= prefix.Length + suffix.Length
+               && label.StartsWith(prefix, StringComparison.Ordinal)
+               && label.EndsWith(suffix, StringComparison.Ordinal);
+    }
 
     /// <summary>
     /// Whether the server may connect to <paramref name="address"/>: a public unicast address, not loopback,
