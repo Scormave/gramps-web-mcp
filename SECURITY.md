@@ -96,6 +96,16 @@ content. Download links are signed, so errors and logs name only the host.
 List only the chat client's file hosts: any model connected to the server can
 make it fetch from them.
 
+An entry may hold one `*` in its first label, such as
+`oaisdmntpr*.blob.core.windows.net` for ChatGPT's regional storage hosts; the
+`*` never matches a dot, so it cannot reach past that label. Such a pattern
+also matches names other people can claim: anyone can open an Azure storage
+account whose name starts with `oaisdmntpr` while the name is free. Through
+one, a misled model could make the server download a file from a host someone
+else controls. The request carries no credentials, only the server's public
+address, and the file is stored only if it passes the same size and type
+checks. Keep patterns as narrow as the chat client's hosts allow.
+
 ## HTTP MCP exposure
 
 When running with `MCP_TRANSPORT=http` or `sse`, the MCP endpoints are reachable

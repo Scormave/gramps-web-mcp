@@ -270,6 +270,16 @@ public class GrampsConfigTests
     }
 
     [Fact]
+    public void FromEnvironment_Parses_Upload_Host_Patterns()
+    {
+        var config = LoadConfig(readOnlyEnv: null, mediaResourcesEnabled: "true",
+            mediaUploadHosts: "oaiusercontent.com, OAISDMNTPR*.blob.core.windows.net, *-files.example.org.");
+
+        Assert.Equal(["oaiusercontent.com", "oaisdmntpr*.blob.core.windows.net", "*-files.example.org"],
+            config.MediaUploadHosts);
+    }
+
+    [Fact]
     public void FromEnvironment_Leaves_Upload_From_Links_Off_Without_Media_Access()
     {
         var config = LoadConfig(readOnlyEnv: null, mediaUploadHosts: "files.example.com");
@@ -294,6 +304,15 @@ public class GrampsConfigTests
     [InlineData("localhost")]
     [InlineData("192.168.1.10")]
     [InlineData("files.example.com:443")]
+    [InlineData("*")]
+    [InlineData("*.com")]
+    [InlineData("*.*.example.com")]
+    [InlineData("**.example.com")]
+    [InlineData("files-*.com")]
+    [InlineData("files-*")]
+    [InlineData("files.*.example.com")]
+    [InlineData("a*b*.example.com")]
+    [InlineData("files-*.example.com/path")]
     public void FromEnvironment_Rejects_Upload_Hosts_That_Are_Not_Host_Names(string value)
     {
         var ex = Assert.Throws<InvalidOperationException>(

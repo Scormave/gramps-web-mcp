@@ -164,9 +164,12 @@ comes from one of two sources:
   downloads it only from the hosts in `GRAMPS_MEDIA_UPLOAD_HOSTS` and their
   subdomains, over HTTPS, redirects included, and connects only to public
   addresses. If a link is refused, the error names its host; add that host
-  when it is the chat client's file host. This source is experimental: it
-  is tested with direct tool calls, not yet in ChatGPT itself, so the host
-  ChatGPT serves attached files from is not named here.
+  when it is the chat client's file host. For ChatGPT, where it is
+  confirmed to work on the web, set
+  `oaiusercontent.com,oaisdmntpr*.blob.core.windows.net`: ChatGPT serves
+  attached files from regional Azure storage hosts, such as
+  `oaisdmntprnortheu.blob.core.windows.net`, that change from one file to
+  the next.
 
 Uploading needs media file access (`GRAMPS_MEDIA_RESOURCES_ENABLED=true`) and
 at least one of the two settings; until then, `create_media` is hidden, and
@@ -177,7 +180,7 @@ tree already stores is reused, not uploaded twice.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GRAMPS_MEDIA_UPLOAD_DIRS` | Absolute folders, separated by `:` (`;` on Windows), that `create_media` and `update_media` may upload from; a leading `~` or `${HOME}` stands for the home folder | unset (the Claude Desktop extension: `~/Downloads`) |
-| `GRAMPS_MEDIA_UPLOAD_HOSTS` | Host names, separated by commas, that files attached in the chat may be downloaded from; each also allows its subdomains, and a leading `*.` is ignored. Only host names are accepted: no scheme, path, port or IP address | unset (off) |
+| `GRAMPS_MEDIA_UPLOAD_HOSTS` | Host names, separated by commas, that files attached in the chat may be downloaded from; each also allows its subdomains, and a leading `*.` is ignored. The first label may hold one `*`, matched within that label only, such as `oaisdmntpr*.blob.core.windows.net`; the rest must name a domain with a dot. Only host names are accepted: no scheme, path, port or IP address | unset (off) |
 | `GRAMPS_MEDIA_UPLOAD_MAX_BYTES` | Largest file `create_media` or `update_media` uploads | `52428800` |
 
 ## Transports

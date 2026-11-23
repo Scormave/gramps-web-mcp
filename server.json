@@ -100,7 +100,7 @@
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_HOSTS",
-          "description": "Host names, separated by commas, that files attached in the chat (ChatGPT file parameters) may be downloaded from over HTTPS by create_media and update_media while GRAMPS_MEDIA_RESOURCES_ENABLED is true; each also allows its subdomains. Unset turns uploading attached files off"
+          "description": "Host names, separated by commas, that files attached in the chat (ChatGPT file parameters) may be downloaded from over HTTPS by create_media and update_media while GRAMPS_MEDIA_RESOURCES_ENABLED is true; each also allows its subdomains, and the first label may hold one * matched within that label (ChatGPT: oaiusercontent.com,oaisdmntpr*.blob.core.windows.net). Unset turns uploading attached files off"
         },
         {
           "name": "GRAMPS_MEDIA_UPLOAD_MAX_BYTES",

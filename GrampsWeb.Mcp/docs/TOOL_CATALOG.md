@@ -1001,8 +1001,9 @@ metadata. A client that supports it, such as ChatGPT, fills the argument with
 the file the user attached in the chat: a temporary `download_url`, a
 `file_id`, and usually `mime_type` and `file_name`. The server downloads it
 only when `GRAMPS_MEDIA_UPLOAD_HOSTS` allows the link's host (or a parent
-domain of it), only over HTTPS, and follows at most 3 redirects, each checked
-the same way. It connects only to public addresses, sends no credentials or
+domain of it, or an entry with a `*` in its first label matches it), only
+over HTTPS, and follows at most 3 redirects, each checked the same way.
+It connects only to public addresses, sends no credentials or
 cookies, gives up after 60 seconds, and stops reading at
 `GRAMPS_MEDIA_UPLOAD_MAX_BYTES`. The type is judged by content, not by
 `mime_type`, and the default description is `file_name` without its
@@ -1011,8 +1012,10 @@ are signed. With only upload folders set, `file` and `openai/fileParams` are
 left out of `tools/list`; with only upload hosts set, `filePath` is left out
 and `create_media` requires `file`.
 
-`file` is experimental: it is tested with direct tool calls, not yet in
-ChatGPT itself.
+In ChatGPT on the web, `file` works with
+`GRAMPS_MEDIA_UPLOAD_HOSTS=oaiusercontent.com,oaisdmntpr*.blob.core.windows.net`:
+ChatGPT serves attached files from regional Azure storage hosts that change
+from one file to the next.
 
 ---
 

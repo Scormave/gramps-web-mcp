@@ -72,6 +72,46 @@ public class MediaDownloaderTests
     }
 
     [Theory]
+    [InlineData("oaisdmntprnortheu.blob.core.windows.net", true)]
+    [InlineData("oaisdmntprdenmarkeast.blob.core.windows.net", true)]
+    [InlineData("oaisdmntpr.blob.core.windows.net", true)]
+    [InlineData("eu.oaisdmntprnortheu.blob.core.windows.net", true)]
+    [InlineData("files.example.com", true)]
+    [InlineData("evil.blob.core.windows.net", false)]
+    [InlineData("evil-oaisdmntpr.blob.core.windows.net", false)]
+    [InlineData("oaisdmntprx.evil.blob.core.windows.net", false)]
+    [InlineData("blob.core.windows.net", false)]
+    [InlineData("oaisdmntprx.blob.core.windows.net.evil.test", false)]
+    [InlineData("oaisdmntprx.blob.core.windows.net-evil.test", false)]
+    public void Matches_A_Star_Only_Within_The_First_Label(string host, bool allowed)
+    {
+        Assert.Equal(allowed,
+            MediaDownloader.IsAllowedHost(host, ["files.example.com", "oaisdmntpr*.blob.core.windows.net"]));
+    }
+
+    [Theory]
+    [InlineData("files-eu.example.com", true)]
+    [InlineData("eu-files.example.com", false)]
+    [InlineData("eu-files.example.org", true)]
+    [InlineData("files-eu.example.org", false)]
+    public void Matches_A_Star_At_Either_End_Of_The_Label(string host, bool allowed)
+    {
+        Assert.Equal(allowed, MediaDownloader.IsAllowedHost(host, ["files-*.example.com", "*-files.example.org"]));
+    }
+
+    [Fact]
+    public async Task Downloads_From_A_Host_That_Matches_A_Pattern()
+    {
+        const string link = "https://oaisdmntprnortheu.blob.core.windows.net/files/1?sig=x";
+        var web = new FakeWeb { [link] = () => Ok(Jpeg) };
+        var config = Config() with { MediaUploadHosts = ["oaisdmntpr*.blob.core.windows.net"] };
+
+        var upload = await Downloader(web).ReadAsync(File(link), config);
+
+        Assert.Equal(Jpeg, upload.Bytes);
+    }
+
+    [Theory]
     [InlineData("https://evil.test/f/1?sig=SECRET-SIGNATURE", "evil.test")]
     [InlineData("https://evilfiles.example.com/f/1", "evilfiles.example.com")]
     [InlineData("https://files.example.com.evil.test/f/1", "files.example.com.evil.test")]
